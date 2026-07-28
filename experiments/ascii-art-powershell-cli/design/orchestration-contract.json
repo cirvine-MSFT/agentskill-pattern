@@ -1,0 +1,48 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "hierarchy": {
+    "rootSessions": 1,
+    "caseCoordinators": 10,
+    "observationsPerCoordinator": 6,
+    "parentSessions": 60,
+    "specialistsPerControl": 0,
+    "specialistsPerTreatment": 1
+  },
+  "freshness": {
+    "newParentSession": true,
+    "emptyConversationHistory": true,
+    "newWorkspace": true,
+    "verifyFixtureLockBeforePrompt": true
+  },
+  "collectionKeys": [
+    "runId",
+    "coordinatorSessionId",
+    "parentSessionId",
+    "specialistSessionId",
+    "benchmarkCommitSha",
+    "initialTreeSha",
+    "terminalCommitSha",
+    "artifactBundleSha256"
+  ],
+  "returnArtifacts": [
+    "run-manifest.json",
+    "raw-telemetry.json",
+    "artifacts.json",
+    "deterministic-results.json"
+  ],
+  "runEnvironment": [
+    "copilotCliVersion",
+    "hostImage",
+    "operatingSystem",
+    "powershellVersion",
+    "nodeVersion"
+  ],
+  "prohibitions": [
+    "merge trial branches",
+    "collect by branch head instead of terminalCommitSha",
+    "reuse a parent or specialist session",
+    "expose acceptance files, schedules, conditions, or prior outputs to a parent",
+    "delegate non-banner work in treatment",
+    "create a nested session in control"
+  ]
+}

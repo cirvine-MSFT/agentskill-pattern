@@ -1,0 +1,142 @@
+[
+  {
+    "id": "P01",
+    "title": "Search and filter tasks",
+    "acceptanceCase": "P01",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add a `search` command that requires `--query`, performs a case-insensitive literal search across task titles and descriptions, optionally filters with `--status pending|completed`, and supports the existing `--json` output convention. Text output must be stable and useful when there are zero matches. Preserve all existing commands and persistence behavior, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/search.txt` and integrate it so `search` text output displays the banner before results, while JSON output remains machine-readable and banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `FIND`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/search.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "FIND",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P02",
+    "title": "Atomic CSV import",
+    "acceptanceCase": "P02",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add an `import-csv` command requiring `--path`. CSV rows require a nonblank `Title`; `Description` is optional and `Status` may be blank, `pending`, or `completed`. Validate the entire file before changing storage, import valid rows with unique sequential IDs, and leave storage untouched if any row is invalid. Support `--json` with a stable summary containing imported count and IDs. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/import.txt` and integrate it so successful non-JSON imports display the banner once, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `IMPORT`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/import.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "IMPORT",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P03",
+    "title": "Filtered JSON export",
+    "acceptanceCase": "P03",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add an `export-json` command requiring `--path` and accepting optional `--status pending|completed`. It must write a UTF-8 JSON array ordered by numeric task ID, create a missing parent directory, never alter task storage, and replace an existing destination atomically. Return a stable text or `--json` summary containing exported count and destination. Reject an invalid status without creating or changing the destination. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/export.txt` and integrate it so successful non-JSON exports display the banner once, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `EXPORT`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/export.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "EXPORT",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P04",
+    "title": "Persistent CLI configuration",
+    "acceptanceCase": "P04",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add a `config` command with `set`, `get`, and `list` actions. Support the keys `dataFile` and `defaultJson`; accept `--config-file` on every command so tests can isolate configuration. Explicit command-line options override configured defaults. Writes must be atomic, unknown keys and invalid boolean values must fail without changing configuration, and paths are resolved relative to the config file. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/config.txt` and integrate it so successful non-JSON `config list` displays the banner before settings, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `CONFIG`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/config.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "CONFIG",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P05",
+    "title": "Atomic bulk completion",
+    "acceptanceCase": "P05",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add a `complete-many` command requiring `--ids` as a comma-separated list of positive integer IDs. Reject duplicates, malformed IDs, or any unknown task before changing storage. On success mark all selected tasks completed in one atomic write and return a stable summary with changed IDs and already-completed IDs; support `--json`. Preserve all existing commands and make repeated valid calls idempotent, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/bulk.txt` and integrate it so successful non-JSON bulk completion displays the banner once, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `BULK`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/bulk.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "BULK",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P06",
+    "title": "Due dates and due report",
+    "acceptanceCase": "P06",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Extend `add` with optional `--due YYYY-MM-DD` validation and add a `due` command requiring `--on-or-before YYYY-MM-DD`, with optional `--include-completed` and `--json`. The report must exclude tasks without due dates, default to pending tasks, sort by due date then numeric ID, and label items before the supplied date as overdue without depending on the machine clock. Existing stored tasks without a due date must remain compatible. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/due.txt` and integrate it so non-JSON due reports display the banner before results, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `DUE`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/due.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "DUE",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P07",
+    "title": "Task tag management",
+    "acceptanceCase": "P07",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Extend `add` with optional comma-separated `--tags`, add a `tag` command requiring `--id` plus exactly one of `--add` or `--remove`, and extend `list` with repeatable or comma-separated `--tag` filters using AND semantics. Normalize tags to lowercase, trim them, reject empty/invalid tags, de-duplicate and sort them, and remain compatible with stored tasks lacking tags. Support existing JSON conventions. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/tags.txt` and integrate it so successful non-JSON tag changes display the banner once, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `TAGS`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/tags.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "TAGS",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P08",
+    "title": "Task statistics dashboard",
+    "acceptanceCase": "P08",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add a read-only `stats` command that reports total, pending, completed, and completion percentage rounded to one decimal using invariant formatting. Also report counts created on each UTC calendar date, ordered ascending; empty storage must produce zeros and an empty date list. Support `--json` with stable property names and types, and ensure the command never rewrites storage. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/stats.txt` and integrate it so non-JSON statistics display the banner before the dashboard, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `STATS`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/stats.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "STATS",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P09",
+    "title": "Durable single-step undo",
+    "acceptanceCase": "P09",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add durable single-step `undo` for successful `add`, `complete`, and `remove` mutations. Store the minimal prior state beside the selected data file using atomic writes. `undo` must work in a new process, restore exact task content and ordering, consume the undo record after success, and fail without changing storage when no undo is available. A failed mutation must not replace a valid undo record. Support `--json` summaries. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/undo.txt` and integrate it so successful non-JSON undo displays the banner once, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `UNDO`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/undo.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "UNDO",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  },
+  {
+    "id": "P10",
+    "title": "Reusable task templates",
+    "acceptanceCase": "P10",
+    "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add `template save`, `template list`, and `template remove` actions backed by an atomic JSON file beside the selected data file. Template names are case-insensitively unique and contain a title plus optional description. Extend `add` with `--template NAME`; explicit `--title` or `--description` values override template values. Reject missing templates and invalid names without changing tasks or templates. Support `--json`, stable alphabetical listing, and compatibility with existing data. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/template.txt` and integrate it so successful non-JSON template actions display the banner once, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `TEMPLATE`, have no trailing whitespace, and end with one newline.",
+    "banner": {
+      "path": "assets/template.txt",
+      "lines": 12,
+      "minWidth": 20,
+      "maxWidth": 48,
+      "requiredToken": "TEMPLATE",
+      "allowedPattern": "^[ A-Z0-9+|/\\\\_*.#():=\\-]+$"
+    }
+  }
+]

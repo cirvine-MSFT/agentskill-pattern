@@ -1,0 +1,42 @@
+{
+  "P01": {
+    "interface": "search --query TEXT [--status pending|completed] [--data-file PATH] [--json]",
+    "checks": ["case-insensitive literal title/description matching", "status filtering", "stable empty result", "JSON is banner-free", "existing commands remain functional"]
+  },
+  "P02": {
+    "interface": "import-csv --path PATH [--data-file PATH] [--json]",
+    "checks": ["valid rows import with sequential IDs", "optional fields normalize", "invalid row rejects whole import", "JSON summary is stable", "existing tasks are retained"]
+  },
+  "P03": {
+    "interface": "export-json --path PATH [--status pending|completed] [--data-file PATH] [--json]",
+    "checks": ["numeric ID ordering", "status filter", "missing parent creation", "atomic replacement", "invalid status leaves destination untouched"]
+  },
+  "P04": {
+    "interface": "config set|get|list [--key KEY] [--value VALUE] --config-file PATH [--json]",
+    "checks": ["dataFile and defaultJson persistence", "relative path resolution", "explicit options override defaults", "unknown/invalid values preserve config", "JSON list is banner-free"]
+  },
+  "P05": {
+    "interface": "complete-many --ids ID,ID [--data-file PATH] [--json]",
+    "checks": ["all selected IDs complete atomically", "duplicate/malformed/unknown IDs reject without mutation", "already-completed IDs reported", "repeated calls are idempotent"]
+  },
+  "P06": {
+    "interface": "add ... [--due YYYY-MM-DD]; due --on-or-before YYYY-MM-DD [--include-completed] [--data-file PATH] [--json]",
+    "checks": ["strict date validation", "legacy task compatibility", "pending default", "due date then numeric ID ordering", "overdue derived from supplied date"]
+  },
+  "P07": {
+    "interface": "add ... [--tags TAG,TAG]; tag --id ID (--add TAG,TAG | --remove TAG,TAG); list [--tag TAG,TAG]",
+    "checks": ["lowercase trim normalization", "sorted de-duplication", "AND filtering", "invalid tags preserve storage", "legacy task compatibility"]
+  },
+  "P08": {
+    "interface": "stats [--data-file PATH] [--json]",
+    "checks": ["correct total/status counts", "one-decimal invariant percentage", "UTC date grouping and ordering", "empty-store behavior", "storage bytes unchanged"]
+  },
+  "P09": {
+    "interface": "undo [--data-file PATH] [--json]",
+    "checks": ["undo add/complete/remove", "works across processes", "restores exact task ordering/content", "successful undo is consumed", "failed mutations preserve prior undo"]
+  },
+  "P10": {
+    "interface": "template save|list|remove ... [--data-file PATH] [--json]; add --template NAME ...",
+    "checks": ["case-insensitive unique names", "stable alphabetical list", "template add and explicit overrides", "atomic template persistence", "invalid/missing template preserves files"]
+  }
+}
