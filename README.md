@@ -20,7 +20,7 @@ for the evidence behind that claim.
 | Role | Responsibility |
 | --- | --- |
 | **Harness** | Hosts the parent session, surfaces installed Skills and custom agents, and performs the actual delegation when the parent chooses to invoke a subagent. |
-| **Parent** | Keeps the full user request, repository state, and orchestration context. Sees only Skill metadata until a Skill is triggered. |
+| **Parent** | Maintains session continuity and access to relevant repository state, subject to the model's finite context window (and potentially lossy compaction over a long session). Sees only Skill metadata until a Skill is triggered. |
 | **Skill** | A minimal, progressively disclosed router. Its job is *discovery and routing only* — recognizing that a bounded task matches its description and instructing the parent to delegate to a named subagent. It does not do the work itself. |
 | **Subagent** | A separate custom agent, usually on a cheaper/smaller model, with a narrow, task-specific tool allowlist and an isolated context window. It performs the bounded work, writes the resulting artifact directly, and returns a terse status. |
 
@@ -37,10 +37,15 @@ sub-task (for example, generating one asset in a fixed format) that:
 - doesn't need the parent's full conversation history or repository context to complete, and
 - can be done correctly by a smaller/cheaper model with a small, fixed set of tools.
 
-The intended benefit is **reducing the parent's context and cost footprint** — fewer
-tokens spent on tool schemas and intermediate output in the expensive parent session —
-with reduced tool surface as a secondary safety benefit, not the primary motivation.
-It is a poor fit for open-ended, conversational, or broad-tool-access work; see
+The intended benefit is context and cost reduction, but the mechanism differs by role:
+the **parent** benefits because the delegated work's reasoning, tool calls, and artifact
+content stay isolated in the subagent and never enter the parent's (more expensive)
+context — only a compact status returns. The **subagent** benefits separately because
+its own narrow tool allowlist means fewer tool schemas, fewer competing choices, and
+fewer irrelevant results for *it* to reason over — this does not reduce the parent's
+tool schema footprint, since the parent's own toolset is unchanged. Reduced tool surface
+on the subagent is also a secondary safety benefit, not the primary motivation for either
+role. It is a poor fit for open-ended, conversational, or broad-tool-access work; see
 [`docs/agent-skill-pattern.md`](docs/agent-skill-pattern.md#when-not-to-use-this-pattern).
 
 ## Architecture

@@ -32,8 +32,12 @@ model's, informed by the Skill.
 The primary model in the session (in the reference implementation, GPT-5.6 Sol). The
 parent:
 
-- retains the full user request, conversation history, and repository context for the
-  life of the session,
+- maintains session continuity and access to relevant repository state, subject to the
+  model's finite context window and to potentially lossy compaction of older
+  conversation history over a long session — repository information is loaded as
+  needed rather than retained wholesale (see
+  [Managing context in GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/copilot-cli/context-management)
+  for how the reference harness's context window and compaction behave),
 - sees only Skill metadata (name + description) until a Skill is triggered by relevance,
   and
 - upon recognizing a bounded task that matches a Skill's description, is instructed by
