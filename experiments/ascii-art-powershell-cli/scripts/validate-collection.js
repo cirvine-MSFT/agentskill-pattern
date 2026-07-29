@@ -37,7 +37,6 @@ const schemas = {
 const prompts = readJson(path.join(root, 'prompts.json'));
 const index = readJson(path.join(rawRoot, 'execution-index.json'));
 const summary = readJson(path.join(resultRoot, 'collection-summary.json'));
-const retryPlan = readJson(path.join(rawRoot, 'wrong-model-retry-plan.json'));
 const provenanceIndex = readJson(path.join(rawRoot, 'provenance-index.json'));
 const readMatching = (suffix) => walkFiles(rawRoot)
   .filter((file) => file.endsWith(suffix))
@@ -59,6 +58,9 @@ const provenanceById = new Map(provenanceIndex.sources.map((source) => [source.s
 const originalMissingSchedules = new Set(index.selectedRuns
   .filter((run) => run.status === 'missing')
   .map((run) => run.schedule_id));
+const selectedRunIds = new Set(index.selectedRuns
+  .filter((run) => run.status === 'completed')
+  .map((run) => `${run.schedule_id}-A${run.attempt}`));
 
 function exactLines(file) {
   const bytes = fs.readFileSync(file);
@@ -204,15 +206,17 @@ validate(deterministic, schemas.deterministic, 'deterministic');
 validate(artifacts, schemas.artifact, 'artifact');
 
 check(index.selectedRuns.length === 60, 'execution index must contain 60 schedules');
-check(index.attempts.length === 67, 'execution index must contain 67 attempts');
-check(index.deviations.length === 4, 'execution index must preserve four deviations');
-check(manifests.length === 67, 'all 67 created attempts must be session-started manifests');
+check(index.attempts.length === 82, 'execution index must contain 82 attempts');
+check(index.deviations.length === 5, 'execution index must preserve five deviations');
+check(selectedRunIds.size === 46, 'execution index must contain 46 completed selections');
+check(originalMissingSchedules.size === 14, 'execution index must contain 14 genuine missing schedules');
+check(manifests.length === 82, 'all 82 created attempts must be session-started manifests');
 check(preExecution.length === 0, 'created attempts must not be represented as pre-execution failures');
-check(telemetry.length === 67, 'every created attempt must have telemetry');
-check(deterministic.length === 67, 'every created attempt must have deterministic evidence');
-check(initialWorkspace.length === 67, 'every created attempt must have initial workspace provenance');
-check(artifacts.length === 63, 'only the 63 collectable attempts may have artifacts');
-check(new Set(manifests.map((record) => record.runId)).size === 67, 'run IDs must be unique');
+check(telemetry.length === 82, 'every created attempt must have telemetry');
+check(deterministic.length === 82, 'every created attempt must have deterministic evidence');
+check(initialWorkspace.length === 82, 'every created attempt must have initial workspace provenance');
+check(artifacts.length === 54, 'only attempts from schedules with a selected run may retain artifacts');
+check(new Set(manifests.map((record) => record.runId)).size === 82, 'run IDs must be unique');
 
 for (const source of provenanceIndex.sources) {
   const sourcePath = resolveContainedPath(rawRoot, source.path, `${source.sourceId} provenance source`);
@@ -243,6 +247,13 @@ for (const source of provenanceIndex.sources) {
       source.query?.sourceDatabaseSnapshot?.queryTimeSnapshotStatus === 'unavailable',
       `${source.sourceId} must not imply that the post-query snapshot is the query-time snapshot`
     );
+  }
+  if (source.kind === 'execution-index-sqlite-export') {
+    check(source.sqliteExport?.queries?.selectedRuns?.rowCount === 60, 'execution index source must bind 60 observation_runs rows');
+    check(source.sqliteExport?.queries?.attempts?.rowCount === 82, 'execution index source must bind 82 observation_attempts rows');
+    check(source.sqliteExport?.queries?.deviations?.rowCount === 5, 'execution index source must bind five deviation rows');
+    check(source.sqliteExport?.executionIndex?.selectedCompleted === 46, 'execution index source selected count mismatch');
+    check(source.sqliteExport?.executionIndex?.missingSchedules === 14, 'execution index source missing count mismatch');
   }
 }
 
@@ -281,41 +292,45 @@ for (const record of manifests) {
   else check(originalMissingSchedules.has(record.scheduleId), `${record.runId} missing artifact is allowed only for an exhausted original schedule`);
 }
 
-check(retryPlan.mismatchedSelectedAttempts.length === 19, 'wrong-model plan must contain 19 selected mismatches');
-check(retryPlan.requiresRealA2.length === 15, 'wrong-model plan must require 15 real A2 retries');
-check(retryPlan.exhaustedMissingSchedules.length === 4, 'wrong-model plan must mark four exhausted schedules missing');
-for (const entry of retryPlan.mismatchedSelectedAttempts) {
-  const manifest = manifestByRun.get(entry.runId);
-  check(Boolean(manifest), `${entry.runId} wrong-model manifest is missing`);
+for (const runId of selectedRunIds) {
+  const manifest = manifestByRun.get(runId);
+  check(Boolean(manifest), `${runId} selected manifest is missing`);
   if (!manifest) continue;
-  check(entry.parentSessionId === manifest.sessions.parent.sessionId, `${entry.runId} retry plan parent session ID mismatch`);
-  check(entry.requestedParentModel === manifest.sessions.parent.requestedModel, `${entry.runId} retry plan requested parent model mismatch`);
-  check(entry.observedParentModel === manifest.sessions.parent.observedModel, `${entry.runId} retry plan observed parent model mismatch`);
+  check(!manifest.exclusion.excluded, `${runId} selected run must not be excluded`);
+  check(
+    manifest.sessions.parent.requestedModel === 'gpt-5.6-sol' &&
+      manifest.sessions.parent.observedModel === 'gpt-5.6-sol',
+    `${runId} selected parent requested/observed model mismatch`
+  );
   if (manifest.condition === 'treatment') {
-    check(entry.specialistSessionId === (manifest.sessions.specialist.sessionId || null), `${entry.runId} retry plan specialist session ID mismatch`);
+    check(
+      manifest.sessions.specialist.requestedModel === 'claude-haiku-4.5' &&
+        manifest.sessions.specialist.observedModel === 'claude-haiku-4.5',
+      `${runId} selected specialist requested/observed model mismatch`
+    );
   }
-  check(manifest.exclusion.excluded && manifest.exclusion.reason === 'wrong_model', `${entry.runId} must be excluded wrong_model`);
-  if (entry.action === 'requires_real_A2') {
-    check(manifest.exclusion.retryId === `${entry.scheduleId}-A2`, `${entry.runId} must reserve its real A2 retry`);
-    check(!manifestByRun.has(`${entry.scheduleId}-A2`), `${entry.scheduleId} must not fabricate A2`);
-  } else {
-    check(entry.attempt === 2 && manifest.exclusion.retryId === null, `${entry.runId} exhausted A2 linkage is invalid`);
-  }
+  check(artifactByRun.has(runId), `${runId} selected artifact is missing`);
+}
+check(!fs.existsSync(path.join(rawRoot, 'wrong-model-retry-plan.json')), 'final collection must not retain a pending retry plan');
+for (const artifact of artifacts) {
+  check(!originalMissingSchedules.has(artifact.scheduleId), `${artifact.runId} missing schedule must not retain an artifact`);
 }
 
-const p06Deviation = summary.noncompliance.find((item) => item.scheduleId === 'P06-R3-treatment');
+const p06Deviation = summary.noncompliance.find((item) => item.runId === 'P06-R3-treatment-A1');
 check(p06Deviation?.reasons.includes('specialist wrote in its own workspace and the parent copied the banner'), 'P06-R3-treatment copy deviation must be explicit');
 check(
-  summary.collectionStage === 'provisional_execution_evidence_awaiting_wrong_model_retries',
-  'summary collection stage must remain provisional while real A2 retries are pending'
+  summary.collectionStage === 'reconciled_execution_evidence_no_judgments',
+  'summary collection stage must be reconciled after final retries'
 );
-check(summary.counts.startedAttempts === 67, 'summary started count must reconcile');
+check(summary.counts.startedAttempts === 82, 'summary started count must reconcile');
 check(summary.counts.preExecutionAttempts === 0, 'summary pre-execution count must be zero');
-check(summary.counts.wrongModelExcludedFrozenSelections === 19, 'summary wrong-model count must reconcile');
-check(summary.counts.pendingRealA2Schedules === 15, 'summary pending retry count must reconcile');
-check(summary.counts.retryExhaustedMissingSchedules === 4, 'summary exhausted retry count must reconcile');
-check(summary.counts.knownMissingSchedules === 6, 'summary known missing count must reconcile');
-check(summary.counts.finalSelectedCount === null, 'final selected count must remain unavailable pending retries');
+check(summary.counts.wrongModelExcludedAttempts === 27, 'summary wrong-model count must reconcile');
+check(summary.counts.missingSchedules === 14, 'summary missing count must reconcile');
+check(summary.counts.finalSelectedCount === 46, 'summary selected count must reconcile');
+check(summary.counts.artifactRecords === 54, 'summary artifact count must reconcile');
+check(summary.fullDatasetStageGates.observedModelMismatches.status === 'clear', 'selected model gate must be clear');
+check(summary.fullDatasetStageGates.completeness.status === 'blocked', 'genuine missing schedules must block completeness');
+check(summary.fullDatasetStageGates.completeness.missingSchedules.length === 14, 'completeness gate must contain 14 missing schedules');
 check(summary.telemetrySources.localSessionStore.status === 'available_with_post_query_snapshot', 'summary must qualify SQLite provenance');
 check(summary.telemetrySources.cloudEvents.status === 'unavailable', 'summary must disclose unavailable cloud events');
 check(summary.telemetrySources.judgeUsage.status === 'not_applicable', 'summary must disclose absent judge usage');

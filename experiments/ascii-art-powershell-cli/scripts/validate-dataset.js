@@ -548,6 +548,14 @@ const selectedBySchedule = new Map(observations.map((scheduledItem) => [
   manifests.find((manifest) => manifest.scheduleId === scheduledItem.scheduleId && !manifest.exclusion.excluded)
 ]));
 const selectedManifests = [...selectedBySchedule.values()].filter(Boolean);
+if (args['require-complete']) {
+  observations.forEach((scheduledItem) => {
+    check(
+      Boolean(selectedBySchedule.get(scheduledItem.scheduleId)),
+      `${scheduledItem.scheduleId} completeness gate requires one selected included run`
+    );
+  });
+}
 const expectedJudged = judged.filter((assignment) => selectedBySchedule.has(assignment.scheduleId) &&
   selectedBySchedule.get(assignment.scheduleId));
 

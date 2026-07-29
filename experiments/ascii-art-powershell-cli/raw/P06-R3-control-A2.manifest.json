@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P06-R3-control-A2",
+  "scheduleId": "P06-R3-control",
+  "promptId": "P06",
+  "repetition": 3,
+  "condition": "control",
+  "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 6,
+    "position": 7,
+    "attempt": 2,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "45c8ce20-54b9-4330-b127-cb7d0c1d58f2",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "status": "not_applicable",
+      "reason": "control_condition"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "4422c7decda3b320821eb06d7fde0c247b54078f",
+    "terminalCommitSha": "0d2eec010cd2cea5c950cd10f3903625afc24d72",
+    "artifactBundleSha256": "73eab2d69899678967c310ac9ac380939d4eb07905809815c2fede5a0d5ae704"
+  },
+  "workspace": {
+    "identifier": "P06/cirvine-msft-animated-spork",
+    "branch": "cirvine-msft-taskforge-due-report-a2"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T13:32:03.858Z",
+    "promptSentAt": "2026-07-29T13:32:11.326Z",
+    "completedAt": "2026-07-29T13:44:23.039Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": "P06-R3-control-A1",
+    "retryId": null
+  }
+}

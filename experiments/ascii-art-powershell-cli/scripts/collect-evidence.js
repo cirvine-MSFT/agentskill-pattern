@@ -3,7 +3,6 @@
 
 const crypto = require('crypto');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
@@ -30,6 +29,7 @@ const { validateSchema } = require('./validate-schema');
 const args = parseArguments(process.argv.slice(2));
 const required = [
   'execution-index',
+  'execution-index-source',
   'app-sessions',
   'app-session-export',
   'usage-export',
@@ -45,6 +45,7 @@ if (missingArguments.length > 0) {
 }
 
 const executionIndexPath = path.resolve(args['execution-index']);
+const executionIndexSourcePath = path.resolve(args['execution-index-source']);
 const appSessionsPath = path.resolve(args['app-sessions']);
 const appSessionExportPath = path.resolve(args['app-session-export']);
 const usageExportPath = path.resolve(args['usage-export']);
@@ -151,7 +152,7 @@ function copySource(sourcePath, relativePath, kind) {
 
 function snapshotSourceDatabase() {
   const snapshotPath = path.join(
-    os.tmpdir(),
+    path.resolve(root, '..', '..'),
     `.source-db-snapshot-${process.pid}.db`
   );
   fs.rmSync(snapshotPath, { force: true });
@@ -945,21 +946,25 @@ function reuseOutcome(attempt) {
     'artifacts',
     `${attempt.run_id}.bundle.json`
   );
-  if (![deterministicPath, artifactPath, bundlePath].every(fs.existsSync)) return null;
+  if (!fs.existsSync(deterministicPath)) return null;
   const deterministic = readJson(deterministicPath);
-  const artifact = readJson(artifactPath);
-  fs.copyFileSync(
-    bundlePath,
-    path.join(artifactRoot, `${attempt.run_id}.bundle.json`)
-  );
-  writeJson(
-    path.join(artifactRoot, `${attempt.run_id}.artifacts.json`),
-    artifact
-  );
+  const artifact = fs.existsSync(artifactPath) && fs.existsSync(bundlePath)
+    ? readJson(artifactPath)
+    : null;
+  if (artifact) {
+    fs.copyFileSync(
+      bundlePath,
+      path.join(artifactRoot, `${attempt.run_id}.bundle.json`)
+    );
+    writeJson(
+      path.join(artifactRoot, `${attempt.run_id}.artifacts.json`),
+      artifact
+    );
+  }
   return {
     deterministic,
     artifact,
-    bundleSha256: artifact.bundleSha256
+    bundleSha256: artifact?.bundleSha256 || null
   };
 }
 
@@ -1752,6 +1757,11 @@ function main() {
   const fileExportSql = `SELECT f.session_id, f.file_path, f.tool_name, f.turn_index, f.first_seen_at, s.cwd FROM session_files f JOIN sessions s ON s.id = f.session_id WHERE substr(f.first_seen_at, 1, 10) >= '2026-07-28' AND (${benchmarkCwdPredicate}) ORDER BY f.session_id, f.turn_index, f.file_path LIMIT 10000`;
   const sourceDatabaseSnapshot = snapshotSourceDatabase();
   sourceContext = {
+    executionIndex: copySource(
+      executionIndexSourcePath,
+      'sources/execution-index-sqlite-export.json',
+      'execution-index-sqlite-export'
+    ),
     usage: copySource(
       usageExportPath,
       'sources/local-usage-export.md',
@@ -1769,6 +1779,9 @@ function main() {
     )
   };
   const sourceByKind = new Map(provenanceSources.map((source) => [source.kind, source]));
+  sourceByKind.get('execution-index-sqlite-export').sqliteExport = readJson(
+    executionIndexSourcePath
+  );
   sourceByKind.get('local-usage-export').query = {
     dialect: 'sqlite',
     sql: usageExportSql,
@@ -1800,7 +1813,7 @@ function main() {
     attemptsBySchedule.set(attempt.schedule_id, current);
   }
   const scratchRoot = path.join(
-    os.tmpdir(),
+    path.resolve(root, '..', '..'),
     `.collection-scratch-${process.pid}`
   );
   fs.rmSync(scratchRoot, { recursive: true, force: true });
@@ -1817,6 +1830,9 @@ function main() {
   const frozenSelectedRunIds = new Set(executionIndex.selectedRuns
     .filter((run) => run.status === 'completed')
     .map((run) => `${run.schedule_id}-A${run.attempt}`));
+  const missingScheduleIds = new Set(executionIndex.selectedRuns
+    .filter((run) => run.status === 'missing')
+    .map((run) => run.schedule_id));
   try {
     for (const attempt of executionIndex.attempts) {
       const scheduleAttempts = attemptsBySchedule.get(attempt.schedule_id);
@@ -1979,10 +1995,8 @@ function main() {
           specialist &&
           (specialist.requestedModel !== specialistModel ||
             evidence.specialistObservedModel !== specialistModel));
-      const selectedModelMismatch = frozenSelectedRunIds.has(attempt.run_id) &&
-        observedModelMismatch;
       const provenanceMismatch = initialWorkspace.status !== 'pass';
-      const overrideReason = selectedModelMismatch
+      const overrideReason = observedModelMismatch
         ? 'wrong_model'
         : (provenanceMismatch ? 'hash_mismatch' : null);
       const exclusion = effectiveExclusion(attempt, scheduleAttempts, overrideReason);
@@ -2050,28 +2064,39 @@ function main() {
           : (attempt.terminal_commit_sha ? 'completed' : 'interrupted'),
         exclusion
       };
-      const artifactResult = reusedOutcome || buildArtifact(
-        attempt,
-        manifest,
-        deterministicResult.deterministic,
-        prompt,
-        repo,
-        terminalCommitSha,
-        initialCommitSha,
-        deterministicResult.workspace
-      );
-      manifest.refs.artifactBundleSha256 = artifactResult.bundleSha256;
+      const missingSchedule = missingScheduleIds.has(attempt.schedule_id);
+      if (missingSchedule) {
+        fs.rmSync(path.join(artifactRoot, `${attempt.run_id}.artifacts.json`), {
+          force: true
+        });
+        fs.rmSync(path.join(artifactRoot, `${attempt.run_id}.bundle.json`), {
+          force: true
+        });
+      }
+      const artifactResult = missingSchedule
+        ? null
+        : (reusedOutcome?.artifact ? reusedOutcome : buildArtifact(
+          attempt,
+          manifest,
+          deterministicResult.deterministic,
+          prompt,
+          repo,
+          terminalCommitSha,
+          initialCommitSha,
+          deterministicResult.workspace
+        ));
+      manifest.refs.artifactBundleSha256 = artifactResult?.bundleSha256 || emptySha256;
       validateRecord(manifest, 'run-manifest');
       validateRecord(evidence.telemetry, 'raw-telemetry');
       validateRecord(deterministicResult.deterministic, 'deterministic-results');
-      validateRecord(artifactResult.artifact, 'artifacts');
+      if (artifactResult) validateRecord(artifactResult.artifact, 'artifacts');
       writeJson(path.join(rawRoot, `${attempt.run_id}.manifest.json`), manifest);
       writeJson(path.join(rawRoot, `${attempt.run_id}.telemetry.json`), evidence.telemetry);
       writeJson(path.join(rawRoot, `${attempt.run_id}.deterministic.json`), deterministicResult.deterministic);
       records.push(manifest);
       telemetryRecords.push(evidence.telemetry);
       deterministicRecords.push(deterministicResult.deterministic);
-      artifactRecords.push(artifactResult.artifact);
+      if (artifactResult) artifactRecords.push(artifactResult.artifact);
       const conditionStatus = evaluateConditionCompliance(manifest, evidence.telemetry, prompt);
       const nestedSpecialistDelegations = evidence.telemetry.tools.filter((tool) => (
         tool.sessionId === manifest.sessions.specialist.sessionId &&
@@ -2081,7 +2106,7 @@ function main() {
         conditionStatus.compliant = false;
         conditionStatus.reasons.push('specialist created an additional nested delegation');
       }
-      if (attempt.schedule_id === 'P06-R3-treatment') {
+      if (attempt.run_id === 'P06-R3-treatment-A1') {
         conditionStatus.compliant = false;
         conditionStatus.reasons.push('specialist wrote in its own workspace and the parent copied the banner');
       }
@@ -2122,31 +2147,6 @@ function main() {
     .filter((run) => run.status === 'completed')
     .map((run) => `${run.schedule_id}-A${run.attempt}`));
   const selectedModelMismatches = modelMismatches.filter((record) => record.frozenSelected);
-  const retryPlanEntries = selectedModelMismatches.map((record) => {
-    const scheduleAttempts = attemptsBySchedule.get(record.scheduleId);
-    const action = record.attempt === 1 && !scheduleAttempts.some((item) => item.attempt === 2)
-      ? 'requires_real_A2'
-      : 'schedule_exhausted_missing';
-    return { ...record, action };
-  });
-  const retryRequired = retryPlanEntries.filter((entry) => entry.action === 'requires_real_A2');
-  const retryExhausted = retryPlanEntries.filter((entry) => (
-    entry.action === 'schedule_exhausted_missing'
-  ));
-  const wrongModelRetryPlan = {
-    protocolId,
-    recordType: 'wrong_model_retry_plan',
-    generatedAt: collectedAt,
-    selectionStatus: 'not_final_pending_real_retries',
-    mismatchedSelectedAttempts: retryPlanEntries,
-    requiresRealA2: retryRequired.map((entry) => entry.scheduleId),
-    exhaustedMissingSchedules: retryExhausted.map((entry) => entry.scheduleId),
-    rules: {
-      requiresRealA2: 'Create a real A2 attempt; no placeholder record exists in this collection.',
-      scheduleExhaustedMissing: 'The mismatched A2 is excluded wrong_model and no further retry is allowed.'
-    }
-  };
-  writeJson(path.join(rawRoot, 'wrong-model-retry-plan.json'), wrongModelRetryPlan);
   writeJson(path.join(rawRoot, 'provenance-index.json'), {
     protocolId,
     recordType: 'raw_provenance_index',
@@ -2154,7 +2154,6 @@ function main() {
     sources: provenanceSources
   });
   const currentlyEligibleRunIds = new Set([...selectedRunIds].filter((runId) => (
-    !selectedModelMismatches.some((record) => record.runId === runId) &&
     records.some((record) => record.runId === runId && !record.exclusion.excluded)
   )));
   const selectedDeterministic = deterministicRecords.filter((record) => selectedRunIds.has(record.runId));
@@ -2193,22 +2192,19 @@ function main() {
   ]));
   const summary = {
     protocolId,
-    collectionStage: 'provisional_execution_evidence_awaiting_wrong_model_retries',
+    collectionStage: 'reconciled_execution_evidence_no_judgments',
     collectedAt,
     counts: {
       plannedSchedules: executionIndex.selectedRuns.length,
       attempts: executionIndex.attempts.length,
       frozenSelectedCompleted: selectedRunIds.size,
-      wrongModelExcludedFrozenSelections: selectedModelMismatches.length,
+      wrongModelExcludedAttempts: records.filter((record) => (
+        record.exclusion.reason === 'wrong_model'
+      )).length,
       currentlyEligibleCompleted: currentlyEligibleRunIds.size,
-      pendingRealA2Schedules: retryRequired.length,
-      originalStructurallyMissingSchedules: executionIndex.selectedRuns
+      missingSchedules: executionIndex.selectedRuns
         .filter((run) => run.status === 'missing').length,
-      retryExhaustedMissingSchedules: retryExhausted.length,
-      knownMissingSchedules: executionIndex.selectedRuns
-        .filter((run) => run.status === 'missing').length + retryExhausted.length,
-      finalSelectedCount: null,
-      finalSelectedCountReason: 'pending_real_A2_execution',
+      finalSelectedCount: selectedRunIds.size,
       startedAttempts: records.filter((record) => record.attempt.phase === 'session_started').length,
       preExecutionAttempts: records.filter((record) => record.attempt.phase === 'pre_execution').length,
       excludedAttempts: records.filter((record) => record.exclusion.excluded).length,
@@ -2244,15 +2240,17 @@ function main() {
       phase: record.attempt.phase,
       reason: record.exclusion.reason
     })),
-    originalMissingSchedules: executionIndex.selectedRuns
+    missingSchedules: executionIndex.selectedRuns
       .filter((run) => run.status === 'missing')
       .map((run) => run.schedule_id),
-    retryExhaustedMissingSchedules: retryExhausted.map((entry) => entry.scheduleId),
-    pendingRetrySchedules: retryRequired.map((entry) => entry.scheduleId),
     deviations: executionIndex.deviations,
     terminalCommitRecoveries,
     modelMismatches,
-    wrongModelRetryPlan: 'raw/wrong-model-retry-plan.json',
+    retryExecution: {
+      status: 'complete',
+      reconciledIndex: 'raw/execution-index.json',
+      attempts: executionIndex.attempts.length
+    },
     initialWorkspace: {
       passed: initialWorkspaceRecords.filter((record) => record.status === 'pass').length,
       failed: initialWorkspaceRecords.filter((record) => record.status === 'fail').length,
@@ -2270,6 +2268,12 @@ function main() {
         usageExportSha256: sha256(fs.readFileSync(usageExportPath)),
         fileEvidenceExportSha256: sha256(fs.readFileSync(fileExportPath)),
         sourceDatabaseSnapshot
+      },
+      executionIndex: {
+        status: 'available',
+        sourcePath: sourceContext.executionIndex.path,
+        sourceSha256: sourceContext.executionIndex.sha256,
+        sqliteExport: readJson(executionIndexSourcePath)
       },
       localEventStreams: {
         status: 'available',
@@ -2295,27 +2299,21 @@ function main() {
         reason: 'judging_not_started'
       },
       observedModelMismatches: {
-        status: selectedModelMismatches.length === 0 ? 'clear' : 'retry_required',
+        status: selectedModelMismatches.length === 0 ? 'clear' : 'blocked',
         count: selectedModelMismatches.length,
         runIds: selectedModelMismatches.map((item) => item.runId),
         reason: selectedModelMismatches.length === 0
           ? null
-          : 'selected mismatches are excluded wrong_model; 15 real A2 retries remain pending and four schedules exhausted A2'
+          : 'reconciled selected run model mismatch remains'
       },
-      pendingRetryStructure: {
-        status: 'blocked',
-        schedules: retryRequired.map((entry) => entry.scheduleId),
-        reason: 'full dataset structure remains incomplete until 15 real A2 attempts execute'
-      },
-      telemetryCollectionFailures: {
-        status: 'collection_stage_only',
-        runIds: [
-          'P09-R2-treatment-A1',
-          'P09-R2-treatment-A2',
-          'P09-R3-treatment-A1',
-          'P09-R3-treatment-A2'
-        ],
-        reason: 'full validator expects available aggregate events, while collection-stage records correctly preserve unavailable telemetry for created parent sessions'
+      completeness: {
+        status: executionIndex.selectedRuns.some((run) => run.status === 'missing')
+          ? 'blocked'
+          : 'complete',
+        missingSchedules: executionIndex.selectedRuns
+          .filter((run) => run.status === 'missing')
+          .map((run) => run.schedule_id),
+        reason: 'genuine retry-exhausted schedules prevent complete paired analysis'
       },
       artifactBlinding: {
         status: 'blocked',
@@ -2337,8 +2335,8 @@ function main() {
 
 function runLocked() {
   const lockPath = path.join(
-    os.tmpdir(),
-    `ascii-art-collection-${sha256(Buffer.from(outputRoot, 'utf8')).slice(0, 16)}.lock`
+    path.resolve(root, '..', '..'),
+    `.collection-lock-${sha256(Buffer.from(outputRoot, 'utf8')).slice(0, 16)}`
   );
   let lock;
   try {

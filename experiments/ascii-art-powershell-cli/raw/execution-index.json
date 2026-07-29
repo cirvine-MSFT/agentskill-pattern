@@ -82,8 +82,8 @@
       "parent_session_id": "c7f34df7-d21b-432b-ae9f-abed7a5d7807",
       "branch": "cirvine-msft-add-due-command",
       "terminal_commit_sha": "dd47be53b743bf809e55170a552b22c0bc6a7125",
-      "status": "completed",
-      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms banner-only Haiku delegation and parent integration; compliance to be authenticated from telemetry."
+      "status": "missing",
+      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms banner-only Haiku delegation and parent integration; compliance to be authenticated from telemetry. A1 and A2 excluded; selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "schedule_id": "P05-R1-treatment",
@@ -172,8 +172,8 @@
       "parent_session_id": "4a9d61b0-02d9-4189-a040-4c28f4be59a0",
       "branch": "cirvine-msft-friendly-robot",
       "terminal_commit_sha": "f144e46b78ba5ede1bbb12fbdf242273afd34765",
-      "status": "completed",
-      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms banner-only Haiku delegation and parent integration; compliance to be authenticated from telemetry."
+      "status": "missing",
+      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms banner-only Haiku delegation and parent integration; compliance to be authenticated from telemetry. A1 and A2 excluded; selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "schedule_id": "P05-R1-control",
@@ -202,8 +202,8 @@
       "parent_session_id": "6bd24c63-4d0e-492b-97b8-c96daf088cae",
       "branch": "cirvine-msft-taskforge-undo",
       "terminal_commit_sha": "cce75d0bf2965947b0ca323791e956bfe5a3fef2",
-      "status": "completed",
-      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms banner-only Haiku delegation and parent integration; compliance to be authenticated from telemetry."
+      "status": "missing",
+      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms banner-only Haiku delegation and parent integration; compliance to be authenticated from telemetry. A1 and A2 excluded; selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "schedule_id": "P03-R1-control",
@@ -247,8 +247,8 @@
       "parent_session_id": "74a484a4-2fd1-44b1-870f-aa813be12595",
       "branch": "cirvine-msft-supreme-memory",
       "terminal_commit_sha": "1a2845fc9f8fc8105d23fa50ca2dada77e0770de",
-      "status": "completed",
-      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms fresh Haiku banner delegation, parent integration, and LF-only artifact; compliance to be authenticated from telemetry."
+      "status": "missing",
+      "notes": "Selected A2; A1 excluded wrong base; coordinator confirms fresh Haiku banner delegation, parent integration, and LF-only artifact; compliance to be authenticated from telemetry. A1 and A2 excluded; selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "schedule_id": "P10-R1-control",
@@ -302,13 +302,13 @@
       "position": 10,
       "repetition": 1,
       "condition": "treatment",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "d0f3bd66-4ee0-47f0-ad7b-87ee6a20f8c1",
-      "parent_session_id": "fb2776b6-29e5-4d4e-8931-3d39ffe6e34b",
-      "branch": "cirvine-msft-implement-csv-import",
-      "terminal_commit_sha": "b37fba9c2b7b9c93733e44ef2327cfeab73c4466",
+      "parent_session_id": "8967d165-5bb5-4c96-b941-ef048107e930",
+      "branch": "cirvine-msft-add-import-csv-command",
+      "terminal_commit_sha": "84ab56606fc13b288c757e95bc6b182fde8d583b",
       "status": "completed",
-      "notes": "Clean; customization verified; 33 assertions passed; compliance pending telemetry."
+      "notes": "Selected wrong-model A2 retry; authenticated gpt-5.6-sol parent + Haiku specialist; 23 assertions passed."
     },
     {
       "schedule_id": "P02-R2-control",
@@ -332,13 +332,13 @@
       "position": 2,
       "repetition": 2,
       "condition": "treatment",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
-      "parent_session_id": "ed2a4753-1e05-41ef-a597-35ba88f96e9b",
+      "parent_session_id": null,
       "branch": null,
-      "terminal_commit_sha": "68535f372df12f960ec80f3de7cc3b52ce9c8b03",
-      "status": "completed",
-      "notes": "Corrected terminal commit integrates validated LF-clean Haiku banner; 29 fixture assertions passed; clean; compliance pending telemetry."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1 and A2 excluded wrong_model; retry exhausted."
     },
     {
       "schedule_id": "P08-R2-control",
@@ -347,13 +347,13 @@
       "position": 3,
       "repetition": 2,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
-      "parent_session_id": "82a21f26-b75c-4497-8b7b-a2053ddee5a0",
+      "parent_session_id": null,
       "branch": "cirvine-msft-improved-fishstick",
-      "terminal_commit_sha": "9f40f84",
-      "status": "completed",
-      "notes": "Explicit control base; customization absent; fixture tests passed; clean."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1 and A2 excluded wrong_model; retry exhausted."
     },
     {
       "schedule_id": "P01-R2-treatment",
@@ -437,13 +437,13 @@
       "position": 9,
       "repetition": 2,
       "condition": "treatment",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
-      "parent_session_id": "061aa152-ada3-4a37-9dbb-5fd0099aca09",
-      "branch": "cirvine-msft-silver-spoon",
-      "terminal_commit_sha": "4e40505",
+      "parent_session_id": "6ab6803e-0efd-40a6-854f-69d6501c3e7c",
+      "branch": "cirvine-msft-add-due-report",
+      "terminal_commit_sha": "06b15dcd90cd03aefd14f8ba8de6f245cf39b630",
       "status": "completed",
-      "notes": "Explicit treatment base; one fresh Haiku banner-only delegation; parent integrated; 31 assertions passed; compliance pending telemetry."
+      "notes": "Selected wrong-model A2 retry; authenticated gpt-5.6-sol parent + Haiku specialist; tests passed."
     },
     {
       "schedule_id": "P09-R2-control",
@@ -452,13 +452,13 @@
       "position": 10,
       "repetition": 2,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "75eac705-af11-4fb9-ab5d-7995349dc76c",
-      "parent_session_id": "a6c776a0-1247-40b3-afea-f2063b140361",
+      "parent_session_id": null,
       "branch": null,
-      "terminal_commit_sha": "0862eb7",
-      "status": "completed",
-      "notes": "Explicit control preflight; 28 assertions passed."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1 and A2 excluded wrong_model; retry exhausted."
     },
     {
       "schedule_id": "P01-R2-control",
@@ -527,13 +527,13 @@
       "position": 5,
       "repetition": 2,
       "condition": "treatment",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
-      "parent_session_id": "65840909-c396-492b-a5f9-8db70de098ab",
+      "parent_session_id": null,
       "branch": "cirvine-msft-cuddly-eureka",
-      "terminal_commit_sha": "fb1c275",
-      "status": "completed",
-      "notes": "Explicit treatment base; fresh Haiku banner-only delegation; parent normalized CRLF to LF; tests passed; clean; compliance pending telemetry."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1/A2 excluded wrong_model; A2 authenticated claude-opus-4.8; retry exhausted."
     },
     {
       "schedule_id": "P05-R2-control",
@@ -572,13 +572,13 @@
       "position": 8,
       "repetition": 2,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
-      "parent_session_id": "678dfa27-f1e8-4f65-b7c5-03e3afe4f9a3",
-      "branch": null,
-      "terminal_commit_sha": "87a691d",
+      "parent_session_id": "f3e3cd96-92d2-4dd3-8753-05fc96263d62",
+      "branch": "cirvine-msft-implement-config-command",
+      "terminal_commit_sha": "619566c0cc2c8a8dea481f2531d45b43f27f17cc",
       "status": "completed",
-      "notes": "Explicit control base; 23 fixture assertions passed."
+      "notes": "Selected wrong-model A2 retry; authenticated gpt-5.6-sol; 22 assertions passed."
     },
     {
       "schedule_id": "P06-R2-control",
@@ -587,13 +587,13 @@
       "position": 9,
       "repetition": 2,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
-      "parent_session_id": "b342ee41-0cdf-4771-af9c-0d50718bd8a2",
-      "branch": "cirvine-msft-taskforge-due-command",
-      "terminal_commit_sha": "4b0bf57",
+      "parent_session_id": "ca7dc7d6-db90-45f8-8ba9-170e4558acaf",
+      "branch": "cirvine-msft-add-due-reports",
+      "terminal_commit_sha": "81e016f40fa71738048feb1d1949273b43edb00b",
       "status": "completed",
-      "notes": "Explicit control base; no customization/nested session; 22 base assertions and 14 focused tests passed."
+      "notes": "Selected wrong-model A2 retry; authenticated gpt-5.6-sol; 21 assertions passed."
     },
     {
       "schedule_id": "P10-R2-control",
@@ -617,13 +617,13 @@
       "position": 1,
       "repetition": 3,
       "condition": "treatment",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
-      "parent_session_id": "7cbf0c2a-f9f7-405e-b6f0-8bf5e3ffc5c7",
+      "parent_session_id": null,
       "branch": null,
-      "terminal_commit_sha": "69523c7",
-      "status": "completed",
-      "notes": "Explicit treatment base; one fresh Haiku banner session; 8 base + 20 config assertions passed; compliance pending telemetry."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1/A2 excluded wrong_model; A2 authenticated claude-opus-4.8."
     },
     {
       "schedule_id": "P06-R3-treatment",
@@ -632,13 +632,13 @@
       "position": 2,
       "repetition": 3,
       "condition": "treatment",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
-      "parent_session_id": "a17fd9eb-d28e-4e79-b229-e31e1908d334",
-      "branch": "cirvine-msft-turbo-dollop",
-      "terminal_commit_sha": "87116d7",
+      "parent_session_id": "e42f5392-4818-49bf-88b6-2c4822a1638e",
+      "branch": "cirvine-msft-taskforge-due-report",
+      "terminal_commit_sha": "9735bf175f3ba99da0a5830882f65653cdc428d1",
       "status": "completed",
-      "notes": "Intent-to-treat completed; tests pass; noncompliant: Haiku wrote own worktree and parent copied byte-identically instead of direct-write."
+      "notes": "Selected wrong-model A2 retry; authenticated gpt-5.6-sol + Haiku; tests passed."
     },
     {
       "schedule_id": "P01-R3-control",
@@ -752,13 +752,13 @@
       "position": 10,
       "repetition": 3,
       "condition": "treatment",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
-      "parent_session_id": "16f532ad-a147-43f6-b3bf-371dac40e69f",
+      "parent_session_id": null,
       "branch": "cirvine-msft-effective-bassoon",
-      "terminal_commit_sha": "5560840",
-      "status": "completed",
-      "notes": "Explicit treatment base; fresh Haiku banner-only delegation; 23 assertions passed; clean; compliance pending telemetry."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1/A2 excluded wrong_model; A2 authenticated claude-opus-4.8."
     },
     {
       "schedule_id": "P01-R3-treatment",
@@ -797,13 +797,13 @@
       "position": 3,
       "repetition": 3,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "75eac705-af11-4fb9-ab5d-7995349dc76c",
-      "parent_session_id": "8a69c470-a1f7-48f0-bf05-2efb412c609e",
+      "parent_session_id": null,
       "branch": null,
-      "terminal_commit_sha": "3dd06e9",
-      "status": "completed",
-      "notes": "Explicit control preflight; 25 assertions passed; no blocker."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1/A2 excluded wrong_model; A2 authenticated claude-opus-4.8; retry exhausted."
     },
     {
       "schedule_id": "P10-R3-treatment",
@@ -827,13 +827,13 @@
       "position": 5,
       "repetition": 3,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
-      "parent_session_id": "4cbde383-a286-4685-b467-3e3fef907b50",
+      "parent_session_id": null,
       "branch": "cirvine-msft-taskforge-stats-command",
-      "terminal_commit_sha": "ae8dc2c",
-      "status": "completed",
-      "notes": "Explicit control base; customization absent; 36 assertions passed; clean."
+      "terminal_commit_sha": null,
+      "status": "missing",
+      "notes": "A1/A2 excluded wrong_model; final A2 authenticated claude-opus-4.8."
     },
     {
       "schedule_id": "P03-R3-treatment",
@@ -857,13 +857,13 @@
       "position": 7,
       "repetition": 3,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
-      "parent_session_id": "147c0c74-61c9-476c-84d6-f53c24aa45a4",
-      "branch": "cirvine-msft-ideal-waffle",
-      "terminal_commit_sha": "f35d20b",
+      "parent_session_id": "45c8ce20-54b9-4330-b127-cb7d0c1d58f2",
+      "branch": "cirvine-msft-taskforge-due-report-a2",
+      "terminal_commit_sha": "0d2eec010cd2cea5c950cd10f3903625afc24d72",
       "status": "completed",
-      "notes": "Explicit control base; customization absent; no nested session; 34 assertions passed."
+      "notes": "Selected wrong-model A2 retry; authenticated gpt-5.6-sol; tests passed."
     },
     {
       "schedule_id": "P07-R3-treatment",
@@ -887,13 +887,13 @@
       "position": 9,
       "repetition": 3,
       "condition": "control",
-      "attempt": 1,
+      "attempt": 2,
       "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
-      "parent_session_id": "fd0cf6f9-4b05-4eb6-95f0-f7044f03f370",
-      "branch": null,
-      "terminal_commit_sha": "d726915",
+      "parent_session_id": "218c2881-1286-485f-be48-01e6e00528b0",
+      "branch": "cirvine-msft-add-cli-config",
+      "terminal_commit_sha": "f1b7c66ac1504101571d40059b9825a87c288281",
       "status": "completed",
-      "notes": "Explicit control base; 22 fixture assertions passed."
+      "notes": "Selected wrong-model A2 retry; authenticated gpt-5.6-sol; tests passed; clean."
     },
     {
       "schedule_id": "P02-R3-control",
@@ -1010,9 +1010,9 @@
       "parent_session_id": "c7f34df7-d21b-432b-ae9f-abed7a5d7807",
       "branch": "cirvine-msft-add-due-command",
       "terminal_commit_sha": "dd47be53b743bf809e55170a552b22c0bc6a7125",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Verified treatment base; repository tests pass; coordinator confirms banner-only delegation to one fresh claude-haiku-4.5 nested session and parent integration."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Verified treatment base; repository tests pass; coordinator confirms banner-only delegation to one fresh claude-haiku-4.5 nested session and parent integration. Selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "run_id": "P05-R1-treatment-A1",
@@ -1146,9 +1146,9 @@
       "parent_session_id": "4a9d61b0-02d9-4189-a040-4c28f4be59a0",
       "branch": "cirvine-msft-friendly-robot",
       "terminal_commit_sha": "f144e46b78ba5ede1bbb12fbdf242273afd34765",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Verified treatment base; 26 assertions passed; exactly one fresh claude-haiku-4.5 nested session handled banner only; BOM corrected; clean."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Verified treatment base; 26 assertions passed; exactly one fresh claude-haiku-4.5 nested session handled banner only; BOM corrected; clean. Selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "run_id": "P05-R1-control-A1",
@@ -1197,9 +1197,9 @@
       "parent_session_id": "6bd24c63-4d0e-492b-97b8-c96daf088cae",
       "branch": "cirvine-msft-taskforge-undo",
       "terminal_commit_sha": "cce75d0bf2965947b0ca323791e956bfe5a3fef2",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Verified treatment base; 24 assertions passed; exactly one fresh claude-haiku-4.5 nested session created only assets/undo.txt; parent integrated; clean."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Verified treatment base; 24 assertions passed; exactly one fresh claude-haiku-4.5 nested session created only assets/undo.txt; parent integrated; clean. Selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "run_id": "P03-R1-control-A1",
@@ -1265,9 +1265,9 @@
       "parent_session_id": "74a484a4-2fd1-44b1-870f-aa813be12595",
       "branch": "cirvine-msft-supreme-memory",
       "terminal_commit_sha": "1a2845fc9f8fc8105d23fa50ca2dada77e0770de",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Verified treatment base; 22 fixture assertions passed; fresh claude-haiku-4.5 nested session created compliant 12-line CONFIG banner; LF-only artifact verified."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Verified treatment base; 22 fixture assertions passed; fresh claude-haiku-4.5 nested session created compliant 12-line CONFIG banner; LF-only artifact verified. Selected A2 observed wrong parent model; retry exhausted."
     },
     {
       "run_id": "P10-R1-control-A1",
@@ -1333,9 +1333,26 @@
       "parent_session_id": "fb2776b6-29e5-4d4e-8931-3d39ffe6e34b",
       "branch": "cirvine-msft-implement-csv-import",
       "terminal_commit_sha": "b37fba9c2b7b9c93733e44ef2327cfeab73c4466",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Clean; customization verified; 33 assertions passed; compliance pending telemetry. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P02-R1-treatment-A2",
+      "schedule_id": "P02-R1-treatment",
+      "prompt_id": "P02",
+      "block": 2,
+      "position": 10,
+      "repetition": 1,
+      "condition": "treatment",
+      "attempt": 2,
+      "coordinator_session_id": "d0f3bd66-4ee0-47f0-ad7b-87ee6a20f8c1",
+      "parent_session_id": "8967d165-5bb5-4c96-b941-ef048107e930",
+      "branch": "cirvine-msft-add-import-csv-command",
+      "terminal_commit_sha": "84ab56606fc13b288c757e95bc6b182fde8d583b",
       "status": "completed",
       "exclusion_reason": null,
-      "notes": "Clean; customization verified; 33 assertions passed; compliance pending telemetry."
+      "notes": "Observed gpt-5.6-sol parent and claude-haiku-4.5 specialist; 23 assertions passed; clean."
     },
     {
       "run_id": "P02-R2-control-A1",
@@ -1367,9 +1384,26 @@
       "parent_session_id": "ed2a4753-1e05-41ef-a597-35ba88f96e9b",
       "branch": null,
       "terminal_commit_sha": "68535f372df12f960ec80f3de7cc3b52ce9c8b03",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Corrected terminal commit integrates validated LF-clean Haiku banner; 29 fixture assertions passed; clean."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Corrected terminal commit integrates validated LF-clean Haiku banner; 29 fixture assertions passed; clean. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P04-R2-treatment-A2",
+      "schedule_id": "P04-R2-treatment",
+      "prompt_id": "P04",
+      "block": 3,
+      "position": 2,
+      "repetition": 2,
+      "condition": "treatment",
+      "attempt": 2,
+      "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
+      "parent_session_id": "3cec4350-e00f-4bfa-b83e-d580cf63f616",
+      "branch": null,
+      "terminal_commit_sha": null,
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Observed claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P08-R2-control-A1",
@@ -1384,9 +1418,26 @@
       "parent_session_id": "82a21f26-b75c-4497-8b7b-a2053ddee5a0",
       "branch": "cirvine-msft-improved-fishstick",
       "terminal_commit_sha": "9f40f84",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Explicit control base; customization absent; fixture tests passed; clean."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control base; customization absent; fixture tests passed; clean. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P08-R2-control-A2",
+      "schedule_id": "P08-R2-control",
+      "prompt_id": "P08",
+      "block": 3,
+      "position": 3,
+      "repetition": 2,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
+      "parent_session_id": "a4d885af-66e5-4292-82f0-483c75e47b13",
+      "branch": null,
+      "terminal_commit_sha": null,
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Observed claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P01-R2-treatment-A1",
@@ -1486,9 +1537,26 @@
       "parent_session_id": "061aa152-ada3-4a37-9dbb-5fd0099aca09",
       "branch": "cirvine-msft-silver-spoon",
       "terminal_commit_sha": "4e40505",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit treatment base; one fresh Haiku banner-only delegation; parent integrated; 31 assertions passed. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P06-R2-treatment-A2",
+      "schedule_id": "P06-R2-treatment",
+      "prompt_id": "P06",
+      "block": 3,
+      "position": 9,
+      "repetition": 2,
+      "condition": "treatment",
+      "attempt": 2,
+      "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
+      "parent_session_id": "6ab6803e-0efd-40a6-854f-69d6501c3e7c",
+      "branch": "cirvine-msft-add-due-report",
+      "terminal_commit_sha": "06b15dcd90cd03aefd14f8ba8de6f245cf39b630",
       "status": "completed",
       "exclusion_reason": null,
-      "notes": "Explicit treatment base; one fresh Haiku banner-only delegation; parent integrated; 31 assertions passed."
+      "notes": "Observed gpt-5.6-sol parent and claude-haiku-4.5 specialist; tests passed; clean."
     },
     {
       "run_id": "P09-R2-control-A1",
@@ -1503,9 +1571,26 @@
       "parent_session_id": "a6c776a0-1247-40b3-afea-f2063b140361",
       "branch": null,
       "terminal_commit_sha": "0862eb7",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Explicit control preflight; 28 assertions passed."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control preflight; 28 assertions passed. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P09-R2-control-A2",
+      "schedule_id": "P09-R2-control",
+      "prompt_id": "P09",
+      "block": 3,
+      "position": 10,
+      "repetition": 2,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "75eac705-af11-4fb9-ab5d-7995349dc76c",
+      "parent_session_id": "c2ec9014-26bd-457c-8af9-78dacbdd1aa5",
+      "branch": null,
+      "terminal_commit_sha": null,
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Observed claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P01-R2-control-A1",
@@ -1588,9 +1673,26 @@
       "parent_session_id": "65840909-c396-492b-a5f9-8db70de098ab",
       "branch": "cirvine-msft-cuddly-eureka",
       "terminal_commit_sha": "fb1c275",
-      "status": "completed",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit treatment base; fresh Haiku banner-only delegation; tests passed; clean. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P08-R2-treatment-A2",
+      "schedule_id": "P08-R2-treatment",
+      "prompt_id": "P08",
+      "block": 4,
+      "position": 5,
+      "repetition": 2,
+      "condition": "treatment",
+      "attempt": 2,
+      "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
+      "parent_session_id": "23051fab-4f37-4862-8e48-52e6d769cf72",
+      "branch": "cirvine-msft-potential-adventure",
+      "terminal_commit_sha": null,
+      "status": "excluded",
       "exclusion_reason": null,
-      "notes": "Explicit treatment base; fresh Haiku banner-only delegation; tests passed; clean."
+      "notes": "Authenticated claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P05-R2-control-A1",
@@ -1656,9 +1758,26 @@
       "parent_session_id": "678dfa27-f1e8-4f65-b7c5-03e3afe4f9a3",
       "branch": null,
       "terminal_commit_sha": "87a691d",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control base; 23 fixture assertions passed. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P04-R2-control-A2",
+      "schedule_id": "P04-R2-control",
+      "prompt_id": "P04",
+      "block": 4,
+      "position": 8,
+      "repetition": 2,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
+      "parent_session_id": "f3e3cd96-92d2-4dd3-8753-05fc96263d62",
+      "branch": "cirvine-msft-implement-config-command",
+      "terminal_commit_sha": "619566c0cc2c8a8dea481f2531d45b43f27f17cc",
       "status": "completed",
       "exclusion_reason": null,
-      "notes": "Explicit control base; 23 fixture assertions passed."
+      "notes": "Authenticated gpt-5.6-sol; 22 assertions passed; clean."
     },
     {
       "run_id": "P06-R2-control-A1",
@@ -1673,9 +1792,26 @@
       "parent_session_id": "b342ee41-0cdf-4771-af9c-0d50718bd8a2",
       "branch": "cirvine-msft-taskforge-due-command",
       "terminal_commit_sha": "4b0bf57",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control base; no customization/nested session; tests passed. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P06-R2-control-A2",
+      "schedule_id": "P06-R2-control",
+      "prompt_id": "P06",
+      "block": 4,
+      "position": 9,
+      "repetition": 2,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
+      "parent_session_id": "ca7dc7d6-db90-45f8-8ba9-170e4558acaf",
+      "branch": "cirvine-msft-add-due-reports",
+      "terminal_commit_sha": "81e016f40fa71738048feb1d1949273b43edb00b",
       "status": "completed",
       "exclusion_reason": null,
-      "notes": "Explicit control base; no customization/nested session; tests passed."
+      "notes": "Authenticated gpt-5.6-sol; 21 assertions passed; clean."
     },
     {
       "run_id": "P10-R2-control-A1",
@@ -1707,9 +1843,26 @@
       "parent_session_id": "7cbf0c2a-f9f7-405e-b6f0-8bf5e3ffc5c7",
       "branch": null,
       "terminal_commit_sha": "69523c7",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Explicit treatment base; one fresh Haiku banner session; 28 assertions passed; compliance pending telemetry."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit treatment base; one fresh Haiku banner session; 28 assertions passed; compliance pending telemetry. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P04-R3-treatment-A2",
+      "schedule_id": "P04-R3-treatment",
+      "prompt_id": "P04",
+      "block": 5,
+      "position": 1,
+      "repetition": 3,
+      "condition": "treatment",
+      "attempt": 2,
+      "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
+      "parent_session_id": "1ca0ebff-b860-43e3-9586-990be71d4d21",
+      "branch": "cirvine-msft-sturdy-adventure",
+      "terminal_commit_sha": null,
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Authenticated claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P06-R3-treatment-A1",
@@ -1724,9 +1877,26 @@
       "parent_session_id": "a17fd9eb-d28e-4e79-b229-e31e1908d334",
       "branch": "cirvine-msft-turbo-dollop",
       "terminal_commit_sha": "87116d7",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Intent-to-treat completed; noncompliant direct-write boundary; tests pass. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P06-R3-treatment-A2",
+      "schedule_id": "P06-R3-treatment",
+      "prompt_id": "P06",
+      "block": 5,
+      "position": 2,
+      "repetition": 3,
+      "condition": "treatment",
+      "attempt": 2,
+      "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
+      "parent_session_id": "e42f5392-4818-49bf-88b6-2c4822a1638e",
+      "branch": "cirvine-msft-taskforge-due-report",
+      "terminal_commit_sha": "9735bf175f3ba99da0a5830882f65653cdc428d1",
       "status": "completed",
       "exclusion_reason": null,
-      "notes": "Intent-to-treat completed; noncompliant direct-write boundary; tests pass."
+      "notes": "Authenticated gpt-5.6-sol + claude-haiku-4.5; tests passed; clean."
     },
     {
       "run_id": "P01-R3-control-A1",
@@ -1877,9 +2047,26 @@
       "parent_session_id": "16f532ad-a147-43f6-b3bf-371dac40e69f",
       "branch": "cirvine-msft-effective-bassoon",
       "terminal_commit_sha": "5560840",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Explicit treatment base; fresh Haiku banner-only delegation; 23 assertions passed; clean."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit treatment base; fresh Haiku banner-only delegation; 23 assertions passed; clean. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P08-R3-treatment-A2",
+      "schedule_id": "P08-R3-treatment",
+      "prompt_id": "P08",
+      "block": 5,
+      "position": 10,
+      "repetition": 3,
+      "condition": "treatment",
+      "attempt": 2,
+      "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
+      "parent_session_id": "29d21117-7fa9-42d5-a43a-b2004743067e",
+      "branch": null,
+      "terminal_commit_sha": null,
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Authenticated claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P01-R3-treatment-A1",
@@ -1928,9 +2115,26 @@
       "parent_session_id": "8a69c470-a1f7-48f0-bf05-2efb412c609e",
       "branch": null,
       "terminal_commit_sha": "3dd06e9",
-      "status": "completed",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control preflight; 25 assertions passed; no blocker. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P09-R3-control-A2",
+      "schedule_id": "P09-R3-control",
+      "prompt_id": "P09",
+      "block": 6,
+      "position": 3,
+      "repetition": 3,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "75eac705-af11-4fb9-ab5d-7995349dc76c",
+      "parent_session_id": "d2643bfd-6046-4688-a134-bc9936ceac20",
+      "branch": "cirvine-msft-miniature-enigma",
+      "terminal_commit_sha": null,
+      "status": "excluded",
       "exclusion_reason": null,
-      "notes": "Explicit control preflight; 25 assertions passed; no blocker."
+      "notes": "Authenticated claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P10-R3-treatment-A1",
@@ -1962,9 +2166,26 @@
       "parent_session_id": "4cbde383-a286-4685-b467-3e3fef907b50",
       "branch": "cirvine-msft-taskforge-stats-command",
       "terminal_commit_sha": "ae8dc2c",
-      "status": "completed",
-      "exclusion_reason": null,
-      "notes": "Explicit control base; customization absent; 36 assertions passed; clean."
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control base; customization absent; 36 assertions passed; clean. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P08-R3-control-A2",
+      "schedule_id": "P08-R3-control",
+      "prompt_id": "P08",
+      "block": 6,
+      "position": 5,
+      "repetition": 3,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "42f7d602-f6fd-4629-991f-4091a0a13e5c",
+      "parent_session_id": "3d528073-41dd-45e1-a5e8-2dafdcc231cb",
+      "branch": null,
+      "terminal_commit_sha": null,
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Authenticated claude-opus-4.8; retry exhausted."
     },
     {
       "run_id": "P03-R3-treatment-A1",
@@ -1996,9 +2217,26 @@
       "parent_session_id": "147c0c74-61c9-476c-84d6-f53c24aa45a4",
       "branch": "cirvine-msft-ideal-waffle",
       "terminal_commit_sha": "f35d20b",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control base; customization absent; no nested session; 34 assertions passed. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P06-R3-control-A2",
+      "schedule_id": "P06-R3-control",
+      "prompt_id": "P06",
+      "block": 6,
+      "position": 7,
+      "repetition": 3,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827",
+      "parent_session_id": "45c8ce20-54b9-4330-b127-cb7d0c1d58f2",
+      "branch": "cirvine-msft-taskforge-due-report-a2",
+      "terminal_commit_sha": "0d2eec010cd2cea5c950cd10f3903625afc24d72",
       "status": "completed",
       "exclusion_reason": null,
-      "notes": "Explicit control base; customization absent; no nested session; 34 assertions passed."
+      "notes": "Authenticated gpt-5.6-sol; tests passed; clean."
     },
     {
       "run_id": "P07-R3-treatment-A1",
@@ -2030,9 +2268,26 @@
       "parent_session_id": "fd0cf6f9-4b05-4eb6-95f0-f7044f03f370",
       "branch": null,
       "terminal_commit_sha": "d726915",
+      "status": "excluded",
+      "exclusion_reason": "wrong_model",
+      "notes": "Explicit control base; 22 fixture assertions passed. Authenticated observed parent model mismatched preregistered gpt-5.6-sol; A1 excluded and real A2 required."
+    },
+    {
+      "run_id": "P04-R3-control-A2",
+      "schedule_id": "P04-R3-control",
+      "prompt_id": "P04",
+      "block": 6,
+      "position": 9,
+      "repetition": 3,
+      "condition": "control",
+      "attempt": 2,
+      "coordinator_session_id": "3758d931-1114-427d-8356-bf4a4e8425c5",
+      "parent_session_id": "218c2881-1286-485f-be48-01e6e00528b0",
+      "branch": "cirvine-msft-add-cli-config",
+      "terminal_commit_sha": "f1b7c66ac1504101571d40059b9825a87c288281",
       "status": "completed",
       "exclusion_reason": null,
-      "notes": "Explicit control base; 22 fixture assertions passed."
+      "notes": "Authenticated gpt-5.6-sol; fixture tests passed; clean."
     },
     {
       "run_id": "P02-R3-control-A1",
@@ -2080,6 +2335,13 @@
       "description": "Haiku nested session wrote banner in its own worktree; parent copied it byte-identically into P06-R3-treatment workspace.",
       "impact": "Treatment violates direct-write condition and may change parent context/tool usage; retain in intent-to-treat but exclude from per-protocol sensitivity set.",
       "remediation": "Authenticate from event/file telemetry, mark condition noncompliant, and report separately."
+    },
+    {
+      "id": "wrong-parent-model-reclassification",
+      "recorded_at": "2026-07-29 11:32:25",
+      "description": "Authenticated collection found 19 selected runs used an observed parent model other than preregistered gpt-5.6-sol.",
+      "impact": "Four selected A2 schedules exhausted retry and are missing; fifteen A1 schedules require real A2 execution.",
+      "remediation": "Exclude mismatched attempts as wrong_model, run exactly one A2 for unused slots with explicit model request, authenticate observed model before selection, and disclose."
     }
   ]
 }

@@ -9,7 +9,7 @@ const { readJson, root, sha256RawFile, walkFiles } = require('../lib');
 const rawRoot = path.join(root, 'raw');
 const artifactRoot = path.join(root, 'artifacts');
 const summary = readJson(path.join(root, 'results', 'collection-summary.json'));
-const retryPlan = readJson(path.join(rawRoot, 'wrong-model-retry-plan.json'));
+const index = readJson(path.join(rawRoot, 'execution-index.json'));
 const provenance = readJson(path.join(rawRoot, 'provenance-index.json'));
 const manifests = walkFiles(rawRoot)
   .filter((file) => file.endsWith('.manifest.json'))
@@ -21,30 +21,32 @@ const initial = walkFiles(rawRoot)
   .filter((file) => file.endsWith('.initial-workspace.json'))
   .map(readJson);
 const manifestByRun = new Map(manifests.map((record) => [record.runId, record]));
+const selectedRunIds = new Set(index.selectedRuns
+  .filter((record) => record.status === 'completed')
+  .map((record) => `${record.schedule_id}-A${record.attempt}`));
+const missingSchedules = new Set(index.selectedRuns
+  .filter((record) => record.status === 'missing')
+  .map((record) => record.schedule_id));
 
 assert.strictEqual(
   summary.collectionStage,
-  'provisional_execution_evidence_awaiting_wrong_model_retries'
+  'reconciled_execution_evidence_no_judgments'
 );
-assert.strictEqual(retryPlan.mismatchedSelectedAttempts.length, 19);
-assert.strictEqual(retryPlan.requiresRealA2.length, 15);
-assert.strictEqual(retryPlan.exhaustedMissingSchedules.length, 4);
-for (const entry of retryPlan.mismatchedSelectedAttempts) {
-  const manifest = manifestByRun.get(entry.runId);
-  assert(manifest, `${entry.runId} manifest missing`);
-  assert.strictEqual(entry.parentSessionId, manifest.sessions.parent.sessionId);
-  assert.strictEqual(entry.requestedParentModel, manifest.sessions.parent.requestedModel);
-  assert.strictEqual(entry.observedParentModel, manifest.sessions.parent.observedModel);
+assert.strictEqual(index.selectedRuns.length, 60);
+assert.strictEqual(index.attempts.length, 82);
+assert.strictEqual(index.deviations.length, 5);
+assert.strictEqual(selectedRunIds.size, 46);
+assert.strictEqual(missingSchedules.size, 14);
+assert(!fs.existsSync(path.join(rawRoot, 'wrong-model-retry-plan.json')));
+for (const runId of selectedRunIds) {
+  const manifest = manifestByRun.get(runId);
+  assert(manifest, `${runId} manifest missing`);
+  assert.strictEqual(manifest.exclusion.excluded, false);
+  assert.strictEqual(manifest.sessions.parent.requestedModel, 'gpt-5.6-sol');
+  assert.strictEqual(manifest.sessions.parent.observedModel, 'gpt-5.6-sol');
   if (manifest.condition === 'treatment') {
-    assert.strictEqual(entry.specialistSessionId, manifest.sessions.specialist.sessionId || null);
-  }
-  assert.strictEqual(manifest.exclusion.reason, 'wrong_model');
-  if (entry.action === 'requires_real_A2') {
-    assert.strictEqual(manifest.exclusion.retryId, `${entry.scheduleId}-A2`);
-    assert(!manifestByRun.has(`${entry.scheduleId}-A2`), `${entry.scheduleId} A2 was fabricated`);
-  } else {
-    assert.strictEqual(entry.attempt, 2);
-    assert.strictEqual(manifest.exclusion.retryId, null);
+    assert.strictEqual(manifest.sessions.specialist.requestedModel, 'claude-haiku-4.5');
+    assert.strictEqual(manifest.sessions.specialist.observedModel, 'claude-haiku-4.5');
   }
 }
 
@@ -70,6 +72,15 @@ for (const runId of createdWithoutCli) {
 assert(provenance.sources.some((source) => source.kind === 'local-usage-export'));
 assert(provenance.sources.some((source) => source.kind === 'local-file-change-export'));
 assert(provenance.sources.some((source) => source.kind === 'app-session-export'));
+const executionIndexSource = provenance.sources.find((source) => (
+  source.kind === 'execution-index-sqlite-export'
+));
+assert(executionIndexSource);
+assert.strictEqual(executionIndexSource.sqliteExport.queries.selectedRuns.rowCount, 60);
+assert.strictEqual(executionIndexSource.sqliteExport.queries.attempts.rowCount, 82);
+assert.strictEqual(executionIndexSource.sqliteExport.queries.deviations.rowCount, 5);
+assert.strictEqual(executionIndexSource.sqliteExport.executionIndex.selectedCompleted, 46);
+assert.strictEqual(executionIndexSource.sqliteExport.executionIndex.missingSchedules, 14);
 for (const source of provenance.sources) {
   const sourcePath = path.join(rawRoot, ...source.path.split('/'));
   assert(fs.existsSync(sourcePath), `${source.sourceId} source bytes missing`);
@@ -100,7 +111,7 @@ for (const record of telemetry) {
   }
 }
 
-assert.strictEqual(initial.length, 67);
+assert.strictEqual(initial.length, 82);
 for (const record of initial) {
   assert.match(record.initialTreeSha, /^[a-f0-9]{40}$/);
   assert.strictEqual(manifestByRun.get(record.runId).refs.initialTreeSha, record.initialTreeSha);
@@ -124,16 +135,25 @@ assert(p06Deviation);
 assert(p06Deviation.reasons.includes(
   'specialist wrote in its own workspace and the parent copied the banner'
 ));
+const p06Selected = summary.noncompliance.find((record) => (
+  record.runId === 'P06-R3-treatment-A2' &&
+  record.reasons.includes('specialist wrote in its own workspace and the parent copied the banner')
+));
+assert.strictEqual(p06Selected, undefined);
 
-assert.strictEqual(summary.counts.finalSelectedCount, null);
-assert.strictEqual(summary.counts.pendingRealA2Schedules, 15);
-assert.strictEqual(summary.counts.retryExhaustedMissingSchedules, 4);
-assert.strictEqual(summary.counts.knownMissingSchedules, 6);
+assert.strictEqual(summary.counts.finalSelectedCount, 46);
+assert.strictEqual(summary.counts.missingSchedules, 14);
+assert.strictEqual(summary.counts.attempts, 82);
+assert.strictEqual(summary.counts.wrongModelExcludedAttempts, 27);
+assert.strictEqual(summary.fullDatasetStageGates.observedModelMismatches.status, 'clear');
+assert.strictEqual(summary.fullDatasetStageGates.completeness.status, 'blocked');
+assert.strictEqual(summary.fullDatasetStageGates.completeness.missingSchedules.length, 14);
 assert.strictEqual(summary.fullDatasetStageGates.artifactBlinding.status, 'blocked');
 assert.strictEqual(manifestByRun.get('P04-R1-control-A1').exclusion.excluded, false);
-assert.strictEqual(
-  walkFiles(artifactRoot).filter((file) => file.endsWith('.artifacts.json')).length,
-  63
-);
+const artifactManifests = walkFiles(artifactRoot)
+  .filter((file) => file.endsWith('.artifacts.json'))
+  .map(readJson);
+assert.strictEqual(artifactManifests.length, 54);
+assert(artifactManifests.every((artifact) => !missingSchedules.has(artifact.scheduleId)));
 
-console.log('PASS: wrong-model, started-attempt, raw-source, initial-tree, and file-actor regressions');
+console.log('PASS: reconciled retries, models, missingness, provenance, and file actors');

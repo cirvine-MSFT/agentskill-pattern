@@ -1,0 +1,78 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P09-R3-control-A2",
+  "scheduleId": "P09-R3-control",
+  "promptId": "P09",
+  "status": "pass",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "undo-add",
+        "status": "pass",
+        "message": "Undo restores exact pre-add storage across processes."
+      },
+      {
+        "id": "undo-consumed",
+        "status": "pass",
+        "message": "Successful undo consumes the record."
+      },
+      {
+        "id": "undo-failed-preserves",
+        "status": "pass",
+        "message": "Failed mutation does not replace a valid undo record."
+      },
+      {
+        "id": "undo-remove",
+        "status": "pass",
+        "message": "Undo restores a removed task."
+      },
+      {
+        "id": "undo-banner",
+        "status": "pass",
+        "message": "Text undo renders the exact registered banner once before its expected result."
+      }
+    ]
+  },
+  "art": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit f8e7de59268d257f49fbe39987e05b658d65350e."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T13:53:30.935Z",
+  "completedAt": "2026-07-29T13:53:41.907Z"
+}

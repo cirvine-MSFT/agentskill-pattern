@@ -1,10 +1,17 @@
-96 row(s) returned:
+130 row(s) returned:
 
 | session_id | file_path | tool_name | turn_index | first_seen_at | cwd |
 | --- | --- | --- | --- | --- | --- |
 | 01431e7f-7ef4-40c8-8ab9-882ba9142187 | X:\code\copilot-worktrees\P06\cirvine-msft-silver-spoon\assets\due.txt | create | 0 | 2026-07-29T08:20:28.105Z | X:\code\copilot-worktrees\P06\cirvine-msft-supreme-engine |
 | 0485d1ec-1ac5-4e02-97fd-0979e2e1abe8 | X:\code\copilot-worktrees\P03\cirvine-msft-crispy-engine\assets\export.txt | create | 1 | 2026-07-29T07:44:09.929Z | X:\code\copilot-worktrees\P03\cirvine-msft-crispy-engine |
 | 0c712a7f-5b0c-404d-aa8d-2a2c93394446 | assets/due.txt | create | 1 | 2026-07-29T08:47:05.597Z | X:\code\copilot-worktrees\P06\cirvine-msft-expert-enigma |
+| 0cd2e581-36c8-4b00-9f40-7348e4d07d6d | X:\code\copilot-worktrees\P08\cirvine-msft-studious-broccoli\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T13:25:59.256Z | X:\code\copilot-worktrees\P08\cirvine-msft-studious-broccoli |
+| 0cd2e581-36c8-4b00-9f40-7348e4d07d6d | X:\code\copilot-worktrees\P08\cirvine-msft-studious-broccoli\src\TaskForge.ps1 | edit | 0 | 2026-07-29T13:26:10.235Z | X:\code\copilot-worktrees\P08\cirvine-msft-studious-broccoli |
+| 0cd2e581-36c8-4b00-9f40-7348e4d07d6d | X:\code\copilot-worktrees\P08\cirvine-msft-studious-broccoli\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T13:28:16.390Z | X:\code\copilot-worktrees\P08\cirvine-msft-studious-broccoli |
+| 0ce13401-6efa-46c7-bb13-aec479e0c8a4 | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma\.gitattributes | create | 0 | 2026-07-29T11:42:44.280Z | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma |
+| 0ce13401-6efa-46c7-bb13-aec479e0c8a4 | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T11:35:43.699Z | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma |
+| 0ce13401-6efa-46c7-bb13-aec479e0c8a4 | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma\src\TaskForge.ps1 | edit | 0 | 2026-07-29T11:36:46.107Z | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma |
+| 0ce13401-6efa-46c7-bb13-aec479e0c8a4 | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T11:38:07.082Z | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma |
 | 0f33e906-517a-43c3-9193-62a8b082d6e4 | X:\code\copilot-worktrees\P06\cirvine-msft-ubiquitous-couscous\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T08:00:39.710Z | X:\code\copilot-worktrees\P06\cirvine-msft-ubiquitous-couscous |
 | 0f33e906-517a-43c3-9193-62a8b082d6e4 | X:\code\copilot-worktrees\P06\cirvine-msft-ubiquitous-couscous\src\TaskForge.ps1 | edit | 0 | 2026-07-29T08:00:49.956Z | X:\code\copilot-worktrees\P06\cirvine-msft-ubiquitous-couscous |
 | 0f33e906-517a-43c3-9193-62a8b082d6e4 | X:\code\copilot-worktrees\P06\cirvine-msft-ubiquitous-couscous\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T08:01:36.094Z | X:\code\copilot-worktrees\P06\cirvine-msft-ubiquitous-couscous |
@@ -23,6 +30,7 @@
 | 26c9d8fc-d7c2-408f-a6b2-c21ca8fce6f1 | X:\code\copilot-worktrees\P06\cirvine-msft-turbo-dollop\src\TaskForge.ps1 | edit | 0 | 2026-07-29T08:47:28.719Z | X:\code\copilot-worktrees\P06\cirvine-msft-turbo-dollop |
 | 26c9d8fc-d7c2-408f-a6b2-c21ca8fce6f1 | X:\code\copilot-worktrees\P06\cirvine-msft-turbo-dollop\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T08:48:23.939Z | X:\code\copilot-worktrees\P06\cirvine-msft-turbo-dollop |
 | 2b312149-f793-4674-bff9-78a5389c223d | X:\code\copilot-worktrees\P08\cirvine-msft-fluffy-spoon\assets\stats.txt | create | 0 | 2026-07-29T08:34:57.732Z | X:\code\copilot-worktrees\P08\cirvine-msft-fluffy-spoon |
+| 358236c3-8ae0-42cb-8853-89b1b04a7261 | X:\code\copilot-worktrees\P04\cirvine-msft-vigilant-enigma\assets\config.txt | create | 1 | 2026-07-29T11:35:56.447Z | X:\code\copilot-worktrees\P04\cirvine-msft-stunning-memory |
 | 3b6abfa4-ec21-4e51-b836-950c9cbcdc73 | X:\code\copilot-worktrees\P04\cirvine-msft-supreme-pancake\assets\config.txt | create | 1 | 2026-07-29T08:48:06.317Z | X:\code\copilot-worktrees\P04\cirvine-msft-ideal-funicular |
 | 3d191770-0b61-456d-ae3e-6a41f6f3f5b0 | X:\code\copilot-worktrees\P06\cirvine-msft-stunning-chainsaw\README.md | edit | 0 | 2026-07-29T08:38:10.654Z | X:\code\copilot-worktrees\P06\cirvine-msft-stunning-chainsaw |
 | 3d191770-0b61-456d-ae3e-6a41f6f3f5b0 | X:\code\copilot-worktrees\P06\cirvine-msft-stunning-chainsaw\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T08:36:20.156Z | X:\code\copilot-worktrees\P06\cirvine-msft-stunning-chainsaw |
@@ -31,6 +39,8 @@
 | 3e7a8e55-51e2-4dab-b9f6-f61ae6106cff | X:\code\copilot-worktrees\P08\cirvine-msft-improved-fishstick\src\TaskForge.ps1 | edit | 0 | 2026-07-29T08:20:06.539Z | X:\code\copilot-worktrees\P08\cirvine-msft-improved-fishstick |
 | 3e7a8e55-51e2-4dab-b9f6-f61ae6106cff | X:\code\copilot-worktrees\P08\cirvine-msft-improved-fishstick\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T08:21:03.093Z | X:\code\copilot-worktrees\P08\cirvine-msft-improved-fishstick |
 | 404708ce-9b3d-45db-8130-7b99277fa165 | X:\code\copilot-worktrees\P01\cirvine-msft-fantastic-potato\assets\search.txt | create | 1 | 2026-07-29T08:18:20.160Z | X:\code\copilot-worktrees\P01\cirvine-msft-fantastic-potato |
+| 43840308-f27e-47c0-8835-f15e005a8ff4 | X:\code\copilot-worktrees\P06\cirvine-msft-didactic-system\assets\due.txt | create | 1 | 2026-07-29T13:24:47.990Z | X:\code\copilot-worktrees\P06\cirvine-msft-didactic-system |
+| 4e447638-c73b-4074-bfbb-dc169121b207 | X:\code\copilot-worktrees\P02\cirvine-msft-psychic-lamp\assets\import.txt | create | 1 | 2026-07-29T11:34:58.554Z | X:\code\copilot-worktrees\P02\cirvine-msft-psychic-lamp |
 | 4eca28b7-8356-4fc3-8a19-dffd236e1ba6 | X:\code\copilot-worktrees\P01\cirvine-msft-taskforge-search-command\assets\search.txt | create | 1 | 2026-07-29T08:57:53.031Z | X:\code\copilot-worktrees\P01\cirvine-msft-ubiquitous-fortnight |
 | 4ff648d5-e979-4ec3-a02b-190db3045245 | X:\code\copilot-worktrees\P03\cirvine-msft-didactic-winner\assets\export.txt | create | 1 | 2026-07-29T08:59:03.722Z | X:\code\copilot-worktrees\P03\cirvine-msft-didactic-winner |
 | 54dc9046-a977-4a7f-9c03-8572ed7e0f08 | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-funicular\.gitattributes | create | 0 | 2026-07-29T08:41:13.565Z | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-funicular |
@@ -42,6 +52,8 @@
 | 58be1325-9875-4d17-bce0-bb62d2e9caee | X:\code\copilot-worktrees\P08\cirvine-msft-miniature-couscous\src\TaskForge.ps1 | edit | 0 | 2026-07-29T09:00:53.130Z | X:\code\copilot-worktrees\P08\cirvine-msft-miniature-couscous |
 | 58be1325-9875-4d17-bce0-bb62d2e9caee | X:\code\copilot-worktrees\P08\cirvine-msft-miniature-couscous\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T09:01:43.377Z | X:\code\copilot-worktrees\P08\cirvine-msft-miniature-couscous |
 | 5db585dc-0bbf-4851-ad04-4c3c9b6b52f8 | X:\code\copilot-worktrees\P04\cirvine-msft-redesigned-journey\assets\config.txt | create | 0 | 2026-07-29T07:56:09.279Z | X:\code\copilot-worktrees\P04\cirvine-msft-redesigned-journey |
+| 5ee35ee3-e2bb-4f6a-9fbd-ac482a448ba4 | X:\code\copilot-worktrees\P08\cirvine-msft-sturdy-guide\src\TaskForge.ps1 | edit | 0 | 2026-07-29T11:36:48.036Z | X:\code\copilot-worktrees\P08\cirvine-msft-sturdy-guide |
+| 5ee35ee3-e2bb-4f6a-9fbd-ac482a448ba4 | X:\code\copilot-worktrees\P08\cirvine-msft-sturdy-guide\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T11:37:20.578Z | X:\code\copilot-worktrees\P08\cirvine-msft-sturdy-guide |
 | 6244740f-30aa-4356-9b74-c261115380d4 | X:\code\copilot-worktrees\P05\cirvine-msft-special-doodle\assets\bulk.txt | create | 1 | 2026-07-29T08:18:58.492Z | X:\code\copilot-worktrees\P05\cirvine-msft-special-doodle |
 | 6340daf9-e750-4ba4-8483-5d29cf1582b6 | X:\code\copilot-worktrees\P06\cirvine-msft-ideal-waffle\.gitattributes | create | 0 | 2026-07-29T09:04:13.341Z | X:\code\copilot-worktrees\P06\cirvine-msft-ideal-waffle |
 | 6340daf9-e750-4ba4-8483-5d29cf1582b6 | X:\code\copilot-worktrees\P06\cirvine-msft-ideal-waffle\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T08:59:52.647Z | X:\code\copilot-worktrees\P06\cirvine-msft-ideal-waffle |
@@ -53,12 +65,34 @@
 | 6530e80c-14aa-4e6b-b42d-8a6d598e3947 | X:\code\copilot-worktrees\P04\cirvine-msft-supreme-pancake\src\TaskForge.ps1 | edit | 0 | 2026-07-29T08:48:40.902Z | X:\code\copilot-worktrees\P04\cirvine-msft-supreme-pancake |
 | 6530e80c-14aa-4e6b-b42d-8a6d598e3947 | X:\code\copilot-worktrees\P04\cirvine-msft-supreme-pancake\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T08:52:08.987Z | X:\code\copilot-worktrees\P04\cirvine-msft-supreme-pancake |
 | 65cb0014-95bd-44e3-bc9e-d21cdc4b78b6 | X:\code\copilot-worktrees\P05\cirvine-msft-fictional-goggles\assets\bulk.txt | create | 1 | 2026-07-29T07:44:10.920Z | X:\code\copilot-worktrees\P05\cirvine-msft-fictional-goggles |
+| 65e632a8-0e7d-4bc0-b07e-a585a1712ba4 | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-adventure\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T13:30:07.060Z | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-adventure |
+| 65e632a8-0e7d-4bc0-b07e-a585a1712ba4 | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-adventure\src\TaskForge.ps1 | edit | 0 | 2026-07-29T13:30:18.868Z | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-adventure |
+| 65e632a8-0e7d-4bc0-b07e-a585a1712ba4 | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-adventure\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T13:33:33.152Z | X:\code\copilot-worktrees\P04\cirvine-msft-sturdy-adventure |
+| 6abaccd9-33d7-4edd-99c6-b9c54fe18392 | C:\Users\cirvine\.copilot\session-state\6abaccd9-33d7-4edd-99c6-b9c54fe18392\files\commit-msg.txt | create | 0 | 2026-07-29T13:33:56.542Z | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole |
+| 6abaccd9-33d7-4edd-99c6-b9c54fe18392 | C:\Users\cirvine\.copilot\session-state\6abaccd9-33d7-4edd-99c6-b9c54fe18392\files\gen-banner.ps1 | create | 0 | 2026-07-29T13:30:27.180Z | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole |
+| 6abaccd9-33d7-4edd-99c6-b9c54fe18392 | C:\Users\cirvine\.copilot\session-state\6abaccd9-33d7-4edd-99c6-b9c54fe18392\files\validate-banner.ps1 | create | 0 | 2026-07-29T13:30:42.202Z | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole |
+| 6abaccd9-33d7-4edd-99c6-b9c54fe18392 | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T13:31:37.212Z | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole |
+| 6abaccd9-33d7-4edd-99c6-b9c54fe18392 | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole\src\TaskForge.ps1 | edit | 0 | 2026-07-29T13:31:48.528Z | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole |
+| 6abaccd9-33d7-4edd-99c6-b9c54fe18392 | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T13:33:03.870Z | X:\code\copilot-worktrees\P08\cirvine-msft-super-guacamole |
+| 72e70cd4-589f-43fc-98c6-4945e2fa2d88 | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma\.gitattributes | create | 0 | 2026-07-29T13:25:28.166Z | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma |
+| 72e70cd4-589f-43fc-98c6-4945e2fa2d88 | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T13:22:05.951Z | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma |
+| 72e70cd4-589f-43fc-98c6-4945e2fa2d88 | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma\src\TaskForge.ps1 | edit | 0 | 2026-07-29T13:22:17.975Z | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma |
+| 72e70cd4-589f-43fc-98c6-4945e2fa2d88 | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T13:24:39.217Z | X:\code\copilot-worktrees\P09\cirvine-msft-miniature-enigma |
 | 7af8d6bc-2e08-4c9e-8ef4-33e696ffa6bb | X:\code\copilot-worktrees\P07\cirvine-msft-crispy-waddle\assets\tags.txt | create | 1 | 2026-07-29T08:33:53.416Z | X:\code\copilot-worktrees\P07\cirvine-msft-crispy-waddle |
 | 7bd22454-65fe-4ee2-92a0-f7b70775828f | X:\code\copilot-worktrees\P03\cirvine-msft-vigilant-winner\assets\export.txt | create | 1 | 2026-07-29T08:33:25.399Z | X:\code\copilot-worktrees\P03\cirvine-msft-vigilant-winner |
 | 7be1f43d-7550-4c53-8bad-cf2b530a5c0a | X:\code\copilot-worktrees\P08\cirvine-msft-friendly-robot\assets\stats.txt | create | 1 | 2026-07-29T08:01:19.125Z | X:\code\copilot-worktrees\P08\cirvine-msft-laughing-potato |
 | 8566255d-eb21-48ec-965e-357ee5311070 | C:\Users\cirvine\.copilot\session-state\8566255d-eb21-48ec-965e-357ee5311070\plan.md | create | 0 | 2026-07-29T08:01:11.852Z | X:\code\copilot-worktrees\P06\cirvine-msft-didactic-robot |
+| 8fb97e92-7a2a-4938-ad25-4442c83e73a9 | C:\Users\cirvine\.copilot\session-state\8fb97e92-7a2a-4938-ad25-4442c83e73a9\files\gen-banner.ps1 | create | 0 | 2026-07-29T11:37:44.567Z | X:\code\copilot-worktrees\P09\cirvine-msft-animated-enigma |
+| 8fb97e92-7a2a-4938-ad25-4442c83e73a9 | X:\code\copilot-worktrees\P09\cirvine-msft-animated-enigma\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T11:36:53.270Z | X:\code\copilot-worktrees\P09\cirvine-msft-animated-enigma |
+| 8fb97e92-7a2a-4938-ad25-4442c83e73a9 | X:\code\copilot-worktrees\P09\cirvine-msft-animated-enigma\src\TaskForge.ps1 | edit | 0 | 2026-07-29T11:37:04.168Z | X:\code\copilot-worktrees\P09\cirvine-msft-animated-enigma |
+| 8fb97e92-7a2a-4938-ad25-4442c83e73a9 | X:\code\copilot-worktrees\P09\cirvine-msft-animated-enigma\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T11:39:30.637Z | X:\code\copilot-worktrees\P09\cirvine-msft-animated-enigma |
 | 96a3e6fb-32ac-4cc4-94fd-f49925390929 | X:\code\copilot-worktrees\P01\cirvine-msft-fluffy-waffle\assets\search.txt | create | 1 | 2026-07-29T07:44:15.711Z | X:\code\copilot-worktrees\P01\cirvine-msft-fluffy-waffle |
+| 9db47c9f-1ce1-462c-99bc-4c4d795e95f4 | X:\code\copilot-worktrees\P06\cirvine-msft-automatic-chainsaw\assets\due.txt | create | 1 | 2026-07-29T11:35:05.538Z | X:\code\copilot-worktrees\P06\cirvine-msft-automatic-chainsaw |
+| a6901b94-1e8a-4b75-86df-fb38c871b677 | X:\code\copilot-worktrees\P08\cirvine-msft-studious-broccoli\assets\stats.txt | create | 1 | 2026-07-29T13:25:52.252Z | X:\code\copilot-worktrees\P08\cirvine-msft-glowing-disco |
 | af3f9b4c-0018-49c7-8b9e-f9b230d46204 | X:\code\copilot-worktrees\P02\cirvine-msft-turbo-chainsaw\assets\import.txt | create | 1 | 2026-07-29T08:33:24.341Z | X:\code\copilot-worktrees\P02\cirvine-msft-turbo-chainsaw |
+| afa49680-88d1-43da-9ed7-ea01605ca551 | X:\code\copilot-worktrees\P08\cirvine-msft-potential-adventure\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T13:22:34.039Z | X:\code\copilot-worktrees\P08\cirvine-msft-potential-adventure |
+| afa49680-88d1-43da-9ed7-ea01605ca551 | X:\code\copilot-worktrees\P08\cirvine-msft-potential-adventure\src\TaskForge.ps1 | edit | 0 | 2026-07-29T13:22:42.588Z | X:\code\copilot-worktrees\P08\cirvine-msft-potential-adventure |
+| afa49680-88d1-43da-9ed7-ea01605ca551 | X:\code\copilot-worktrees\P08\cirvine-msft-potential-adventure\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T13:23:18.089Z | X:\code\copilot-worktrees\P08\cirvine-msft-potential-adventure |
 | b55c70ca-2d88-41c3-b891-06ef98e1f910 | X:\code\copilot-worktrees\P08\cirvine-msft-friendly-robot\src\TaskForge.Core.psm1 | edit | 0 | 2026-07-29T08:01:49.271Z | X:\code\copilot-worktrees\P08\cirvine-msft-friendly-robot |
 | b55c70ca-2d88-41c3-b891-06ef98e1f910 | X:\code\copilot-worktrees\P08\cirvine-msft-friendly-robot\src\TaskForge.ps1 | edit | 0 | 2026-07-29T08:01:57.612Z | X:\code\copilot-worktrees\P08\cirvine-msft-friendly-robot |
 | b55c70ca-2d88-41c3-b891-06ef98e1f910 | X:\code\copilot-worktrees\P08\cirvine-msft-friendly-robot\tests\Run-Tests.ps1 | edit | 0 | 2026-07-29T08:03:55.364Z | X:\code\copilot-worktrees\P08\cirvine-msft-friendly-robot |

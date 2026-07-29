@@ -2,7 +2,7 @@
   "protocolId": "ascii-art-powershell-cli-v1",
   "runId": "P09-R2-treatment-A1",
   "scheduleId": "P09-R2-treatment",
-  "collectedAt": "2026-07-29T13:04:18.084Z",
+  "collectedAt": "2026-07-29T14:11:07.596Z",
   "metrics": {
     "totalSessionAiCredits": {
       "status": "unavailable",
@@ -186,7 +186,7 @@
   "compaction": [],
   "events": [
     {
-      "eventId": "app-session-export-ace63e550dd057f6ad89:line:276:offset:9910:sha:5b3e64ce69fadf1390da:id:6e0add8e-4e9c-4580-abca-3fe384411eea:session-start",
+      "eventId": "app-session-export-3d52ddf01ad6727be086:line:447:offset:16092:sha:5b3e64ce69fadf1390da:id:6e0add8e-4e9c-4580-abca-3fe384411eea:session-start",
       "sessionId": "6e0add8e-4e9c-4580-abca-3fe384411eea",
       "sequence": 1,
       "type": "session_start",
@@ -201,7 +201,7 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "app-session-export-ace63e550dd057f6ad89"
+      "rawSourceId": "app-session-export-3d52ddf01ad6727be086"
     }
   ],
   "routing": {
@@ -210,7 +210,7 @@
       "requestedModel": "gpt-5.6-sol",
       "observedModel": "unavailable:no_cli_session",
       "sourceEventIds": [
-        "app-session-export-ace63e550dd057f6ad89:line:276:offset:9910:sha:5b3e64ce69fadf1390da:id:6e0add8e-4e9c-4580-abca-3fe384411eea:session-start"
+        "app-session-export-3d52ddf01ad6727be086:line:447:offset:16092:sha:5b3e64ce69fadf1390da:id:6e0add8e-4e9c-4580-abca-3fe384411eea:session-start"
       ]
     },
     "specialist": {
@@ -228,9 +228,9 @@
   },
   "rawSources": [
     {
-      "sourceId": "app-session-export-ace63e550dd057f6ad89",
+      "sourceId": "app-session-export-3d52ddf01ad6727be086",
       "path": "sources/app-session-export.txt",
-      "sha256": "ace63e550dd057f6ad89d237fff423a1e4c14eca937571ef36356cd15fe958da",
+      "sha256": "3d52ddf01ad6727be086120e37ac1851c71b73ad13f51200f2baf8e48a10d37a",
       "collector": "exact_byte_copy",
       "collectedBySessionId": "d40e2522-1cd5-4c87-8fd3-42ddca22edb9"
     }
