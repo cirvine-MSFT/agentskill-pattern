@@ -10,9 +10,9 @@
 - All file hashes below use SHA-256 over bytes after canonical CRLF-to-LF normalization for registered text extensions (`sha256-normalized-lf-v1`); binary bytes are unchanged.
 - Prompt SHA-256: `b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3`.
 - Fixture-lock SHA-256: `903cc7150f0305959fbdade2ceb7aa9b764537f1fa16804a72e0465d2550c183`; every measured workspace is created from files matching `fixture/fixture-lock.json`.
-- Acceptance-lock SHA-256: `f7123db0de43de23f9eb4fbf757c7642b312878d2617d57cb7a50f08bf38541e`.
+- Acceptance-lock SHA-256: `fe977d58f12472bc882b956dca57bf590abfb0202a7603276ec607375b06c153`.
 - Randomization SHA-256: `17b872a454c9141fef73b6be939b6226c3b54ec7efac72c56e7fd4a1d4447ba0`.
-- Judge-assignment SHA-256: `094c0fb07b5cff25f3229cb4996ac058d9355a313f4022ddbef4245e67f7715b`.
+- Judge-assignment SHA-256: `6e9080eb0d83254aa2dadfbda544eaf8657f5fa3843a4bb57aea9cebdc2d36c8`.
 - Schedule seed: decimal `20260728`, algorithm `mulberry32-v1`.
 - Judge-assignment seed: decimal `560045`, algorithm `mulberry32-v1`.
 - Parent model: `gpt-5.6-sol`.
@@ -49,7 +49,7 @@ Both conditions receive the same prompt object from `prompts.json`, the same fix
 
 **Treatment coordinator instruction:** "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset."
 
-The coordinator records the exact injected instruction. Treatment is noncompliant if the specialist edits anything except the specified asset, if more than one specialist is used, or if the parent delegates non-banner work. Control is noncompliant if any nested session is created.
+The coordinator records the exact injected instruction. The validator requires byte-exact equality with the instruction registered for the scheduled condition. The requested and observed parent model must both be `gpt-5.6-sol`; the requested and observed treatment specialist model must both be `claude-haiku-4.5`. A mismatch is valid only when the attempt is excluded before outcomes are opened with exclusion reason `wrong_model`; otherwise validation fails. Treatment is noncompliant if the specialist edits anything except the specified asset, if more than one specialist is used, or if the parent delegates non-banner work. Control is noncompliant if any nested session is created.
 
 ## Fresh-session and workspace rules
 
@@ -108,15 +108,15 @@ Every metric is `{status,value,unit,source}` where status is `available`, `unava
 
 ## Deterministic checks
 
-The external runner checks task behavior via the CLI process, isolated data files, exit status, JSON/text output, persistence, and negative cases. `validate-art.js` checks the exact asset path, UTF-8/ASCII-only bytes, line endings, line count, width bounds, allowed character class, required literal token, forbidden trailing whitespace, and final newline. It also scans the workspace for unexpected extra `.txt` banner assets. Fixture-owned baseline tests must pass before materialization.
+The external runner checks task behavior via the CLI process, isolated data files, exit status, JSON/text output, persistence, and negative cases. Each CLI process has a fixed 30-second timeout. On timeout the runner terminates the entire process tree and records a deterministic failed timeout assertion; a timeout after work begins is not an unavailable result. Text-output checks compare stdout with the full normalized banner asset content rather than accepting the required token alone. `validate-art.js` checks the exact asset path, UTF-8/ASCII-only bytes, line endings, line count, width bounds, allowed character class, required literal token, forbidden trailing whitespace, and final newline. It also scans the workspace for unexpected extra `.txt` banner assets. Fixture-owned baseline tests must pass before materialization.
 
-Deterministic result is pass only if all functional and art checks pass and the workspace does not contain modified acceptance material. Record individual assertions; do not collapse missing execution into failure.
+Deterministic result is pass only if every assertion in every functional, art, and tamper child group passes. A failed assertion makes its child group and the top-level result fail. An unavailable assertion makes its child group and, absent a failure elsewhere, the top-level result unavailable; every unavailable group and top-level result requires a reason. `unavailable` is missing data, never a failure or a pass, and binary analysis omits its pair without substituting zero. Record individual assertions; do not collapse missing execution into failure.
 
 ## Blinded judge design
 
-After deterministic collection, generate anonymized bundles containing only the task prompt, terminal diff/source needed to assess it, test result, and rendered banner. Remove condition, model, session, branch, timing, token, and routing metadata. Randomize filenames and bundle order using `design/judge-assignments.json`.
+After deterministic collection, generate anonymized bundles containing only the task prompt, terminal diff/source needed to assess it, test result, and rendered banner. Remove condition, model, session, branch, timing, token, and routing metadata. Randomize filenames and bundle order using `design/judge-assignments.json`. After the sole non-excluded run is selected, create one schema-valid runtime binding per blind ID containing its assigned block, selected `runId`, source artifact bundle SHA-256, and final blind bundle SHA-256. Judgments repeat all four binding values and are rejected if any differ, so a replaced retry or artifact bundle cannot inherit a prior judgment.
 
-Six fresh GPT-5.6 Sol judge sessions each score one balanced block of ten primary artifacts plus one masked reliability duplicate. Every block's primary set contains one observation per prompt and, hidden from the judge, five observations per condition. A judge never sees paired primary observations side by side and receives no delegation information. Judge usage is excluded from all efficiency and latency metrics.
+Six fresh GPT-5.6 Sol judge sessions each score one balanced block of ten primary artifacts plus one masked reliability duplicate. Validation requires exactly one judge session ID for every artifact assigned to a block and exactly six distinct IDs across the six blocks; a judgment whose block or session membership differs from its assignment is rejected. Every block's primary set contains one observation per prompt and, hidden from the judge, five observations per condition. A judge never sees paired primary observations side by side and receives no delegation information. Judge usage is excluded from all efficiency and latency metrics.
 
 Use `rubric.md` verbatim. Judges return schema-valid JSON only. A 10% deterministic sample is duplicated across blocks under different blind IDs to estimate exact/within-one agreement; duplicates are excluded from outcome means. Judge sessions cannot edit artifacts or run implementation agents.
 
@@ -132,9 +132,11 @@ Primary outcomes:
 
 Secondary outcomes include all telemetry fields, six rubric dimensions, total/parent output tokens, specialist tokens, tool events, compact-return bytes, and latency.
 
-For continuous outcomes compute each prompt-repetition treatment-minus-control pair, the mean and median paired difference, and percent change relative to control when defined. For binary pass compute paired difference in percentage points and discordant counts. Aggregate rubric dimensions on their 1-5 scale without treating missing judgments as zero.
+For continuous outcomes compute each prompt-repetition treatment-minus-control pair, the mean and median paired difference, and percent change relative to control when defined. For binary pass compute condition means, paired differences, and confidence intervals in percentage points, plus discordant counts. Aggregate rubric dimensions on their 1-5 scale without treating missing judgments as zero.
 
-Confidence intervals use a seeded nonparametric cluster bootstrap with prompts as clusters (`seed=845621`, 10,000 draws): sample 10 prompt IDs with replacement and include all three within-prompt pairs for each sampled cluster. Report percentile 95% intervals. Also report prompt-level means, repetition-level results, intent-to-treat and per-protocol sensitivity, missingness by condition, and raw paired rows. No unpaired substitution, observation-level bootstrap, multiple-comparison significance claims, or post-hoc outcome switching.
+Confidence intervals use a seeded nonparametric cluster bootstrap with prompts as clusters (`seed=845621`, 10,000 draws): sample exactly 10 prompt IDs with replacement and include all three within-prompt pairs for each sampled cluster. A confidence interval is unavailable unless all three pairs are available for every one of the 10 preregistered prompt clusters; the analysis reports the reason instead of silently reducing clusters or bootstrapping incomplete clusters. Point estimates still use complete pairs and explicitly report missing pairs by condition. Also report prompt-level means, repetition-level results, intent-to-treat and per-protocol sensitivity, missingness by condition, and raw paired rows. No unpaired substitution, observation-level bootstrap, multiple-comparison significance claims, or post-hoc outcome switching.
+
+The secondary telemetry table is exhaustive rather than selective: by condition it reports each observed role/model split's AI credits, nano-AIU, cumulative and peak input tokens, output tokens, and cached tokens; aggregate exposed-tool/call/result counts; per-tool call, status, duration, and result-byte summaries; compaction event counts and compact-return bytes; routing/delegation evidence counts and raw-event reference counts; and unavailable/not-applicable/missing counts. Available metrics require numeric values and nonempty sources. Unavailable metrics require null values and nonempty reasons. Not-applicable metrics require null values, source, and reason. Treatment telemetry requires one provenance-matched parent split and one provenance-matched specialist split; control requires exactly one parent split and no specialist split.
 
 Practical materiality markers, interpreted as descriptive thresholds rather than hypothesis-test cutoffs:
 

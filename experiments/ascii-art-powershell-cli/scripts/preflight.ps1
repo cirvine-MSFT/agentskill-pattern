@@ -47,6 +47,10 @@ if ($LASTEXITCODE -ne 0) { $failures.Add('Randomization output is stale.') }
 if ($LASTEXITCODE -ne 0) { $failures.Add('Judge assignments are stale.') }
 & node (Join-Path $PSScriptRoot 'validate-dataset.js')
 if ($LASTEXITCODE -ne 0) { $failures.Add('Dataset validation failed.') }
+& node (Join-Path $PSScriptRoot 'tests/run-tests.js')
+if ($LASTEXITCODE -ne 0) { $failures.Add('Benchmark integrity regression tests failed.') }
+& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'tests/Run-AcceptanceHarness.Tests.ps1')
+if ($LASTEXITCODE -ne 0) { $failures.Add('Acceptance harness regression tests failed.') }
 & pwsh -NoProfile -File (Join-Path $root 'fixture/tests/Run-Tests.ps1')
 if ($LASTEXITCODE -ne 0) { $failures.Add('Base fixture tests failed.') }
 

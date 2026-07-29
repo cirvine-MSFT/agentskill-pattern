@@ -18,6 +18,8 @@ pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\scripts\preflight.p
 node .\experiments\ascii-art-powershell-cli\scripts\randomize.js --check
 node .\experiments\ascii-art-powershell-cli\scripts\create-judge-assignments.js --check
 node .\experiments\ascii-art-powershell-cli\scripts\validate-dataset.js
+node .\experiments\ascii-art-powershell-cli\scripts\tests\run-tests.js
+pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\scripts\tests\Run-AcceptanceHarness.Tests.ps1
 pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\fixture\tests\Run-Tests.ps1
 ```
 
@@ -35,8 +37,19 @@ Generate analysis only after complete, validated raw data exists:
 ```powershell
 node .\experiments\ascii-art-powershell-cli\scripts\summarize.js `
   --runs .\experiments\ascii-art-powershell-cli\raw `
+  --artifacts .\experiments\ascii-art-powershell-cli\artifacts `
   --judgments .\experiments\ascii-art-powershell-cli\judgments `
   --out .\experiments\ascii-art-powershell-cli\results\summary.json
+```
+
+Before judging, materialize the blinded bundle files and bind them to the selected runs and source artifact hashes:
+
+```powershell
+node .\experiments\ascii-art-powershell-cli\scripts\bind-blind-bundles.js `
+  --runs .\experiments\ascii-art-powershell-cli\raw `
+  --artifacts .\experiments\ascii-art-powershell-cli\artifacts `
+  --blind-bundles C:\path\to\blind-bundles `
+  --out .\experiments\ascii-art-powershell-cli\artifacts
 ```
 
 See `protocol.md` for the immutable preregistration, telemetry definitions, exclusions, judging, and analysis.

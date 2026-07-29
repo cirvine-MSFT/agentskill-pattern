@@ -29,7 +29,12 @@
     "promptId": { "type": "string", "pattern": "^P(0[1-9]|10)$" },
     "repetition": { "type": "integer", "minimum": 1, "maximum": 3 },
     "condition": { "enum": ["control", "treatment"] },
-    "conditionInstruction": { "type": "string", "minLength": 1 },
+    "conditionInstruction": {
+      "enum": [
+        "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+        "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset."
+      ]
+    },
     "execution": {
       "type": "object",
       "additionalProperties": false,

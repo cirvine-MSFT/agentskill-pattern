@@ -4,13 +4,14 @@
   "title": "Deterministic acceptance result",
   "type": "object",
   "additionalProperties": false,
-  "required": ["protocolId", "runId", "scheduleId", "promptId", "status", "functional", "art", "tamperCheck", "startedAt", "completedAt"],
+  "required": ["protocolId", "runId", "scheduleId", "promptId", "status", "unavailableReason", "functional", "art", "tamperCheck", "startedAt", "completedAt"],
   "properties": {
     "protocolId": { "const": "ascii-art-powershell-cli-v1" },
     "runId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A[1-2]$" },
     "scheduleId": { "type": "string" },
     "promptId": { "type": "string", "pattern": "^P(0[1-9]|10)$" },
     "status": { "enum": ["pass", "fail", "unavailable"] },
+    "unavailableReason": { "type": ["string", "null"] },
     "functional": { "$ref": "#/$defs/checkGroup" },
     "art": { "$ref": "#/$defs/checkGroup" },
     "tamperCheck": { "$ref": "#/$defs/checkGroup" },
@@ -21,9 +22,10 @@
     "checkGroup": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "assertions"],
+      "required": ["status", "unavailableReason", "assertions"],
       "properties": {
         "status": { "enum": ["pass", "fail", "unavailable"] },
+        "unavailableReason": { "type": ["string", "null"] },
         "assertions": {
           "type": "array",
           "items": {
