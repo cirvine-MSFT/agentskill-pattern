@@ -2356,8 +2356,8 @@ function main() {
 
 function runLocked() {
   const lockPath = path.join(
-    path.resolve(root, '..', '..'),
-    `.collection-lock-${sha256(Buffer.from(outputRoot, 'utf8')).slice(0, 16)}`
+    require('os').tmpdir(),
+    `ascii-art-collection-${sha256(Buffer.from(outputRoot, 'utf8')).slice(0, 16)}.lock`
   );
   let lock;
   try {
