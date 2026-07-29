@@ -21,6 +21,12 @@ const {
 } = require('./lib');
 const { sanitizedDeterministic } = require('./artifact-bundles');
 const {
+  assertMaterializedBytes,
+  fileAtCommit,
+  materializeGitTree,
+  repositoryFiles
+} = require('./collection-bytes');
+const {
   derivedConditionEvidence,
   evaluateConditionCompliance
 } = require('./telemetry-integrity');
@@ -576,16 +582,6 @@ function recoverTerminalCommit(repo, initialCommitSha, events) {
   return recovered;
 }
 
-function repositoryFiles(repo, commit) {
-  return git(repo, ['ls-tree', '-r', '--name-only', commit]).stdout
-    .split(/\r?\n/)
-    .filter(Boolean);
-}
-
-function fileAtCommit(repo, commit, file) {
-  return git(repo, ['show', `${commit}:${file}`], { encoding: null }).stdout;
-}
-
 function registeredTextHash(bytes) {
   return sha256(Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8'));
 }
@@ -714,17 +710,18 @@ function parseJsonOutput(stdout, fallbackId, stderr) {
   };
 }
 
-function runDeterministic(attempt, terminalCommitSha, initialCommitSha, prompt, repo, scratchRoot) {
+function runDeterministic(
+  attempt,
+  terminalCommitSha,
+  initialCommitSha,
+  prompt,
+  repo,
+  scratchRoot,
+  candidateFiles
+) {
   const workspace = path.join(scratchRoot, attempt.run_id);
-  const archive = path.join(scratchRoot, `${attempt.run_id}.tar`);
-  fs.rmSync(workspace, { recursive: true, force: true });
-  fs.mkdirSync(workspace, { recursive: true });
-  const archiveBytes = git(repo, ['archive', '--format=tar', terminalCommitSha], {
-    encoding: null
-  }).stdout;
-  fs.writeFileSync(archive, archiveBytes);
-  run('tar', ['-xf', archive, '-C', workspace]);
-  fs.rmSync(archive, { force: true });
+  materializeGitTree(repo, terminalCommitSha, workspace);
+  assertMaterializedBytes(workspace, candidateFiles);
 
   const startedAt = new Date().toISOString();
   const acceptanceScript = path.join(root, 'acceptance', 'cases', `${prompt.acceptanceCase}.Tests.ps1`);
@@ -810,6 +807,10 @@ function runDeterministic(attempt, terminalCommitSha, initialCommitSha, prompt, 
     id: 'terminal-commit-materialized',
     status: 'pass',
     message: `Candidate was materialized from exact terminal commit ${terminalCommitSha}.`
+  }, {
+    id: 'evaluated-bundle-byte-identity',
+    status: 'pass',
+    message: 'Every evaluated source, fixture test, and banner byte matched the terminal Git blob bytes used by the artifact bundle.'
   }];
 
   const functional = deterministicGroup(
@@ -841,10 +842,22 @@ function runDeterministic(attempt, terminalCommitSha, initialCommitSha, prompt, 
   return { deterministic, workspace, files };
 }
 
-function buildArtifact(attempt, manifest, deterministic, prompt, repo, terminalCommitSha, initialCommitSha, workspace) {
+function buildArtifactEntries(attempt, prompt, repo, terminalCommitSha, initialCommitSha) {
   const entries = [];
-  const add = (file, role, content) => {
-    if (!entries.some((entry) => entry.path === file)) entries.push({ path: file, role, content });
+  const add = (file, role, bytes) => {
+    if (!entries.some((entry) => entry.path === file)) {
+      const content = bytes.toString('utf8');
+      if (!Buffer.from(content, 'utf8').equals(bytes)) {
+        throw new Error(`${attempt.run_id} ${file} is not lossless UTF-8`);
+      }
+      entries.push({
+        path: file,
+        role,
+        content,
+        bytes,
+        sha256: sha256(bytes)
+      });
+    }
   };
   const diff = git(repo, [
     'diff',
@@ -858,38 +871,46 @@ function buildArtifact(attempt, manifest, deterministic, prompt, repo, terminalC
     'assets',
     '.gitattributes'
   ], { allowFailure: true }).stdout || '';
-  add('terminal.diff', 'diff', diff.replace(/\r\n/g, '\n'));
+  add(
+    'terminal.diff',
+    'diff',
+    Buffer.from(diff.replace(/\r\n/g, '\n'), 'utf8')
+  );
   const treeFiles = repositoryFiles(repo, terminalCommitSha);
   for (const file of treeFiles.filter((item) => item.startsWith('src/')).sort()) {
-    const bytes = fileAtCommit(repo, terminalCommitSha, file);
-    const content = bytes.toString('utf8');
-    if (!Buffer.from(content, 'utf8').equals(bytes)) {
-      throw new Error(`${attempt.run_id} ${file} is not lossless UTF-8`);
-    }
-    add(file, 'source', content);
+    add(file, 'source', fileAtCommit(repo, terminalCommitSha, file));
   }
   for (const file of treeFiles.filter((item) => item.startsWith('tests/')).sort()) {
-    const bytes = fileAtCommit(repo, terminalCommitSha, file);
-    const content = bytes.toString('utf8');
-    if (!Buffer.from(content, 'utf8').equals(bytes)) {
-      throw new Error(`${attempt.run_id} ${file} is not lossless UTF-8`);
-    }
-    add(file, 'fixture_test', content);
+    add(file, 'fixture_test', fileAtCommit(repo, terminalCommitSha, file));
   }
   if (treeFiles.includes(prompt.banner.path)) {
-    const bytes = fileAtCommit(repo, terminalCommitSha, prompt.banner.path);
-    const content = bytes.toString('utf8');
-    if (!Buffer.from(content, 'utf8').equals(bytes)) {
-      throw new Error(`${attempt.run_id} ${prompt.banner.path} is not lossless UTF-8`);
-    }
-    add(prompt.banner.path, 'banner', content);
+    add(
+      prompt.banner.path,
+      'banner',
+      fileAtCommit(repo, terminalCommitSha, prompt.banner.path)
+    );
   }
+  return entries;
+}
+
+function buildArtifact(
+  attempt,
+  manifest,
+  deterministic,
+  prompt,
+  terminalCommitSha,
+  entries
+) {
   const bundle = {
     protocolId,
     promptId: prompt.id,
     prompt: prompt.prompt,
     deterministic: sanitizedDeterministic(deterministic),
-    files: entries
+    files: entries.map(({ path: filePath, role, content }) => ({
+      path: filePath,
+      role,
+      content
+    }))
   };
   const bundlePath = `${attempt.run_id}.bundle.json`;
   const bundleBytes = canonicalJson(bundle);
@@ -903,15 +924,12 @@ function buildArtifact(attempt, manifest, deterministic, prompt, repo, terminalC
     terminalCommitSha,
     bundlePath,
     bundleSha256,
-    files: entries.map((entry) => {
-      const bytes = Buffer.from(entry.content, 'utf8');
-      return {
-        path: entry.path,
-        sha256: sha256(bytes),
-        bytes: bytes.length,
-        role: entry.role
-      };
-    })
+    files: entries.map((entry) => ({
+      path: entry.path,
+      sha256: entry.sha256,
+      bytes: entry.bytes.length,
+      role: entry.role
+    }))
   };
   writeJson(path.join(artifactRoot, `${attempt.run_id}.artifacts.json`), artifact);
   return { artifact, bundleSha256 };
@@ -1979,17 +1997,22 @@ function main() {
             : 'authoritative_index_terminal_was_null_no_resolvable_commit_event_initial_commit_used'
         });
       }
-      const reusedOutcome = reuseOutcome(attempt);
-      const deterministicResult = reusedOutcome
-        ? { deterministic: reusedOutcome.deterministic, workspace: null }
-        : runDeterministic(
-          attempt,
-          terminalCommitSha,
-          initialCommitSha,
-          prompt,
-          repo,
-          scratchRoot
-        );
+      const artifactEntries = buildArtifactEntries(
+        attempt,
+        prompt,
+        repo,
+        terminalCommitSha,
+        initialCommitSha
+      );
+      const deterministicResult = runDeterministic(
+        attempt,
+        terminalCommitSha,
+        initialCommitSha,
+        prompt,
+        repo,
+        scratchRoot,
+        artifactEntries.filter((entry) => entry.role !== 'diff')
+      );
       const observedModelMismatch = evidence.parentObservedModel !== parentModel ||
         (attempt.condition === 'treatment' &&
           specialist &&
@@ -2075,16 +2098,14 @@ function main() {
       }
       const artifactResult = missingSchedule
         ? null
-        : (reusedOutcome?.artifact ? reusedOutcome : buildArtifact(
+        : buildArtifact(
           attempt,
           manifest,
           deterministicResult.deterministic,
           prompt,
-          repo,
           terminalCommitSha,
-          initialCommitSha,
-          deterministicResult.workspace
-        ));
+          artifactEntries
+        );
       manifest.refs.artifactBundleSha256 = artifactResult?.bundleSha256 || emptySha256;
       validateRecord(manifest, 'run-manifest');
       validateRecord(evidence.telemetry, 'raw-telemetry');
@@ -2335,8 +2356,8 @@ function main() {
 
 function runLocked() {
   const lockPath = path.join(
-    require('os').tmpdir(),
-    `ascii-art-collection-${sha256(Buffer.from(outputRoot, 'utf8')).slice(0, 16)}.lock`
+    path.resolve(root, '..', '..'),
+    `.collection-lock-${sha256(Buffer.from(outputRoot, 'utf8')).slice(0, 16)}`
   );
   let lock;
   try {

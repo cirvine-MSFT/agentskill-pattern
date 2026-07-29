@@ -4,7 +4,13 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readJson, root, sha256RawFile, walkFiles } = require('../lib');
+const { spawnSync } = require('child_process');
+const {
+  assertMaterializedBytes,
+  fileAtCommit,
+  materializeGitTree
+} = require('../collection-bytes');
+const { readJson, root, sha256, sha256RawFile, walkFiles } = require('../lib');
 
 const rawRoot = path.join(root, 'raw');
 const artifactRoot = path.join(root, 'artifacts');
@@ -156,4 +162,60 @@ const artifactManifests = walkFiles(artifactRoot)
 assert.strictEqual(artifactManifests.length, 54);
 assert(artifactManifests.every((artifact) => !missingSchedules.has(artifact.scheduleId)));
 
-console.log('PASS: reconciled retries, models, missingness, provenance, and file actors');
+const byteTestRoot = path.join(__dirname, '.collection-bytes-test');
+fs.rmSync(byteTestRoot, { recursive: true, force: true });
+fs.mkdirSync(byteTestRoot, { recursive: true });
+try {
+  const repo = path.join(byteTestRoot, 'repo');
+  const exactWorkspace = path.join(byteTestRoot, 'exact');
+  const checkoutWorkspace = path.join(byteTestRoot, 'checkout');
+  fs.mkdirSync(repo);
+  const git = (...args) => {
+    const result = spawnSync('git', ['-C', repo, ...args], {
+      encoding: 'utf8',
+      windowsHide: true
+    });
+    assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+    return result.stdout.trim();
+  };
+  git('init', '--quiet');
+  git('config', 'user.name', 'Collection Test');
+  git('config', 'user.email', 'collection@example.invalid');
+  fs.mkdirSync(path.join(repo, 'src'));
+  fs.writeFileSync(
+    path.join(repo, '.gitattributes'),
+    'src/Exact.ps1 text eol=crlf\n',
+    'utf8'
+  );
+  fs.writeFileSync(path.join(repo, 'src', 'Exact.ps1'), 'line-one\nline-two\n', 'utf8');
+  git('add', '.gitattributes', 'src/Exact.ps1');
+  git('commit', '--quiet', '-m', 'Exact bytes');
+  const commit = git('rev-parse', 'HEAD');
+  const blob = fileAtCommit(repo, commit, 'src/Exact.ps1');
+  const expected = [{
+    path: 'src/Exact.ps1',
+    bytes: blob,
+    sha256: sha256(blob)
+  }];
+  materializeGitTree(repo, commit, exactWorkspace);
+  assertMaterializedBytes(exactWorkspace, expected);
+  const clone = spawnSync(
+    'git',
+    ['-c', 'core.autocrlf=true', 'clone', '--quiet', repo, checkoutWorkspace],
+    { encoding: 'utf8', windowsHide: true }
+  );
+  assert.strictEqual(clone.status, 0, clone.stderr || clone.stdout);
+  const checkoutBytes = fs.readFileSync(
+    path.join(checkoutWorkspace, 'src', 'Exact.ps1')
+  );
+  assert(checkoutBytes.includes(Buffer.from('\r\n')));
+  assert(!checkoutBytes.equals(blob));
+  assert.throws(
+    () => assertMaterializedBytes(checkoutWorkspace, expected),
+    /evaluated bytes differ/
+  );
+} finally {
+  fs.rmSync(byteTestRoot, { recursive: true, force: true });
+}
+
+console.log('PASS: reconciled retries, models, missingness, provenance, file actors, and exact Git bytes');

@@ -290,6 +290,15 @@ for (const record of manifests) {
   }
   if (artifact) validateArtifact(record, deterministicRecord, artifact, prompt);
   else check(originalMissingSchedules.has(record.scheduleId), `${record.runId} missing artifact is allowed only for an exhausted original schedule`);
+  if (artifact) {
+    const byteAssertion = deterministicRecord.tamperCheck.assertions.find((assertion) => (
+      assertion.id === 'evaluated-bundle-byte-identity'
+    ));
+    check(
+      byteAssertion?.status === 'pass',
+      `${record.runId} evaluated bytes must be authenticated to artifact bundle bytes`
+    );
+  }
 }
 
 for (const runId of selectedRunIds) {

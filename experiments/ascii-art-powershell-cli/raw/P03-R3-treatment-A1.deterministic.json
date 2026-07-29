@@ -3,7 +3,7 @@
   "runId": "P03-R3-treatment-A1",
   "scheduleId": "P03-R3-treatment",
   "promptId": "P03",
-  "status": "fail",
+  "status": "pass",
   "unavailableReason": null,
   "functional": {
     "status": "pass",
@@ -32,73 +32,13 @@
     ]
   },
   "art": {
-    "status": "fail",
+    "status": "pass",
     "unavailableReason": null,
     "assertions": [
       {
-        "id": "art-1",
-        "status": "fail",
-        "message": "asset must use LF line endings"
-      },
-      {
-        "id": "art-2",
-        "status": "fail",
-        "message": "line 1 contains a forbidden character"
-      },
-      {
-        "id": "art-3",
-        "status": "fail",
-        "message": "line 2 contains a forbidden character"
-      },
-      {
-        "id": "art-4",
-        "status": "fail",
-        "message": "line 3 contains a forbidden character"
-      },
-      {
-        "id": "art-5",
-        "status": "fail",
-        "message": "line 4 contains a forbidden character"
-      },
-      {
-        "id": "art-6",
-        "status": "fail",
-        "message": "line 5 contains a forbidden character"
-      },
-      {
-        "id": "art-7",
-        "status": "fail",
-        "message": "line 6 contains a forbidden character"
-      },
-      {
-        "id": "art-8",
-        "status": "fail",
-        "message": "line 7 contains a forbidden character"
-      },
-      {
-        "id": "art-9",
-        "status": "fail",
-        "message": "line 8 contains a forbidden character"
-      },
-      {
-        "id": "art-10",
-        "status": "fail",
-        "message": "line 9 contains a forbidden character"
-      },
-      {
-        "id": "art-11",
-        "status": "fail",
-        "message": "line 10 contains a forbidden character"
-      },
-      {
-        "id": "art-12",
-        "status": "fail",
-        "message": "line 11 contains a forbidden character"
-      },
-      {
-        "id": "art-13",
-        "status": "fail",
-        "message": "line 12 contains a forbidden character"
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
       }
     ]
   },
@@ -125,9 +65,14 @@
         "id": "terminal-commit-materialized",
         "status": "pass",
         "message": "Candidate was materialized from exact terminal commit a91c86c0f7ab0d8aebcc96f6c4e78836ed3fddb3."
+      },
+      {
+        "id": "evaluated-bundle-byte-identity",
+        "status": "pass",
+        "message": "Every evaluated source, fixture test, and banner byte matched the terminal Git blob bytes used by the artifact bundle."
       }
     ]
   },
-  "startedAt": "2026-07-29T12:48:05.488Z",
-  "completedAt": "2026-07-29T12:48:10.561Z"
+  "startedAt": "2026-07-29T16:00:40.943Z",
+  "completedAt": "2026-07-29T16:00:47.620Z"
 }
