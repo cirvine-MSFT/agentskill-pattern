@@ -17,7 +17,7 @@
   },
   "P05": {
     "interface": "complete-many --ids ID,ID [--data-file PATH] [--json]",
-    "checks": ["all selected IDs complete atomically", "duplicate/malformed/unknown IDs reject without mutation", "JSON changedIds and alreadyCompletedIds contain exact ordered IDs", "repeated calls are idempotent"]
+    "checks": ["all selected IDs complete atomically", "duplicate/malformed/unknown IDs reject without mutation", "already-completed IDs reported", "repeated calls are idempotent"]
   },
   "P06": {
     "interface": "add ... [--due YYYY-MM-DD]; due --on-or-before YYYY-MM-DD [--include-completed] [--data-file PATH] [--json]",

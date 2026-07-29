@@ -3,6 +3,15 @@
   "seed": 560045,
   "algorithm": "mulberry32-v1",
   "judgeUsageExcludedFromEfficiency": true,
+  "runtimeBindingSchema": "schemas/blind-bundle.schema.json",
+  "runtimeBindingKeys": [
+    "blindId",
+    "judgeBlock",
+    "scheduleId",
+    "runId",
+    "sourceArtifactBundleSha256",
+    "blindBundleSha256"
+  ],
   "blocks": [
     {
       "block": 1,

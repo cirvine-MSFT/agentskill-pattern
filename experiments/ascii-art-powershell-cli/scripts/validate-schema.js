@@ -28,9 +28,8 @@ function validateSchema(instance, schema, rootSchema = schema, location = '$') {
     if (matches.length !== 1) errors.push(`${location} must match exactly one oneOf branch`);
   }
   if (schema.anyOf) {
-    if (!schema.anyOf.some((candidate) => validateSchema(instance, candidate, rootSchema, location).length === 0)) {
-      errors.push(`${location} must match at least one anyOf branch`);
-    }
+    const matches = schema.anyOf.filter((candidate) => validateSchema(instance, candidate, rootSchema, location).length === 0);
+    if (matches.length === 0) errors.push(`${location} must match at least one anyOf branch`);
   }
   if (schema.allOf) {
     schema.allOf.forEach((candidate) => errors.push(...validateSchema(instance, candidate, rootSchema, location)));

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "wrong-condition-instruction",
+    "mutation": "wrongConditionInstruction",
+    "expected": "must use the exact preregistered"
+  },
+  {
+    "id": "wrong-model-not-excluded",
+    "mutation": "wrongModelNotExcluded",
+    "expected": "must be explicitly excluded with reason wrong_model"
+  },
+  {
+    "id": "wrong-requested-parent-model-not-excluded",
+    "mutation": "wrongRequestedParentModelNotExcluded",
+    "expected": "must be explicitly excluded with reason wrong_model"
+  },
+  {
+    "id": "wrong-treatment-specialist-model-not-excluded",
+    "mutation": "wrongTreatmentSpecialistModelNotExcluded",
+    "expected": "must be explicitly excluded with reason wrong_model"
+  },
+  {
+    "id": "deterministic-pass-with-unavailable-child",
+    "mutation": "deterministicPassWithUnavailableChild",
+    "expected": "deterministic top-level status must reflect every child check"
+  },
+  {
+    "id": "deterministic-pass-with-failed-child",
+    "mutation": "deterministicPassWithFailedChild",
+    "expected": "deterministic top-level status must reflect every child check"
+  },
+  {
+    "id": "blind-binding-replaced-run",
+    "mutation": "blindBindingReplacedRun",
+    "expected": "must bind to selected run"
+  },
+  {
+    "id": "judgment-replaced-artifact-hash",
+    "mutation": "judgmentReplacedArtifactHash",
+    "expected": "judgment source artifact hash must match bound blind bundle"
+  },
+  {
+    "id": "judge-session-reused-across-blocks",
+    "mutation": "judgeSessionReusedAcrossBlocks",
+    "expected": "exactly six distinct judge session IDs"
+  },
+  {
+    "id": "judgment-wrong-block",
+    "mutation": "judgmentWrongBlock",
+    "expected": "judge block must match assignment"
+  },
+  {
+    "id": "available-metric-null",
+    "mutation": "availableMetricNull",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
+    "id": "unavailable-metric-has-value",
+    "mutation": "unavailableMetricHasValue",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
+    "id": "missing-parent-model-split",
+    "mutation": "missingParentModelSplit",
+    "expected": "exactly one parent model split"
+  },
+  {
+    "id": "treatment-missing-specialist-provenance",
+    "mutation": "treatmentMissingSpecialistProvenance",
+    "expected": "exactly one specialist model split"
+  }
+]

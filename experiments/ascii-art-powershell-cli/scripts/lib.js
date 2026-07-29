@@ -5,6 +5,14 @@ const path = require('path');
 const crypto = require('crypto');
 
 const root = path.resolve(__dirname, '..');
+const protocolId = 'ascii-art-powershell-cli-v1';
+const parentModel = 'gpt-5.6-sol';
+const specialistModel = 'claude-haiku-4.5';
+const judgeModel = 'gpt-5.6-sol';
+const conditionInstructions = Object.freeze({
+  control: 'Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.',
+  treatment: 'Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.'
+});
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -93,13 +101,18 @@ function compareOrWrite(file, value, check) {
 
 module.exports = {
   compareOrWrite,
+  conditionInstructions,
+  judgeModel,
   mulberry32,
+  parentModel,
   parseArguments,
+  protocolId,
   readJson,
   root,
   sha256,
   sha256File,
   shuffle,
+  specialistModel,
   walkFiles,
   writeJson
 };
