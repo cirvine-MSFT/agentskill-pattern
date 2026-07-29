@@ -18,8 +18,12 @@ const {
 
 const args = parseArguments(process.argv.slice(2));
 if (!args.runs || !args.artifacts || !args.judgments || !args.out) {
-  console.error('Usage: summarize.js --runs DIR --artifacts DIR --judgments DIR --out FILE [--allow-incomplete]');
+  console.error('Usage: summarize.js --runs DIR --artifacts DIR --judgments DIR --out FILE [--allow-incomplete] [--generated-at ISO-8601]');
   process.exit(2);
+}
+const generatedAt = args['generated-at'] || new Date().toISOString();
+if (Number.isNaN(Date.parse(generatedAt))) {
+  throw new Error('--generated-at must be a valid ISO-8601 timestamp.');
 }
 
 function loadJsonFiles(directory) {
@@ -305,7 +309,9 @@ function analyzeScope(records) {
       completePairs: complete.length,
       missingPairs: 30 - complete.length,
       controlMean,
+      controlMedian: median(controls),
       treatmentMean,
+      treatmentMedian: median(treatments),
       meanPairedDifference: mean(differences),
       medianPairedDifference: median(differences),
       percentChangeFromControl: binary || controlMean === null || controlMean === 0
@@ -348,10 +354,12 @@ function analyzeScope(records) {
   const telemetryNames = [
     'totalSessionAiCredits',
     'totalSessionNanoAiu',
+    'parentAiCredits',
     'parentNanoAiu',
     'parentCumulativeInputTokens',
     'parentPeakInputTokens',
     'parentOutputTokens',
+    'specialistAiCredits',
     'specialistCumulativeInputTokens',
     'specialistPeakInputTokens',
     'specialistOutputTokens',
@@ -367,6 +375,12 @@ function analyzeScope(records) {
   ];
   const outcomes = telemetryNames.map((name) => summarize(name, (record) => {
     if (!record.telemetry) return null;
+    if (name === 'parentAiCredits') {
+      return metricValue(record.telemetry.models.find((model) => model.role === 'parent')?.aiCredits);
+    }
+    if (name === 'specialistAiCredits') {
+      return metricValue(record.telemetry.models.find((model) => model.role === 'specialist')?.aiCredits);
+    }
     if (name === 'parentWaitLatencyMs') {
       return reconcileParentWaitLatency(record.manifest, record.telemetry);
     }
@@ -502,7 +516,7 @@ function analyzeScope(records) {
 
 const output = {
   protocolId: 'ascii-art-powershell-cli-v1',
-  generatedAt: new Date().toISOString(),
+  generatedAt,
   analysis: {
     pairing: 'promptId + repetition',
     bootstrap: {
@@ -515,6 +529,7 @@ const output = {
   dataset: {
     scheduled: 60,
     runAttempts: manifests.size,
+    excludedAttempts: [...manifests.values()].filter((manifest) => manifest.exclusion.excluded).length,
     selectedRuns: selectedRuns.size,
     telemetryRecords: telemetry.size,
     deterministicResults: deterministic.size,
@@ -532,27 +547,39 @@ const output = {
   },
   judgeReliability: (() => {
     const dimensions = ['function', 'codeQuality', 'integration', 'recognizability', 'composition', 'cleanliness'];
-    const comparisons = assignments.blocks.flatMap((block) => block.artifacts)
+    const availablePairs = assignments.blocks.flatMap((block) => block.artifacts)
       .filter((item) => item.duplicateOfBlindId)
       .flatMap((item) => {
         const primary = judgmentsByBlind.get(item.duplicateOfBlindId);
         const duplicate = judgmentsByBlind.get(item.blindId);
         if (!primary || !duplicate) return [];
-        return dimensions.map((dimension) => ({
-          primaryBlindId: item.duplicateOfBlindId,
-          duplicateBlindId: item.blindId,
+        const dimensionComparisons = dimensions.map((dimension) => ({
           dimension,
+          primary: primary.scores[dimension],
+          duplicate: duplicate.scores[dimension],
           difference: duplicate.scores[dimension] - primary.scores[dimension]
         }));
+        return [{
+          primaryBlindId: item.duplicateOfBlindId,
+          duplicateBlindId: item.blindId,
+          exactDimensionScores: dimensionComparisons.filter((comparison) => comparison.difference === 0).length,
+          withinOneDimensionScores: dimensionComparisons.filter((comparison) => Math.abs(comparison.difference) <= 1).length,
+          dimensions: dimensionComparisons
+        }];
       });
+    const comparisons = availablePairs.flatMap((pair) => pair.dimensions);
     return {
+      availablePairs: availablePairs.length,
       comparedDimensionScores: comparisons.length,
+      exactAgreementCount: comparisons.filter((item) => item.difference === 0).length,
       exactAgreementRate: comparisons.length === 0
         ? null
         : comparisons.filter((item) => item.difference === 0).length / comparisons.length,
+      withinOneAgreementCount: comparisons.filter((item) => Math.abs(item.difference) <= 1).length,
       withinOneAgreementRate: comparisons.length === 0
         ? null
-        : comparisons.filter((item) => Math.abs(item.difference) <= 1).length / comparisons.length
+        : comparisons.filter((item) => Math.abs(item.difference) <= 1).length / comparisons.length,
+      pairs: availablePairs
     };
   })(),
   intentToTreat: analyzeScope(buildRecords('intentToTreat')),

@@ -79,11 +79,18 @@ integration verification.
 
 ## Benchmark
 
-The benchmark foundation is available at
+The completed benchmark is available at
 [`experiments/ascii-art-powershell-cli`](experiments/ascii-art-powershell-cli). Its
 immutable control is tag `experiment-control-v1` at
-`6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`. The treatment has not yet been frozen, and
-**no benchmark results exist yet**.
+`6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; its frozen treatment is tag
+`experiment-treatment-v1` at `ac0895c23c4c811cf10e5af5b42efcde12c14849`.
+In 20 complete intent-to-treat pairs, treatment used 69.7% more total AI credits and
+53.9% more parent cumulative input, with deterministic pass 25 percentage points
+lower and blinded overall quality 0.883 points lower; wall latency was 54.9% lower.
+Fourteen of 60 schedules are missing, so inference and significance claims are
+withheld. See the [report](experiments/ascii-art-powershell-cli/report.md),
+[raw evidence](experiments/ascii-art-powershell-cli/raw/), and
+[machine-readable results](experiments/ascii-art-powershell-cli/results/).
 
 ## Research and prior art
 
@@ -106,8 +113,9 @@ search methodology.
 This repository contains the pattern documentation, benchmark foundation, and live
 GitHub Copilot reference implementation. A clean CLI routing smoke has passed with
 parent-owned directory preparation and integration, asset-only delegation, and the
-Claude Haiku 4.5 `read`/`edit` boundary. The benchmark treatment is not yet frozen and
-no measured benchmark results exist.
+Claude Haiku 4.5 `read`/`edit` boundary. The treatment and control are frozen and the
+experiment is complete. Its incomplete, dispatch-affected dataset supports
+descriptive results only; inferential conclusions were withheld.
 
 ## License
 

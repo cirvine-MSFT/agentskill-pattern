@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0020",
+  "judgeBlock": 2,
+  "judgeSessionId": "2a61a1d3-62fe-4ba1-b2ac-83e1db1886cb",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P04-R2-control-A2",
+  "sourceArtifactBundleSha256": "d217aae2700524c4f8d8010b246afe83665a498dd9e56367558a3cb403621921",
+  "blindBundleSha256": "426c4eba7fe7b97e459898e978dcee5893508bcdfbbc21ae5a5a1c472681ac94",
+  "scores": {
+    "function": 2,
+    "codeQuality": 3,
+    "integration": 2,
+    "recognizability": 5,
+    "composition": 4,
+    "cleanliness": 4
+  },
+  "overall": 3.33,
+  "rationale": "The deterministic evaluation reports major failures in supported config set, configured defaults, and config get; only explicit data-file override, JSON list cleanliness, banner display, and invalid-write atomicity pass. Because setting and retrieving supported keys and applying both defaults are central requirements, the feature is only partially usable. The code has useful path, config parsing, boolean parsing, and atomic-write helpers, but the command interface and default application do not match the required behavior under evaluation. It also introduces extra --no-json and valued --json behavior, increasing complexity beyond the prompt. Help and tests are present, yet they do not prevent the observed integration failures. The banner itself is strong and recognizable, with a clear CONFIG CONTROL PANEL title, settings rows, action labels, balanced spacing, and consistent framing. The diff is otherwise focused and the art contract passes.",
+  "duplicateOf": null
+}

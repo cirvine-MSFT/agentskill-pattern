@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0066",
+  "judgeBlock": 1,
+  "judgeSessionId": "d2663e20-96c5-46bf-b09d-ef521b994d0c",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P10-R1-control-A1",
+  "sourceArtifactBundleSha256": "28f64282b39563f4759852273d33f67979cdbf4da4f41ed70e41e7cdfe17df16",
+  "blindBundleSha256": "64525aca7992a5682108b230bfa5b9747b801340b4c5aa0b9cd5966c69b6bf32",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "All deterministic checks pass. Template persistence is adjacent to the selected data file and atomically replaced; names are validated and case-insensitively unique; listing is stable; add supports case-insensitive lookup and explicit overrides; failures preserve both stores; and legacy data remains compatible. Helpers separate storage, name validation, lookup, and banner output cleanly. There is minor duplication between task and template store wrappers, but the implementation is idiomatic and well tested. The banner is immediately recognizable, names all three actions, and conveys reuse and atomic JSON storage in a strong centered frame. Spacing and hierarchy are polished. The diff is focused.",
+  "duplicateOf": "B0060"
+}

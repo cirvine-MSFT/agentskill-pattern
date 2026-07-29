@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0009",
+  "judgeBlock": 3,
+  "judgeSessionId": "9648435b-5b13-4dad-a703-f1f6aeccd11b",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P02-R1-treatment-A2",
+  "sourceArtifactBundleSha256": "6b0ef7fea3591a2173f11ba421a3feac964e77292403ea08892b812a47ead690",
+  "blindBundleSha256": "2bfb1b3d7f03a9365b2a3983a693ed6eed92f44866a2df4ea8bfb87b55e2cfc7",
+  "scores": {
+    "function": 4,
+    "codeQuality": 4,
+    "integration": 4,
+    "recognizability": 2,
+    "composition": 2,
+    "cleanliness": 4
+  },
+  "overall": 3.33,
+  "rationale": "The import implementation validates all parsed rows before reading or writing storage, assigns sequential IDs, defaults blank status to pending, preserves optional descriptions, and emits stable banner-free JSON. Deterministic checks confirm valid import, ordering, atomic rejection, exact banner placement, and asset constraints. The command and focused tests fit the existing CLI and preserve base behavior. The logic is nevertheless concentrated in a long switch branch, and tests do not deeply cover malformed CSV structure, missing files, empty input, or JSON behavior on every failure. The asset is the main weakness: it is a collection of import configuration assignments rather than a visually meaningful banner. IMPORT is repeated and the subject is textually identifiable, but there is no framing, illustration, hierarchy, or intentional negative space; line lengths and alignment vary without a cohesive composition. Changes remain focused and free of unrelated artifacts.",
+  "duplicateOf": null
+}

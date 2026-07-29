@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0061",
+  "judgeBlock": 2,
+  "judgeSessionId": "2a61a1d3-62fe-4ba1-b2ac-83e1db1886cb",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P05-R1-control-A1",
+  "sourceArtifactBundleSha256": "8569e06ca32a8338f63502b680713fa11a8b3d074aa3d1df98ef856becfd8905",
+  "blindBundleSha256": "003ee42786750a4b9820e9434b6c5bcb3de963e05af40ad35d2671c7aa96797f",
+  "scores": {
+    "function": 5,
+    "codeQuality": 5,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 4
+  },
+  "overall": 4.83,
+  "rationale": "All deterministic functional and art checks pass. The dedicated positive-integer-list helper rejects malformed, overflowing, and duplicate IDs; the command validates all IDs before mutation, updates selected tasks through one atomic store write, reports stable sorted integer sets, remains idempotent, and keeps JSON output banner-free. Help and focused fixture tests cover required inputs, malformed values, unknown-task atomicity, persistence, summaries, repeated calls, banner constraints, and existing commands. The banner is immediately recognizable as a successful TaskForge bulk completion: strong outer framing, centered subject and status, a nested selected-tasks panel, balanced whitespace, and consistent proportions make it legible at terminal size. The diff is focused; the added line-ending rule is directly relevant to the exact LF asset contract, though adding a repository-level attributes file is a small extra surface.",
+  "duplicateOf": "B0025"
+}

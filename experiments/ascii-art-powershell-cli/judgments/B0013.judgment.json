@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0013",
+  "judgeBlock": 1,
+  "judgeSessionId": "d2663e20-96c5-46bf-b09d-ef521b994d0c",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P03-R1-control-A1",
+  "sourceArtifactBundleSha256": "43e48daca76b9dfac4bd7d0fb454d8e44a4c8a9552d1bda1dca9daac12e97fbd",
+  "blindBundleSha256": "6545a5de67f6c793a7b9e985b3ee371015fd4d0d6029cc53e1ccae50325de5a1",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "All deterministic checks pass. Export validates status before touching the destination, prevents overwriting task storage, filters and sorts by numeric ID, creates parent directories, emits UTF-8 without a BOM, atomically replaces the destination, and leaves task storage unchanged. JSON and text summaries are stable and help/tests cover valid, filtered, invalid, same-path, and banner cases. The atomic writer is well isolated; destination path normalization is appropriate. The banner immediately communicates TaskForge export, JSON archiving, ordering, and safe atomic writing. Its consistent frame, centered hierarchy, and generous spacing are polished and legible. The diff is focused.",
+  "duplicateOf": null
+}

@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0039",
+  "judgeBlock": 3,
+  "judgeSessionId": "9648435b-5b13-4dad-a703-f1f6aeccd11b",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P07-R1-control-A1",
+  "sourceArtifactBundleSha256": "b22188eaf3a467c7ed66964c58a9c598618ab24d0517ddc233c1edb182f7fc7d",
+  "blindBundleSha256": "675aef376081feeb3fe5a5990a31c8306d392aa9328b133f278af1ab26f89f57",
+  "scores": {
+    "function": 5,
+    "codeQuality": 5,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 5,
+  "rationale": "This is a complete, coherent implementation. Tag parsing trims, lowercases, validates, de-duplicates, and sorts values through shared helpers; repeatable list filters are supported with AND semantics; legacy tasks without tags are handled; tag mutation enforces exactly one operation and persists normalized arrays. Deterministic checks confirm normalization, mutation, filtering, atomic invalid-input behavior, exact banner use, and asset compliance. Text and JSON output follow existing conventions, help is updated, and focused tests cover valid, invalid, repeatable, legacy, JSON, and banner cases while preserving existing commands. The banner is immediately recognizable: a strong outer frame, centered nested TAGS panel, clear ADD/REMOVE and FILTER labels, balanced spacing, and consistent proportions create deliberate hierarchy at ordinary terminal size. The diff is tightly scoped with no clutter or unnecessary rewriting.",
+  "duplicateOf": null
+}

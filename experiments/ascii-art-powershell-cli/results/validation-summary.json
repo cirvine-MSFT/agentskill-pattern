@@ -1,0 +1,42 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "standardValidation": {
+    "exitCode": 0,
+    "status": "pass",
+    "message": "PASS: preregistered dataset design is complete and internally consistent"
+  },
+  "strictCompletenessValidation": {
+    "exitCode": 1,
+    "status": "expected_incomplete",
+    "unexpectedFailures": 0,
+    "expectedGateFailures": [
+      "FAIL: P06-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P08-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P04-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P04-R2-treatment completeness gate requires one selected included run",
+      "FAIL: P08-R2-control completeness gate requires one selected included run",
+      "FAIL: P09-R2-control completeness gate requires one selected included run",
+      "FAIL: P08-R2-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R2-treatment completeness gate requires one selected included run",
+      "FAIL: P04-R3-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R3-treatment completeness gate requires one selected included run",
+      "FAIL: P08-R3-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R3-control completeness gate requires one selected included run",
+      "FAIL: P08-R3-control completeness gate requires one selected included run"
+    ]
+  },
+  "generatedSummary": {
+    "path": "results/summary.json",
+    "allowIncomplete": true,
+    "counts": {
+      "scheduled": 60,
+      "runAttempts": 82,
+      "excludedAttempts": 36,
+      "selectedRuns": 46,
+      "judgments": 45,
+      "missingSchedules": 14
+    },
+    "inferentialOutput": "withheld"
+  }
+}

@@ -1,6 +1,6 @@
 # Reference implementation: `ascii-art` (GitHub Copilot)
 
-**Status: implemented; benchmark treatment not yet frozen.** The live
+**Status: implemented; treatment frozen and experiment completed.** The live
 [`SKILL.md`](../../.github/skills/ascii-art/SKILL.md) router and
 [`ascii-art.agent.md`](../../.github/agents/ascii-art.agent.md) specialist provide the
 concrete, checkable target for the [pattern description](../agent-skill-pattern.md).
@@ -8,8 +8,8 @@ A clean GitHub Copilot CLI smoke began without the target parent directory, had 
 parent create it, delegated only the banner path and asset-local constraints, and kept
 CLI/source integration in the parent. The trace used Claude Haiku 4.5 with only `read`
 and `edit`; the agent edited only the banner, validated every supplied exact, minimum,
-and maximum constraint, and returned terse status. This is not a measured benchmark
-result.
+and maximum constraint, and returned terse status. The later measured experiment is
+reported separately below.
 
 This is the reference implementation for the
 [Agent Skill Pattern](../agent-skill-pattern.md), targeting GitHub Copilot as the
@@ -126,9 +126,14 @@ A benchmark foundation for comparing this reference implementation against paren
 banner generation is available at
 [`experiments/ascii-art-powershell-cli`](../../experiments/ascii-art-powershell-cli).
 Its immutable control is tag `experiment-control-v1` at
-`6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; the treatment has not yet been frozen.
-**No benchmark results exist yet.** See the
+`6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; its frozen treatment is tag
+`experiment-treatment-v1` at `ac0895c23c4c811cf10e5af5b42efcde12c14849`.
+The [completed benchmark report](../../experiments/ascii-art-powershell-cli/report.md)
+finds higher treatment credits and parent cumulative input, lower deterministic and
+blinded quality, and lower wall latency among available complete pairs. Fourteen of
+60 schedules are missing, primarily from model dispatch, so inference and
+significance claims were withheld. See the
 [repository README](../../README.md#benchmark) and
 [observability and measurement](../agent-skill-pattern.md#observability-and-measurement)
 for how measured results will be distinguished from inferred claims when the benchmark
-executes.
+is interpreted.

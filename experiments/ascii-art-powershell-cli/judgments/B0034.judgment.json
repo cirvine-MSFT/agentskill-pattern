@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0034",
+  "judgeBlock": 4,
+  "judgeSessionId": "312c3232-6246-43a8-bb1e-d27876a67011",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P06-R3-control-A2",
+  "sourceArtifactBundleSha256": "01705b4b7cbccbcf9cf1dd88794e6c6525585c9f05dc4f8b48341219cca9d12d",
+  "blindBundleSha256": "24f2f4aabe5b4d2d0b67b2a36355aa5b89497ca7952a4a36aff8e43d1b35569c",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "All specified behavior passes: strict date validation, legacy compatibility, deterministic cutoff-relative overdue labels, pending-default and completed-inclusive filtering, due-date then numeric-ID ordering, clean JSON, and banner-first text output. The date parser is appropriately centralized and the report construction is readable, although the main command switch carries substantial inline projection logic rather than a dedicated helper. Help and focused fixture tests cover normal, error, ordering, compatibility, and asset cases. The balanced framed banner immediately reads as a due-task report, with a clear title, compact inner panel, meaningful date-driven labels, consistent width, and strong terminal legibility. The diff is focused, constraints and tamper checks pass, and no unrelated artifacts are present.",
+  "duplicateOf": null
+}

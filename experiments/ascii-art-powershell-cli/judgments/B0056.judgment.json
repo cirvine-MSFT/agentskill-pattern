@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0056",
+  "judgeBlock": 2,
+  "judgeSessionId": "2a61a1d3-62fe-4ba1-b2ac-83e1db1886cb",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P10-R3-control-A1",
+  "sourceArtifactBundleSha256": "f55e6d533488c5341893e2e0c788a856f9345cf3c08b284d1946ee2bebbecee8",
+  "blindBundleSha256": "70a7e1cdc9fd58cf8538bfb615f4e6c99f636f12ef527af89df2067305d88661",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "All deterministic checks pass. Template save, case-insensitive uniqueness and lookup, alphabetical list, case-insensitive removal, template-backed add, explicit overrides, missing-template rejection, invalid-name rejection, adjacent atomic persistence, and existing-data compatibility are implemented and exercised. Failed operations preserve both stores, JSON output is banner-free, and each successful text template action displays the banner once. Shared store, validation, lookup, and banner helpers keep the implementation understandable, though the action dispatch and command body are sizable. Help and focused tests cover empty lists, all actions, ordering, overrides, atomic failures, output modes, and the full asset contract. The banner is exceptionally clear: strong frame, centered TEMPLATE identity, a nested SAVE/LIST/REMOVE action panel, concise data and persistence labels, and balanced whitespace create deliberate hierarchy and excellent terminal legibility. The diff is focused and polished.",
+  "duplicateOf": null
+}

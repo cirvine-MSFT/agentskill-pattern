@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0017",
+  "judgeBlock": 5,
+  "judgeSessionId": "61f2a399-901b-4496-b426-fada12803468",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P03-R3-control-A1",
+  "sourceArtifactBundleSha256": "32bf80dd32cdba42ea9026e70fbe735892bacdc61fa3eb61861ebec5a0d22c9b",
+  "blindBundleSha256": "9a3716f493fbc6a5aa1681fe0013891847ee72e42fbadc26f6392f52d450133d",
+  "scores": {
+    "function": 5,
+    "codeQuality": 5,
+    "integration": 5,
+    "recognizability": 4,
+    "composition": 4,
+    "cleanliness": 5
+  },
+  "overall": 4.67,
+  "rationale": "The export command fully handles required paths, optional filtering, numeric ordering, UTF-8 arrays, parent creation, atomic replacement, stable summaries, storage collision protection, and banner-free JSON. Deterministic evidence passes all behavior, art, and integrity checks, and the fixture tests cover replacement, invalid destinations, storage byte identity, missing paths, collision, and banner count. The helper uses unique adjacent temporary files with cleanup, while path comparison correctly accounts for Windows case insensitivity. Code is clear, cohesive, and appropriately factored. The banner strongly communicates JSON EXPORT and its guarantees with a consistent frame and good hierarchy. It is highly legible and task-specific, though primarily an informational panel rather than a distinctive pictorial design. The diff is precise and contains no unrelated changes.",
+  "duplicateOf": null
+}

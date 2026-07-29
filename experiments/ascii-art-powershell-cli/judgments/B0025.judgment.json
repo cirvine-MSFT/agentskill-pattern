@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0025",
+  "judgeBlock": 1,
+  "judgeSessionId": "d2663e20-96c5-46bf-b09d-ef521b994d0c",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P05-R1-control-A1",
+  "sourceArtifactBundleSha256": "8569e06ca32a8338f63502b680713fa11a8b3d074aa3d1df98ef856becfd8905",
+  "blindBundleSha256": "4d3eb8c61978b3fee9dacff448f6a0c9d366a88e5a93c4288124f0793a80693c",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "All deterministic checks pass. ID parsing strictly rejects malformed, duplicate, nonpositive, spaced, and overflowing values before storage changes; unknown IDs preserve storage byte-for-byte; success updates all selected tasks in one store write; summaries are stable integer arrays; and repeated calls are idempotent. The parsing helper is clear and the command validates the complete set before mutation. Writing even when no status changes is a minor inefficiency, not a correctness issue. Help and tests are thorough. The banner clearly depicts bulk completion with strong centered framing, nested emphasis, and an unambiguous DONE status. It is balanced and highly legible. The diff is focused.",
+  "duplicateOf": null
+}
