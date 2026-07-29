@@ -38,6 +38,12 @@ const infrastructureReasons = new Set([
   'external_interruption',
   'required_tool_unavailable'
 ]);
+const preExecutionReasons = new Set([
+  'session_creation_failure',
+  'hash_mismatch',
+  'external_interruption',
+  'required_tool_unavailable'
+]);
 
 function check(condition, message) {
   if (!condition) {
@@ -105,7 +111,7 @@ assignments.blocks.forEach((block) => {
 });
 
 const schemas = {};
-for (const schemaName of ['run-manifest', 'raw-telemetry', 'artifacts', 'artifact-bundle', 'blind-bundle', 'blind-content', 'deterministic-results', 'judgment']) {
+for (const schemaName of ['run-manifest', 'pre-execution-failure', 'raw-telemetry', 'artifacts', 'artifact-bundle', 'blind-bundle', 'blind-content', 'deterministic-results', 'judgment']) {
   const schema = readJson(path.join(root, 'schemas', `${schemaName}.schema.json`));
   schemas[schemaName] = schema;
   check(schema.$schema === 'https://json-schema.org/draft/2020-12/schema', `${schemaName} must use JSON Schema 2020-12`);
@@ -175,37 +181,60 @@ function authenticateRawEvents(telemetryRecord) {
 }
 
 const rawJson = walkFiles(path.join(dataRoot, 'raw')).filter((file) => file.endsWith('.json'));
-const rawObjects = rawJson.map(readJson);
-const manifests = rawObjects.filter((item) => item.protocolId && item.condition && item.sessions);
+const rawRecords = rawJson.map((file) => ({ file, value: readJson(file) }));
+const rawObjects = rawRecords.map((record) => record.value);
+const preExecutionRecords = rawRecords.filter((record) => (
+  record.value.protocolId && record.value.recordType === 'pre_execution_failure'
+));
+const preExecutionManifests = preExecutionRecords.map((record) => record.value);
+const manifestCandidates = rawObjects.filter((item) => (
+  item.protocolId && item.condition && item.exclusion && item.execution &&
+  !item.metrics && !item.functional
+));
+const startedManifests = manifestCandidates.filter((item) => (
+  item.recordType !== 'pre_execution_failure' && item.sessions && item.refs
+));
+const manifests = [...startedManifests, ...preExecutionManifests];
 const telemetry = rawObjects.filter((item) => item.protocolId && item.metrics && item.routing);
 const deterministic = rawObjects.filter((item) => item.protocolId && item.functional && item.art && item.tamperCheck);
 if (rawJson.length > 0) {
-  validateRecords(manifests, 'run-manifest');
+  validateRecords(startedManifests, 'run-manifest');
+  validateRecords(preExecutionManifests, 'pre-execution-failure');
   validateRecords(telemetry, 'raw-telemetry');
   validateRecords(deterministic, 'deterministic-results');
   check(manifests.length >= 60 && manifests.length <= 120, `complete raw dataset must contain 60-120 run attempts, found ${manifests.length}`);
-  check(telemetry.length === manifests.length, `raw dataset must contain one telemetry record per run attempt, found ${telemetry.length} for ${manifests.length} attempts`);
-  check(deterministic.length === manifests.length, `raw dataset must contain one deterministic result per run attempt, found ${deterministic.length} for ${manifests.length} attempts`);
+  check(
+    manifestCandidates.length === manifests.length,
+    'every run attempt record must be either a session-started manifest or an explicit pre-execution failure'
+  );
+  check(telemetry.length === startedManifests.length, `raw dataset must contain one telemetry record per session-started attempt, found ${telemetry.length} for ${startedManifests.length} started attempts`);
+  check(deterministic.length === startedManifests.length, `raw dataset must contain one deterministic result per session-started attempt, found ${deterministic.length} for ${startedManifests.length} started attempts`);
   check(new Set(manifests.map((item) => item.runId)).size === manifests.length, 'run manifest run IDs must be unique');
   check(new Set(telemetry.map((item) => item.runId)).size === telemetry.length, 'telemetry run IDs must be unique');
   check(new Set(deterministic.map((item) => item.runId)).size === deterministic.length, 'deterministic result run IDs must be unique');
   check(manifests.every((item) => item.runId === `${item.scheduleId}-A${item.execution.attempt}`), 'run IDs must encode schedule ID and attempt');
-  check(manifests.every((item) => telemetry.some((record) => record.runId === item.runId) && deterministic.some((record) => record.runId === item.runId)), 'every run attempt must have matching telemetry and deterministic records');
-  const parentIds = manifests.map((item) => item.sessions.parent.sessionId);
-  check(new Set(parentIds).size === manifests.length, 'parent session IDs must be unique across attempts');
-  const specialistIds = manifests.filter((item) => (
+  check(startedManifests.every((item) => telemetry.some((record) => record.runId === item.runId) && deterministic.some((record) => record.runId === item.runId)), 'every session-started attempt must have matching telemetry and deterministic records');
+  check(preExecutionManifests.every((item) => !telemetry.some((record) => record.runId === item.runId) && !deterministic.some((record) => record.runId === item.runId)), 'pre-execution attempts must not have telemetry or deterministic outcome records');
+  const parentIds = startedManifests.map((item) => item.sessions.parent.sessionId);
+  check(new Set(parentIds).size === startedManifests.length, 'parent session IDs must be unique across attempts');
+  const specialistIds = startedManifests.filter((item) => (
     item.condition === 'treatment' && item.sessions.specialist.sessionId
   )).map((item) => item.sessions.specialist.sessionId);
   check(new Set(specialistIds).size === specialistIds.length, 'specialist session IDs must be unique across treatment attempts');
-  const coordinatorIds = manifests.map((item) => item.execution.coordinatorSessionId);
-  const rootIds = manifests.map((item) => item.execution.rootSessionId);
-  check(new Set(rootIds).size === 1, 'all attempts must record exactly one root experiment session ID');
-  check(new Set(coordinatorIds).size === 10, 'all attempts must use exactly 10 case coordinator session IDs');
+  const coordinatorIds = startedManifests.map((item) => item.execution.coordinatorSessionId);
+  const rootIds = startedManifests.map((item) => item.execution.rootSessionId);
+  check(startedManifests.length === 0 || new Set(rootIds).size === 1, 'all session-started attempts must record exactly one root experiment session ID');
+  const promptsWithStartedAttempts = new Set(startedManifests.map((item) => item.promptId));
+  check(
+    new Set(coordinatorIds).size === promptsWithStartedAttempts.size,
+    'session-started attempts must use exactly one case coordinator session ID per represented prompt'
+  );
   prompts.forEach((prompt) => {
     check(
-      new Set(manifests
+      new Set(startedManifests
         .filter((manifest) => manifest.promptId === prompt.id)
-        .map((manifest) => manifest.execution.coordinatorSessionId)).size === 1,
+        .map((manifest) => manifest.execution.coordinatorSessionId)).size ===
+          (promptsWithStartedAttempts.has(prompt.id) ? 1 : 0),
       `${prompt.id} attempts must use one case coordinator session ID`
     );
   });
@@ -217,9 +246,13 @@ if (rawJson.length > 0) {
   check(specialistIds.every((id) => !coordinatorIds.includes(id)), 'specialist and coordinator session ID sets must be disjoint');
   const allEventIds = telemetry.flatMap((record) => record.events.map((event) => event.eventId));
   check(new Set(allEventIds).size === allEventIds.length, 'raw event IDs must be globally unique across attempts');
-  check(new Set(manifests.map((item) => item.refs.benchmarkCommitSha)).size === 1, 'all attempts must use one benchmark commit SHA');
-  check(manifests.every((item) => item.refs.promptsSha256 === sha256File(path.join(root, 'prompts.json'))), 'all attempts must use the registered prompt hash');
-  check(manifests.every((item) => item.refs.fixtureLockSha256 === sha256File(path.join(root, 'fixture', 'fixture-lock.json'))), 'all attempts must use the registered fixture lock hash');
+  check(
+    startedManifests.length === 0 ||
+      new Set(startedManifests.map((item) => item.refs.benchmarkCommitSha)).size === 1,
+    'all session-started attempts must use one benchmark commit SHA'
+  );
+  check(startedManifests.every((item) => item.refs.promptsSha256 === sha256File(path.join(root, 'prompts.json'))), 'all session-started attempts must use the registered prompt hash');
+  check(startedManifests.every((item) => item.refs.fixtureLockSha256 === sha256File(path.join(root, 'fixture', 'fixture-lock.json'))), 'all session-started attempts must use the registered fixture lock hash');
   manifests.forEach((manifest) => {
     const scheduledItem = observations.find((item) => item.scheduleId === manifest.scheduleId);
     const telemetryRecord = telemetry.find((item) => item.runId === manifest.runId);
@@ -234,6 +267,26 @@ if (rawJson.length > 0) {
       check(manifest.execution.block === scheduledItem.block && manifest.execution.position === scheduledItem.position, `${manifest.runId} must match its scheduled block and position`);
       check(manifest.conditionInstruction === conditionInstructions[scheduledItem.condition], `${manifest.runId} must use the exact preregistered ${scheduledItem.condition} instruction`);
     }
+    if (manifest.recordType === 'pre_execution_failure') {
+      check(
+        manifest.attempt?.phase === 'pre_execution' &&
+        manifest.attempt?.status === 'excluded' &&
+        manifest.attempt?.availability === 'not_created',
+        `${manifest.runId} pre-execution attempt must explicitly declare excluded/not-created availability`
+      );
+      check(
+        manifest.exclusion.excluded && preExecutionReasons.has(manifest.exclusion.reason),
+        `${manifest.runId} pre-execution attempt must use an allowed pre-execution infrastructure reason`
+      );
+      check(!telemetryRecord && !deterministicRecord, `${manifest.runId} pre-execution attempt must not have telemetry or deterministic outcome evidence`);
+      return;
+    }
+    check(
+      manifest.attempt?.phase === 'session_started' &&
+      manifest.attempt?.availability === 'evidence_required' &&
+      manifest.attempt?.status === (manifest.exclusion.excluded ? 'excluded' : 'included'),
+      `${manifest.runId} session-started attempt status and evidence availability must match exclusion state`
+    );
     const parentModelMismatch = manifest.sessions.parent.requestedModel !== parentModel ||
       manifest.sessions.parent.observedModel !== parentModel;
     const specialistModelMismatch = manifest.condition === 'treatment' &&
@@ -404,13 +457,34 @@ const expectedJudged = judged.filter((assignment) => selectedBySchedule.has(assi
   selectedBySchedule.get(assignment.scheduleId));
 
 const artifactJson = walkFiles(path.join(dataRoot, 'artifacts')).filter((file) => file.endsWith('.json'));
-const artifactManifests = artifactJson.map(readJson).filter((item) => item.protocolId && item.bundleSha256 && item.files);
-const blindBundles = artifactJson.map(readJson).filter((item) => item.protocolId && item.blindId && item.blindBundleSha256);
+const artifactObjects = artifactJson.map(readJson);
+const artifactManifests = artifactObjects.filter((item) => item.protocolId && item.bundleSha256 && item.files);
+const blindBundles = artifactObjects.filter((item) => item.protocolId && item.blindId && item.blindBundleSha256);
+preExecutionRecords.forEach(({ file, value: manifest }) => {
+  const runIdPrefix = `${manifest.runId}.`;
+  check(
+    path.basename(file).startsWith(runIdPrefix) &&
+    path.basename(file).endsWith('.pre-execution.json'),
+    `${manifest.runId} pre-execution record filename must end with .pre-execution.json`
+  );
+  check(
+    !rawRecords.some((record) => (
+      record.file !== file && path.basename(record.file).startsWith(runIdPrefix)
+    )),
+    `${manifest.runId} pre-execution attempt must not have additional run-associated raw records`
+  );
+});
+preExecutionManifests.forEach((manifest) => {
+  check(
+    !artifactObjects.some((item) => item && item.runId === manifest.runId),
+    `${manifest.runId} pre-execution attempt must not have artifact or blind-binding records`
+  );
+});
 const authenticatedArtifacts = new Map();
 if (artifactJson.length > 0) {
   validateRecords(artifactManifests, 'artifacts');
   check(
-    artifactManifests.length >= selectedManifests.length && artifactManifests.length <= manifests.length,
+    artifactManifests.length >= selectedManifests.length && artifactManifests.length <= startedManifests.length,
     `artifact dataset must contain every selected included schedule and may retain excluded-attempt artifacts, found ${artifactManifests.length} for ${selectedManifests.length} selected schedules`
   );
   check(new Set(artifactManifests.map((item) => item.runId)).size === artifactManifests.length, 'artifact run IDs must be unique');
@@ -421,8 +495,8 @@ if (artifactJson.length > 0) {
     );
   });
   artifactManifests.forEach((artifact) => {
-    const manifest = manifests.find((item) => item.runId === artifact.runId);
-    check(Boolean(manifest), `${artifact.runId} artifact must have a matching run manifest`);
+    const manifest = startedManifests.find((item) => item.runId === artifact.runId);
+    check(Boolean(manifest), `${artifact.runId} artifact must have a matching session-started run manifest`);
     if (manifest) {
       check(artifact.scheduleId === manifest.scheduleId, `${artifact.runId} artifact schedule ID must match manifest`);
       check(artifact.sessionId === manifest.sessions.parent.sessionId, `${artifact.runId} artifact parent session must match manifest`);
@@ -537,7 +611,7 @@ if (judgmentJson.length > 0) {
       ? 'judgments must use exactly six distinct judge session IDs, one per non-empty assigned block'
       : `judgments must use exactly ${expectedJudgeSessionCount} distinct judge session IDs, one per non-empty assigned block`
   );
-  const trialSessionIds = new Set(manifests.flatMap((manifest) => [
+  const trialSessionIds = new Set(startedManifests.flatMap((manifest) => [
     manifest.execution.rootSessionId,
     manifest.execution.coordinatorSessionId,
     manifest.sessions.parent.sessionId,

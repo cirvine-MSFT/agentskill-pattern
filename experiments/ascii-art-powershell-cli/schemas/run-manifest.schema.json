@@ -12,6 +12,7 @@
     "repetition",
     "condition",
     "conditionInstruction",
+    "attempt",
     "conditionEvidence",
     "execution",
     "environment",
@@ -35,6 +36,7 @@
         "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset."
       ]
     },
+    "attempt": { "$ref": "#/$defs/startedAttempt" },
     "conditionEvidence": { "$ref": "#/$defs/conditionEvidence" },
     "execution": {
       "type": "object",
@@ -202,6 +204,16 @@
     }
   },
   "$defs": {
+    "startedAttempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "status", "availability"],
+      "properties": {
+        "phase": { "const": "session_started" },
+        "status": { "enum": ["included", "excluded"] },
+        "availability": { "const": "evidence_required" }
+      }
+    },
     "conditionEvidence": {
       "oneOf": [
         {

@@ -155,6 +155,21 @@
     "expected": "condition/model/session/run metadata leakage"
   },
   {
+    "id": "source-artifact-uppercase-model-leak",
+    "mutation": "sourceArtifactUppercaseModelLeak",
+    "expected": "condition/model/session/run metadata leakage"
+  },
+  {
+    "id": "source-artifact-mixed-case-identifiers-leak",
+    "mutation": "sourceArtifactMixedCaseIdentifiersLeak",
+    "expected": "condition/model/session/run metadata leakage"
+  },
+  {
+    "id": "source-artifact-mixed-case-specialist-leak",
+    "mutation": "sourceArtifactMixedCaseSpecialistLeak",
+    "expected": "condition/model/session/run metadata leakage"
+  },
+  {
     "id": "blind-bundle-not-generated",
     "mutation": "blindBundleNotGenerated",
     "expected": "was not generated from the authenticated selected artifact bytes"

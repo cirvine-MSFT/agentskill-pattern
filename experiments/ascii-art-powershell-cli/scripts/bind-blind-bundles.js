@@ -27,7 +27,10 @@ function jsonValues(directory) {
     .map(readJson);
 }
 
-const manifests = jsonValues(args.runs).filter((value) => value.sessions && value.refs && value.exclusion);
+const manifests = jsonValues(args.runs).filter((value) => (
+  value.exclusion && value.execution &&
+  ((value.sessions && value.refs) || value.recordType === 'pre_execution_failure')
+));
 const deterministic = jsonValues(args.runs).filter((value) => value.functional && value.art && value.tamperCheck);
 const artifacts = jsonValues(args.artifacts).filter((value) => value.bundleSha256 && value.files);
 const assignments = readJson(path.join(root, 'design', 'judge-assignments.json'));

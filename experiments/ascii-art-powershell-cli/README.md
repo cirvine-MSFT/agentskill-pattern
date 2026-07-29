@@ -47,6 +47,10 @@ An intentional no-result foundation smoke test may add `--allow-incomplete`; its
 The same flag produces descriptive diagnostics when both allowed attempts for a planned schedule are
 excluded for infrastructure reasons. The schedule remains one of 60 planned IDs, is reported with both
 exclusion reasons, has no artifact/judgment requirement, and globally withholds inferential output.
+If no parent session is created, record the attempt with the dedicated pre-execution failure schema:
+`phase=pre_execution`, `status=excluded`, and `availability=not_created`. Do not fabricate session IDs,
+telemetry, deterministic results, commits, artifacts, condition evidence, or outcomes. A started attempt
+instead uses `phase=session_started` and requires telemetry plus deterministic evidence even when excluded.
 
 Before judging, generate blinded bundles directly from exact-byte-authenticated selected source artifacts and bind them to selected runs:
 
@@ -61,6 +65,7 @@ Blind generation rejects high-confidence candidate provenance phrases that revea
 specialist/subagent use, condition arms, trial sessions, or model routing while allowing ordinary task
 language such as control flow, treatment plans, session caches, and data models. Control parent-wait
 latency is unavailable; treatment parent wait is accepted only when it exactly reconciles to authenticated
-delegation call/result timestamps.
+delegation call/result timestamps. Exact forbidden values are matched after deterministic Unicode NFKC and
+locale-independent lowercase normalization, so model and identifier case variants are also rejected.
 
 See `protocol.md` for the immutable preregistration, telemetry definitions, exclusions, judging, and analysis.

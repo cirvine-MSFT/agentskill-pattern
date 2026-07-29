@@ -70,7 +70,10 @@ const telemetry = new Map();
 const deterministic = new Map();
 for (const { value } of runFiles) {
   if (!value || !value.runId || !value.scheduleId) continue;
-  if (value.sessions && value.condition && value.refs) manifests.set(value.runId, value);
+  if ((value.sessions && value.condition && value.refs) ||
+      value.recordType === 'pre_execution_failure') {
+    manifests.set(value.runId, value);
+  }
   if (value.metrics && value.routing && value.models) telemetry.set(value.runId, value);
   if (value.functional && value.art && value.tamperCheck) deterministic.set(value.runId, value);
 }
@@ -145,12 +148,14 @@ for (const { value } of judgmentFiles) {
     if (new Set(sessionsByBlock).size !== 6) {
       throw new Error('Judgments must use exactly six distinct judge sessions, one per assigned block.');
     }
-    const trialSessions = new Set([...manifests.values()].flatMap((manifest) => [
+    const trialSessions = new Set([...manifests.values()]
+      .filter((manifest) => manifest.attempt.phase === 'session_started')
+      .flatMap((manifest) => [
       manifest.execution.rootSessionId,
       manifest.execution.coordinatorSessionId,
       manifest.sessions.parent.sessionId,
       ...(manifest.condition === 'treatment' ? [manifest.sessions.specialist.sessionId] : [])
-    ]));
+      ]));
     if (sessionsByBlock.some((sessionId) => trialSessions.has(sessionId))) {
       throw new Error('Judge sessions must be disjoint from all trial sessions.');
     }

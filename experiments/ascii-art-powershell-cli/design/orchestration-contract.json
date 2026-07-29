@@ -29,6 +29,37 @@
     "selfAssertedComplianceAccepted": false,
     "unavailableEvidencePolicy": "exclude_as_telemetry_collection_failure"
   },
+  "attemptContract": {
+    "sessionStarted": {
+      "record": "run-manifest.json",
+      "phase": "session_started",
+      "status": ["included", "excluded"],
+      "availability": "evidence_required",
+      "requiredEvidence": ["session IDs", "telemetry", "deterministic result", "condition evidence"],
+      "artifactPolicy": "required for selected included attempts; optional for excluded attempts"
+    },
+    "preExecutionExcluded": {
+      "record": "pre-execution-failure.json",
+      "phase": "pre_execution",
+      "status": "excluded",
+      "availability": "not_created",
+      "allowedReasons": [
+        "session_creation_failure",
+        "hash_mismatch",
+        "external_interruption",
+        "required_tool_unavailable"
+      ],
+      "forbiddenEvidence": [
+        "session IDs",
+        "commit or workspace references",
+        "telemetry",
+        "deterministic result",
+        "artifact",
+        "condition evidence",
+        "outcome or completion state"
+      ]
+    }
+  },
   "collectionKeys": [
     "runId",
     "rootSessionId",
@@ -42,6 +73,7 @@
   ],
   "returnArtifacts": [
     "run-manifest.json",
+    "pre-execution-failure.json (instead of run-manifest.json only when no parent session was created)",
     "raw-telemetry.json",
     "artifacts.json",
     "deterministic-results.json"
@@ -59,6 +91,7 @@
     "reuse a parent or specialist session",
     "expose acceptance files, schedules, conditions, or prior outputs to a parent",
     "delegate non-banner work in treatment",
-    "create a nested session in control"
+    "create a nested session in control",
+    "fabricate session, telemetry, deterministic, artifact, commit, condition, or outcome evidence for a pre-execution failure"
   ]
 }

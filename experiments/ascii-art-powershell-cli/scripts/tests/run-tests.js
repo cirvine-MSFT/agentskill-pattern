@@ -63,6 +63,12 @@ function sessionRef(sessionId, model) {
   return { sessionId, requestedModel: model, observedModel: model };
 }
 
+function mixedCase(value) {
+  return [...value].map((character, index) => (
+    index % 2 === 0 ? character.toUpperCase() : character.toLowerCase()
+  )).join('');
+}
+
 function checkGroup(id) {
   return {
     status: 'pass',
@@ -171,6 +177,11 @@ function createDataset(directory) {
       repetition: observation.repetition,
       condition: observation.condition,
       conditionInstruction: conditionInstructions[observation.condition],
+      attempt: {
+        phase: 'session_started',
+        status: 'included',
+        availability: 'evidence_required'
+      },
       conditionEvidence: {
         status: 'available',
         delegationCallEventIds: treatment ? [`delegate-call-${runId}`] : [],
@@ -422,6 +433,50 @@ function createDataset(directory) {
   return { manifest, telemetryRecord, deterministicRecord, artifact };
   }
 
+  function replaceWithPreExecutionFailure(observation, attempt, reason, retryOf, retryId) {
+    const runId = `${observation.scheduleId}-A${attempt}`;
+    const manifest = {
+      protocolId,
+      recordType: 'pre_execution_failure',
+      runId,
+      scheduleId: observation.scheduleId,
+      promptId: observation.promptId,
+      repetition: observation.repetition,
+      condition: observation.condition,
+      conditionInstruction: conditionInstructions[observation.condition],
+      attempt: {
+        phase: 'pre_execution',
+        status: 'excluded',
+        availability: 'not_created'
+      },
+      execution: {
+        block: observation.block,
+        position: observation.position,
+        attempt
+      },
+      exclusion: {
+        excluded: true,
+        reason,
+        retryOf,
+        retryId
+      }
+    };
+    manifests.set(runId, manifest);
+    telemetry.delete(runId);
+    deterministic.delete(runId);
+    artifacts.delete(runId);
+    artifactBundles.delete(runId);
+    rawSources.delete(runId);
+    bindings.forEach((binding, blindId) => {
+      if (binding.runId === runId) {
+        bindings.delete(blindId);
+        blindContents.delete(blindId);
+        judgments.delete(blindId);
+      }
+    });
+    return manifest;
+  }
+
   for (const observation of observations) {
   addRun(observation, 1);
   }
@@ -478,7 +533,12 @@ function createDataset(directory) {
         if (file.endsWith('.json')) fs.rmSync(path.join(directory, name, file));
       }
     }
-    for (const [runId, value] of manifests) writeJson(path.join(directory, 'raw', `${runId}.manifest.json`), value);
+    for (const [runId, value] of manifests) {
+      const suffix = value.recordType === 'pre_execution_failure'
+        ? 'pre-execution.json'
+        : 'manifest.json';
+      writeJson(path.join(directory, 'raw', `${runId}.${suffix}`), value);
+    }
     for (const [runId, value] of telemetry) writeJson(path.join(directory, 'raw', `${runId}.telemetry.json`), value);
     for (const [runId, value] of deterministic) writeJson(path.join(directory, 'raw', `${runId}.deterministic.json`), value);
     for (const [runId, value] of rawSources) writeJson(path.join(directory, 'raw', `${runId}.events.json`), value);
@@ -501,6 +561,7 @@ function createDataset(directory) {
     blindContents,
     judgments,
     addRun,
+    replaceWithPreExecutionFailure,
     bindAssignment,
     persist
   };
@@ -584,6 +645,7 @@ function mutate(state, name) {
     }
     case 'wrongModelExcluded':
       firstManifest.sessions.parent.observedModel = 'wrong-parent';
+      firstManifest.attempt.status = 'excluded';
       firstManifest.exclusion = { excluded: true, reason: 'wrong_model', retryOf: null, retryId: `${firstManifest.scheduleId}-A2` };
       firstTelemetry.routing.parent.observedModel = 'wrong-parent';
       firstTelemetry.models.find((model) => model.role === 'parent').observedModel = 'wrong-parent';
@@ -709,6 +771,28 @@ function mutate(state, name) {
       state.artifactBundles.get(firstManifest.runId).files[0].content += firstManifest.sessions.parent.sessionId;
       refreshArtifactHash(state, firstManifest.runId);
       break;
+    case 'sourceArtifactUppercaseModelLeak':
+      state.artifactBundles.get(firstManifest.runId).files[0].content += parentModel.toUpperCase();
+      refreshArtifactHash(state, firstManifest.runId);
+      break;
+    case 'sourceArtifactMixedCaseIdentifiersLeak':
+      state.artifactBundles.get(firstManifest.runId).files[0].content += [
+        mixedCase(firstManifest.runId),
+        mixedCase(firstManifest.execution.coordinatorSessionId),
+        mixedCase(firstManifest.sessions.parent.sessionId),
+        mixedCase(firstManifest.workspace.identifier)
+      ].join('\n');
+      refreshArtifactHash(state, firstManifest.runId);
+      break;
+    case 'sourceArtifactMixedCaseSpecialistLeak': {
+      const treatment = firstTreatment(state);
+      state.artifactBundles.get(treatment.runId).files[0].content += [
+        mixedCase(treatment.sessions.specialist.sessionId),
+        mixedCase(specialistModel)
+      ].join('\n');
+      refreshArtifactHash(state, treatment.runId);
+      break;
+    }
     case 'blindBundleNotGenerated':
       state.blindContents.get(firstBinding.blindId).prompt += ' tampered';
       firstBinding.blindBundleSha256 = sha256(Buffer.from(
@@ -963,6 +1047,7 @@ function mutate(state, name) {
       firstTelemetry.metrics.totalSessionNanoAiu.value += 1;
       break;
     case 'outcomeBasedExclusionReason':
+      firstManifest.attempt.status = 'excluded';
       firstManifest.exclusion = {
         excluded: true,
         reason: 'implementation_failure',
@@ -1004,6 +1089,27 @@ try {
     [],
     'allowed ordinary domain assignments'
   ));
+  assert.doesNotThrow(() => assertNoProhibitedMetadata(
+    'An ordinary MODEL renders a user-selected identifier and updates the SESSION cache.',
+    [parentModel, 'parent-P01-R1-control'],
+    'allowed ordinary mixed-case content'
+  ));
+  const leakageManifest = [...positive.manifests.values()][0];
+  const leakageTreatment = firstTreatment(positive);
+  for (const [value, forbidden] of [
+    [parentModel.toUpperCase(), parentModel],
+    [mixedCase(specialistModel), specialistModel],
+    [mixedCase(leakageManifest.runId), leakageManifest.runId],
+    [mixedCase(leakageManifest.execution.coordinatorSessionId), leakageManifest.execution.coordinatorSessionId],
+    [mixedCase(leakageManifest.sessions.parent.sessionId), leakageManifest.sessions.parent.sessionId],
+    [mixedCase(leakageTreatment.sessions.specialist.sessionId), leakageTreatment.sessions.specialist.sessionId],
+    [mixedCase(leakageManifest.workspace.identifier), leakageManifest.workspace.identifier]
+  ]) {
+    assert.throws(
+      () => assertNoProhibitedMetadata(value, [forbidden], 'case-variant exact-value regression'),
+      /metadata leakage/
+    );
+  }
   const generatedBlindDirectory = path.join(temporaryRoot, 'generated-blind-bundles');
   result = runNode('bind-blind-bundles.js', [
     '--runs', path.join(positiveDirectory, 'raw'),
@@ -1061,35 +1167,29 @@ try {
 
   const twiceExcludedDirectory = path.join(temporaryRoot, 'twice-excluded-infrastructure');
   const twiceExcluded = createDataset(twiceExcludedDirectory);
-  const failedInitial = [...twiceExcluded.manifests.values()][0];
-  const failedRetryId = `${failedInitial.scheduleId}-A2`;
-  failedInitial.exclusion = {
-    excluded: true,
-    reason: 'session_creation_failure',
-    retryOf: null,
-    retryId: failedRetryId
-  };
-  const failedRetry = twiceExcluded.addRun(
-    observations.find((item) => item.scheduleId === failedInitial.scheduleId),
-    2
-  ).manifest;
-  failedRetry.exclusion = {
-    excluded: true,
-    reason: 'required_tool_unavailable',
-    retryOf: failedInitial.runId,
-    retryId: null
-  };
-  twiceExcluded.artifacts.delete(failedInitial.runId);
-  twiceExcluded.artifactBundles.delete(failedInitial.runId);
-  twiceExcluded.artifacts.delete(failedRetry.runId);
-  twiceExcluded.artifactBundles.delete(failedRetry.runId);
-  twiceExcluded.bindings.forEach((binding, blindId) => {
-    if (binding.scheduleId === failedInitial.scheduleId) {
-      twiceExcluded.bindings.delete(blindId);
-      twiceExcluded.blindContents.delete(blindId);
-      twiceExcluded.judgments.delete(blindId);
-    }
-  });
+  const failedStartedManifest = [...twiceExcluded.manifests.values()][0];
+  const failedObservation = observations.find((item) => (
+    item.scheduleId === failedStartedManifest.scheduleId
+  ));
+  const failedRetryId = `${failedObservation.scheduleId}-A2`;
+  const failedInitial = twiceExcluded.replaceWithPreExecutionFailure(
+    failedObservation,
+    1,
+    'session_creation_failure',
+    null,
+    failedRetryId
+  );
+  const failedRetry = twiceExcluded.replaceWithPreExecutionFailure(
+    failedObservation,
+    2,
+    'session_creation_failure',
+    failedInitial.runId,
+    null
+  );
+  assert.ok(!twiceExcluded.telemetry.has(failedInitial.runId));
+  assert.ok(!twiceExcluded.telemetry.has(failedRetry.runId));
+  assert.ok(!twiceExcluded.deterministic.has(failedInitial.runId));
+  assert.ok(!twiceExcluded.deterministic.has(failedRetry.runId));
   twiceExcluded.persist();
   result = validate(twiceExcludedDirectory);
   assert.strictEqual(result.status, 0, result.stderr);
@@ -1129,7 +1229,7 @@ try {
       condition: failedInitial.condition,
       attempts: [
         { runId: failedInitial.runId, reason: 'session_creation_failure' },
-        { runId: failedRetry.runId, reason: 'required_tool_unavailable' }
+        { runId: failedRetry.runId, reason: 'session_creation_failure' }
       ]
     }]
   );
@@ -1149,11 +1249,128 @@ try {
   result = validate(twiceExcludedDirectory);
   assert.notStrictEqual(result.status, 0, 'Outcome-based second infrastructure failure reason unexpectedly passed.');
   assert.match(`${result.stdout}\n${result.stderr}`, /must match exactly one oneOf branch/);
+  failedRetry.exclusion.reason = 'session_creation_failure';
+
+  const startedEvidence = positive.manifests.get(failedInitial.runId);
+  failedInitial.execution.rootSessionId = startedEvidence.execution.rootSessionId;
+  failedInitial.execution.coordinatorSessionId = startedEvidence.execution.coordinatorSessionId;
+  failedInitial.sessions = structuredClone(startedEvidence.sessions);
+  failedInitial.refs = structuredClone(startedEvidence.refs);
+  failedInitial.completion = 'failed';
+  failedInitial.conditionEvidence = {
+    status: 'unavailable',
+    delegationCallEventIds: [],
+    delegationResultEventIds: [],
+    specialistToolCallEventIds: [],
+    specialistToolResultEventIds: [],
+    specialistFileChangeEventIds: [],
+    unavailableReason: 'fabricated'
+  };
+  twiceExcluded.telemetry.set(
+    failedInitial.runId,
+    structuredClone(positive.telemetry.get(failedInitial.runId))
+  );
+  twiceExcluded.rawSources.set(
+    failedInitial.runId,
+    structuredClone(positive.rawSources.get(failedInitial.runId))
+  );
+  twiceExcluded.artifacts.set(
+    failedInitial.runId,
+    structuredClone(positive.artifacts.get(failedInitial.runId))
+  );
+  twiceExcluded.persist();
+  result = validate(twiceExcludedDirectory);
+  assert.notStrictEqual(result.status, 0, 'Pre-execution attempt with attached session/evidence records unexpectedly passed.');
+  const attachedEvidenceOutput = `${result.stdout}\n${result.stderr}`;
+  assert.match(attachedEvidenceOutput, /conditionEvidence is not allowed/);
+  assert.match(attachedEvidenceOutput, /sessions is not allowed/);
+  assert.match(attachedEvidenceOutput, /refs is not allowed/);
+  assert.match(attachedEvidenceOutput, /completion is not allowed/);
+  assert.match(attachedEvidenceOutput, /additional run-associated raw records/);
+  assert.match(attachedEvidenceOutput, /pre-execution attempt must not have telemetry/);
+  assert.match(attachedEvidenceOutput, /pre-execution attempt must not have artifact/);
+  delete failedInitial.execution.rootSessionId;
+  delete failedInitial.execution.coordinatorSessionId;
+  delete failedInitial.sessions;
+  delete failedInitial.refs;
+  delete failedInitial.completion;
+  delete failedInitial.conditionEvidence;
+  twiceExcluded.telemetry.delete(failedInitial.runId);
+  twiceExcluded.rawSources.delete(failedInitial.runId);
+  twiceExcluded.artifacts.delete(failedInitial.runId);
+
+  delete failedInitial.attempt.phase;
+  twiceExcluded.persist();
+  result = validate(twiceExcludedDirectory);
+  assert.notStrictEqual(result.status, 0, 'Pre-execution attempt without an explicit phase unexpectedly passed.');
+  assert.match(`${result.stdout}\n${result.stderr}`, /attempt.*phase is required/);
+  failedInitial.attempt.phase = 'pre_execution';
+
+  delete failedInitial.recordType;
+  twiceExcluded.persist();
+  result = validate(twiceExcludedDirectory);
+  assert.notStrictEqual(result.status, 0, 'Pre-execution attempt without its dedicated record type unexpectedly passed.');
+  assert.match(`${result.stdout}\n${result.stderr}`, /must be either a session-started manifest or an explicit pre-execution failure|run-manifest/);
+  failedInitial.recordType = 'pre_execution_failure';
+
+  const fabricatedDeterministic = structuredClone(
+    positive.deterministic.get(failedInitial.runId)
+  );
+  twiceExcluded.deterministic.set(failedInitial.runId, fabricatedDeterministic);
+  twiceExcluded.persist();
+  result = validate(twiceExcludedDirectory);
+  assert.notStrictEqual(result.status, 0, 'Pre-execution attempt with a fabricated deterministic outcome unexpectedly passed.');
+  assert.match(`${result.stdout}\n${result.stderr}`, /pre-execution attempt must not have telemetry or deterministic outcome/);
+  twiceExcluded.deterministic.delete(failedInitial.runId);
+
+  failedInitial.exclusion.reason = 'wrong_model';
+  twiceExcluded.persist();
+  result = validate(twiceExcludedDirectory);
+  assert.notStrictEqual(result.status, 0, 'Model failure reclassified as pre-execution infrastructure unexpectedly passed.');
+  assert.match(`${result.stdout}\n${result.stderr}`, /must match exactly one oneOf branch|allowed pre-execution infrastructure reason/);
+  failedInitial.exclusion.reason = 'session_creation_failure';
+  twiceExcluded.persist();
+
+  const missingStartedDirectory = path.join(temporaryRoot, 'post-start-missing-evidence');
+  const missingStarted = createDataset(missingStartedDirectory);
+  const missingStartedInitial = [...missingStarted.manifests.values()][0];
+  const missingStartedObservation = observations.find((item) => (
+    item.scheduleId === missingStartedInitial.scheduleId
+  ));
+  missingStartedInitial.attempt.status = 'excluded';
+  missingStartedInitial.exclusion = {
+    excluded: true,
+    reason: 'telemetry_collection_failure',
+    retryOf: null,
+    retryId: `${missingStartedInitial.scheduleId}-A2`
+  };
+  const missingStartedRetry = missingStarted.addRun(missingStartedObservation, 2).manifest;
+  missingStartedRetry.exclusion = {
+    excluded: false,
+    reason: null,
+    retryOf: missingStartedInitial.runId,
+    retryId: null
+  };
+  missingStarted.telemetry.delete(missingStartedInitial.runId);
+  missingStarted.deterministic.delete(missingStartedInitial.runId);
+  missingStarted.rawSources.delete(missingStartedInitial.runId);
+  for (const block of assignments.blocks) {
+    for (const assignment of block.artifacts.filter((item) => (
+      item.scheduleId === missingStartedInitial.scheduleId
+    ))) {
+      missingStarted.bindAssignment(block, assignment, missingStartedRetry.runId);
+    }
+  }
+  missingStarted.persist();
+  result = validate(missingStartedDirectory);
+  assert.notStrictEqual(result.status, 0, 'Session-started exclusion without telemetry/deterministic evidence unexpectedly passed.');
+  assert.match(`${result.stdout}\n${result.stderr}`, /session-started attempt|matching telemetry and deterministic records/);
 
   const unavailableEvidenceDirectory = path.join(temporaryRoot, 'excluded-unavailable-evidence');
   const unavailableEvidence = createDataset(unavailableEvidenceDirectory);
   const unavailableManifest = firstTreatment(unavailableEvidence);
   const unavailableTelemetry = unavailableEvidence.telemetry.get(unavailableManifest.runId);
+  unavailableManifest.attempt.status = 'excluded';
   unavailableManifest.exclusion = {
     excluded: true,
     reason: 'telemetry_collection_failure',
@@ -1209,6 +1426,7 @@ try {
   const unavailableControlManifest = [...unavailableControl.manifests.values()]
     .find((manifest) => manifest.condition === 'control');
   const unavailableControlTelemetry = unavailableControl.telemetry.get(unavailableControlManifest.runId);
+  unavailableControlManifest.attempt.status = 'excluded';
   unavailableControlManifest.exclusion = {
     excluded: true,
     reason: 'telemetry_collection_failure',
@@ -1621,7 +1839,7 @@ try {
     properties: { x: { type: 'integer' } }
   }).length > 0);
 
-  console.log(`PASS: ${cases.length} integrity negatives, excluded wrong-model positive, and analysis regressions`);
+  console.log(`PASS: ${cases.length} fixture integrity negatives, 6 pre-execution negatives, excluded positives, and analysis regressions`);
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true });
 }

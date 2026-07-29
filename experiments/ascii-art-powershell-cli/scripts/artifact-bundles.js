@@ -31,8 +31,12 @@ const conditionRevealingMarkers = [
 ];
 
 function assertNoProhibitedMetadata(serialized, forbiddenValues, label) {
+  const invariantCaseFold = (value) => value.normalize('NFKC').toLowerCase();
+  const normalizedSerialized = invariantCaseFold(serialized);
   const containsForbidden = (value) => {
-    return typeof value === 'string' && value.length > 0 && serialized.includes(value);
+    return typeof value === 'string' &&
+      value.length > 0 &&
+      normalizedSerialized.includes(invariantCaseFold(value));
   };
   if (prohibitedMetadataAssignment.test(serialized) ||
       forbiddenValues.some(containsForbidden)) {
