@@ -548,7 +548,9 @@ const selectedBySchedule = new Map(observations.map((scheduledItem) => [
   manifests.find((manifest) => manifest.scheduleId === scheduledItem.scheduleId && !manifest.exclusion.excluded)
 ]));
 const selectedManifests = [...selectedBySchedule.values()].filter(Boolean);
-if (args['require-complete']) {
+const requireComplete = Boolean(args['require-complete']) ||
+  fs.existsSync(path.join(dataRoot, 'results', 'collection-summary.json'));
+if (requireComplete) {
   observations.forEach((scheduledItem) => {
     check(
       Boolean(selectedBySchedule.get(scheduledItem.scheduleId)),
