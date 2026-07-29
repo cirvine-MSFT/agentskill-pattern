@@ -8,45 +8,47 @@
   "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
   "attempt": {
     "phase": "session_started",
-    "status": "included",
+    "status": "excluded",
     "availability": "evidence_required"
   },
   "conditionEvidence": {
     "status": "available",
     "delegationCallEventIds": [
-      "local-authenticated-P08-R2-treatment-A1:5b65e63c-8f63-4675-8f18-dcddd3cec5bc:delegation"
+      "events-parent-P08-R2-treatment-A1-3b04ed7a81fabba9:line:27:origin:66:offset:115208:sha:948ebc03b700a270de70:id:5b65e63c-8f63-4675-8f18-dcddd3cec5bc:delegation-call"
     ],
     "delegationResultEventIds": [
-      "local-authenticated-P08-R2-treatment-A1:a0bdf1c8-1cac-48fb-a222-2f547875bf8a:delegation"
+      "events-parent-P08-R2-treatment-A1-3b04ed7a81fabba9:line:57:origin:149:offset:277805:sha:ba017b69b141b32836f6:id:a0bdf1c8-1cac-48fb-a222-2f547875bf8a:delegation-result"
     ],
     "specialistToolCallEventIds": [
-      "local-authenticated-P08-R2-treatment-A1:d22404e7-1b95-4700-95b6-ced6fcbce038:tool",
-      "local-authenticated-P08-R2-treatment-A1:890abf55-939d-4479-acc6-0d5e26c6571c:tool",
-      "local-authenticated-P08-R2-treatment-A1:a3c29222-7e42-4802-891d-118b23923736:tool",
-      "local-authenticated-P08-R2-treatment-A1:99341604-0e4d-4654-ac58-d4b14363964f:tool",
-      "local-authenticated-P08-R2-treatment-A1:b082cac6-ce6a-4b05-9830-eb9ff20cae1f:tool",
-      "local-authenticated-P08-R2-treatment-A1:38501a6d-df7d-47c7-9dd6-fe577127c437:tool",
-      "local-authenticated-P08-R2-treatment-A1:0954a76d-bbe4-4a3f-954b-72336f2841fb:tool",
-      "local-authenticated-P08-R2-treatment-A1:b850c6e0-d912-4512-9f59-1ead6f88c0c1:tool",
-      "local-authenticated-P08-R2-treatment-A1:21c2be02-9d0a-44c5-beb2-de7b8d15d841:tool",
-      "local-authenticated-P08-R2-treatment-A1:85da24b4-e828-4032-88ad-70b09d118683:tool",
-      "local-authenticated-P08-R2-treatment-A1:656d41d8-301f-479e-9e6e-da66508b66d7:tool"
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:5:origin:13:offset:64455:sha:12a3b153e0f046ccda5a:id:d22404e7-1b95-4700-95b6-ced6fcbce038:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:10:origin:24:offset:81320:sha:fba02883e879adaa7dd3:id:890abf55-939d-4479-acc6-0d5e26c6571c:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:13:origin:33:offset:98440:sha:80fd888cab194b582979:id:a3c29222-7e42-4802-891d-118b23923736:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:16:origin:42:offset:115739:sha:3d33c8b1b9c7361a7717:id:99341604-0e4d-4654-ac58-d4b14363964f:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:19:origin:51:offset:124925:sha:47eedf767776427120f9:id:b082cac6-ce6a-4b05-9830-eb9ff20cae1f:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:22:origin:60:offset:136438:sha:f40f7c14123f872bc0ff:id:38501a6d-df7d-47c7-9dd6-fe577127c437:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:25:origin:69:offset:153312:sha:b6f3a4dfb37c87170774:id:0954a76d-bbe4-4a3f-954b-72336f2841fb:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:28:origin:78:offset:159797:sha:6b331b96dacd3e6812d5:id:b850c6e0-d912-4512-9f59-1ead6f88c0c1:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:31:origin:87:offset:168988:sha:f42afec4f52778580812:id:21c2be02-9d0a-44c5-beb2-de7b8d15d841:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:34:origin:96:offset:182714:sha:a4d02787f69336b0fbc3:id:85da24b4-e828-4032-88ad-70b09d118683:tool-call",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:37:origin:105:offset:191353:sha:da05e6ad6fb9f64dc1f0:id:656d41d8-301f-479e-9e6e-da66508b66d7:tool-call"
     ],
     "specialistToolResultEventIds": [
-      "local-authenticated-P08-R2-treatment-A1:b56fa021-b989-40bb-94df-5daebb53ecb8:tool",
-      "local-authenticated-P08-R2-treatment-A1:1dc570c5-bd5d-4ee7-9c88-ff99975c2058:tool",
-      "local-authenticated-P08-R2-treatment-A1:061b8625-14cd-4d26-97bc-edcfe7d0a3ff:tool",
-      "local-authenticated-P08-R2-treatment-A1:2b09458d-d685-4972-9a07-cd0ea958e9d5:tool",
-      "local-authenticated-P08-R2-treatment-A1:e56df55d-a95c-4b20-b4a1-c4102fcb0aff:tool",
-      "local-authenticated-P08-R2-treatment-A1:eb1ebaa3-50af-4564-9f2d-99c91dc581fc:tool",
-      "local-authenticated-P08-R2-treatment-A1:a907c23b-3863-48d9-9337-cf030c4848c1:tool",
-      "local-authenticated-P08-R2-treatment-A1:170ff6ea-5e48-42a0-99a4-ff5e612dafb5:tool",
-      "local-authenticated-P08-R2-treatment-A1:cc31bb8e-5199-45e2-81e0-3cc723931c15:tool",
-      "local-authenticated-P08-R2-treatment-A1:a4bd1322-f7d1-4544-92b0-e53f38a3b8a9:tool",
-      "local-authenticated-P08-R2-treatment-A1:a24df06a-4a33-4a24-914f-4cc11c0e0caf:tool"
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:8:origin:20:offset:67161:sha:3661394ff2cae15a2e49:id:b56fa021-b989-40bb-94df-5daebb53ecb8:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:11:origin:29:offset:84331:sha:645bf8ed8b7450df853b:id:1dc570c5-bd5d-4ee7-9c88-ff99975c2058:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:14:origin:38:offset:101422:sha:ab60f496f8971661f92f:id:061b8625-14cd-4d26-97bc-edcfe7d0a3ff:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:17:origin:47:offset:119641:sha:639f909c8b4359a1d411:id:2b09458d-d685-4972-9a07-cd0ea958e9d5:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:20:origin:56:offset:131395:sha:ee1a37247ef5c498e3c9:id:e56df55d-a95c-4b20-b4a1-c4102fcb0aff:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:23:origin:65:offset:144219:sha:16bc3831324bf9e035d3:id:eb1ebaa3-50af-4564-9f2d-99c91dc581fc:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:26:origin:74:offset:156052:sha:a73bb73fcb83bfc11cfe:id:a907c23b-3863-48d9-9337-cf030c4848c1:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:29:origin:83:offset:163699:sha:d6dba42642c97e61e147:id:170ff6ea-5e48-42a0-99a4-ff5e612dafb5:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:32:origin:92:offset:177041:sha:585c126a782e65319ad9:id:cc31bb8e-5199-45e2-81e0-3cc723931c15:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:35:origin:101:offset:187016:sha:30c02aa091a1b7729517:id:a4bd1322-f7d1-4544-92b0-e53f38a3b8a9:tool-result",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:38:origin:110:offset:194200:sha:cf3199593dfbb06d6f53:id:a24df06a-4a33-4a24-914f-4cc11c0e0caf:tool-result"
     ],
     "specialistFileChangeEventIds": [
-      "local-authenticated-P08-R2-treatment-A1:file:2b312149-f793-4674-bff9-78a5389c223d:0:fd011ac928a6a284"
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:17:origin:47:offset:119641:sha:639f909c8b4359a1d411:id:2b09458d-d685-4972-9a07-cd0ea958e9d5:tool-result:file-change",
+      "local-file-change-export-e964a5db1640f4fdec6a:line:25:offset:4470:sha:f9cd213d610abe4bfaad:id:2b312149-f793-4674-bff9-78a5389c223d:file-change",
+      "events-specialist-P08-R2-treatment-A1-523ae421c95a0c72:line:29:origin:83:offset:163699:sha:d6dba42642c97e61e147:id:170ff6ea-5e48-42a0-99a4-ff5e612dafb5:tool-result:file-change"
     ],
     "unavailableReason": null
   },
@@ -80,7 +82,7 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "e1486b5c07ed816e377c65e91458187f0af4334c",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
     "terminalCommitSha": "fb1c275d2606d9b041a34ca28cd2a681de2a6091",
     "artifactBundleSha256": "18a9d9f68276b85cc45def58c66a6bb13d79dc0fd9818707d9a6cd99167fc442"
   },
@@ -95,9 +97,9 @@
   },
   "completion": "completed",
   "exclusion": {
-    "excluded": false,
-    "reason": null,
+    "excluded": true,
+    "reason": "wrong_model",
     "retryOf": null,
-    "retryId": null
+    "retryId": "P08-R2-treatment-A2"
   }
 }

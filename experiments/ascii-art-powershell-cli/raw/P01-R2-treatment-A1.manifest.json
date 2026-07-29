@@ -14,21 +14,21 @@
   "conditionEvidence": {
     "status": "available",
     "delegationCallEventIds": [
-      "local-authenticated-P01-R2-treatment-A1:be5527c9-3c6a-4c87-8249-2fab7860d709:delegation"
+      "events-parent-P01-R2-treatment-A1-d00763a817cbfa18:line:44:origin:97:offset:170443:sha:c8f9034066a4175962c7:id:be5527c9-3c6a-4c87-8249-2fab7860d709:delegation-call"
     ],
     "delegationResultEventIds": [
-      "local-authenticated-P01-R2-treatment-A1:53ee77e6-7055-4524-9f19-bf30db9f6cbb:delegation"
+      "events-parent-P01-R2-treatment-A1-d00763a817cbfa18:line:56:origin:135:offset:219203:sha:ba0399e6726c329c6fe0:id:53ee77e6-7055-4524-9f19-bf30db9f6cbb:delegation-result"
     ],
     "specialistToolCallEventIds": [
-      "local-authenticated-P01-R2-treatment-A1:15c0dbe8-3e38-403d-8b72-fdf372fea46b:tool",
-      "local-authenticated-P01-R2-treatment-A1:87cf0719-f325-4f61-86c2-89f86a88c492:tool"
+      "events-parent-P01-R2-treatment-A1-d00763a817cbfa18:line:50:origin:117:offset:190959:sha:3c0c6ab7ba4466afcfe5:id:15c0dbe8-3e38-403d-8b72-fdf372fea46b:tool-call",
+      "events-parent-P01-R2-treatment-A1-d00763a817cbfa18:line:53:origin:124:offset:204982:sha:f54bbb9210f35bffb2ba:id:87cf0719-f325-4f61-86c2-89f86a88c492:tool-call"
     ],
     "specialistToolResultEventIds": [
-      "local-authenticated-P01-R2-treatment-A1:9e5599e1-acbf-4073-8ea8-5775b5850b94:tool",
-      "local-authenticated-P01-R2-treatment-A1:99a024f4-5998-4b1a-be42-9582e62b5f61:tool"
+      "events-parent-P01-R2-treatment-A1-d00763a817cbfa18:line:51:origin:122:offset:195219:sha:ee153ce14955edb57cb3:id:9e5599e1-acbf-4073-8ea8-5775b5850b94:tool-result",
+      "events-parent-P01-R2-treatment-A1-d00763a817cbfa18:line:54:origin:129:offset:207996:sha:dbfce11492b67994e8cf:id:99a024f4-5998-4b1a-be42-9582e62b5f61:tool-result"
     ],
     "specialistFileChangeEventIds": [
-      "local-authenticated-P01-R2-treatment-A1:file:404708ce-9b3d-45db-8130-7b99277fa165:1:722539bfd1b6016f"
+      "events-parent-P01-R2-treatment-A1-d00763a817cbfa18:line:51:origin:122:offset:195219:sha:ee153ce14955edb57cb3:id:9e5599e1-acbf-4073-8ea8-5775b5850b94:tool-result:file-change"
     ],
     "unavailableReason": null
   },
@@ -62,7 +62,7 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "e8948b420ddfa5446f9d50003a148df9a7577b6c",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
     "terminalCommitSha": "75860ce3f29426c556243785700088ce71898b42",
     "artifactBundleSha256": "e739099d1d2f347bebf5520e856f79bd231923b897c2ad7263be4b5042f7cecb"
   },

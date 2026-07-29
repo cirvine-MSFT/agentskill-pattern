@@ -8,37 +8,38 @@
   "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
   "attempt": {
     "phase": "session_started",
-    "status": "included",
+    "status": "excluded",
     "availability": "evidence_required"
   },
   "conditionEvidence": {
     "status": "available",
     "delegationCallEventIds": [
-      "local-authenticated-P06-R1-treatment-A2:bb6bc72e-acb0-4ac4-943b-23d33611594b:delegation"
+      "events-parent-P06-R1-treatment-A2-bc6adfb46cd5b61a:line:29:origin:72:offset:118889:sha:0691a2f9a3fd2d20a840:id:bb6bc72e-acb0-4ac4-943b-23d33611594b:delegation-call"
     ],
     "delegationResultEventIds": [
-      "local-authenticated-P06-R1-treatment-A2:501a8321-6606-4ed1-bd2c-418be82b5f05:delegation"
+      "events-parent-P06-R1-treatment-A2-bc6adfb46cd5b61a:line:142:origin:388:offset:577583:sha:4c9ed48366c8c3e19b29:id:501a8321-6606-4ed1-bd2c-418be82b5f05:delegation-result"
     ],
     "specialistToolCallEventIds": [
-      "local-authenticated-P06-R1-treatment-A2:110dbb0a-2fd3-427f-a8ce-b5f13ece10ac:tool",
-      "local-authenticated-P06-R1-treatment-A2:744b5b7a-d7d7-441e-a8c1-e95d8b1fb324:tool",
-      "local-authenticated-P06-R1-treatment-A2:7b5d3c33-4f77-4cff-b180-1ff8d1854e34:tool",
-      "local-authenticated-P06-R1-treatment-A2:6a350a8a-8141-4e1b-b0df-1904360105bf:tool",
-      "local-authenticated-P06-R1-treatment-A2:785973ab-7202-4f86-843d-57a78803cec6:tool",
-      "local-authenticated-P06-R1-treatment-A2:5e9ea304-edcf-40d8-b048-bb7580ba6660:tool",
-      "local-authenticated-P06-R1-treatment-A2:17f2d3b6-594b-4278-8c88-6432b6e5d5ab:tool"
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:5:origin:13:offset:76448:sha:7bbf5e495fff4a607fc9:id:110dbb0a-2fd3-427f-a8ce-b5f13ece10ac:tool-call",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:6:origin:14:offset:76774:sha:2ee34ccb164a21c54d5a:id:744b5b7a-d7d7-441e-a8c1-e95d8b1fb324:tool-call",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:12:origin:29:offset:92489:sha:8c7ded13e79ffa24d6b3:id:7b5d3c33-4f77-4cff-b180-1ff8d1854e34:tool-call",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:15:origin:40:offset:141250:sha:26a530045bfd9d4f841c:id:6a350a8a-8141-4e1b-b0df-1904360105bf:tool-call",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:18:origin:49:offset:150226:sha:9d31c8de9eedb4a3158c:id:785973ab-7202-4f86-843d-57a78803cec6:tool-call",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:21:origin:58:offset:163064:sha:57708c2a43a2a6c27aaa:id:5e9ea304-edcf-40d8-b048-bb7580ba6660:tool-call",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:26:origin:69:offset:172452:sha:c2aa36631017d2e9a91f:id:17f2d3b6-594b-4278-8c88-6432b6e5d5ab:tool-call"
     ],
     "specialistToolResultEventIds": [
-      "local-authenticated-P06-R1-treatment-A2:e7ef4595-4236-45b8-8d89-e83ced9e17d5:tool",
-      "local-authenticated-P06-R1-treatment-A2:9d2e2412-5e5f-4732-abe6-20bb38ff9530:tool",
-      "local-authenticated-P06-R1-treatment-A2:13e431fb-beda-4f14-9894-b5c61422a28c:tool",
-      "local-authenticated-P06-R1-treatment-A2:e1e8310a-aa1f-43ff-95d4-d7dd1a94ac86:tool",
-      "local-authenticated-P06-R1-treatment-A2:7168ca1f-053a-4159-b5cc-e9634584f556:tool",
-      "local-authenticated-P06-R1-treatment-A2:83d80b04-fdc0-48ce-9b80-6885ee7d84f9:tool",
-      "local-authenticated-P06-R1-treatment-A2:1b151405-ad6d-49eb-8349-0b704cfad58d:tool"
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:10:origin:25:offset:89275:sha:603e91692012e651f60c:id:e7ef4595-4236-45b8-8d89-e83ced9e17d5:tool-result",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:9:origin:23:offset:86002:sha:ed49dbea50738f3cf11e:id:9d2e2412-5e5f-4732-abe6-20bb38ff9530:tool-result",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:13:origin:35:offset:96514:sha:74f78c70badeb5f35025:id:13e431fb-beda-4f14-9894-b5c61422a28c:tool-result",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:16:origin:45:offset:144189:sha:68c5cd5ff56e7d200494:id:e1e8310a-aa1f-43ff-95d4-d7dd1a94ac86:tool-result",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:19:origin:54:offset:159221:sha:b6ebf1422cb8c42e3d6b:id:7168ca1f-053a-4159-b5cc-e9634584f556:tool-result",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:24:origin:65:offset:169795:sha:4257514575f450e74804:id:83d80b04-fdc0-48ce-9b80-6885ee7d84f9:tool-result",
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:27:origin:74:offset:177363:sha:1c7a932351f448b2e05d:id:1b151405-ad6d-49eb-8349-0b704cfad58d:tool-result"
     ],
     "specialistFileChangeEventIds": [
-      "local-authenticated-P06-R1-treatment-A2:file:8566255d-eb21-48ec-965e-357ee5311070:0:7f1a687fa8173a37"
+      "events-specialist-P06-R1-treatment-A2-f5f50e0b53ae6d72:line:9:origin:23:offset:86002:sha:ed49dbea50738f3cf11e:id:9d2e2412-5e5f-4732-abe6-20bb38ff9530:tool-result:file-change",
+      "local-file-change-export-e964a5db1640f4fdec6a:line:59:offset:12039:sha:620ee5e1138c323e75a5:id:8566255d-eb21-48ec-965e-357ee5311070:file-change"
     ],
     "unavailableReason": null
   },
@@ -72,7 +73,7 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "b20758abbd070747a687fe28a806ee426320902a",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
     "terminalCommitSha": "dd47be53b743bf809e55170a552b22c0bc6a7125",
     "artifactBundleSha256": "eefa816ce72c4e04350f9b8dd6859ce2c9b52578ac3ddeb91bb88f68df5df29f"
   },
@@ -87,8 +88,8 @@
   },
   "completion": "completed",
   "exclusion": {
-    "excluded": false,
-    "reason": null,
+    "excluded": true,
+    "reason": "wrong_model",
     "retryOf": "P06-R1-treatment-A1",
     "retryId": null
   }

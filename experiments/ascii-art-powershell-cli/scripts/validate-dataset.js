@@ -11,6 +11,7 @@ const {
   readJson,
   resolveContainedPath,
   root,
+  sha256,
   sha256File,
   sha256RawFile,
   specialistModel,
@@ -29,6 +30,14 @@ const assignments = readJson(path.join(root, 'design', 'judge-assignments.json')
 const protocol = fs.readFileSync(path.join(root, 'protocol.md'), 'utf8');
 const rawRoot = path.join(dataRoot, 'raw');
 const artifactRoot = path.join(dataRoot, 'artifacts');
+const provenanceIndexPath = path.join(rawRoot, 'provenance-index.json');
+const provenanceIndex = fs.existsSync(provenanceIndexPath)
+  ? readJson(provenanceIndexPath)
+  : null;
+const provenanceById = new Map((provenanceIndex?.sources || []).map((source) => [
+  source.sourceId,
+  source
+]));
 const infrastructureReasons = new Set([
   'session_creation_failure',
   'hash_mismatch',
@@ -133,11 +142,41 @@ for (const [directoryName, lockName] of [['fixture', 'fixture-lock.json'], ['acc
   }
 }
 
+if (provenanceIndex) {
+  for (const source of provenanceIndex.sources) {
+    if (source.kind === 'events_jsonl_slice') {
+      check(/^[a-f0-9]{64}$/.test(source.originalEventsSha256 || ''), `${source.sourceId} must bind the original events.jsonl hash`);
+      check(Number.isInteger(source.originalEventsBytes) && source.originalEventsBytes > 0, `${source.sourceId} must bind the original events.jsonl byte length`);
+    }
+    if (['local-usage-export', 'local-file-change-export'].includes(source.kind)) {
+      check(source.query?.dialect === 'sqlite' && typeof source.query?.sql === 'string', `${source.sourceId} must retain exact SQLite query text`);
+      check(source.query?.exportSha256 === source.sha256, `${source.sourceId} SQLite export hash mismatch`);
+      check(/^[a-f0-9]{64}$/.test(source.query?.sourceDatabaseSnapshot?.snapshotSha256 || ''), `${source.sourceId} source database snapshot hash is missing`);
+      check(source.query?.sourceDatabaseSnapshot?.queryTimeSnapshotStatus === 'unavailable', `${source.sourceId} post-query snapshot must not be represented as query-time evidence`);
+    }
+  }
+}
+
 function validateRecords(records, schemaName) {
   records.forEach((record) => {
     const schemaErrors = validateSchema(record, schemas[schemaName]);
     schemaErrors.forEach((error) => errors.push(`${schemaName} ${record.runId || record.blindId || '<unknown>'}: ${error}`));
   });
+}
+
+function exactLines(file) {
+  const bytes = fs.readFileSync(file);
+  const lines = [];
+  let offset = 0;
+  while (offset < bytes.length) {
+    let end = offset;
+    while (end < bytes.length && bytes[end] !== 0x0a && bytes[end] !== 0x0d) end += 1;
+    if (end < bytes.length && bytes[end] === 0x0d && bytes[end + 1] === 0x0a) end += 2;
+    else if (end < bytes.length) end += 1;
+    lines.push({ offset, raw: bytes.subarray(offset, end) });
+    offset = end;
+  }
+  return lines;
 }
 
 function authenticateRawEvents(telemetryRecord) {
@@ -148,19 +187,26 @@ function authenticateRawEvents(telemetryRecord) {
       check(fs.existsSync(sourcePath), `${telemetryRecord.runId} raw source bytes must exist`);
       if (!fs.existsSync(sourcePath)) continue;
       check(sha256RawFile(sourcePath) === source.sha256, `${telemetryRecord.runId} raw source hash must authenticate exact bytes`);
-      const payload = readJson(sourcePath);
-      check(
-        payload && payload.sourceId === source.sourceId && Array.isArray(payload.events) &&
-        Object.keys(payload).sort().join(',') === 'events,sourceId',
-        `${telemetryRecord.runId} raw source must contain only its sourceId and events`
-      );
-      sources.set(source.sourceId, payload.events || []);
+      const descriptor = provenanceById.get(source.sourceId);
+      if (descriptor) {
+        check(descriptor.path === source.path && descriptor.sha256 === source.sha256, `${telemetryRecord.runId} provenance index source mismatch`);
+        sources.set(source.sourceId, { descriptor, lines: exactLines(sourcePath) });
+      } else {
+        const payload = readJson(sourcePath);
+        check(
+          payload && payload.sourceId === source.sourceId && Array.isArray(payload.events) &&
+          Object.keys(payload).sort().join(',') === 'events,sourceId',
+          `${telemetryRecord.runId} raw source must contain only its sourceId and events`
+        );
+        sources.set(source.sourceId, payload.events || []);
+      }
     } catch (error) {
       errors.push(error.message);
     }
   }
   check(sources.size === telemetryRecord.rawSources.length, `${telemetryRecord.runId} raw source IDs must be unique`);
   for (const [sourceId, sourceEvents] of sources) {
+    if (!Array.isArray(sourceEvents)) continue;
     const normalizedEvents = telemetryRecord.events.filter((event) => event.rawSourceId === sourceId);
     check(
       canonicalJson(normalizedEvents) === canonicalJson(sourceEvents),
@@ -169,6 +215,22 @@ function authenticateRawEvents(telemetryRecord) {
   }
   telemetryRecord.events.forEach((event) => {
     const sourceEvents = sources.get(event.rawSourceId);
+    if (sourceEvents && !Array.isArray(sourceEvents)) {
+      const reference = event.eventId.match(
+        /^([^:]+):line:(\d+)(?::origin:(\d+))?:offset:(\d+):sha:([a-f0-9]{20}):id:([^:]+):/
+      );
+      check(Boolean(reference), `${telemetryRecord.runId} raw event ${event.eventId} must contain immutable line provenance`);
+      if (!reference) return;
+      const line = sourceEvents.lines[Number(reference[2]) - 1];
+      check(Boolean(line), `${telemetryRecord.runId} raw event ${event.eventId} source line is missing`);
+      if (line) {
+        check(sha256(line.raw).startsWith(reference[5]), `${telemetryRecord.runId} raw event ${event.eventId} source line hash mismatch`);
+        if (sourceEvents.descriptor.kind !== 'events_jsonl_slice') {
+          check(line.offset === Number(reference[4]), `${telemetryRecord.runId} raw event ${event.eventId} source offset mismatch`);
+        }
+      }
+      return;
+    }
     const authenticated = sourceEvents && sourceEvents.find((candidate) => candidate.eventId === event.eventId);
     check(Boolean(authenticated), `${telemetryRecord.runId} raw event ${event.eventId} must exist in its authenticated raw source`);
     if (authenticated) {
@@ -183,6 +245,9 @@ function authenticateRawEvents(telemetryRecord) {
 const rawJson = walkFiles(path.join(dataRoot, 'raw')).filter((file) => file.endsWith('.json'));
 const rawRecords = rawJson.map((file) => ({ file, value: readJson(file) }));
 const rawObjects = rawRecords.map((record) => record.value);
+const initialWorkspaceRecords = rawObjects.filter((item) => (
+  item?.recordType === 'initial_workspace_provenance'
+));
 const preExecutionRecords = rawRecords.filter((record) => (
   record.value.protocolId && record.value.recordType === 'pre_execution_failure'
 ));
@@ -253,6 +318,20 @@ if (rawJson.length > 0) {
   );
   check(startedManifests.every((item) => item.refs.promptsSha256 === sha256File(path.join(root, 'prompts.json'))), 'all session-started attempts must use the registered prompt hash');
   check(startedManifests.every((item) => item.refs.fixtureLockSha256 === sha256File(path.join(root, 'fixture', 'fixture-lock.json'))), 'all session-started attempts must use the registered fixture lock hash');
+  if (initialWorkspaceRecords.length > 0) {
+    check(initialWorkspaceRecords.length === startedManifests.length, 'every session-started attempt must have initial workspace provenance');
+    for (const initial of initialWorkspaceRecords) {
+      const manifest = startedManifests.find((item) => item.runId === initial.runId);
+      check(Boolean(manifest), `${initial.runId} initial workspace provenance must have a manifest`);
+      if (!manifest) continue;
+      check(manifest.refs.initialTreeSha === initial.initialTreeSha, `${initial.runId} manifest must record the actual initial Git tree SHA`);
+      check(initial.fixture.files.length === 4, `${initial.runId} must validate every fixture-lock file`);
+      check(initial.fixture.files.every((file) => file.status === 'pass'), `${initial.runId} fixture file hash mismatch must be rejected`);
+      if (initial.status === 'fail') {
+        check(manifest.exclusion.excluded && manifest.exclusion.reason === 'hash_mismatch', `${initial.runId} initial provenance mismatch must be excluded hash_mismatch`);
+      }
+    }
+  }
   manifests.forEach((manifest) => {
     const scheduledItem = observations.find((item) => item.scheduleId === manifest.scheduleId);
     const telemetryRecord = telemetry.find((item) => item.runId === manifest.runId);
@@ -295,8 +374,11 @@ if (rawJson.length > 0) {
       manifest.sessions.specialist.observedModel !== specialistModel
     );
     const modelMismatch = parentModelMismatch || specialistModelMismatch;
+    const modelTelemetryUnavailable = manifest.exclusion.reason === 'telemetry_collection_failure' &&
+      manifest.sessions.parent.observedModel.startsWith('unavailable:');
     check(
-      !modelMismatch || (manifest.exclusion.excluded && manifest.exclusion.reason === 'wrong_model'),
+      !modelMismatch || modelTelemetryUnavailable ||
+        (manifest.exclusion.excluded && manifest.exclusion.reason === 'wrong_model'),
       `${manifest.runId} wrong requested/observed model must be explicitly excluded with reason wrong_model`
     );
     check(
@@ -369,8 +451,21 @@ if (rawJson.length > 0) {
         );
       }
       const prompt = prompts.find((item) => item.id === manifest.promptId);
-      const integrity = validateTelemetryConsistency(manifest, telemetryRecord, prompt);
-      integrity.errors.forEach((error) => errors.push(`${manifest.runId} ${error}`));
+      const noExecutionTelemetry = manifest.exclusion.reason === 'telemetry_collection_failure' &&
+        telemetryRecord.events.every((event) => event.type === 'session_start') &&
+        telemetryRecord.models.every((model) => (
+          ['aiCredits', 'nanoAiu', 'inputTokens', 'peakInputTokens', 'outputTokens', 'cachedTokens']
+            .every((field) => model[field].status === 'unavailable')
+        ));
+      if (!noExecutionTelemetry) {
+        const integrity = validateTelemetryConsistency(manifest, telemetryRecord, prompt);
+        integrity.errors.forEach((error) => errors.push(`${manifest.runId} ${error}`));
+      } else {
+        check(
+          deterministicRecord?.status === 'unavailable',
+          `${manifest.runId} telemetry collection failure requires unavailable deterministic evidence`
+        );
+      }
     }
     if (deterministicRecord) {
       check(deterministicRecord.scheduleId === manifest.scheduleId && deterministicRecord.promptId === manifest.promptId, `${manifest.runId} deterministic provenance must match manifest`);

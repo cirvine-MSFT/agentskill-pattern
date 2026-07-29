@@ -2,7 +2,7 @@
   "protocolId": "ascii-art-powershell-cli-v1",
   "runId": "P03-R1-control-A1",
   "scheduleId": "P03-R1-control",
-  "collectedAt": "2026-07-29T11:02:18.038Z",
+  "collectedAt": "2026-07-29T12:44:36.346Z",
   "metrics": {
     "totalSessionAiCredits": {
       "status": "available",
@@ -198,8 +198,8 @@
       "sequence": 1,
       "name": "rename_session",
       "callId": "call_PCUkrWPJfrkAoxOF0CERdsJ7",
-      "callEventId": "local-authenticated-P03-R1-control-A1:36736dd1-f272-463c-a8fe-e1ad42cc0194:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:37e70743-7338-4b21-9cc6-2c0eba0d5d6d:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:5:origin:13:offset:64483:sha:416846fbd77fdfdba407:id:36736dd1-f272-463c-a8fe-e1ad42cc0194:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:13:origin:26:offset:70659:sha:ab4775d31cee1198acfa:id:37e70743-7338-4b21-9cc6-2c0eba0d5d6d:tool-result",
       "targetPath": "Add JSON export",
       "startedAt": "2026-07-29T07:55:17.203Z",
       "completedAt": "2026-07-29T07:55:19.311Z",
@@ -217,8 +217,8 @@
       "sequence": 2,
       "name": "rename_branch",
       "callId": "call_BeKwR1ASDM1KuOuICPzUvEvy",
-      "callEventId": "local-authenticated-P03-R1-control-A1:5025ae8d-5485-4789-a24d-ab35296a9f3f:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:548a6b30-32aa-4a0f-a32e-349c525ee9b2:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:6:origin:14:offset:64805:sha:5b8f459d3523986f8730:id:5025ae8d-5485-4789-a24d-ab35296a9f3f:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:15:origin:32:offset:74798:sha:e2b50d47b4b4de329824:id:548a6b30-32aa-4a0f-a32e-349c525ee9b2:tool-result",
       "targetPath": "add-json-export",
       "startedAt": "2026-07-29T07:55:17.207Z",
       "completedAt": "2026-07-29T07:55:19.343Z",
@@ -236,8 +236,8 @@
       "sequence": 3,
       "name": "glob",
       "callId": "call_axok5EsU3KKUxbGP6mWelj2s",
-      "callEventId": "local-authenticated-P03-R1-control-A1:476bbd8a-1755-4cf1-b18d-8a9bb0f00ed2:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:6c81e5ff-b784-478d-b7f9-b47fc677b5cb:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:7:origin:15:offset:65125:sha:16275b2d3e0cebb12bd7:id:476bbd8a-1755-4cf1-b18d-8a9bb0f00ed2:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:14:origin:28:offset:71403:sha:07ebf2952af6719249da:id:6c81e5ff-b784-478d-b7f9-b47fc677b5cb:tool-result",
       "targetPath": "**/*",
       "startedAt": "2026-07-29T07:55:17.209Z",
       "completedAt": "2026-07-29T07:55:19.324Z",
@@ -255,8 +255,8 @@
       "sequence": 4,
       "name": "powershell",
       "callId": "call_lS4jsKzMvQFMRg4MTdmjggum",
-      "callEventId": "local-authenticated-P03-R1-control-A1:ff9946b8-2fe7-4320-b88f-36256a099053:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:6a3b78be-26fb-4cd8-af98-9618d6f5fbbb:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:8:origin:16:offset:65499:sha:1b6810bb3cd4acc73ee4:id:ff9946b8-2fe7-4320-b88f-36256a099053:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:16:origin:34:offset:75593:sha:bba78fa30842241aa6bd:id:6a3b78be-26fb-4cd8-af98-9618d6f5fbbb:tool-result",
       "targetPath": "git -C \"X:/code/copilot-worktrees/P03/cirvine-msft-crispy-eureka\" status --short --branch",
       "startedAt": "2026-07-29T07:55:17.212Z",
       "completedAt": "2026-07-29T07:55:19.367Z",
@@ -274,8 +274,8 @@
       "sequence": 5,
       "name": "rename_branch",
       "callId": "call_4rkDkXQ6E2sT5jGDcKe7atuz",
-      "callEventId": "local-authenticated-P03-R1-control-A1:cffddb4f-7cb5-4a22-bb82-cdd541a97800:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:59431af0-e750-4fe4-9416-553c3f9db535:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:18:origin:38:offset:81976:sha:528e3d2ad8cb59bafd70:id:cffddb4f-7cb5-4a22-bb82-cdd541a97800:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:31:origin:65:offset:126528:sha:805e55b767bbe9d6f71f:id:59431af0-e750-4fe4-9416-553c3f9db535:tool-result",
       "targetPath": "implement-export-json",
       "startedAt": "2026-07-29T07:55:24.294Z",
       "completedAt": "2026-07-29T07:55:24.870Z",
@@ -293,8 +293,8 @@
       "sequence": 6,
       "name": "view",
       "callId": "call_c0Mr9gxzpUcCHcxelg1xgOBt",
-      "callEventId": "local-authenticated-P03-R1-control-A1:5365ec46-bf94-46b6-9189-dad331a26d64:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:3a3f3703-05d5-489e-a1dc-03148dedbb7c:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:19:origin:39:offset:82302:sha:ea395a659c002acd50fa:id:5365ec46-bf94-46b6-9189-dad331a26d64:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:28:origin:57:offset:107493:sha:54b5fecf01365c67575a:id:3a3f3703-05d5-489e-a1dc-03148dedbb7c:tool-result",
       "targetPath": "src/TaskForge.ps1",
       "startedAt": "2026-07-29T07:55:24.296Z",
       "completedAt": "2026-07-29T07:55:24.834Z",
@@ -312,8 +312,8 @@
       "sequence": 7,
       "name": "view",
       "callId": "call_ZBEZTXeyB6we2tdTXPGzAJbA",
-      "callEventId": "local-authenticated-P03-R1-control-A1:b57c5332-270b-4f3e-a341-89af22c6e29d:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:e50cc68f-59e0-461e-af25-c7bdbbd7042f:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:20:origin:40:offset:82678:sha:dfa83b1e3a2e29547ee2:id:b57c5332-270b-4f3e-a341-89af22c6e29d:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:26:origin:50:offset:88051:sha:69f00f6b58a7f76ce678:id:e50cc68f-59e0-461e-af25-c7bdbbd7042f:tool-result",
       "targetPath": "src/TaskForge.Core.psm1",
       "startedAt": "2026-07-29T07:55:24.300Z",
       "completedAt": "2026-07-29T07:55:24.805Z",
@@ -331,8 +331,8 @@
       "sequence": 8,
       "name": "view",
       "callId": "call_lrgeW2iOfFvhSoptGO2vTyWf",
-      "callEventId": "local-authenticated-P03-R1-control-A1:af3609a1-3085-4e81-a166-5509e5983a1d:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:c027ac44-aa1d-42c6-b5a0-f02a7ffac0cd:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:21:origin:41:offset:83060:sha:0c718c2ca198ceebeb76:id:af3609a1-3085-4e81-a166-5509e5983a1d:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:27:origin:54:offset:98664:sha:3234766a05481240e9f1:id:c027ac44-aa1d-42c6-b5a0-f02a7ffac0cd:tool-result",
       "targetPath": "tests/Run-Tests.ps1",
       "startedAt": "2026-07-29T07:55:24.302Z",
       "completedAt": "2026-07-29T07:55:24.822Z",
@@ -350,8 +350,8 @@
       "sequence": 9,
       "name": "view",
       "callId": "call_YpFVBpHJndbg505hyZRFP87i",
-      "callEventId": "local-authenticated-P03-R1-control-A1:8cebdf3a-38ef-4e01-861d-ddd69a2476f7:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:b4760762-1c2c-4705-beda-d2f97dbcd3ca:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:22:origin:42:offset:83438:sha:b7269aa842e1b7d20a4c:id:8cebdf3a-38ef-4e01-861d-ddd69a2476f7:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:29:origin:60:offset:120335:sha:2d1d85c6069fb70b4a6f:id:b4760762-1c2c-4705-beda-d2f97dbcd3ca:tool-result",
       "targetPath": "README.md",
       "startedAt": "2026-07-29T07:55:24.304Z",
       "completedAt": "2026-07-29T07:55:24.848Z",
@@ -369,8 +369,8 @@
       "sequence": 10,
       "name": "view",
       "callId": "call_3eM2EPTZx8WXv78tYHdGuXOs",
-      "callEventId": "local-authenticated-P03-R1-control-A1:1f620a51-10fa-4bb0-adab-060ea0810d4a:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:d30b3ba2-80fc-4dd0-bf1c-b18118fbd90a:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:23:origin:43:offset:83805:sha:2b3bd57c5b85c602f676:id:1f620a51-10fa-4bb0-adab-060ea0810d4a:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:30:origin:63:offset:123616:sha:2ee7cd25fc001a64076e:id:d30b3ba2-80fc-4dd0-bf1c-b18118fbd90a:tool-result",
       "targetPath": "fixture-lock.json",
       "startedAt": "2026-07-29T07:55:24.306Z",
       "completedAt": "2026-07-29T07:55:24.861Z",
@@ -388,8 +388,8 @@
       "sequence": 11,
       "name": "apply_patch",
       "callId": "custom_call_xk8e5epmCGR4Y1u7VJdfnDUJ",
-      "callEventId": "local-authenticated-P03-R1-control-A1:09132647-b9b7-4400-8c17-79c504610abd:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:22617537-f941-4095-a7fc-ce3e89225d04:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:34:origin:70:offset:150188:sha:cb6b194e742167814aa1:id:09132647-b9b7-4400-8c17-79c504610abd:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:35:origin:75:offset:182658:sha:54df098c4fd986847fe8:id:22617537-f941-4095-a7fc-ce3e89225d04:tool-result",
       "targetPath": "assets/export.txt",
       "startedAt": "2026-07-29T07:56:06.361Z",
       "completedAt": "2026-07-29T07:56:06.568Z",
@@ -407,8 +407,8 @@
       "sequence": 12,
       "name": "powershell",
       "callId": "call_uxRyY5AY6gH9EoXwmSRh0qsl",
-      "callEventId": "local-authenticated-P03-R1-control-A1:66b3766c-3552-4b20-a0d6-8b133a341d94:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:5ebf2cf1-7d1e-4584-a8ef-c4880e0e70c3:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:37:origin:79:offset:200245:sha:2e6dc688857617678973:id:66b3766c-3552-4b20-a0d6-8b133a341d94:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:38:origin:84:offset:203440:sha:88c713e47e8a3b0c13a5:id:5ebf2cf1-7d1e-4584-a8ef-c4880e0e70c3:tool-result",
       "targetPath": "external-workspace/652d998e1ba7/tests/Run-Tests.ps1",
       "startedAt": "2026-07-29T07:56:10.147Z",
       "completedAt": "2026-07-29T07:56:22.076Z",
@@ -426,8 +426,8 @@
       "sequence": 13,
       "name": "powershell",
       "callId": "call_IK3j5xXQ9b5jrOp4s6P3SApN",
-      "callEventId": "local-authenticated-P03-R1-control-A1:a74c4e6a-57ee-457d-ad35-8db2afc4c70a:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:69406e94-c69b-401a-83b9-2cade29556a8:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:40:origin:88:offset:208984:sha:e0fc85ce19b683ea2f41:id:a74c4e6a-57ee-457d-ad35-8db2afc4c70a:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:41:origin:93:offset:212982:sha:3fcd3d0a0aa094217631:id:69406e94-c69b-401a-83b9-2cade29556a8:tool-result",
       "targetPath": "assets/export.txt",
       "startedAt": "2026-07-29T07:56:27.813Z",
       "completedAt": "2026-07-29T07:56:28.563Z",
@@ -445,8 +445,8 @@
       "sequence": 14,
       "name": "powershell",
       "callId": "call_6ezxna7HHfC42EHh1i0fmZjJ",
-      "callEventId": "local-authenticated-P03-R1-control-A1:edf745c8-152b-433d-9ced-3adb3b9b13ed:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:c082bd64-db4c-4937-b607-ec1aec0e5377:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:43:origin:97:offset:220776:sha:7a7357ec57a4b386fa58:id:edf745c8-152b-433d-9ced-3adb3b9b13ed:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:44:origin:102:offset:224081:sha:e3852315dd687cc1fe85:id:c082bd64-db4c-4937-b607-ec1aec0e5377:tool-result",
       "targetPath": "assets/export.txt",
       "startedAt": "2026-07-29T07:56:37.533Z",
       "completedAt": "2026-07-29T07:56:38.287Z",
@@ -464,8 +464,8 @@
       "sequence": 15,
       "name": "apply_patch",
       "callId": "custom_call_lmw94n59LRJMReMO4bn1jt0E",
-      "callEventId": "local-authenticated-P03-R1-control-A1:aaf5c0f5-d881-448f-bf97-817888c6127a:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:75884721-950c-49a6-b9b4-6fcc94e84691:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:46:origin:106:offset:230936:sha:e876fc50829cd81ad4ba:id:aaf5c0f5-d881-448f-bf97-817888c6127a:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:47:origin:111:offset:236128:sha:f420192c604523977d88:id:75884721-950c-49a6-b9b4-6fcc94e84691:tool-result",
       "targetPath": "tests/Run-Tests.ps1",
       "startedAt": "2026-07-29T07:56:46.168Z",
       "completedAt": "2026-07-29T07:56:46.369Z",
@@ -483,8 +483,8 @@
       "sequence": 16,
       "name": "powershell",
       "callId": "call_SygUv6WzLMt2epV656KfxY8f",
-      "callEventId": "local-authenticated-P03-R1-control-A1:0c1b45f5-0b63-48da-a36c-481dddc2719e:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:3daa78b8-94ec-43fa-a7c7-56a2da7b594f:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:49:origin:115:offset:243705:sha:a8a716c30b004fa0197d:id:0c1b45f5-0b63-48da-a36c-481dddc2719e:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:52:origin:124:offset:250201:sha:cd8c39b2e8314b20cdc9:id:3daa78b8-94ec-43fa-a7c7-56a2da7b594f:tool-result",
       "targetPath": "external-workspace/652d998e1ba7/tests/Run-Tests.ps1",
       "startedAt": "2026-07-29T07:56:52.326Z",
       "completedAt": "2026-07-29T07:57:07.050Z",
@@ -502,8 +502,8 @@
       "sequence": 17,
       "name": "powershell",
       "callId": "call_qdbb8uH5SiKIpjF67feTYbfx",
-      "callEventId": "local-authenticated-P03-R1-control-A1:70e5ece0-ffaa-47ca-a656-7799c72c24b6:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:787ad3eb-a8d2-440d-8440-e9d8bcef5f70:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:50:origin:116:offset:244378:sha:42dbf4687da4a6317b77:id:70e5ece0-ffaa-47ca-a656-7799c72c24b6:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:51:origin:122:offset:249076:sha:67fa6c7daabf80fd228a:id:787ad3eb-a8d2-440d-8440-e9d8bcef5f70:tool-result",
       "targetPath": "external-workspace/2c131c3428fc/code/copilot-worktrees/P03/cirvine-msft-crispy-eureka\" status --short",
       "startedAt": "2026-07-29T07:56:52.327Z",
       "completedAt": "2026-07-29T07:57:07.031Z",
@@ -521,8 +521,8 @@
       "sequence": 18,
       "name": "apply_patch",
       "callId": "custom_call_uEP32z0BDwTMWg4fxZODXO80",
-      "callEventId": "local-authenticated-P03-R1-control-A1:e4fffea4-9cfa-4aa3-9a11-4d546b3cf344:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:dc7b12fe-3d57-41fb-9613-c4576eaf2789:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:54:origin:128:offset:261616:sha:3dddeaae92fb68f0646f:id:e4fffea4-9cfa-4aa3-9a11-4d546b3cf344:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:55:origin:133:offset:271059:sha:637039cd5b1d9cd6f70b:id:dc7b12fe-3d57-41fb-9613-c4576eaf2789:tool-result",
       "targetPath": "src/TaskForge.ps1",
       "startedAt": "2026-07-29T07:57:26.663Z",
       "completedAt": "2026-07-29T07:57:26.947Z",
@@ -540,8 +540,8 @@
       "sequence": 19,
       "name": "powershell",
       "callId": "call_PYl6fqp5Jd8XwUcTW6I5wYMy",
-      "callEventId": "local-authenticated-P03-R1-control-A1:a5a60228-80fb-4e83-bee8-ac62db58457c:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:0fda3c0e-46f1-4d8c-b790-62c69e3916c4:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:57:origin:137:offset:280886:sha:8badde4d3b8c6f24b6fd:id:a5a60228-80fb-4e83-bee8-ac62db58457c:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:60:origin:146:offset:308505:sha:bfb5d4ddc74142890872:id:0fda3c0e-46f1-4d8c-b790-62c69e3916c4:tool-result",
       "targetPath": "external-workspace/652d998e1ba7/tests/Run-Tests.ps1",
       "startedAt": "2026-07-29T07:57:32.542Z",
       "completedAt": "2026-07-29T07:57:48.920Z",
@@ -559,8 +559,8 @@
       "sequence": 20,
       "name": "powershell",
       "callId": "call_dFTv2MoHFlu8O6DzhmxDXUl1",
-      "callEventId": "local-authenticated-P03-R1-control-A1:3f980799-5f4e-4ecd-8b4b-4104b520f6e6:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:7717b1a0-4c38-493b-8d1c-28c7b8109ae3:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:58:origin:138:offset:281554:sha:8a22463955939905322c:id:3f980799-5f4e-4ecd-8b4b-4104b520f6e6:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:59:origin:144:offset:286443:sha:a0cf1af738cea4d8e83d:id:7717b1a0-4c38-493b-8d1c-28c7b8109ae3:tool-result",
       "targetPath": "external-workspace/2455aebac9d0/TaskForge.Core.psm1 src/TaskForge.ps1 tests/Run-Tests.ps1 assets/export.txt",
       "startedAt": "2026-07-29T07:57:32.546Z",
       "completedAt": "2026-07-29T07:57:48.853Z",
@@ -578,8 +578,8 @@
       "sequence": 21,
       "name": "powershell",
       "callId": "call_peTX4HIokruzqUWc0WUJ5lsV",
-      "callEventId": "local-authenticated-P03-R1-control-A1:9601f69b-4625-46ec-9aed-bfb624a9c497:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:daf26957-538f-418f-a2de-06ff0139981a:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:62:origin:150:offset:315179:sha:caa48474b38a1fe53cb0:id:9601f69b-4625-46ec-9aed-bfb624a9c497:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:63:origin:155:offset:319262:sha:84064fc84e54fa5d7449:id:daf26957-538f-418f-a2de-06ff0139981a:tool-result",
       "targetPath": "external-workspace/415f322847e6/TaskForge.Core.psm1 src/TaskForge.ps1 tests/Run-Tests.ps1 assets/export.txt && git commit -m \"Add atomic JSON task export\" -m \"Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>\" -m \"Copilot-Session: 103c6bad-1d4c-45e3-beed-893a90253bb0\"",
       "startedAt": "2026-07-29T07:57:56.512Z",
       "completedAt": "2026-07-29T07:57:57.474Z",
@@ -597,8 +597,8 @@
       "sequence": 22,
       "name": "powershell",
       "callId": "call_dxJjfWiTmrlgcKxLjnm554Im",
-      "callEventId": "local-authenticated-P03-R1-control-A1:d6540638-7ac4-4ae9-a2ac-1331784d8488:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:7dac5282-4443-40e0-941e-8140229bea96:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:65:origin:159:offset:325642:sha:4214950edde2cbcbc3fd:id:d6540638-7ac4-4ae9-a2ac-1331784d8488:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:68:origin:168:offset:331409:sha:4567f6d1a571d20270c1:id:7dac5282-4443-40e0-941e-8140229bea96:tool-result",
       "targetPath": "external-workspace/df8f572cfc7c/code/copilot-worktrees/P03/cirvine-msft-crispy-eureka\" --no-pager log -1 --format=\"%h %s\"",
       "startedAt": "2026-07-29T07:58:04.000Z",
       "completedAt": "2026-07-29T07:58:05.197Z",
@@ -616,8 +616,8 @@
       "sequence": 23,
       "name": "rg",
       "callId": "call_6Z0IQt4xeSJWNnqb8n1DcDwj",
-      "callEventId": "local-authenticated-P03-R1-control-A1:d528ec66-c12c-42b2-8b73-7e8213c8ce54:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:d19fd6b5-f3fa-4ce9-862f-b84c1e836e02:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:66:origin:160:offset:326347:sha:0ba5a8a87f8c0942b0fc:id:d528ec66-c12c-42b2-8b73-7e8213c8ce54:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:67:origin:166:offset:330446:sha:46ac883263836e091b79:id:d19fd6b5-f3fa-4ce9-862f-b84c1e836e02:tool-result",
       "targetPath": "Assert-True",
       "startedAt": "2026-07-29T07:58:04.003Z",
       "completedAt": "2026-07-29T07:58:05.186Z",
@@ -635,8 +635,8 @@
       "sequence": 24,
       "name": "send_session_message",
       "callId": "call_zXMoqBaFdB2XcwVXspPqLfO6",
-      "callEventId": "local-authenticated-P03-R1-control-A1:688dac53-2c52-4db8-8550-ab257810cb59:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:98910dad-8791-45af-8c2d-d55b354860ce:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:70:origin:172:offset:337908:sha:ccc354589fca22057f7f:id:688dac53-2c52-4db8-8550-ab257810cb59:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:73:origin:179:offset:342754:sha:4174db081811ec38f631:id:98910dad-8791-45af-8c2d-d55b354860ce:tool-result",
       "targetPath": "06feefbf-813f-4078-affd-24cd0e652292",
       "startedAt": "2026-07-29T07:58:14.852Z",
       "completedAt": "2026-07-29T07:58:14.912Z",
@@ -654,8 +654,8 @@
       "sequence": 25,
       "name": "task_complete",
       "callId": "call_nSC2ufYRbSPjwAhrNSnPyxu0",
-      "callEventId": "local-authenticated-P03-R1-control-A1:488e6c10-a8b1-4998-b652-5282e6103c23:tool",
-      "resultEventId": "local-authenticated-P03-R1-control-A1:2d620c5f-7b79-48f2-85a2-7c8b3bba4c6b:tool",
+      "callEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:75:origin:183:offset:347536:sha:5c8d9c3d52d330f58787:id:488e6c10-a8b1-4998-b652-5282e6103c23:tool-call",
+      "resultEventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:76:origin:188:offset:350415:sha:61f1b982945e9c43b636:id:2d620c5f-7b79-48f2-85a2-7c8b3bba4c6b:tool-result",
       "targetPath": "Implemented and committed atomic `export-json` support with status filtering, UTF-8 sorted output, storage protection, stable summaries, the validated 12-line banner, focused tests, and documentation. Repository tests pass. Commit: `ef7baa2`.",
       "startedAt": "2026-07-29T07:58:18.603Z",
       "completedAt": "2026-07-29T07:58:18.692Z",
@@ -672,7 +672,7 @@
   "compaction": [],
   "events": [
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:a36de949-6dc2-4d54-8da4-b4dfc212098c:session-start",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:1:origin:1:offset:0:sha:71431a2fc64d96fa95c4:id:a36de949-6dc2-4d54-8da4-b4dfc212098c:session-start",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 1,
       "type": "session_start",
@@ -687,10 +687,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43255",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:360:offset:111942:sha:04c3f23ebd14e35086cb:id:43255:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 2,
       "type": "usage",
@@ -712,10 +712,10 @@
         "outputTokens": 223,
         "cachedTokens": 0
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:36736dd1-f272-463c-a8fe-e1ad42cc0194:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:5:origin:13:offset:64483:sha:416846fbd77fdfdba407:id:36736dd1-f272-463c-a8fe-e1ad42cc0194:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 3,
       "type": "tool_call",
@@ -730,10 +730,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:5025ae8d-5485-4789-a24d-ab35296a9f3f:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:6:origin:14:offset:64805:sha:5b8f459d3523986f8730:id:5025ae8d-5485-4789-a24d-ab35296a9f3f:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 4,
       "type": "tool_call",
@@ -748,10 +748,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:476bbd8a-1755-4cf1-b18d-8a9bb0f00ed2:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:7:origin:15:offset:65125:sha:16275b2d3e0cebb12bd7:id:476bbd8a-1755-4cf1-b18d-8a9bb0f00ed2:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 5,
       "type": "tool_call",
@@ -766,10 +766,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:ff9946b8-2fe7-4320-b88f-36256a099053:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:8:origin:16:offset:65499:sha:1b6810bb3cd4acc73ee4:id:ff9946b8-2fe7-4320-b88f-36256a099053:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 6,
       "type": "tool_call",
@@ -784,10 +784,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:37e70743-7338-4b21-9cc6-2c0eba0d5d6d:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:13:origin:26:offset:70659:sha:ab4775d31cee1198acfa:id:37e70743-7338-4b21-9cc6-2c0eba0d5d6d:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 7,
       "type": "tool_result",
@@ -802,10 +802,10 @@
       "operation": null,
       "resultBytes": 147,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:6c81e5ff-b784-478d-b7f9-b47fc677b5cb:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:14:origin:28:offset:71403:sha:07ebf2952af6719249da:id:6c81e5ff-b784-478d-b7f9-b47fc677b5cb:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 8,
       "type": "tool_result",
@@ -820,10 +820,10 @@
       "operation": null,
       "resultBytes": 847,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:548a6b30-32aa-4a0f-a32e-349c525ee9b2:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:15:origin:32:offset:74798:sha:e2b50d47b4b4de329824:id:548a6b30-32aa-4a0f-a32e-349c525ee9b2:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 9,
       "type": "tool_result",
@@ -838,10 +838,10 @@
       "operation": null,
       "resultBytes": 198,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:6a3b78be-26fb-4cd8-af98-9618d6f5fbbb:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:16:origin:34:offset:75593:sha:bba78fa30842241aa6bd:id:6a3b78be-26fb-4cd8-af98-9618d6f5fbbb:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 10,
       "type": "tool_result",
@@ -856,10 +856,10 @@
       "operation": null,
       "resultBytes": 175,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43262",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:361:offset:112255:sha:c260a0c7476ff557ec2a:id:43262:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 11,
       "type": "usage",
@@ -881,10 +881,10 @@
         "outputTokens": 284,
         "cachedTokens": 45184
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:cffddb4f-7cb5-4a22-bb82-cdd541a97800:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:18:origin:38:offset:81976:sha:528e3d2ad8cb59bafd70:id:cffddb4f-7cb5-4a22-bb82-cdd541a97800:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 12,
       "type": "tool_call",
@@ -899,10 +899,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:5365ec46-bf94-46b6-9189-dad331a26d64:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:19:origin:39:offset:82302:sha:ea395a659c002acd50fa:id:5365ec46-bf94-46b6-9189-dad331a26d64:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 13,
       "type": "tool_call",
@@ -917,10 +917,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:b57c5332-270b-4f3e-a341-89af22c6e29d:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:20:origin:40:offset:82678:sha:dfa83b1e3a2e29547ee2:id:b57c5332-270b-4f3e-a341-89af22c6e29d:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 14,
       "type": "tool_call",
@@ -935,10 +935,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:af3609a1-3085-4e81-a166-5509e5983a1d:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:21:origin:41:offset:83060:sha:0c718c2ca198ceebeb76:id:af3609a1-3085-4e81-a166-5509e5983a1d:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 15,
       "type": "tool_call",
@@ -953,10 +953,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:8cebdf3a-38ef-4e01-861d-ddd69a2476f7:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:22:origin:42:offset:83438:sha:b7269aa842e1b7d20a4c:id:8cebdf3a-38ef-4e01-861d-ddd69a2476f7:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 16,
       "type": "tool_call",
@@ -971,10 +971,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:1f620a51-10fa-4bb0-adab-060ea0810d4a:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:23:origin:43:offset:83805:sha:2b3bd57c5b85c602f676:id:1f620a51-10fa-4bb0-adab-060ea0810d4a:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 17,
       "type": "tool_call",
@@ -989,10 +989,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:e50cc68f-59e0-461e-af25-c7bdbbd7042f:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:26:origin:50:offset:88051:sha:69f00f6b58a7f76ce678:id:e50cc68f-59e0-461e-af25-c7bdbbd7042f:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 18,
       "type": "tool_result",
@@ -1007,10 +1007,10 @@
       "operation": null,
       "resultBytes": 7069,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:c027ac44-aa1d-42c6-b5a0-f02a7ffac0cd:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:27:origin:54:offset:98664:sha:3234766a05481240e9f1:id:c027ac44-aa1d-42c6-b5a0-f02a7ffac0cd:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 19,
       "type": "tool_result",
@@ -1025,10 +1025,10 @@
       "operation": null,
       "resultBytes": 6601,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:3a3f3703-05d5-489e-a1dc-03148dedbb7c:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:28:origin:57:offset:107493:sha:54b5fecf01365c67575a:id:3a3f3703-05d5-489e-a1dc-03148dedbb7c:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 20,
       "type": "tool_result",
@@ -1043,10 +1043,10 @@
       "operation": null,
       "resultBytes": 10603,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:b4760762-1c2c-4705-beda-d2f97dbcd3ca:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:29:origin:60:offset:120335:sha:2d1d85c6069fb70b4a6f:id:b4760762-1c2c-4705-beda-d2f97dbcd3ca:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 21,
       "type": "tool_result",
@@ -1061,10 +1061,10 @@
       "operation": null,
       "resultBytes": 1664,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:d30b3ba2-80fc-4dd0-bf1c-b18118fbd90a:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:30:origin:63:offset:123616:sha:2ee7cd25fc001a64076e:id:d30b3ba2-80fc-4dd0-bf1c-b18118fbd90a:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 22,
       "type": "tool_result",
@@ -1079,10 +1079,10 @@
       "operation": null,
       "resultBytes": 1963,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:59431af0-e750-4fe4-9416-553c3f9db535:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:31:origin:65:offset:126528:sha:805e55b767bbe9d6f71f:id:59431af0-e750-4fe4-9416-553c3f9db535:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 23,
       "type": "tool_result",
@@ -1097,10 +1097,10 @@
       "operation": null,
       "resultBytes": 149,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43305",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:362:offset:112560:sha:37cbc48db0dd4256c056:id:43305:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 24,
       "type": "usage",
@@ -1122,10 +1122,10 @@
         "outputTokens": 3344,
         "cachedTokens": 45655
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:09132647-b9b7-4400-8c17-79c504610abd:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:34:origin:70:offset:150188:sha:cb6b194e742167814aa1:id:09132647-b9b7-4400-8c17-79c504610abd:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 25,
       "type": "tool_call",
@@ -1140,10 +1140,10 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:22617537-f941-4095-a7fc-ce3e89225d04:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:35:origin:75:offset:182658:sha:54df098c4fd986847fe8:id:22617537-f941-4095-a7fc-ce3e89225d04:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 26,
       "type": "tool_result",
@@ -1158,12 +1158,30 @@
       "operation": null,
       "resultBytes": 11684,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43308",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:35:origin:75:offset:182658:sha:54df098c4fd986847fe8:id:22617537-f941-4095-a7fc-ce3e89225d04:tool-result:file-change",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
       "sequence": 27,
+      "type": "file_change",
+      "timestamp": "2026-07-29T07:56:06.568Z",
+      "callId": null,
+      "toolName": null,
+      "success": null,
+      "targetSessionId": null,
+      "requestedModel": null,
+      "scope": null,
+      "path": "assets/export.txt",
+      "operation": "apply_patch",
+      "resultBytes": null,
+      "usage": null,
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
+    },
+    {
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:363:offset:112872:sha:b71c76f22b60fcaa5fbe:id:43308:usage",
+      "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
+      "sequence": 28,
       "type": "usage",
       "timestamp": "2026-07-29T07:56:10.141Z",
       "callId": null,
@@ -1183,12 +1201,12 @@
         "outputTokens": 127,
         "cachedTokens": 49850
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:66b3766c-3552-4b20-a0d6-8b133a341d94:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:37:origin:79:offset:200245:sha:2e6dc688857617678973:id:66b3766c-3552-4b20-a0d6-8b133a341d94:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 28,
+      "sequence": 29,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:56:10.147Z",
       "callId": "call_uxRyY5AY6gH9EoXwmSRh0qsl",
@@ -1201,12 +1219,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:5ebf2cf1-7d1e-4584-a8ef-c4880e0e70c3:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:38:origin:84:offset:203440:sha:88c713e47e8a3b0c13a5:id:5ebf2cf1-7d1e-4584-a8ef-c4880e0e70c3:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 29,
+      "sequence": 30,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:56:22.076Z",
       "callId": "call_uxRyY5AY6gH9EoXwmSRh0qsl",
@@ -1219,12 +1237,12 @@
       "operation": null,
       "resultBytes": 275,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43323",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:364:offset:113188:sha:b4bec85dc960db240934:id:43323:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 30,
+      "sequence": 31,
       "type": "usage",
       "timestamp": "2026-07-29T07:56:27.804Z",
       "callId": null,
@@ -1244,12 +1262,12 @@
         "outputTokens": 249,
         "cachedTokens": 53353
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:a74c4e6a-57ee-457d-ad35-8db2afc4c70a:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:40:origin:88:offset:208984:sha:e0fc85ce19b683ea2f41:id:a74c4e6a-57ee-457d-ad35-8db2afc4c70a:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 31,
+      "sequence": 32,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:56:27.813Z",
       "callId": "call_IK3j5xXQ9b5jrOp4s6P3SApN",
@@ -1262,12 +1280,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:69406e94-c69b-401a-83b9-2cade29556a8:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:41:origin:93:offset:212982:sha:3fcd3d0a0aa094217631:id:69406e94-c69b-401a-83b9-2cade29556a8:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 32,
+      "sequence": 33,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:56:28.563Z",
       "callId": "call_IK3j5xXQ9b5jrOp4s6P3SApN",
@@ -1280,12 +1298,12 @@
       "operation": null,
       "resultBytes": 1559,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43331",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:365:offset:113494:sha:5cab654847bd256ded10:id:43331:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 33,
+      "sequence": 34,
       "type": "usage",
       "timestamp": "2026-07-29T07:56:37.524Z",
       "callId": null,
@@ -1305,12 +1323,12 @@
         "outputTokens": 311,
         "cachedTokens": 53519
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:edf745c8-152b-433d-9ced-3adb3b9b13ed:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:43:origin:97:offset:220776:sha:7a7357ec57a4b386fa58:id:edf745c8-152b-433d-9ced-3adb3b9b13ed:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 34,
+      "sequence": 35,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:56:37.533Z",
       "callId": "call_6ezxna7HHfC42EHh1i0fmZjJ",
@@ -1323,12 +1341,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:c082bd64-db4c-4937-b607-ec1aec0e5377:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:44:origin:102:offset:224081:sha:e3852315dd687cc1fe85:id:c082bd64-db4c-4937-b607-ec1aec0e5377:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 35,
+      "sequence": 36,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:56:38.287Z",
       "callId": "call_6ezxna7HHfC42EHh1i0fmZjJ",
@@ -1341,12 +1359,12 @@
       "operation": null,
       "resultBytes": 155,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43341",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:366:offset:113800:sha:1587a519449aad5ecff0:id:43341:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 36,
+      "sequence": 37,
       "type": "usage",
       "timestamp": "2026-07-29T07:56:46.161Z",
       "callId": null,
@@ -1366,12 +1384,12 @@
         "outputTokens": 474,
         "cachedTokens": 53956
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:aaf5c0f5-d881-448f-bf97-817888c6127a:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:46:origin:106:offset:230936:sha:e876fc50829cd81ad4ba:id:aaf5c0f5-d881-448f-bf97-817888c6127a:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 37,
+      "sequence": 38,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:56:46.168Z",
       "callId": "custom_call_lmw94n59LRJMReMO4bn1jt0E",
@@ -1384,12 +1402,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:75884721-950c-49a6-b9b4-6fcc94e84691:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:47:origin:111:offset:236128:sha:f420192c604523977d88:id:75884721-950c-49a6-b9b4-6fcc94e84691:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 38,
+      "sequence": 39,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:56:46.369Z",
       "callId": "custom_call_lmw94n59LRJMReMO4bn1jt0E",
@@ -1402,12 +1420,30 @@
       "operation": null,
       "resultBytes": 1773,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43352",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:47:origin:111:offset:236128:sha:f420192c604523977d88:id:75884721-950c-49a6-b9b4-6fcc94e84691:tool-result:file-change",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 39,
+      "sequence": 40,
+      "type": "file_change",
+      "timestamp": "2026-07-29T07:56:46.369Z",
+      "callId": null,
+      "toolName": null,
+      "success": null,
+      "targetSessionId": null,
+      "requestedModel": null,
+      "scope": null,
+      "path": "tests/Run-Tests.ps1",
+      "operation": "apply_patch",
+      "resultBytes": null,
+      "usage": null,
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
+    },
+    {
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:367:offset:114107:sha:fb1b242640420dfad9a7:id:43352:usage",
+      "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
+      "sequence": 41,
       "type": "usage",
       "timestamp": "2026-07-29T07:56:52.317Z",
       "callId": null,
@@ -1427,12 +1463,12 @@
         "outputTokens": 253,
         "cachedTokens": 54302
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:0c1b45f5-0b63-48da-a36c-481dddc2719e:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:49:origin:115:offset:243705:sha:a8a716c30b004fa0197d:id:0c1b45f5-0b63-48da-a36c-481dddc2719e:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 40,
+      "sequence": 42,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:56:52.326Z",
       "callId": "call_SygUv6WzLMt2epV656KfxY8f",
@@ -1445,12 +1481,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:70e5ece0-ffaa-47ca-a656-7799c72c24b6:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:50:origin:116:offset:244378:sha:42dbf4687da4a6317b77:id:70e5ece0-ffaa-47ca-a656-7799c72c24b6:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 41,
+      "sequence": 43,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:56:52.327Z",
       "callId": "call_qdbb8uH5SiKIpjF67feTYbfx",
@@ -1463,12 +1499,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:787ad3eb-a8d2-440d-8440-e9d8bcef5f70:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:51:origin:122:offset:249076:sha:67fa6c7daabf80fd228a:id:787ad3eb-a8d2-440d-8440-e9d8bcef5f70:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 42,
+      "sequence": 44,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:57:07.031Z",
       "callId": "call_qdbb8uH5SiKIpjF67feTYbfx",
@@ -1481,12 +1517,12 @@
       "operation": null,
       "resultBytes": 311,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:3daa78b8-94ec-43fa-a7c7-56a2da7b594f:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:52:origin:124:offset:250201:sha:cd8c39b2e8314b20cdc9:id:3daa78b8-94ec-43fa-a7c7-56a2da7b594f:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 43,
+      "sequence": 45,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:57:07.050Z",
       "callId": "call_SygUv6WzLMt2epV656KfxY8f",
@@ -1499,12 +1535,12 @@
       "operation": null,
       "resultBytes": 171,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43386",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:368:offset:114401:sha:82359cb540b29c3b1445:id:43386:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 44,
+      "sequence": 46,
       "type": "usage",
       "timestamp": "2026-07-29T07:57:26.649Z",
       "callId": null,
@@ -1524,12 +1560,12 @@
         "outputTokens": 1154,
         "cachedTokens": 54821
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:e4fffea4-9cfa-4aa3-9a11-4d546b3cf344:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:54:origin:128:offset:261616:sha:3dddeaae92fb68f0646f:id:e4fffea4-9cfa-4aa3-9a11-4d546b3cf344:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 45,
+      "sequence": 47,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:57:26.663Z",
       "callId": "custom_call_uEP32z0BDwTMWg4fxZODXO80",
@@ -1542,12 +1578,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:dc7b12fe-3d57-41fb-9613-c4576eaf2789:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:55:origin:133:offset:271059:sha:637039cd5b1d9cd6f70b:id:dc7b12fe-3d57-41fb-9613-c4576eaf2789:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 46,
+      "sequence": 48,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:57:26.947Z",
       "callId": "custom_call_uEP32z0BDwTMWg4fxZODXO80",
@@ -1560,12 +1596,30 @@
       "operation": null,
       "resultBytes": 4105,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43392",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:55:origin:133:offset:271059:sha:637039cd5b1d9cd6f70b:id:dc7b12fe-3d57-41fb-9613-c4576eaf2789:tool-result:file-change",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 47,
+      "sequence": 49,
+      "type": "file_change",
+      "timestamp": "2026-07-29T07:57:26.947Z",
+      "callId": null,
+      "toolName": null,
+      "success": null,
+      "targetSessionId": null,
+      "requestedModel": null,
+      "scope": null,
+      "path": "src/TaskForge.ps1",
+      "operation": "apply_patch",
+      "resultBytes": null,
+      "usage": null,
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
+    },
+    {
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:369:offset:114711:sha:223fe3e4bbf28325aa2a:id:43392:usage",
+      "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
+      "sequence": 50,
       "type": "usage",
       "timestamp": "2026-07-29T07:57:32.531Z",
       "callId": null,
@@ -1585,12 +1639,12 @@
         "outputTokens": 223,
         "cachedTokens": 55163
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:a5a60228-80fb-4e83-bee8-ac62db58457c:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:57:origin:137:offset:280886:sha:8badde4d3b8c6f24b6fd:id:a5a60228-80fb-4e83-bee8-ac62db58457c:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 48,
+      "sequence": 51,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:57:32.542Z",
       "callId": "call_PYl6fqp5Jd8XwUcTW6I5wYMy",
@@ -1603,12 +1657,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:3f980799-5f4e-4ecd-8b4b-4104b520f6e6:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:58:origin:138:offset:281554:sha:8a22463955939905322c:id:3f980799-5f4e-4ecd-8b4b-4104b520f6e6:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 49,
+      "sequence": 52,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:57:32.546Z",
       "callId": "call_dFTv2MoHFlu8O6DzhmxDXUl1",
@@ -1621,12 +1675,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:7717b1a0-4c38-493b-8d1c-28c7b8109ae3:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:59:origin:144:offset:286443:sha:a0cf1af738cea4d8e83d:id:7717b1a0-4c38-493b-8d1c-28c7b8109ae3:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 50,
+      "sequence": 53,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:57:48.853Z",
       "callId": "call_dFTv2MoHFlu8O6DzhmxDXUl1",
@@ -1639,12 +1693,12 @@
       "operation": null,
       "resultBytes": 21249,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:0fda3c0e-46f1-4d8c-b790-62c69e3916c4:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:60:origin:146:offset:308505:sha:bfb5d4ddc74142890872:id:0fda3c0e-46f1-4d8c-b790-62c69e3916c4:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 51,
+      "sequence": 54,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:57:48.920Z",
       "callId": "call_PYl6fqp5Jd8XwUcTW6I5wYMy",
@@ -1657,12 +1711,12 @@
       "operation": null,
       "resultBytes": 171,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43415",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:370:offset:115018:sha:b4aba2dd553b95126f0b:id:43415:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 52,
+      "sequence": 55,
       "type": "usage",
       "timestamp": "2026-07-29T07:57:56.505Z",
       "callId": null,
@@ -1682,12 +1736,12 @@
         "outputTokens": 367,
         "cachedTokens": 56390
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:9601f69b-4625-46ec-9aed-bfb624a9c497:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:62:origin:150:offset:315179:sha:caa48474b38a1fe53cb0:id:9601f69b-4625-46ec-9aed-bfb624a9c497:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 53,
+      "sequence": 56,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:57:56.512Z",
       "callId": "call_peTX4HIokruzqUWc0WUJ5lsV",
@@ -1700,12 +1754,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:daf26957-538f-418f-a2de-06ff0139981a:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:63:origin:155:offset:319262:sha:84064fc84e54fa5d7449:id:daf26957-538f-418f-a2de-06ff0139981a:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 54,
+      "sequence": 57,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:57:57.474Z",
       "callId": "call_peTX4HIokruzqUWc0WUJ5lsV",
@@ -1718,12 +1772,12 @@
       "operation": null,
       "resultBytes": 445,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43422",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:371:offset:115323:sha:8ff32e6244b1b7946311:id:43422:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 55,
+      "sequence": 58,
       "type": "usage",
       "timestamp": "2026-07-29T07:58:03.990Z",
       "callId": null,
@@ -1743,12 +1797,12 @@
         "outputTokens": 280,
         "cachedTokens": 59585
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:d6540638-7ac4-4ae9-a2ac-1331784d8488:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:65:origin:159:offset:325642:sha:4214950edde2cbcbc3fd:id:d6540638-7ac4-4ae9-a2ac-1331784d8488:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 56,
+      "sequence": 59,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:58:04.000Z",
       "callId": "call_dxJjfWiTmrlgcKxLjnm554Im",
@@ -1761,12 +1815,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:d528ec66-c12c-42b2-8b73-7e8213c8ce54:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:66:origin:160:offset:326347:sha:0ba5a8a87f8c0942b0fc:id:d528ec66-c12c-42b2-8b73-7e8213c8ce54:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 57,
+      "sequence": 60,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:58:04.003Z",
       "callId": "call_6Z0IQt4xeSJWNnqb8n1DcDwj",
@@ -1779,12 +1833,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:d19fd6b5-f3fa-4ce9-862f-b84c1e836e02:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:67:origin:166:offset:330446:sha:46ac883263836e091b79:id:d19fd6b5-f3fa-4ce9-862f-b84c1e836e02:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 58,
+      "sequence": 61,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:58:05.186Z",
       "callId": "call_6Z0IQt4xeSJWNnqb8n1DcDwj",
@@ -1797,12 +1851,12 @@
       "operation": null,
       "resultBytes": 205,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:7dac5282-4443-40e0-941e-8140229bea96:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:68:origin:168:offset:331409:sha:4567f6d1a571d20270c1:id:7dac5282-4443-40e0-941e-8140229bea96:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 59,
+      "sequence": 62,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:58:05.197Z",
       "callId": "call_dxJjfWiTmrlgcKxLjnm554Im",
@@ -1815,12 +1869,12 @@
       "operation": null,
       "resultBytes": 265,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43437",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:372:offset:115616:sha:e0c0fe268665cb52bae3:id:43437:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 60,
+      "sequence": 63,
       "type": "usage",
       "timestamp": "2026-07-29T07:58:14.785Z",
       "callId": null,
@@ -1840,12 +1894,12 @@
         "outputTokens": 328,
         "cachedTokens": 60023
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:688dac53-2c52-4db8-8550-ab257810cb59:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:70:origin:172:offset:337908:sha:ccc354589fca22057f7f:id:688dac53-2c52-4db8-8550-ab257810cb59:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 61,
+      "sequence": 64,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:58:14.852Z",
       "callId": "call_zXMoqBaFdB2XcwVXspPqLfO6",
@@ -1858,12 +1912,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:98910dad-8791-45af-8c2d-d55b354860ce:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:73:origin:179:offset:342754:sha:4174db081811ec38f631:id:98910dad-8791-45af-8c2d-d55b354860ce:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 62,
+      "sequence": 65,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:58:14.912Z",
       "callId": "call_zXMoqBaFdB2XcwVXspPqLfO6",
@@ -1876,12 +1930,12 @@
       "operation": null,
       "resultBytes": 131,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "usage:ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471:43439",
+      "eventId": "local-usage-export-29d854d22a98f8be4535:line:373:offset:115921:sha:06f10a31d86288fc4240:id:43439:usage",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 63,
+      "sequence": 66,
       "type": "usage",
       "timestamp": "2026-07-29T07:58:18.508Z",
       "callId": null,
@@ -1901,12 +1955,12 @@
         "outputTokens": 86,
         "cachedTokens": 60387
       },
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "local-usage-export-29d854d22a98f8be4535"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:488e6c10-a8b1-4998-b652-5282e6103c23:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:75:origin:183:offset:347536:sha:5c8d9c3d52d330f58787:id:488e6c10-a8b1-4998-b652-5282e6103c23:tool-call",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 64,
+      "sequence": 67,
       "type": "tool_call",
       "timestamp": "2026-07-29T07:58:18.603Z",
       "callId": "call_nSC2ufYRbSPjwAhrNSnPyxu0",
@@ -1919,12 +1973,12 @@
       "operation": null,
       "resultBytes": null,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     },
     {
-      "eventId": "local-authenticated-P03-R1-control-A1:2d620c5f-7b79-48f2-85a2-7c8b3bba4c6b:tool",
+      "eventId": "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:76:origin:188:offset:350415:sha:61f1b982945e9c43b636:id:2d620c5f-7b79-48f2-85a2-7c8b3bba4c6b:tool-result",
       "sessionId": "ca9de5d3-8fe7-4c45-a16b-f1b07c0b4471",
-      "sequence": 65,
+      "sequence": 68,
       "type": "tool_result",
       "timestamp": "2026-07-29T07:58:18.692Z",
       "callId": "call_nSC2ufYRbSPjwAhrNSnPyxu0",
@@ -1937,7 +1991,7 @@
       "operation": null,
       "resultBytes": 539,
       "usage": null,
-      "rawSourceId": "local-authenticated-P03-R1-control-A1"
+      "rawSourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134"
     }
   ],
   "routing": {
@@ -1946,7 +2000,7 @@
       "requestedModel": "gpt-5.6-sol",
       "observedModel": "gpt-5.6-sol",
       "sourceEventIds": [
-        "local-authenticated-P03-R1-control-A1:a36de949-6dc2-4d54-8da4-b4dfc212098c:session-start"
+        "events-parent-P03-R1-control-A1-9f431406dcd2e134:line:1:origin:1:offset:0:sha:71431a2fc64d96fa95c4:id:a36de949-6dc2-4d54-8da4-b4dfc212098c:session-start"
       ]
     },
     "specialist": {
@@ -1964,10 +2018,17 @@
   },
   "rawSources": [
     {
-      "sourceId": "local-authenticated-P03-R1-control-A1",
-      "path": "P03-R1-control-A1.events.json",
-      "sha256": "ba75c0ae2e2aa9aa31cbb95484b0709705adce62297ca23b5a410959eaad0059",
-      "collector": "local_events_jsonl_plus_session_store_sql_completion_export",
+      "sourceId": "events-parent-P03-R1-control-A1-9f431406dcd2e134",
+      "path": "sources/P03-R1-control-A1/parent.events.jsonl",
+      "sha256": "9f431406dcd2e134a271700ac16d2eb618df85f796cb87f5429854b411e11d36",
+      "collector": "exact_events_jsonl_slice",
+      "collectedBySessionId": "d40e2522-1cd5-4c87-8fd3-42ddca22edb9"
+    },
+    {
+      "sourceId": "local-usage-export-29d854d22a98f8be4535",
+      "path": "sources/local-usage-export.md",
+      "sha256": "29d854d22a98f8be4535cdd3d2ccbf3fa759879078c4b49f667fca42c300a637",
+      "collector": "exact_byte_copy",
       "collectedBySessionId": "d40e2522-1cd5-4c87-8fd3-42ddca22edb9"
     }
   ]

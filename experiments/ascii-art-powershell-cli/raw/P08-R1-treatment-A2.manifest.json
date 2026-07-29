@@ -8,57 +8,59 @@
   "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
   "attempt": {
     "phase": "session_started",
-    "status": "included",
+    "status": "excluded",
     "availability": "evidence_required"
   },
   "conditionEvidence": {
     "status": "available",
     "delegationCallEventIds": [
-      "local-authenticated-P08-R1-treatment-A2:7d3e59af-e61a-4475-8c9c-d899e59c691e:delegation"
+      "events-parent-P08-R1-treatment-A2-606cbb013f8600d7:line:31:origin:76:offset:123211:sha:8ca02b98e790356339e7:id:7d3e59af-e61a-4475-8c9c-d899e59c691e:delegation-call"
     ],
     "delegationResultEventIds": [
-      "local-authenticated-P08-R1-treatment-A2:4716a6df-5f06-4727-99ef-5d32e96a0855:delegation"
+      "events-parent-P08-R1-treatment-A2-606cbb013f8600d7:line:71:origin:189:offset:356387:sha:854723deda224776a849:id:4716a6df-5f06-4727-99ef-5d32e96a0855:delegation-result"
     ],
     "specialistToolCallEventIds": [
-      "local-authenticated-P08-R1-treatment-A2:12d85264-da3f-42f0-8499-8a12916e7770:tool",
-      "local-authenticated-P08-R1-treatment-A2:791fef25-f906-4343-b92a-27cf89ef7eed:tool",
-      "local-authenticated-P08-R1-treatment-A2:a869d282-dbe9-48a7-ad4c-314eeafae650:tool",
-      "local-authenticated-P08-R1-treatment-A2:03995f77-98c3-4c90-9512-220a587b8e77:tool",
-      "local-authenticated-P08-R1-treatment-A2:9b92c3b1-18ec-49a5-a774-74925e3fcc2c:tool",
-      "local-authenticated-P08-R1-treatment-A2:470ea335-611c-437d-a1f2-ce534bd8aba1:tool",
-      "local-authenticated-P08-R1-treatment-A2:6876ce2b-d444-44c2-9a70-02c9613f46bb:tool",
-      "local-authenticated-P08-R1-treatment-A2:be9483de-b7bd-48a6-8176-f046861980fc:tool",
-      "local-authenticated-P08-R1-treatment-A2:73b07036-9a0d-424d-84ce-5ef330e3ae0c:tool",
-      "local-authenticated-P08-R1-treatment-A2:3ae01ea0-fbb4-463a-a5b2-b934f6dabf5f:tool",
-      "local-authenticated-P08-R1-treatment-A2:665f5a97-48b7-4c6e-89d2-de7f923f09a2:tool",
-      "local-authenticated-P08-R1-treatment-A2:e06e6a90-83b6-4071-a7bb-4337b88a5db8:tool",
-      "local-authenticated-P08-R1-treatment-A2:73eedd5f-3be8-467e-84cd-31ff8544c30e:tool",
-      "local-authenticated-P08-R1-treatment-A2:5e5f0838-74b7-4088-acfb-df50d8e16d2b:tool",
-      "local-authenticated-P08-R1-treatment-A2:59a6da8c-07a3-4c42-bfcb-985e9df5fbb7:tool",
-      "local-authenticated-P08-R1-treatment-A2:3e0d1675-ba75-44be-a9d1-bc84d5fb5645:tool",
-      "local-authenticated-P08-R1-treatment-A2:170a4c6a-3b5d-43ee-b286-82bfe89f589c:tool"
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:5:origin:13:offset:60443:sha:7d463430c4c7f289390b:id:12d85264-da3f-42f0-8499-8a12916e7770:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:6:origin:14:offset:60773:sha:e22f83ffcb55a801da94:id:791fef25-f906-4343-b92a-27cf89ef7eed:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:13:origin:30:offset:76715:sha:d257fcba02497e0467f8:id:a869d282-dbe9-48a7-ad4c-314eeafae650:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:16:origin:39:offset:86502:sha:ea9fee1263972bbedf09:id:03995f77-98c3-4c90-9512-220a587b8e77:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:20:origin:48:offset:109509:sha:b88825751a40a322b371:id:9b92c3b1-18ec-49a5-a774-74925e3fcc2c:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:26:origin:66:offset:145447:sha:027569b3bce7ee7c4c36:id:470ea335-611c-437d-a1f2-ce534bd8aba1:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:29:origin:75:offset:167852:sha:de89697f5d490e53dd81:id:6876ce2b-d444-44c2-9a70-02c9613f46bb:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:32:origin:84:offset:183155:sha:329f5d9e718a97a0455a:id:be9483de-b7bd-48a6-8176-f046861980fc:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:35:origin:93:offset:194141:sha:6f161ef7e3c8d3b10fe6:id:73b07036-9a0d-424d-84ce-5ef330e3ae0c:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:38:origin:102:offset:212656:sha:7075763fba3b907b7ab8:id:3ae01ea0-fbb4-463a-a5b2-b934f6dabf5f:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:42:origin:111:offset:232220:sha:82643546d03eb6dbc8c9:id:665f5a97-48b7-4c6e-89d2-de7f923f09a2:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:45:origin:118:offset:249928:sha:47d4a3a771f0e15c557f:id:e06e6a90-83b6-4071-a7bb-4337b88a5db8:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:48:origin:125:offset:268977:sha:ce4363ed9ac0da847a78:id:73eedd5f-3be8-467e-84cd-31ff8544c30e:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:51:origin:132:offset:279989:sha:733ccac8fb34acd783e0:id:5e5f0838-74b7-4088-acfb-df50d8e16d2b:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:57:origin:150:offset:298971:sha:f5d9a89c81f14d3d8f1d:id:59a6da8c-07a3-4c42-bfcb-985e9df5fbb7:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:63:origin:170:offset:364354:sha:d2ba4b1c4c933a9cf4ec:id:3e0d1675-ba75-44be-a9d1-bc84d5fb5645:tool-call",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:66:origin:179:offset:376070:sha:7b47690509381fcf1055:id:170a4c6a-3b5d-43ee-b286-82bfe89f589c:tool-call"
     ],
     "specialistToolResultEventIds": [
-      "local-authenticated-P08-R1-treatment-A2:dd9bc507-8b17-4e8b-9836-89ceca720f27:tool",
-      "local-authenticated-P08-R1-treatment-A2:b38a6bd0-2da9-4a7d-b6a6-fd8a2a26ba3b:tool",
-      "local-authenticated-P08-R1-treatment-A2:6a529fd9-e5a6-44f1-a958-49c2dc3eda9d:tool",
-      "local-authenticated-P08-R1-treatment-A2:7ed48a4b-c0d3-47ea-a341-1f2ed1ff0401:tool",
-      "local-authenticated-P08-R1-treatment-A2:b2025aa7-22ee-4d99-987b-682c3607fe81:tool",
-      "local-authenticated-P08-R1-treatment-A2:d528dff9-1bfb-40dc-a0c4-1a92d35c4ef0:tool",
-      "local-authenticated-P08-R1-treatment-A2:362a9d9a-377d-4824-91db-9159eeabef9c:tool",
-      "local-authenticated-P08-R1-treatment-A2:a4d93e88-c6ee-47f0-b8ba-b759ab02d05e:tool",
-      "local-authenticated-P08-R1-treatment-A2:977cdaf7-5214-4c84-a3bd-f8d5041cbe51:tool",
-      "local-authenticated-P08-R1-treatment-A2:63f057f1-1a7b-4c32-a2c4-bb33148638e4:tool",
-      "local-authenticated-P08-R1-treatment-A2:c6739355-0dcf-404c-95db-9065c7533062:tool",
-      "local-authenticated-P08-R1-treatment-A2:c1363ddf-f46c-4cd9-921c-9a6433a4ef1e:tool",
-      "local-authenticated-P08-R1-treatment-A2:60b4658a-a79a-4587-bf72-c1c223f86ab9:tool",
-      "local-authenticated-P08-R1-treatment-A2:4151992e-30c9-432e-8d9b-da312fe1bbcc:tool",
-      "local-authenticated-P08-R1-treatment-A2:a49964b2-0d20-4236-98c2-d3aee8c482db:tool",
-      "local-authenticated-P08-R1-treatment-A2:92add73d-02f4-4526-bddc-4c8799965386:tool",
-      "local-authenticated-P08-R1-treatment-A2:ed1fc2c8-0afb-4eb6-bc57-342f9ef16393:tool"
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:10:origin:25:offset:69981:sha:0c24be25627f92dbbe3a:id:dd9bc507-8b17-4e8b-9836-89ceca720f27:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:9:origin:22:offset:66810:sha:6effb06c2510c0bd08f5:id:b38a6bd0-2da9-4a7d-b6a6-fd8a2a26ba3b:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:14:origin:35:offset:79980:sha:38d683b1220240f24bfc:id:6a529fd9-e5a6-44f1-a958-49c2dc3eda9d:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:24:origin:62:offset:136622:sha:21ae2ea8ce0835df12dd:id:7ed48a4b-c0d3-47ea-a341-1f2ed1ff0401:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:21:origin:53:offset:114078:sha:498eca66913307a38dcf:id:b2025aa7-22ee-4d99-987b-682c3607fe81:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:27:origin:71:offset:158177:sha:5e36d35323473926930a:id:d528dff9-1bfb-40dc-a0c4-1a92d35c4ef0:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:30:origin:80:offset:178108:sha:0d3833bac2b11ca52e39:id:362a9d9a-377d-4824-91db-9159eeabef9c:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:33:origin:89:offset:188133:sha:a8b04cad350a11c8f302:id:a4d93e88-c6ee-47f0-b8ba-b759ab02d05e:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:36:origin:98:offset:204625:sha:c033c55fc5c08bf8e448:id:977cdaf7-5214-4c84-a3bd-f8d5041cbe51:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:55:origin:146:offset:291654:sha:d17aea3023d4cff2adc4:id:63f057f1-1a7b-4c32-a2c4-bb33148638e4:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:43:origin:116:offset:236140:sha:8e0faf7c087673b44fbe:id:c6739355-0dcf-404c-95db-9065c7533062:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:46:origin:123:offset:252939:sha:f5fc19fa3971da44eec7:id:c1363ddf-f46c-4cd9-921c-9a6433a4ef1e:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:49:origin:130:offset:275140:sha:c9985bc3aeec754eafc6:id:60b4658a-a79a-4587-bf72-c1c223f86ab9:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:52:origin:137:offset:283000:sha:8c259d099484d685f837:id:4151992e-30c9-432e-8d9b-da312fe1bbcc:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:58:origin:155:offset:308815:sha:0b0337c2f64a05bd1dcb:id:a49964b2-0d20-4236-98c2-d3aee8c482db:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:64:origin:175:offset:369468:sha:4cee317469dfa14bee49:id:92add73d-02f4-4526-bddc-4c8799965386:tool-result",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:67:origin:184:offset:389043:sha:069d268a329a546ad45c:id:ed1fc2c8-0afb-4eb6-bc57-342f9ef16393:tool-result"
     ],
     "specialistFileChangeEventIds": [
-      "local-authenticated-P08-R1-treatment-A2:file:7be1f43d-7550-4c53-8bad-cf2b530a5c0a:1:e7cb0a64d47b1f6f"
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:21:origin:53:offset:114078:sha:498eca66913307a38dcf:id:b2025aa7-22ee-4d99-987b-682c3607fe81:tool-result:file-change",
+      "local-file-change-export-e964a5db1640f4fdec6a:line:58:offset:11820:sha:1f8e772089d573da4cc3:id:7be1f43d-7550-4c53-8bad-cf2b530a5c0a:file-change",
+      "events-specialist-P08-R1-treatment-A2-383c8f02bf436853:line:49:origin:130:offset:275140:sha:c9985bc3aeec754eafc6:id:60b4658a-a79a-4587-bf72-c1c223f86ab9:tool-result:file-change"
     ],
     "unavailableReason": null
   },
@@ -92,7 +94,7 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "e1486b5c07ed816e377c65e91458187f0af4334c",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
     "terminalCommitSha": "f144e46b78ba5ede1bbb12fbdf242273afd34765",
     "artifactBundleSha256": "1e5b6188faac419137e31a9a233f18faf67aced813a3947ceab0179498ee5992"
   },
@@ -107,8 +109,8 @@
   },
   "completion": "completed",
   "exclusion": {
-    "excluded": false,
-    "reason": null,
+    "excluded": true,
+    "reason": "wrong_model",
     "retryOf": "P08-R1-treatment-A1",
     "retryId": null
   }

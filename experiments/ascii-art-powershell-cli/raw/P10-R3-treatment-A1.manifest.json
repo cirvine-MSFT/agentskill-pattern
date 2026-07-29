@@ -14,25 +14,26 @@
   "conditionEvidence": {
     "status": "available",
     "delegationCallEventIds": [
-      "local-authenticated-P10-R3-treatment-A1:a29b43ef-6392-4407-b4ee-dc312a7e0214:delegation"
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:36:origin:83:offset:154182:sha:3a3c198159252b8301db:id:a29b43ef-6392-4407-b4ee-dc312a7e0214:delegation-call"
     ],
     "delegationResultEventIds": [
-      "local-authenticated-P10-R3-treatment-A1:cd7dbb77-1776-459f-af4e-984273bab2e4:delegation"
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:48:origin:121:offset:217018:sha:c71e9510a8eda28a1a39:id:cd7dbb77-1776-459f-af4e-984273bab2e4:delegation-result"
     ],
     "specialistToolCallEventIds": [
-      "local-authenticated-P10-R3-treatment-A1:ea601000-1c29-496d-b51e-bdb4d45b1276:tool",
-      "local-authenticated-P10-R3-treatment-A1:4eff5c9e-74fa-405f-8d92-48873d519631:tool",
-      "local-authenticated-P10-R3-treatment-A1:c128e956-adc1-4b03-ab18-43160b2d339a:tool",
-      "local-authenticated-P10-R3-treatment-A1:8e3f57dc-f844-404c-832a-58bdfd1acbce:tool"
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:42:origin:103:offset:181363:sha:662c73b2df8aa122edb8:id:ea601000-1c29-496d-b51e-bdb4d45b1276:tool-call",
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:45:origin:110:offset:198974:sha:4a97da1a218a9f93ee2f:id:4eff5c9e-74fa-405f-8d92-48873d519631:tool-call",
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:69:origin:180:offset:321853:sha:e3056d6c71d2191c6800:id:c128e956-adc1-4b03-ab18-43160b2d339a:tool-call",
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:72:origin:187:offset:335591:sha:336a4b30a09b2ff5ab92:id:8e3f57dc-f844-404c-832a-58bdfd1acbce:tool-call"
     ],
     "specialistToolResultEventIds": [
-      "local-authenticated-P10-R3-treatment-A1:b028a8be-6ed2-4078-8688-e8e2b59ffe1b:tool",
-      "local-authenticated-P10-R3-treatment-A1:4e49a90a-ccfc-4a7b-83fd-d2a0c14056a5:tool",
-      "local-authenticated-P10-R3-treatment-A1:ed32ae2e-3624-42fc-a957-c48103e38b67:tool",
-      "local-authenticated-P10-R3-treatment-A1:bc7ee2d9-565f-4b24-8521-03124ed8e049:tool"
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:43:origin:108:offset:185506:sha:3d57a882fc2f29257796:id:b028a8be-6ed2-4078-8688-e8e2b59ffe1b:tool-result",
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:46:origin:115:offset:201989:sha:d0e4c17e8e18486c0bcd:id:4e49a90a-ccfc-4a7b-83fd-d2a0c14056a5:tool-result",
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:70:origin:185:offset:326896:sha:10743e79347073608f58:id:ed32ae2e-3624-42fc-a957-c48103e38b67:tool-result",
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:73:origin:192:offset:338606:sha:b385c868d79c36d790b4:id:bc7ee2d9-565f-4b24-8521-03124ed8e049:tool-result"
     ],
     "specialistFileChangeEventIds": [
-      "local-authenticated-P10-R3-treatment-A1:file:c9d1a4d6-1397-41d9-acdb-ef527d8d6fc0:1:d3d7d4ae6e408ffd"
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:43:origin:108:offset:185506:sha:3d57a882fc2f29257796:id:b028a8be-6ed2-4078-8688-e8e2b59ffe1b:tool-result:file-change",
+      "events-parent-P10-R3-treatment-A1-3892c3ade3981bcc:line:70:origin:185:offset:326896:sha:10743e79347073608f58:id:ed32ae2e-3624-42fc-a957-c48103e38b67:tool-result:file-change"
     ],
     "unavailableReason": null
   },
@@ -66,9 +67,9 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "85629250ee474e03cba94d33e52cf18e92e806b3",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
     "terminalCommitSha": "b9ced14089ea2628ba6499d76dfb206685818e04",
-    "artifactBundleSha256": "b92b112c6c2a7d6707cd9256d011e20fe81808fa1043990913b82462b24d027b"
+    "artifactBundleSha256": "b28d8346f037c3d79f1627e9ece1d20bb15ff17268fbbc2edf073ab8a5b7b78a"
   },
   "workspace": {
     "identifier": "P10/cirvine-msft-legendary-disco",

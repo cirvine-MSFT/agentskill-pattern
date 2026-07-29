@@ -8,26 +8,26 @@
   "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
   "attempt": {
     "phase": "session_started",
-    "status": "included",
+    "status": "excluded",
     "availability": "evidence_required"
   },
   "conditionEvidence": {
     "status": "available",
     "delegationCallEventIds": [
-      "local-authenticated-P09-R1-treatment-A2:6e58f11c-ca92-47c3-8382-6ceb2df5b4b4:delegation"
+      "events-parent-P09-R1-treatment-A2-29974adb06461bc8:line:29:origin:66:offset:121470:sha:7fa6c8b10b3c7888b468:id:6e58f11c-ca92-47c3-8382-6ceb2df5b4b4:delegation-call"
     ],
     "delegationResultEventIds": [
-      "local-authenticated-P09-R1-treatment-A2:80d98383-ea6a-4ced-998d-dd2ab5343312:delegation"
+      "events-parent-P09-R1-treatment-A2-29974adb06461bc8:line:109:origin:294:offset:468015:sha:9be2cd8b170d7a8937cd:id:80d98383-ea6a-4ced-998d-dd2ab5343312:delegation-result"
     ],
     "specialistToolCallEventIds": [
-      "local-authenticated-P09-R1-treatment-A2:b2f8fc30-b11e-44fd-b762-fc66aca95d56:tool",
-      "local-authenticated-P09-R1-treatment-A2:002c6873-34cd-4392-97ab-633d67925c5d:tool",
-      "local-authenticated-P09-R1-treatment-A2:e21fa001-ddd9-418d-ba84-877c37e19e9b:tool"
+      "events-specialist-P09-R1-treatment-A2-be018b4df0869fbd:line:5:origin:13:offset:61162:sha:7c063dd0436a958ee29e:id:b2f8fc30-b11e-44fd-b762-fc66aca95d56:tool-call",
+      "events-specialist-P09-R1-treatment-A2-be018b4df0869fbd:line:8:origin:22:offset:79287:sha:372727e06814daa8b3d9:id:002c6873-34cd-4392-97ab-633d67925c5d:tool-call",
+      "events-specialist-P09-R1-treatment-A2-be018b4df0869fbd:line:11:origin:31:offset:98454:sha:86d47733c4568b32da6f:id:e21fa001-ddd9-418d-ba84-877c37e19e9b:tool-call"
     ],
     "specialistToolResultEventIds": [
-      "local-authenticated-P09-R1-treatment-A2:e46944c2-2726-4feb-b1fe-c196f33ad228:tool",
-      "local-authenticated-P09-R1-treatment-A2:c78282a2-f914-48ce-81c9-a72579a97889:tool",
-      "local-authenticated-P09-R1-treatment-A2:f17d6f5c-6586-4b5b-8db1-b5103c531219:tool"
+      "events-specialist-P09-R1-treatment-A2-be018b4df0869fbd:line:6:origin:18:offset:68153:sha:8acdab3d1fcb4334d50b:id:e46944c2-2726-4feb-b1fe-c196f33ad228:tool-result",
+      "events-specialist-P09-R1-treatment-A2-be018b4df0869fbd:line:9:origin:27:offset:91970:sha:bdee624b2f4b6a37b320:id:c78282a2-f914-48ce-81c9-a72579a97889:tool-result",
+      "events-specialist-P09-R1-treatment-A2-be018b4df0869fbd:line:12:origin:36:offset:108157:sha:6224ad1e0394be205164:id:f17d6f5c-6586-4b5b-8db1-b5103c531219:tool-result"
     ],
     "specialistFileChangeEventIds": [],
     "unavailableReason": null
@@ -62,7 +62,7 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "569ef30df0f1bd36a94180ccd81d913b911f1ca6",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
     "terminalCommitSha": "cce75d0bf2965947b0ca323791e956bfe5a3fef2",
     "artifactBundleSha256": "2b0ac6a2e0b5e6f8f163fa69b94650967f53949256f44ae196ec8a03a281589f"
   },
@@ -77,8 +77,8 @@
   },
   "completion": "completed",
   "exclusion": {
-    "excluded": false,
-    "reason": null,
+    "excluded": true,
+    "reason": "wrong_model",
     "retryOf": "P09-R1-treatment-A1",
     "retryId": null
   }

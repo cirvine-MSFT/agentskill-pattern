@@ -14,20 +14,22 @@
   "conditionEvidence": {
     "status": "available",
     "delegationCallEventIds": [
-      "local-authenticated-P01-R3-treatment-A1:23aed9cf-2429-4af0-b91d-5d3da5e0ae74:delegation"
+      "events-parent-P01-R3-treatment-A1-82594ae173d6e363:line:41:origin:94:offset:161010:sha:77eb18c2cc2bf56fe7ae:id:23aed9cf-2429-4af0-b91d-5d3da5e0ae74:delegation-call"
     ],
     "delegationResultEventIds": [
-      "local-authenticated-P01-R3-treatment-A1:e548741a-4f72-424d-bbfa-886d0c9f55f8:delegation"
+      "events-parent-P01-R3-treatment-A1-82594ae173d6e363:line:53:origin:132:offset:213853:sha:63b86534636c2453d49e:id:e548741a-4f72-424d-bbfa-886d0c9f55f8:delegation-result"
     ],
     "specialistToolCallEventIds": [
-      "local-authenticated-P01-R3-treatment-A1:8a4b0018-0639-4dbe-b589-5f7cfaee286f:tool",
-      "local-authenticated-P01-R3-treatment-A1:aa27f169-95b5-4b42-bdc5-2299d5b29ac6:tool"
+      "events-parent-P01-R3-treatment-A1-82594ae173d6e363:line:47:origin:114:offset:184763:sha:509db83508a806513343:id:8a4b0018-0639-4dbe-b589-5f7cfaee286f:tool-call",
+      "events-parent-P01-R3-treatment-A1-82594ae173d6e363:line:50:origin:121:offset:199197:sha:d95b9e430d6db89e361b:id:aa27f169-95b5-4b42-bdc5-2299d5b29ac6:tool-call"
     ],
     "specialistToolResultEventIds": [
-      "local-authenticated-P01-R3-treatment-A1:11139f79-d099-44c5-87e7-2dc73f641a8b:tool",
-      "local-authenticated-P01-R3-treatment-A1:f032fda8-0541-42a6-b3ea-6b59803c681e:tool"
+      "events-parent-P01-R3-treatment-A1-82594ae173d6e363:line:48:origin:119:offset:189038:sha:3aecde41dd5eb1fae2fd:id:11139f79-d099-44c5-87e7-2dc73f641a8b:tool-result",
+      "events-parent-P01-R3-treatment-A1-82594ae173d6e363:line:51:origin:126:offset:202243:sha:e07062baed156a3a9603:id:f032fda8-0541-42a6-b3ea-6b59803c681e:tool-result"
     ],
-    "specialistFileChangeEventIds": [],
+    "specialistFileChangeEventIds": [
+      "events-parent-P01-R3-treatment-A1-82594ae173d6e363:line:48:origin:119:offset:189038:sha:3aecde41dd5eb1fae2fd:id:11139f79-d099-44c5-87e7-2dc73f641a8b:tool-result:file-change"
+    ],
     "unavailableReason": null
   },
   "execution": {
@@ -60,9 +62,9 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "e8948b420ddfa5446f9d50003a148df9a7577b6c",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
     "terminalCommitSha": "c8b168962635635c51c75c1976918fe533be3770",
-    "artifactBundleSha256": "99906bcf59219284279b6053f1e005cc9d0779b240a2764a869d276aa99ad0c3"
+    "artifactBundleSha256": "7aed48be09f4c32572478370e67706e516897433ebc349054f33887021e706a8"
   },
   "workspace": {
     "identifier": "P01/cirvine-msft-ubiquitous-fortnight",

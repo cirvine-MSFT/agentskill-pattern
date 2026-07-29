@@ -8,7 +8,7 @@
   "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
   "attempt": {
     "phase": "session_started",
-    "status": "included",
+    "status": "excluded",
     "availability": "evidence_required"
   },
   "conditionEvidence": {
@@ -49,7 +49,7 @@
     "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
     "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
     "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
-    "initialTreeSha": "e7ac2f2f7f6cdad3310e7deee6e84c6e452ec5e5",
+    "initialTreeSha": "4422c7decda3b320821eb06d7fde0c247b54078f",
     "terminalCommitSha": "87a691d91ea3e1dee2b5969809b2b58d07528289",
     "artifactBundleSha256": "44d7ff9a1b6e223894f6c56fb34a2b139e4fbe69c3f29898d6ad69f5b625a2ee"
   },
@@ -64,9 +64,9 @@
   },
   "completion": "completed",
   "exclusion": {
-    "excluded": false,
-    "reason": null,
+    "excluded": true,
+    "reason": "wrong_model",
     "retryOf": null,
-    "retryId": null
+    "retryId": "P04-R2-control-A2"
   }
 }

@@ -31,8 +31,10 @@ const args = parseArguments(process.argv.slice(2));
 const required = [
   'execution-index',
   'app-sessions',
+  'app-session-export',
   'usage-export',
   'file-export',
+  'source-db',
   'candidate-root',
   'session-state-root'
 ];
@@ -44,8 +46,13 @@ if (missingArguments.length > 0) {
 
 const executionIndexPath = path.resolve(args['execution-index']);
 const appSessionsPath = path.resolve(args['app-sessions']);
+const appSessionExportPath = path.resolve(args['app-session-export']);
 const usageExportPath = path.resolve(args['usage-export']);
 const fileExportPath = path.resolve(args['file-export']);
+const sourceDatabasePath = path.resolve(args['source-db']);
+const reuseOutcomesRoot = args['reuse-outcomes-root']
+  ? path.resolve(args['reuse-outcomes-root'])
+  : null;
 const candidateRoot = path.resolve(args['candidate-root']);
 const sessionStateRoot = path.resolve(args['session-state-root']);
 const outputRoot = args['out-root'] ? path.resolve(args['out-root']) : root;
@@ -59,7 +66,11 @@ const executionIndex = readJson(executionIndexPath);
 const appSessions = readJson(appSessionsPath);
 const prompts = readJson(path.join(root, 'prompts.json'));
 const fixtureLockSha256 = sha256File(path.join(root, 'fixture', 'fixture-lock.json'));
+const fixtureLock = readJson(path.join(root, 'fixture', 'fixture-lock.json'));
 const promptsSha256 = sha256File(path.join(root, 'prompts.json'));
+const emptySha256 = sha256(Buffer.alloc(0));
+const provenanceSources = [];
+let sourceContext = null;
 const schemas = Object.fromEntries(
   ['run-manifest', 'pre-execution-failure', 'raw-telemetry', 'deterministic-results', 'artifacts']
     .map((name) => [name, readJson(path.join(root, 'schemas', `${name}.schema.json`))])
@@ -71,11 +82,103 @@ function ensureCleanOutput() {
   }
   for (const directory of [rawRoot, artifactRoot]) {
     for (const file of walkFiles(directory)) {
-      if (path.basename(file) !== '.gitkeep') fs.rmSync(file, { force: true });
+      if (!['.gitkeep', '.collection.lock'].includes(path.basename(file))) {
+        fs.rmSync(file, { force: true });
+      }
     }
   }
   fs.rmSync(path.join(resultsRoot, 'collection-summary.json'), { force: true });
   fs.copyFileSync(executionIndexPath, path.join(rawRoot, 'execution-index.json'));
+}
+
+function exactLines(file) {
+  const bytes = fs.readFileSync(file);
+  const lines = [];
+  let offset = 0;
+  let lineNumber = 1;
+  while (offset < bytes.length) {
+    let end = offset;
+    while (end < bytes.length && bytes[end] !== 0x0a && bytes[end] !== 0x0d) end += 1;
+    if (end < bytes.length && bytes[end] === 0x0d && bytes[end + 1] === 0x0a) end += 2;
+    else if (end < bytes.length) end += 1;
+    const raw = bytes.subarray(offset, end);
+    const text = raw.toString('utf8').replace(/\r?\n$|\r$/, '');
+    lines.push({
+      lineNumber,
+      offset,
+      raw,
+      text,
+      sha256: sha256(raw)
+    });
+    offset = end;
+    lineNumber += 1;
+  }
+  return lines;
+}
+
+function setSourceMeta(value, line) {
+  for (const [name, metadata] of Object.entries({
+    _sourceLine: line.lineNumber,
+    _sourceOffset: line.offset,
+    _sourceLineSha256: line.sha256,
+    _sourceRawLine: line.raw
+  })) {
+    Object.defineProperty(value, name, {
+      value: metadata,
+      enumerable: false,
+      configurable: false,
+      writable: false
+    });
+  }
+  return value;
+}
+
+function copySource(sourcePath, relativePath, kind) {
+  const destination = path.join(rawRoot, ...relativePath.split('/'));
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(sourcePath, destination);
+  const hash = sha256(fs.readFileSync(destination));
+  const source = {
+    sourceId: `${kind}-${hash.slice(0, 20)}`,
+    path: relativePath,
+    sha256: hash,
+    collector: 'exact_byte_copy',
+    collectedBySessionId: collectorSessionId
+  };
+  provenanceSources.push({ ...source, kind });
+  return source;
+}
+
+function snapshotSourceDatabase() {
+  const snapshotPath = path.join(
+    os.tmpdir(),
+    `.source-db-snapshot-${process.pid}.db`
+  );
+  fs.rmSync(snapshotPath, { force: true });
+  const backupScript = [
+    'import sqlite3,sys',
+    "source=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True)",
+    'snapshot=sqlite3.connect(sys.argv[2])',
+    'source.backup(snapshot)',
+    'snapshot.close()',
+    'source.close()'
+  ].join(';');
+  try {
+    run('python', ['-c', backupScript, sourceDatabasePath, snapshotPath]);
+    const snapshotSha256 = sha256(fs.readFileSync(snapshotPath));
+    return {
+      status: 'available_post_query_snapshot',
+      snapshotIdentity: `sha256:${snapshotSha256}`,
+      snapshotSha256,
+      snapshotBytes: fs.statSync(snapshotPath).size,
+      sourceDatabaseName: path.basename(sourceDatabasePath),
+      capturedAt: new Date().toISOString(),
+      queryTimeSnapshotStatus: 'unavailable',
+      queryTimeSnapshotReason: 'query_time_database_snapshot_or_hash_was_not_captured'
+    };
+  } finally {
+    fs.rmSync(snapshotPath, { force: true });
+  }
 }
 
 function run(command, commandArgs, options = {}) {
@@ -97,22 +200,23 @@ function git(repo, gitArgs, options = {}) {
 }
 
 function parseMarkdownTable(file) {
-  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
-  const headerIndex = lines.findIndex((line) => line.startsWith('| '));
+  const lines = exactLines(file);
+  const headerIndex = lines.findIndex((line) => line.text.startsWith('| '));
   if (headerIndex < 0) throw new Error(`No markdown table found in ${file}`);
   const cells = (line) => line.slice(2, -2).split(' | ');
-  const headers = cells(lines[headerIndex]);
+  const headers = cells(lines[headerIndex].text);
   const rows = [];
   for (let index = headerIndex + 2; index < lines.length; index += 1) {
-    if (!lines[index].startsWith('| ')) continue;
-    const values = cells(lines[index]);
+    if (!lines[index].text.startsWith('| ')) continue;
+    const values = cells(lines[index].text);
     if (values.length !== headers.length) {
       throw new Error(`Malformed markdown row ${index + 1} in ${file}`);
     }
-    rows.push(Object.fromEntries(headers.map((header, cellIndex) => [
+    const row = Object.fromEntries(headers.map((header, cellIndex) => [
       header,
       values[cellIndex] === 'NULL' ? null : values[cellIndex]
-    ])));
+    ]));
+    rows.push(setSourceMeta(row, lines[index]));
   }
   return rows;
 }
@@ -139,10 +243,18 @@ function normalizeUsageRows(rows) {
     'inter_token_latency_ms',
     'content_filter_triggered'
   ]);
-  return rows.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [
-    key,
-    numeric.has(key) ? numberOrNull(value) : value
-  ])));
+  return rows.map((row) => {
+    const normalized = Object.fromEntries(Object.entries(row).map(([key, value]) => [
+      key,
+      numeric.has(key) ? numberOrNull(value) : value
+    ]));
+    return setSourceMeta(normalized, {
+      lineNumber: row._sourceLine,
+      offset: row._sourceOffset,
+      sha256: row._sourceLineSha256,
+      raw: row._sourceRawLine
+    });
+  });
 }
 
 function parseWorkspaceYaml(file) {
@@ -158,12 +270,12 @@ function parseWorkspaceYaml(file) {
 
 function readEventFile(file) {
   const events = [];
-  for (const [index, line] of fs.readFileSync(file, 'utf8').split(/\r?\n/).entries()) {
-    if (!line) continue;
+  for (const line of exactLines(file)) {
+    if (!line.text) continue;
     try {
-      events.push(JSON.parse(line));
+      events.push(setSourceMeta(JSON.parse(line.text), line));
     } catch (error) {
-      throw new Error(`Invalid JSONL in ${file} line ${index + 1}: ${error.message}`);
+      throw new Error(`Invalid JSONL in ${file} line ${line.lineNumber}: ${error.message}`);
     }
   }
   return events;
@@ -193,6 +305,101 @@ function discoverCliSessions() {
 function sessionEvents(session) {
   if (session.events === null) session.events = readEventFile(session.eventsFile);
   return session.events;
+}
+
+function rawRecordId(source, record, suffix) {
+  return [
+    source.sourceId,
+    `line:${record._sliceLine || record._sourceLine}`,
+    `origin:${record._sourceLine}`,
+    `offset:${record._sourceOffset}`,
+    `sha:${record._sourceLineSha256.slice(0, 20)}`,
+    `id:${record.id || record.sourceRowId || 'row'}`,
+    suffix
+  ].join(':');
+}
+
+function writeEventSlice(attempt, role, session, actorSessionId) {
+  const includedTypes = new Set([
+    'assistant.message',
+    'external_tool.completed',
+    'external_tool.requested',
+    'session.model_change',
+    'session.shutdown',
+    'session.start',
+    'subagent.completed',
+    'subagent.started',
+    'tool.execution_complete',
+    'tool.execution_start',
+    'user.message'
+  ]);
+  const events = sessionEvents(session).filter((event) => (
+    includedTypes.has(event.type) ||
+    (event.type === 'hook.start' && event.data?.hookType === 'userPromptSubmitted')
+  ));
+  const bytes = Buffer.concat(events.map((event) => event._sourceRawLine));
+  const relativePath = `sources/${attempt.run_id}/${role}.events.jsonl`;
+  const destination = path.join(rawRoot, ...relativePath.split('/'));
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.writeFileSync(destination, bytes);
+  const hash = sha256(bytes);
+  const originalEventsSha256 = sha256(fs.readFileSync(session.eventsFile));
+  const originalEventsBytes = fs.statSync(session.eventsFile).size;
+  const source = {
+    sourceId: `events-${role}-${attempt.run_id}-${hash.slice(0, 16)}`,
+    path: relativePath,
+    sha256: hash,
+    collector: 'exact_events_jsonl_slice',
+    collectedBySessionId: collectorSessionId
+  };
+  const index = events.map((event, indexValue) => {
+    Object.defineProperty(event, '_sliceLine', {
+      value: indexValue + 1,
+      enumerable: false,
+      configurable: false,
+      writable: false
+    });
+    return {
+      sourceEventId: event.id,
+      type: event.type,
+      sliceLine: indexValue + 1,
+      originalLine: event._sourceLine,
+      originalByteOffset: event._sourceOffset,
+      exactLineSha256: event._sourceLineSha256
+    };
+  });
+  const indexPath = `sources/${attempt.run_id}/${role}.events.index.json`;
+  writeJson(path.join(rawRoot, ...indexPath.split('/')), {
+    recordType: 'exact_event_slice_index',
+    sourceId: source.sourceId,
+    exactSliceSha256: source.sha256,
+    originalEventsSha256,
+    originalEventsBytes,
+    originalCliSessionId: session.id,
+    records: index
+  });
+  provenanceSources.push({
+    ...source,
+    kind: 'events_jsonl_slice',
+    indexPath,
+    role,
+    cliSessionId: session.id,
+    actorSessionId,
+    originalEventsSha256,
+    originalEventsBytes
+  });
+  return source;
+}
+
+function tableRecordId(source, row, suffix) {
+  return [
+    source.sourceId,
+    `line:${row._sourceLine}`,
+    `offset:${row._sourceOffset}`,
+    `sha:${row._sourceLineSha256.slice(0, 20)}`,
+    `id:${row.id ?? row.session_id ?? 'row'}`,
+    suffix
+  ].join(':');
 }
 
 function eventText(events) {
@@ -332,11 +539,9 @@ function isBannerOnlyPrompt(value, prompt) {
 }
 
 function exposedToolNames(events) {
-  const content = events
-    .filter((event) => event.type === 'system.message')
-    .map((event) => event.data?.content || '')
-    .join('\n');
-  return [...new Set([...content.matchAll(/^type ([A-Za-z0-9_-]+) =/gm)].map((match) => match[1]))]
+  return [...new Set(events
+    .filter((event) => event.type === 'tool.execution_start' && event.data?.toolName)
+    .map((event) => event.data.toolName))]
     .sort();
 }
 
@@ -380,6 +585,96 @@ function fileAtCommit(repo, commit, file) {
   return git(repo, ['show', `${commit}:${file}`], { encoding: null }).stdout;
 }
 
+function registeredTextHash(bytes) {
+  return sha256(Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8'));
+}
+
+function buildInitialWorkspaceProvenance(attempt, repo, initialCommitSha) {
+  const initialTreeSha = git(repo, ['rev-parse', `${initialCommitSha}^{tree}`]).stdout.trim();
+  const fixtureFiles = fixtureLock.files.map((expected) => {
+    let actualSha256 = null;
+    let status = 'fail';
+    try {
+      actualSha256 = registeredTextHash(fileAtCommit(repo, initialCommitSha, expected.path));
+      status = actualSha256 === expected.sha256 ? 'pass' : 'fail';
+    } catch {
+      status = 'fail';
+    }
+    return {
+      path: expected.path,
+      expectedSha256: expected.sha256,
+      actualSha256,
+      status
+    };
+  });
+  let fixtureLockActualSha256 = null;
+  try {
+    fixtureLockActualSha256 = registeredTextHash(fileAtCommit(
+      repo,
+      initialCommitSha,
+      'fixture-lock.json'
+    ));
+  } catch {
+    fixtureLockActualSha256 = null;
+  }
+  const customizationPaths = [
+    '.github/agents/ascii-art.agent.md',
+    '.github/skills/ascii-art/SKILL.md'
+  ];
+  const candidateFiles = new Set(repositoryFiles(repo, initialCommitSha));
+  const customizationFiles = customizationPaths.map((file) => {
+    const present = candidateFiles.has(file);
+    let expectedSha256 = null;
+    let actualSha256 = null;
+    if (attempt.condition === 'treatment') {
+      expectedSha256 = registeredTextHash(fileAtCommit(
+        root,
+        executionIndex.treatmentRef.sha,
+        file
+      ));
+    }
+    if (present) {
+      actualSha256 = registeredTextHash(fileAtCommit(repo, initialCommitSha, file));
+    }
+    const status = attempt.condition === 'treatment'
+      ? (present && actualSha256 === expectedSha256 ? 'pass' : 'fail')
+      : (!present ? 'pass' : 'fail');
+    return { path: file, present, expectedSha256, actualSha256, status };
+  });
+  const fixtureStatus = fixtureFiles.every((file) => file.status === 'pass') &&
+    fixtureLockActualSha256 === fixtureLockSha256
+    ? 'pass'
+    : 'fail';
+  const customizationStatus = customizationFiles.every((file) => file.status === 'pass')
+    ? 'pass'
+    : 'fail';
+  const record = {
+    protocolId,
+    recordType: 'initial_workspace_provenance',
+    runId: attempt.run_id,
+    scheduleId: attempt.schedule_id,
+    condition: attempt.condition,
+    initialCommitSha,
+    initialTreeSha,
+    fixture: {
+      status: fixtureStatus,
+      lockExpectedSha256: fixtureLockSha256,
+      lockActualSha256: fixtureLockActualSha256,
+      files: fixtureFiles
+    },
+    customization: {
+      status: customizationStatus,
+      sourceRef: attempt.condition === 'treatment'
+        ? executionIndex.treatmentRef
+        : executionIndex.controlRef,
+      files: customizationFiles
+    },
+    status: fixtureStatus === 'pass' && customizationStatus === 'pass' ? 'pass' : 'fail'
+  };
+  writeJson(path.join(rawRoot, `${attempt.run_id}.initial-workspace.json`), record);
+  return record;
+}
+
 function groupStatus(assertions) {
   const statuses = assertions.map((assertion) => assertion.status);
   if (statuses.includes('fail')) return 'fail';
@@ -421,8 +716,12 @@ function parseJsonOutput(stdout, fallbackId, stderr) {
 function runDeterministic(attempt, terminalCommitSha, initialCommitSha, prompt, repo, scratchRoot) {
   const workspace = path.join(scratchRoot, attempt.run_id);
   const archive = path.join(scratchRoot, `${attempt.run_id}.tar`);
+  fs.rmSync(workspace, { recursive: true, force: true });
   fs.mkdirSync(workspace, { recursive: true });
-  git(repo, ['archive', '--format=tar', '--output', archive, terminalCommitSha]);
+  const archiveBytes = git(repo, ['archive', '--format=tar', terminalCommitSha], {
+    encoding: null
+  }).stdout;
+  fs.writeFileSync(archive, archiveBytes);
   run('tar', ['-xf', archive, '-C', workspace]);
   fs.rmSync(archive, { force: true });
 
@@ -561,7 +860,7 @@ function buildArtifact(attempt, manifest, deterministic, prompt, repo, terminalC
   add('terminal.diff', 'diff', diff.replace(/\r\n/g, '\n'));
   const treeFiles = repositoryFiles(repo, terminalCommitSha);
   for (const file of treeFiles.filter((item) => item.startsWith('src/')).sort()) {
-    const bytes = fs.readFileSync(path.join(workspace, ...file.split('/')));
+    const bytes = fileAtCommit(repo, terminalCommitSha, file);
     const content = bytes.toString('utf8');
     if (!Buffer.from(content, 'utf8').equals(bytes)) {
       throw new Error(`${attempt.run_id} ${file} is not lossless UTF-8`);
@@ -569,7 +868,7 @@ function buildArtifact(attempt, manifest, deterministic, prompt, repo, terminalC
     add(file, 'source', content);
   }
   for (const file of treeFiles.filter((item) => item.startsWith('tests/')).sort()) {
-    const bytes = fs.readFileSync(path.join(workspace, ...file.split('/')));
+    const bytes = fileAtCommit(repo, terminalCommitSha, file);
     const content = bytes.toString('utf8');
     if (!Buffer.from(content, 'utf8').equals(bytes)) {
       throw new Error(`${attempt.run_id} ${file} is not lossless UTF-8`);
@@ -577,7 +876,7 @@ function buildArtifact(attempt, manifest, deterministic, prompt, repo, terminalC
     add(file, 'fixture_test', content);
   }
   if (treeFiles.includes(prompt.banner.path)) {
-    const bytes = fs.readFileSync(path.join(workspace, ...prompt.banner.path.split('/')));
+    const bytes = fileAtCommit(repo, terminalCommitSha, prompt.banner.path);
     const content = bytes.toString('utf8');
     if (!Buffer.from(content, 'utf8').equals(bytes)) {
       throw new Error(`${attempt.run_id} ${prompt.banner.path} is not lossless UTF-8`);
@@ -624,6 +923,46 @@ function validateRecord(record, schemaName) {
   }
 }
 
+function reuseOutcome(attempt) {
+  if (!reuseOutcomesRoot) return null;
+  const previousRoot = path.join(
+    reuseOutcomesRoot,
+    'experiments',
+    'ascii-art-powershell-cli'
+  );
+  const deterministicPath = path.join(
+    previousRoot,
+    'raw',
+    `${attempt.run_id}.deterministic.json`
+  );
+  const artifactPath = path.join(
+    previousRoot,
+    'artifacts',
+    `${attempt.run_id}.artifacts.json`
+  );
+  const bundlePath = path.join(
+    previousRoot,
+    'artifacts',
+    `${attempt.run_id}.bundle.json`
+  );
+  if (![deterministicPath, artifactPath, bundlePath].every(fs.existsSync)) return null;
+  const deterministic = readJson(deterministicPath);
+  const artifact = readJson(artifactPath);
+  fs.copyFileSync(
+    bundlePath,
+    path.join(artifactRoot, `${attempt.run_id}.bundle.json`)
+  );
+  writeJson(
+    path.join(artifactRoot, `${attempt.run_id}.artifacts.json`),
+    artifact
+  );
+  return {
+    deterministic,
+    artifact,
+    bundleSha256: artifact.bundleSha256
+  };
+}
+
 function retryLinks(attempt, scheduleAttempts) {
   if (attempt.status !== 'excluded') {
     return {
@@ -643,27 +982,13 @@ function retryLinks(attempt, scheduleAttempts) {
   };
 }
 
-function preExecutionRecord(attempt, scheduleAttempts) {
+function effectiveExclusion(attempt, scheduleAttempts, overrideReason = null) {
+  if (!overrideReason) return retryLinks(attempt, scheduleAttempts);
   return {
-    protocolId,
-    recordType: 'pre_execution_failure',
-    runId: attempt.run_id,
-    scheduleId: attempt.schedule_id,
-    promptId: attempt.prompt_id,
-    repetition: attempt.repetition,
-    condition: attempt.condition,
-    conditionInstruction: conditionInstructions[attempt.condition],
-    attempt: {
-      phase: 'pre_execution',
-      status: 'excluded',
-      availability: 'not_created'
-    },
-    execution: {
-      block: attempt.block,
-      position: attempt.position,
-      attempt: attempt.attempt
-    },
-    exclusion: retryLinks(attempt, scheduleAttempts)
+    excluded: true,
+    reason: overrideReason,
+    retryOf: attempt.attempt === 2 ? `${attempt.schedule_id}-A1` : null,
+    retryId: attempt.attempt === 1 ? `${attempt.schedule_id}-A2` : null
   };
 }
 
@@ -683,9 +1008,9 @@ function modelSplit(role, sessionId, requestedModel, observedModel, rows) {
   };
 }
 
-function usageEvent(sourceId, eventId, sessionId, row) {
+function usageEvent(source, sessionId, row) {
   return {
-    eventId,
+    eventId: tableRecordId(source, row, 'usage'),
     sessionId,
     sequence: 0,
     type: 'usage',
@@ -707,7 +1032,7 @@ function usageEvent(sourceId, eventId, sessionId, row) {
       outputTokens: row.output_tokens,
       cachedTokens: row.cache_read_tokens
     },
-    rawSourceId: sourceId
+    rawSourceId: source.sourceId
   };
 }
 
@@ -733,7 +1058,7 @@ function baseEvent(sourceId, eventId, sessionId, type, timestamp, values = {}) {
   };
 }
 
-function makeToolRecords(sourceId, rawEvents, sessionId, parentWorkspace, specialistWorkspace, prompt) {
+function makeToolRecords(source, rawEvents, sessionId, parentWorkspace, specialistWorkspace, prompt) {
   const completed = completionByCall(rawEvents);
   const tools = [];
   const normalized = [];
@@ -753,10 +1078,10 @@ function makeToolRecords(sourceId, rawEvents, sessionId, parentWorkspace, specia
     const resultBytes = result
       ? Buffer.byteLength(JSON.stringify(resultContent), 'utf8')
       : null;
-    const callEventId = `${sourceId}:${start.id}:tool`;
-    const resultEventId = result ? `${sourceId}:${result.id}:tool` : null;
+    const callEventId = rawRecordId(source, start, 'tool-call');
+    const resultEventId = result ? rawRecordId(source, result, 'tool-result') : null;
     normalized.push(baseEvent(
-      sourceId,
+      source.sourceId,
       callEventId,
       sessionId,
       'tool_call',
@@ -769,7 +1094,7 @@ function makeToolRecords(sourceId, rawEvents, sessionId, parentWorkspace, specia
     ));
     if (result) {
       normalized.push(baseEvent(
-        sourceId,
+        source.sourceId,
         resultEventId,
         sessionId,
         'tool_result',
@@ -879,49 +1204,20 @@ function findSpecialist(attempt, parentApp, parentCli, cliSessions, appByPath, p
   return null;
 }
 
-function writeUsageCompletionSource(attempt, parentRows, specialistRows) {
-  const file = path.join(rawRoot, `${attempt.run_id}.usage-completions.jsonl`);
-  const rows = [
-    ...parentRows.map((row) => ({ role: 'parent', ...row })),
-    ...specialistRows.map((row) => ({ role: 'specialist', ...row }))
-  ].sort((left, right) => (
-    Date.parse(left.created_at) - Date.parse(right.created_at) ||
-    left.id - right.id
-  ));
-  const allowed = rows.map((row) => ({
-    sourceRowId: row.id,
-    role: row.role,
-    cliSessionId: row.session_id,
-    turnIndex: row.turn_index,
-    agentId: row.agent_id,
-    parentToolCallId: row.parent_tool_call_id,
-    model: row.model,
-    inputTokens: row.input_tokens,
-    outputTokens: row.output_tokens,
-    cacheReadTokens: row.cache_read_tokens,
-    cacheWriteTokens: row.cache_write_tokens,
-    reasoningTokens: row.reasoning_tokens,
-    totalNanoAiu: row.total_nano_aiu,
-    requestMultiplier: row.request_multiplier,
-    durationMs: row.duration_ms,
-    timeToFirstTokenMs: row.time_to_first_token_ms,
-    interTokenLatencyMs: row.inter_token_latency_ms,
-    initiator: row.initiator,
-    apiEndpoint: row.api_endpoint,
-    reasoningEffort: row.reasoning_effort,
-    finishReason: row.finish_reason,
-    contentFilterTriggered: row.content_filter_triggered,
-    timestamp: row.created_at
-  }));
-  fs.writeFileSync(file, allowed.map((row) => JSON.stringify(row)).join('\n') + '\n', 'utf8');
-}
-
 function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usageRows, fileRows) {
-  const sourceId = `local-authenticated-${attempt.run_id}`;
   const parentRawEvents = sessionEvents(parentCli);
   const specialistRawEvents = specialist?.kind === 'external' && specialist.cliSession
     ? sessionEvents(specialist.cliSession)
     : [];
+  const parentSource = writeEventSlice(
+    attempt,
+    'parent',
+    parentCli,
+    attempt.parent_session_id
+  );
+  const specialistSource = specialist?.kind === 'external' && specialist.cliSession
+    ? writeEventSlice(attempt, 'specialist', specialist.cliSession, specialist.sessionId)
+    : parentSource;
   const parentUsageRows = usageRows.filter((row) => (
     row.session_id === parentCli.id &&
     (!specialist || specialist.kind !== 'in_process' || row.agent_id !== specialist.sessionId)
@@ -933,8 +1229,6 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
       ))
       : usageRows.filter((row) => row.session_id === specialist.cliSession?.id))
     : [];
-  writeUsageCompletionSource(attempt, parentUsageRows, specialistUsageRows);
-
   const parentModels = [...new Set(parentUsageRows.map((row) => row.model))].sort();
   const specialistModels = [...new Set(specialistUsageRows.map((row) => row.model))].sort();
   const parentObservedModel = parentModels.join('+') || 'unavailable:no_parent_completion_usage';
@@ -942,37 +1236,31 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
     specialist?.observedModel ||
     'unavailable:no_specialist_completion_usage';
   const parentStartRaw = parentRawEvents.find((event) => event.type === 'session.start');
-  const parentStartId = `${sourceId}:${parentStartRaw?.id || parentCli.id}:session-start`;
+  const parentStartId = rawRecordId(parentSource, parentStartRaw, 'session-start');
   const normalizedEvents = [baseEvent(
-    sourceId,
+    parentSource.sourceId,
     parentStartId,
     attempt.parent_session_id,
     'session_start',
     parentStartRaw?.timestamp || parentCli.createdAt
   )];
-  parentUsageRows.forEach((row) => normalizedEvents.push(usageEvent(
-    sourceId,
-    `usage:${attempt.parent_session_id}:${row.id}`,
-    attempt.parent_session_id,
-    row
-  )));
+  parentUsageRows.forEach((row) => normalizedEvents.push(
+    usageEvent(sourceContext.usage, attempt.parent_session_id, row)
+  ));
 
   let specialistStartId = null;
   if (specialist) {
-    specialistStartId = `${sourceId}:${specialist.started?.id || specialist.sessionId}:session-start`;
+    specialistStartId = rawRecordId(specialistSource, specialist.started, 'session-start');
     normalizedEvents.push(baseEvent(
-      sourceId,
+      specialistSource.sourceId,
       specialistStartId,
       specialist.sessionId,
       'session_start',
       specialist.started?.timestamp || specialist.cliSession?.createdAt || parentStartRaw?.timestamp
     ));
-    specialistUsageRows.forEach((row) => normalizedEvents.push(usageEvent(
-      sourceId,
-      `usage:${specialist.sessionId}:${row.id}`,
-      specialist.sessionId,
-      row
-    )));
+    specialistUsageRows.forEach((row) => normalizedEvents.push(
+      usageEvent(sourceContext.usage, specialist.sessionId, row)
+    ));
   }
 
   const parentToolEvents = parentRawEvents.filter((event) => (
@@ -983,7 +1271,7 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
     .filter((event) => event.type === 'tool.execution_start')
     .map((event) => event.data?.toolCallId));
   const parentTools = makeToolRecords(
-    sourceId,
+    parentSource,
     parentRawEvents.filter((event) => (
       event.type !== 'tool.execution_complete' ||
       parentToolCallIds.has(event.data?.toolCallId)
@@ -999,12 +1287,9 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
   const specialistTools = specialist
     ? (specialist.kind === 'in_process'
       ? makeToolRecords(
-        sourceId,
+        specialistSource,
         parentRawEvents.filter((event) => (
-          event.data?.parentToolCallId === specialist.sessionId ||
-          (event.data?.model === specialistModel &&
-            event.data?.toolName !== 'task' &&
-            event.type.startsWith('tool.execution_'))
+          event.data?.parentToolCallId === specialist.sessionId
         )),
         specialist.sessionId,
         parentApp.path,
@@ -1012,7 +1297,7 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
         prompt
       )
       : makeToolRecords(
-        sourceId,
+        specialistSource,
         specialistRawEvents,
         specialist.sessionId,
         parentApp.path,
@@ -1025,13 +1310,13 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
   const delegationCallIds = [];
   const delegationResultIds = [];
   if (specialist?.call) {
-    const delegationCallId = `${sourceId}:${specialist.call.id}:delegation`;
+    const delegationCallId = rawRecordId(parentSource, specialist.call, 'delegation-call');
     delegationCallIds.push(delegationCallId);
     const delegatedPrompt = specialist.call.data?.arguments?.prompt ||
       specialist.call.data?.arguments?.kickoff?.prompt ||
       '';
     normalizedEvents.push(baseEvent(
-      sourceId,
+      parentSource.sourceId,
       delegationCallId,
       attempt.parent_session_id,
       'delegation_call',
@@ -1051,13 +1336,13 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
     ));
   }
   if (specialist?.result && specialist.call) {
-    const delegationResultId = `${sourceId}:${specialist.result.id}:delegation`;
+    const delegationResultId = rawRecordId(parentSource, specialist.result, 'delegation-result');
     delegationResultIds.push(delegationResultId);
     const delegatedPrompt = specialist.call.data?.arguments?.prompt ||
       specialist.call.data?.arguments?.kickoff?.prompt ||
       '';
     normalizedEvents.push(baseEvent(
-      sourceId,
+      parentSource.sourceId,
       delegationResultId,
       attempt.parent_session_id,
       'delegation_result',
@@ -1077,31 +1362,44 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
   }
 
   const normalizedFileEvents = [];
-  for (const row of fileRows.filter((item) => (
-    item.session_id === parentCli.id ||
-    (specialist?.kind === 'external' && item.session_id === specialist.cliSession?.id)
-  ))) {
-    const actualPath = sanitizeRelative(row.file_path, parentApp.path, specialist?.workspace);
-    let sessionId = attempt.parent_session_id;
-    if (specialist?.kind === 'external' && row.session_id === specialist.cliSession?.id) {
-      sessionId = specialist.sessionId;
-    } else if (
-      specialist?.kind === 'in_process' &&
-      actualPath === prompt.banner.path
-    ) {
-      sessionId = specialist.sessionId;
-    }
+  const mutatingTools = new Set(['apply_patch', 'create', 'edit']);
+  for (const tool of [...parentTools.tools, ...specialistTools.tools]) {
+    if (!tool.success || !tool.targetPath || !mutatingTools.has(tool.name) || !tool.resultEventId) continue;
+    const resultEvent = [...parentTools.events, ...specialistTools.events]
+      .find((event) => event.eventId === tool.resultEventId);
     normalizedFileEvents.push(baseEvent(
-      sourceId,
-      `${sourceId}:file:${row.session_id}:${row.turn_index}:${sha256(Buffer.from(row.file_path, 'utf8')).slice(0, 16)}`,
-      sessionId,
+      resultEvent.rawSourceId,
+      `${resultEvent.eventId}:file-change`,
+      tool.sessionId,
       'file_change',
-      row.first_seen_at,
+      tool.completedAt,
       {
-        path: actualPath,
-        operation: row.tool_name
+        path: tool.targetPath,
+        operation: tool.name
       }
     ));
+  }
+  if (specialist?.kind !== 'in_process') {
+    for (const row of fileRows.filter((item) => (
+      item.session_id === parentCli.id ||
+      (specialist?.kind === 'external' && item.session_id === specialist.cliSession?.id)
+    ))) {
+      const actualPath = sanitizeRelative(row.file_path, parentApp.path, specialist?.workspace);
+      if (!actualPath) continue;
+      const specialistActor = specialist?.kind === 'external' &&
+        row.session_id === specialist.cliSession?.id;
+      normalizedFileEvents.push(baseEvent(
+        sourceContext.file.sourceId,
+        tableRecordId(sourceContext.file, row, 'file-change'),
+        specialistActor ? specialist.sessionId : attempt.parent_session_id,
+        'file_change',
+        row.first_seen_at,
+        {
+          path: actualPath,
+          operation: row.tool_name
+        }
+      ));
+    }
   }
   normalizedEvents.push(...normalizedFileEvents);
 
@@ -1190,9 +1488,7 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
       : unavailable('tokens', attempt.condition === 'control'
         ? 'control_condition_no_specialist'
         : 'specialist_completion_usage_unavailable'),
-    exposedToolCount: metric(exposedTools.length, 'count', exposedToolNames(parentRawEvents).length > 0
-      ? 'authenticated_system_tool_definitions'
-      : 'authenticated_observed_tool_names_only'),
+    exposedToolCount: metric(exposedTools.length, 'count', 'authenticated_observed_tool_names_only'),
     toolCallCount: metric(normalizedEvents.filter((event) => event.type === 'tool_call').length, 'count', 'authenticated_tool_events'),
     toolResultCount: metric(normalizedEvents.filter((event) => event.type === 'tool_result').length, 'count', 'authenticated_tool_events'),
     compactionEventCount: metric(0, 'count', 'authenticated_event_stream_no_compaction_events'),
@@ -1264,19 +1560,15 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
           unavailableReason: null
         }
     },
-    rawSources: []
+    rawSources: [
+      parentSource,
+      ...(specialistSource.sourceId === parentSource.sourceId ? [] : [specialistSource]),
+      sourceContext.usage,
+      ...(normalizedFileEvents.some((event) => event.rawSourceId === sourceContext.file.sourceId)
+        ? [sourceContext.file]
+        : [])
+    ]
   };
-  const rawPayload = { sourceId, events: normalizedEvents };
-  const rawPath = `${attempt.run_id}.events.json`;
-  const rawBytes = canonicalJson(rawPayload);
-  fs.writeFileSync(path.join(rawRoot, rawPath), rawBytes, 'utf8');
-  telemetry.rawSources.push({
-    sourceId,
-    path: rawPath,
-    sha256: sha256(Buffer.from(rawBytes, 'utf8')),
-    collector: 'local_events_jsonl_plus_session_store_sql_completion_export',
-    collectedBySessionId: collectorSessionId
-  });
   return {
     telemetry,
     specialist,
@@ -1296,6 +1588,150 @@ function buildTelemetry(attempt, parentApp, parentCli, specialist, prompt, usage
   };
 }
 
+function unavailableModelSplit(role, sessionId, requestedModel, observedModel, reason) {
+  return {
+    role,
+    requestedModel,
+    observedModel,
+    sessionId,
+    aiCredits: unavailable('premium_requests', reason),
+    nanoAiu: unavailable('nano_aiu', reason),
+    inputTokens: unavailable('tokens', reason),
+    peakInputTokens: unavailable('tokens', reason),
+    outputTokens: unavailable('tokens', reason),
+    cachedTokens: unavailable('tokens', reason)
+  };
+}
+
+function buildUnavailableTelemetry(attempt, parentApp) {
+  const reason = 'parent_cli_session_not_started_telemetry_unavailable';
+  const appSourcePath = path.join(rawRoot, ...sourceContext.app.path.split('/'));
+  const sourceLine = exactLines(appSourcePath)
+    .find((line) => line.text.includes(`"id": "${attempt.parent_session_id}"`));
+  if (!sourceLine) {
+    throw new Error(`${attempt.run_id} parent app session is missing from exact app export`);
+  }
+  const parentStartId = [
+    sourceContext.app.sourceId,
+    `line:${sourceLine.lineNumber}`,
+    `offset:${sourceLine.offset}`,
+    `sha:${sourceLine.sha256.slice(0, 20)}`,
+    `id:${attempt.parent_session_id}`,
+    'session-start'
+  ].join(':');
+  const timestamp = formatIso(parentApp.created_at || parentApp.createdAt, collectedAt);
+  const fields = {
+    totalSessionAiCredits: ['premium_requests', reason],
+    totalSessionNanoAiu: ['nano_aiu', reason],
+    parentNanoAiu: ['nano_aiu', reason],
+    parentCumulativeInputTokens: ['tokens', reason],
+    parentPeakInputTokens: ['tokens', reason],
+    parentOutputTokens: ['tokens', reason],
+    specialistCumulativeInputTokens: ['tokens', reason],
+    specialistPeakInputTokens: ['tokens', reason],
+    specialistOutputTokens: ['tokens', reason],
+    exposedToolCount: ['count', reason],
+    toolCallCount: ['count', reason],
+    toolResultCount: ['count', reason],
+    compactionEventCount: ['count', reason],
+    compactReturnBytes: ['bytes', reason],
+    wallLatencyMs: ['milliseconds', reason],
+    parentActiveLatencyMs: ['milliseconds', reason],
+    specialistLatencyMs: ['milliseconds', reason],
+    parentWaitLatencyMs: ['milliseconds', reason]
+  };
+  const telemetry = {
+    protocolId,
+    runId: attempt.run_id,
+    scheduleId: attempt.schedule_id,
+    collectedAt,
+    metrics: Object.fromEntries(Object.entries(fields).map(([name, [unit, fieldReason]]) => [
+      name,
+      unavailable(unit, fieldReason)
+    ])),
+    models: [unavailableModelSplit(
+      'parent',
+      attempt.parent_session_id,
+      parentModel,
+      'unavailable:no_cli_session',
+      reason
+    )],
+    exposedTools: [],
+    tools: [],
+    compaction: [],
+    events: [{
+      ...baseEvent(
+        sourceContext.app.sourceId,
+        parentStartId,
+        attempt.parent_session_id,
+        'session_start',
+        timestamp
+      ),
+      sequence: 1
+    }],
+    routing: {
+      parent: {
+        sessionId: attempt.parent_session_id,
+        requestedModel: parentModel,
+        observedModel: 'unavailable:no_cli_session',
+        sourceEventIds: [parentStartId]
+      },
+      specialist: attempt.condition === 'control'
+        ? { status: 'not_applicable', reason: 'control_condition' }
+        : { status: 'unavailable', reason: 'specialist_session_not_created' },
+      delegationEvidence: {
+        status: 'unavailable',
+        callEventId: null,
+        resultEventId: null,
+        requestedAt: null,
+        returnedAt: null,
+        unavailableReason: reason
+      }
+    },
+    rawSources: [sourceContext.app]
+  };
+  const group = (name) => ({
+    status: 'unavailable',
+    unavailableReason: reason,
+    assertions: [{
+      id: `${name}-unavailable`,
+      status: 'unavailable',
+      message: 'The parent project session was created, but no CLI session or task execution evidence was recorded.'
+    }]
+  });
+  const deterministic = {
+    protocolId,
+    runId: attempt.run_id,
+    scheduleId: attempt.schedule_id,
+    promptId: attempt.prompt_id,
+    status: 'unavailable',
+    unavailableReason: reason,
+    functional: group('functional'),
+    art: group('art'),
+    tamperCheck: group('tamper'),
+    startedAt: timestamp,
+    completedAt: timestamp
+  };
+  return {
+    telemetry,
+    deterministic,
+    createdAt: timestamp,
+    promptSentAt: timestamp,
+    completedAt: timestamp,
+    parentObservedModel: 'unavailable:no_cli_session',
+    specialistObservedModel: 'unavailable:no_specialist_session',
+    conditionEvidence: {
+      status: 'unavailable',
+      delegationCallEventIds: [],
+      delegationResultEventIds: [],
+      specialistToolCallEventIds: [],
+      specialistToolResultEventIds: [],
+      specialistFileChangeEventIds: [],
+      unavailableReason: reason
+    }
+  };
+}
+
 function collectionEnvironment() {
   const powershell = run('pwsh', ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()']).stdout.trim();
   return {
@@ -1309,6 +1745,44 @@ function collectionEnvironment() {
 
 function main() {
   ensureCleanOutput();
+  const benchmarkCwdPredicate = Array.from({ length: 10 }, (_, index) => (
+    `s.cwd LIKE 'X:\\code\\copilot-worktrees\\P${String(index + 1).padStart(2, '0')}\\%'`
+  )).join(' OR ');
+  const usageExportSql = `SELECT u.id, u.session_id, u.turn_index, u.agent_id, u.parent_tool_call_id, u.model, u.input_tokens, u.output_tokens, u.cache_read_tokens, u.cache_write_tokens, u.reasoning_tokens, u.total_nano_aiu, u.request_multiplier, u.duration_ms, u.time_to_first_token_ms, u.inter_token_latency_ms, u.initiator, u.api_endpoint, u.reasoning_effort, u.finish_reason, u.content_filter_triggered, u.created_at, s.cwd FROM assistant_usage_events u JOIN sessions s ON s.id = u.session_id WHERE substr(u.created_at, 1, 10) >= '2026-07-28' AND (${benchmarkCwdPredicate}) ORDER BY u.session_id, u.id LIMIT 10000`;
+  const fileExportSql = `SELECT f.session_id, f.file_path, f.tool_name, f.turn_index, f.first_seen_at, s.cwd FROM session_files f JOIN sessions s ON s.id = f.session_id WHERE substr(f.first_seen_at, 1, 10) >= '2026-07-28' AND (${benchmarkCwdPredicate}) ORDER BY f.session_id, f.turn_index, f.file_path LIMIT 10000`;
+  const sourceDatabaseSnapshot = snapshotSourceDatabase();
+  sourceContext = {
+    usage: copySource(
+      usageExportPath,
+      'sources/local-usage-export.md',
+      'local-usage-export'
+    ),
+    file: copySource(
+      fileExportPath,
+      'sources/local-file-change-export.md',
+      'local-file-change-export'
+    ),
+    app: copySource(
+      appSessionExportPath,
+      'sources/app-session-export.txt',
+      'app-session-export'
+    )
+  };
+  const sourceByKind = new Map(provenanceSources.map((source) => [source.kind, source]));
+  sourceByKind.get('local-usage-export').query = {
+    dialect: 'sqlite',
+    sql: usageExportSql,
+    exportRowCount: parseMarkdownTable(usageExportPath).length,
+    exportSha256: sourceContext.usage.sha256,
+    sourceDatabaseSnapshot
+  };
+  sourceByKind.get('local-file-change-export').query = {
+    dialect: 'sqlite',
+    sql: fileExportSql,
+    exportRowCount: parseMarkdownTable(fileExportPath).length,
+    exportSha256: sourceContext.file.sha256,
+    sourceDatabaseSnapshot
+  };
   const usageRows = normalizeUsageRows(parseMarkdownTable(usageExportPath));
   const fileRows = parseMarkdownTable(fileExportPath);
   const cliSessions = discoverCliSessions();
@@ -1325,7 +1799,12 @@ function main() {
     current.push(attempt);
     attemptsBySchedule.set(attempt.schedule_id, current);
   }
-  const scratchRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ascii-art-collection-'));
+  const scratchRoot = path.join(
+    os.tmpdir(),
+    `.collection-scratch-${process.pid}`
+  );
+  fs.rmSync(scratchRoot, { recursive: true, force: true });
+  fs.mkdirSync(scratchRoot, { recursive: true });
   const records = [];
   const telemetryRecords = [];
   const deterministicRecords = [];
@@ -1334,16 +1813,111 @@ function main() {
   const modelMismatches = [];
   const collectionIssues = [];
   const terminalCommitRecoveries = [];
+  const initialWorkspaceRecords = [];
+  const frozenSelectedRunIds = new Set(executionIndex.selectedRuns
+    .filter((run) => run.status === 'completed')
+    .map((run) => `${run.schedule_id}-A${run.attempt}`));
   try {
     for (const attempt of executionIndex.attempts) {
       const scheduleAttempts = attemptsBySchedule.get(attempt.schedule_id);
       const parentApp = appById.get(attempt.parent_session_id);
       const parentCli = parentApp?.path ? cliByPath.get(parentApp.path.toLowerCase()) : null;
       if (!parentCli) {
-        const record = preExecutionRecord(attempt, scheduleAttempts);
-        validateRecord(record, 'pre-execution-failure');
-        writeJson(path.join(rawRoot, `${attempt.run_id}.pre-execution.json`), record);
-        records.push(record);
+        if (!parentApp?.path || !fs.existsSync(parentApp.path)) {
+          throw new Error(`${attempt.run_id} created parent worktree is unavailable`);
+        }
+        const repo = path.join(candidateRoot, attempt.prompt_id);
+        const initialCommitSha = exactCommit(parentApp.path, 'HEAD');
+        const initialWorkspace = buildInitialWorkspaceProvenance(
+          attempt,
+          repo,
+          initialCommitSha
+        );
+        initialWorkspaceRecords.push(initialWorkspace);
+        const evidence = buildUnavailableTelemetry(attempt, parentApp);
+        const exclusion = effectiveExclusion(
+          attempt,
+          scheduleAttempts,
+          'telemetry_collection_failure'
+        );
+        const manifest = {
+          protocolId,
+          runId: attempt.run_id,
+          scheduleId: attempt.schedule_id,
+          promptId: attempt.prompt_id,
+          repetition: attempt.repetition,
+          condition: attempt.condition,
+          conditionInstruction: conditionInstructions[attempt.condition],
+          attempt: {
+            phase: 'session_started',
+            status: 'excluded',
+            availability: 'evidence_required'
+          },
+          conditionEvidence: evidence.conditionEvidence,
+          execution: {
+            block: attempt.block,
+            position: attempt.position,
+            attempt: attempt.attempt,
+            rootSessionId: executionIndex.rootProjectSessionId,
+            coordinatorSessionId: attempt.coordinator_session_id
+          },
+          environment: {
+            copilotCliVersion: 'unavailable:no_cli_session',
+            hostImage: 'local-windows-worktree',
+            operatingSystem: 'Windows_NT',
+            powershellVersion: 'unavailable:no_cli_session',
+            nodeVersion: 'unavailable:no_cli_session'
+          },
+          sessions: {
+            parent: {
+              sessionId: attempt.parent_session_id,
+              requestedModel: parentModel,
+              observedModel: evidence.parentObservedModel
+            },
+            specialist: { status: 'unavailable', reason: 'specialist_session_not_created' }
+          },
+          refs: {
+            benchmarkCommitSha,
+            fixtureLockSha256,
+            promptsSha256,
+            initialTreeSha: initialWorkspace.initialTreeSha,
+            terminalCommitSha: initialCommitSha,
+            artifactBundleSha256: emptySha256
+          },
+          workspace: {
+            identifier: `${attempt.prompt_id}/${path.basename(parentApp.path)}`,
+            branch: attempt.branch || path.basename(parentApp.path)
+          },
+          timestamps: {
+            createdAt: evidence.createdAt,
+            promptSentAt: evidence.promptSentAt,
+            completedAt: evidence.completedAt
+          },
+          completion: 'interrupted',
+          exclusion
+        };
+        validateRecord(manifest, 'run-manifest');
+        validateRecord(evidence.telemetry, 'raw-telemetry');
+        validateRecord(evidence.deterministic, 'deterministic-results');
+        writeJson(path.join(rawRoot, `${attempt.run_id}.manifest.json`), manifest);
+        writeJson(path.join(rawRoot, `${attempt.run_id}.telemetry.json`), evidence.telemetry);
+        writeJson(path.join(rawRoot, `${attempt.run_id}.deterministic.json`), evidence.deterministic);
+        records.push(manifest);
+        telemetryRecords.push(evidence.telemetry);
+        deterministicRecords.push(evidence.deterministic);
+        compliance.push({
+          runId: attempt.run_id,
+          scheduleId: attempt.schedule_id,
+          condition: attempt.condition,
+          selected: false,
+          compliant: false,
+          reasons: ['condition evidence unavailable because no CLI session was recorded']
+        });
+        collectionIssues.push({
+          runId: attempt.run_id,
+          issue: 'created_parent_without_cli_session',
+          handling: 'session_started telemetry_collection_failure; schema-required prompt/completion timestamps equal exact app-session creation time; no artifact emitted'
+        });
         continue;
       }
 
@@ -1364,6 +1938,12 @@ function main() {
       const initialCommitSha = evidence.initialCommitSha
         ? exactCommit(repo, evidence.initialCommitSha)
         : exactCommit(repo, executionIndex[`${attempt.condition}Ref`].sha);
+      const initialWorkspace = buildInitialWorkspaceProvenance(
+        attempt,
+        repo,
+        initialCommitSha
+      );
+      initialWorkspaceRecords.push(initialWorkspace);
       const recovery = attempt.terminal_commit_sha
         ? null
         : recoverTerminalCommit(repo, initialCommitSha, sessionEvents(parentCli));
@@ -1383,14 +1963,29 @@ function main() {
             : 'authoritative_index_terminal_was_null_no_resolvable_commit_event_initial_commit_used'
         });
       }
-      const deterministicResult = runDeterministic(
-        attempt,
-        terminalCommitSha,
-        initialCommitSha,
-        prompt,
-        repo,
-        scratchRoot
-      );
+      const reusedOutcome = reuseOutcome(attempt);
+      const deterministicResult = reusedOutcome
+        ? { deterministic: reusedOutcome.deterministic, workspace: null }
+        : runDeterministic(
+          attempt,
+          terminalCommitSha,
+          initialCommitSha,
+          prompt,
+          repo,
+          scratchRoot
+        );
+      const observedModelMismatch = evidence.parentObservedModel !== parentModel ||
+        (attempt.condition === 'treatment' &&
+          specialist &&
+          (specialist.requestedModel !== specialistModel ||
+            evidence.specialistObservedModel !== specialistModel));
+      const selectedModelMismatch = frozenSelectedRunIds.has(attempt.run_id) &&
+        observedModelMismatch;
+      const provenanceMismatch = initialWorkspace.status !== 'pass';
+      const overrideReason = selectedModelMismatch
+        ? 'wrong_model'
+        : (provenanceMismatch ? 'hash_mismatch' : null);
+      const exclusion = effectiveExclusion(attempt, scheduleAttempts, overrideReason);
       const manifest = {
         protocolId,
         runId: attempt.run_id,
@@ -1401,7 +1996,7 @@ function main() {
         conditionInstruction: conditionInstructions[attempt.condition],
         attempt: {
           phase: 'session_started',
-          status: attempt.status === 'excluded' ? 'excluded' : 'included',
+          status: exclusion.excluded ? 'excluded' : 'included',
           availability: 'evidence_required'
         },
         conditionEvidence: {
@@ -1437,7 +2032,7 @@ function main() {
           benchmarkCommitSha,
           fixtureLockSha256,
           promptsSha256,
-          initialTreeSha: initialCommitSha,
+          initialTreeSha: initialWorkspace.initialTreeSha,
           terminalCommitSha,
           artifactBundleSha256: '0'.repeat(64)
         },
@@ -1453,9 +2048,9 @@ function main() {
         completion: attempt.status === 'completed' || recovery
           ? 'completed'
           : (attempt.terminal_commit_sha ? 'completed' : 'interrupted'),
-        exclusion: retryLinks(attempt, scheduleAttempts)
+        exclusion
       };
-      const artifactResult = buildArtifact(
+      const artifactResult = reusedOutcome || buildArtifact(
         attempt,
         manifest,
         deterministicResult.deterministic,
@@ -1494,7 +2089,7 @@ function main() {
         runId: attempt.run_id,
         scheduleId: attempt.schedule_id,
         condition: attempt.condition,
-        selected: attempt.status === 'completed',
+        selected: frozenSelectedRunIds.has(attempt.run_id) && !manifest.exclusion.excluded,
         compliant: conditionStatus.compliant,
         reasons: conditionStatus.reasons
       });
@@ -1502,10 +2097,14 @@ function main() {
         evidence.parentObservedModel !== parentModel ||
         (attempt.condition === 'treatment' &&
           specialist &&
-          evidence.specialistObservedModel !== specialistModel)
+          (specialist.requestedModel !== specialistModel ||
+            evidence.specialistObservedModel !== specialistModel))
       ) {
         modelMismatches.push({
+          scheduleId: attempt.schedule_id,
           runId: attempt.run_id,
+          attempt: attempt.attempt,
+          frozenSelected: frozenSelectedRunIds.has(attempt.run_id),
           requestedParentModel: parentModel,
           observedParentModel: evidence.parentObservedModel,
           requestedSpecialistModel: specialist?.requestedModel || null,
@@ -1520,7 +2119,46 @@ function main() {
   const selectedRunIds = new Set(executionIndex.selectedRuns
     .filter((run) => run.status === 'completed')
     .map((run) => `${run.schedule_id}-A${run.attempt}`));
+  const selectedModelMismatches = modelMismatches.filter((record) => record.frozenSelected);
+  const retryPlanEntries = selectedModelMismatches.map((record) => {
+    const scheduleAttempts = attemptsBySchedule.get(record.scheduleId);
+    const action = record.attempt === 1 && !scheduleAttempts.some((item) => item.attempt === 2)
+      ? 'execute_real_A2'
+      : 'retry_exhausted_schedule_missing';
+    return { ...record, action };
+  });
+  const retryRequired = retryPlanEntries.filter((entry) => entry.action === 'execute_real_A2');
+  const retryExhausted = retryPlanEntries.filter((entry) => (
+    entry.action === 'retry_exhausted_schedule_missing'
+  ));
+  const wrongModelRetryPlan = {
+    protocolId,
+    recordType: 'wrong_model_retry_plan',
+    generatedAt: collectedAt,
+    selectionStatus: 'not_final_pending_real_retries',
+    mismatchedSelectedAttempts: retryPlanEntries,
+    executeRealA2: retryRequired.map((entry) => entry.scheduleId),
+    exhaustedMissingSchedules: retryExhausted.map((entry) => entry.scheduleId),
+    rules: {
+      executeRealA2: 'Create a real A2 attempt; no placeholder record exists in this collection.',
+      retryExhaustedScheduleMissing: 'The mismatched A2 is excluded wrong_model and no further retry is allowed.'
+    }
+  };
+  writeJson(path.join(rawRoot, 'wrong-model-retry-plan.json'), wrongModelRetryPlan);
+  writeJson(path.join(rawRoot, 'provenance-index.json'), {
+    protocolId,
+    recordType: 'raw_provenance_index',
+    generatedAt: collectedAt,
+    sources: provenanceSources
+  });
+  const currentlyEligibleRunIds = new Set([...selectedRunIds].filter((runId) => (
+    !selectedModelMismatches.some((record) => record.runId === runId) &&
+    records.some((record) => record.runId === runId && !record.exclusion.excluded)
+  )));
   const selectedDeterministic = deterministicRecords.filter((record) => selectedRunIds.has(record.runId));
+  const eligibleDeterministic = deterministicRecords.filter((record) => (
+    currentlyEligibleRunIds.has(record.runId)
+  ));
   const telemetryFields = Object.keys(telemetryRecords[0]?.metrics || {});
   const telemetryAvailability = Object.fromEntries(telemetryFields.map((field) => [
     field,
@@ -1558,8 +2196,15 @@ function main() {
     counts: {
       plannedSchedules: executionIndex.selectedRuns.length,
       attempts: executionIndex.attempts.length,
-      selectedCompleted: selectedRunIds.size,
-      structurallyMissingSchedules: executionIndex.selectedRuns.filter((run) => run.status === 'missing').length,
+      frozenSelectedCompleted: selectedRunIds.size,
+      wrongModelExcludedFrozenSelections: selectedModelMismatches.length,
+      currentlyEligibleCompleted: currentlyEligibleRunIds.size,
+      pendingRealA2Schedules: retryRequired.length,
+      originalStructurallyMissingSchedules: executionIndex.selectedRuns
+        .filter((run) => run.status === 'missing').length,
+      retryExhaustedMissingSchedules: retryExhausted.length,
+      finalSelectedCount: null,
+      finalSelectedCountReason: 'pending_real_A2_execution',
       startedAttempts: records.filter((record) => record.attempt.phase === 'session_started').length,
       preExecutionAttempts: records.filter((record) => record.attempt.phase === 'pre_execution').length,
       excludedAttempts: records.filter((record) => record.exclusion.excluded).length,
@@ -1567,9 +2212,13 @@ function main() {
       deterministicRecords: deterministicRecords.length,
       artifactRecords: artifactRecords.length
     },
-    deterministic: Object.fromEntries(['pass', 'fail', 'unavailable'].map((status) => [
+    frozenSelectedDeterministic: Object.fromEntries(['pass', 'fail', 'unavailable'].map((status) => [
       status,
       selectedDeterministic.filter((record) => record.status === status).length
+    ])),
+    currentlyEligibleDeterministic: Object.fromEntries(['pass', 'fail', 'unavailable'].map((status) => [
+      status,
+      eligibleDeterministic.filter((record) => record.status === status).length
     ])),
     telemetryAvailability,
     modelTelemetryAvailability,
@@ -1577,10 +2226,11 @@ function main() {
       status,
       compliance.filter((record) => record.compliant === (status === 'compliant')).length
     ])),
-    selectedCompliance: Object.fromEntries(['compliant', 'noncompliant'].map((status) => [
+    currentlyEligibleCompliance: Object.fromEntries(['compliant', 'noncompliant'].map((status) => [
       status,
       compliance.filter((record) => (
-        record.selected && record.compliant === (status === 'compliant')
+        currentlyEligibleRunIds.has(record.runId) &&
+          record.compliant === (status === 'compliant')
       )).length
     ])),
     noncompliance: compliance.filter((record) => !record.compliant),
@@ -1590,21 +2240,36 @@ function main() {
       phase: record.attempt.phase,
       reason: record.exclusion.reason
     })),
-    missingSchedules: executionIndex.selectedRuns
+    originalMissingSchedules: executionIndex.selectedRuns
       .filter((run) => run.status === 'missing')
       .map((run) => run.schedule_id),
+    retryExhaustedMissingSchedules: retryExhausted.map((entry) => entry.scheduleId),
+    pendingRetrySchedules: retryRequired.map((entry) => entry.scheduleId),
     deviations: executionIndex.deviations,
     terminalCommitRecoveries,
     modelMismatches,
+    wrongModelRetryPlan: 'raw/wrong-model-retry-plan.json',
+    initialWorkspace: {
+      passed: initialWorkspaceRecords.filter((record) => record.status === 'pass').length,
+      failed: initialWorkspaceRecords.filter((record) => record.status === 'fail').length,
+      failures: initialWorkspaceRecords
+        .filter((record) => record.status === 'fail')
+        .map((record) => ({
+          runId: record.runId,
+          fixtureStatus: record.fixture.status,
+          customizationStatus: record.customization.status
+        }))
+    },
     telemetrySources: {
       localSessionStore: {
-        status: 'available',
+        status: 'available_with_post_query_snapshot',
         usageExportSha256: sha256(fs.readFileSync(usageExportPath)),
-        fileEvidenceExportSha256: sha256(fs.readFileSync(fileExportPath))
+        fileEvidenceExportSha256: sha256(fs.readFileSync(fileExportPath)),
+        sourceDatabaseSnapshot
       },
       localEventStreams: {
         status: 'available',
-        note: 'Normalized records are bound to exact local events.jsonl event IDs and completion-export row IDs.'
+        note: 'Normalized records reference exact-byte event slices and immutable source line/offset/hash identifiers.'
       },
       cloudEvents: {
         status: 'unavailable',
@@ -1626,12 +2291,27 @@ function main() {
         reason: 'judging_not_started'
       },
       observedModelMismatches: {
-        status: modelMismatches.length === 0 ? 'clear' : 'blocked',
-        count: modelMismatches.length,
-        runIds: modelMismatches.map((item) => item.runId),
-        reason: modelMismatches.length === 0
+        status: selectedModelMismatches.length === 0 ? 'clear' : 'retry_required',
+        count: selectedModelMismatches.length,
+        runIds: selectedModelMismatches.map((item) => item.runId),
+        reason: selectedModelMismatches.length === 0
           ? null
-          : 'full_validator_requires_wrong_model_exclusion_but_authoritative_execution_index_selects_these_attempts'
+          : 'selected mismatches are excluded wrong_model; 15 real A2 retries remain pending and four schedules exhausted A2'
+      },
+      pendingRetryStructure: {
+        status: 'blocked',
+        schedules: retryRequired.map((entry) => entry.scheduleId),
+        reason: 'full dataset structure remains incomplete until 15 real A2 attempts execute'
+      },
+      telemetryCollectionFailures: {
+        status: 'collection_stage_only',
+        runIds: [
+          'P09-R2-treatment-A1',
+          'P09-R2-treatment-A2',
+          'P09-R3-treatment-A1',
+          'P09-R3-treatment-A2'
+        ],
+        reason: 'full validator expects available aggregate events, while collection-stage records correctly preserve unavailable telemetry for created parent sessions'
       },
       artifactBlinding: {
         status: 'blocked',
@@ -1641,6 +2321,7 @@ function main() {
     },
     limitations: [
       'App project-session IDs and CLI telemetry-session IDs are distinct; records preserve project IDs while raw completion sources retain the authenticated CLI ID bridge.',
+      'Exact SQLite query-output bytes and SQL text are retained. The source database is bound to a consistent post-query snapshot hash; no query-time database snapshot/hash was captured.',
       'When the system prompt did not expose the complete tool registry in parseable form, exposedTools contains authenticated observed tool names only.',
       'No treatment-effect calculations or judge conclusions were produced.'
     ],
@@ -1650,4 +2331,24 @@ function main() {
   console.log(JSON.stringify(summary.counts));
 }
 
-main();
+function runLocked() {
+  fs.mkdirSync(rawRoot, { recursive: true });
+  const lockPath = path.join(rawRoot, '.collection.lock');
+  let lock;
+  try {
+    lock = fs.openSync(lockPath, 'wx');
+  } catch (error) {
+    if (error.code === 'EEXIST') {
+      throw new Error(`collection already in progress: ${lockPath}`);
+    }
+    throw error;
+  }
+  try {
+    main();
+  } finally {
+    fs.closeSync(lock);
+    fs.rmSync(lockPath, { force: true });
+  }
+}
+
+runLocked();

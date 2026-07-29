@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P09-R3-treatment-A2",
+  "scheduleId": "P09-R3-treatment",
+  "promptId": "P09",
+  "repetition": 3,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "excluded",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "unavailable",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": "parent_cli_session_not_started_telemetry_unavailable"
+  },
+  "execution": {
+    "block": 5,
+    "position": 8,
+    "attempt": 2,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "75eac705-af11-4fb9-ab5d-7995349dc76c"
+  },
+  "environment": {
+    "copilotCliVersion": "unavailable:no_cli_session",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "unavailable:no_cli_session",
+    "nodeVersion": "unavailable:no_cli_session"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "b0092815-a171-48fc-8c7f-f02fc0414d07",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "unavailable:no_cli_session"
+    },
+    "specialist": {
+      "status": "unavailable",
+      "reason": "specialist_session_not_created"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
+    "terminalCommitSha": "569ef30df0f1bd36a94180ccd81d913b911f1ca6",
+    "artifactBundleSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "workspace": {
+    "identifier": "P09/cirvine-msft-improved-dollop",
+    "branch": "cirvine-msft-improved-dollop"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T08:48:08.231Z",
+    "promptSentAt": "2026-07-29T08:48:08.231Z",
+    "completedAt": "2026-07-29T08:48:08.231Z"
+  },
+  "completion": "interrupted",
+  "exclusion": {
+    "excluded": true,
+    "reason": "telemetry_collection_failure",
+    "retryOf": "P09-R3-treatment-A1",
+    "retryId": null
+  }
+}

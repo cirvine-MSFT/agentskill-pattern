@@ -1,0 +1,244 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "recordType": "wrong_model_retry_plan",
+  "generatedAt": "2026-07-29T12:44:36.346Z",
+  "selectionStatus": "not_final_pending_real_retries",
+  "mismatchedSelectedAttempts": [
+    {
+      "scheduleId": "P06-R1-treatment",
+      "runId": "P06-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "unavailable:not_explicitly_requested",
+      "observedSpecialistModel": "claude-opus-4.8",
+      "action": "retry_exhausted_schedule_missing"
+    },
+    {
+      "scheduleId": "P08-R1-treatment",
+      "runId": "P08-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "retry_exhausted_schedule_missing"
+    },
+    {
+      "scheduleId": "P09-R1-treatment",
+      "runId": "P09-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "retry_exhausted_schedule_missing"
+    },
+    {
+      "scheduleId": "P04-R1-treatment",
+      "runId": "P04-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "retry_exhausted_schedule_missing"
+    },
+    {
+      "scheduleId": "P02-R1-treatment",
+      "runId": "P02-R1-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-haiku-4.5+gpt-5.6-sol",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P04-R2-treatment",
+      "runId": "P04-R2-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "unavailable:not_explicitly_requested",
+      "observedSpecialistModel": "claude-haiku-4.5+claude-opus-4.8",
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P08-R2-control",
+      "runId": "P08-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P06-R2-treatment",
+      "runId": "P06-R2-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P09-R2-control",
+      "runId": "P09-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P08-R2-treatment",
+      "runId": "P08-R2-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P04-R2-control",
+      "runId": "P04-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P06-R2-control",
+      "runId": "P06-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P04-R3-treatment",
+      "runId": "P04-R3-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P06-R3-treatment",
+      "runId": "P06-R3-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P08-R3-treatment",
+      "runId": "P08-R3-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": "claude-haiku-4.5",
+      "observedSpecialistModel": "claude-haiku-4.5",
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P09-R3-control",
+      "runId": "P09-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P08-R3-control",
+      "runId": "P08-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P06-R3-control",
+      "runId": "P06-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    },
+    {
+      "scheduleId": "P04-R3-control",
+      "runId": "P04-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
+      "requestedParentModel": "gpt-5.6-sol",
+      "observedParentModel": "claude-opus-4.8",
+      "requestedSpecialistModel": null,
+      "observedSpecialistModel": null,
+      "action": "execute_real_A2"
+    }
+  ],
+  "executeRealA2": [
+    "P02-R1-treatment",
+    "P04-R2-treatment",
+    "P08-R2-control",
+    "P06-R2-treatment",
+    "P09-R2-control",
+    "P08-R2-treatment",
+    "P04-R2-control",
+    "P06-R2-control",
+    "P04-R3-treatment",
+    "P06-R3-treatment",
+    "P08-R3-treatment",
+    "P09-R3-control",
+    "P08-R3-control",
+    "P06-R3-control",
+    "P04-R3-control"
+  ],
+  "exhaustedMissingSchedules": [
+    "P06-R1-treatment",
+    "P08-R1-treatment",
+    "P09-R1-treatment",
+    "P04-R1-treatment"
+  ],
+  "rules": {
+    "executeRealA2": "Create a real A2 attempt; no placeholder record exists in this collection.",
+    "retryExhaustedScheduleMissing": "The mismatched A2 is excluded wrong_model and no further retry is allowed."
+  }
+}

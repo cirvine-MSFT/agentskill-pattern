@@ -1,113 +1,124 @@
 {
   "protocolId": "ascii-art-powershell-cli-v1",
   "collectionStage": "execution_evidence_frozen_no_judgments",
-  "collectedAt": "2026-07-29T11:02:18.038Z",
+  "collectedAt": "2026-07-29T12:44:36.346Z",
   "counts": {
     "plannedSchedules": 60,
     "attempts": 67,
-    "selectedCompleted": 58,
-    "structurallyMissingSchedules": 2,
-    "startedAttempts": 63,
-    "preExecutionAttempts": 4,
-    "excludedAttempts": 9,
-    "telemetryRecords": 63,
-    "deterministicRecords": 63,
+    "frozenSelectedCompleted": 58,
+    "wrongModelExcludedFrozenSelections": 19,
+    "currentlyEligibleCompleted": 39,
+    "pendingRealA2Schedules": 15,
+    "originalStructurallyMissingSchedules": 2,
+    "retryExhaustedMissingSchedules": 4,
+    "finalSelectedCount": null,
+    "finalSelectedCountReason": "pending_real_A2_execution",
+    "startedAttempts": 67,
+    "preExecutionAttempts": 0,
+    "excludedAttempts": 28,
+    "telemetryRecords": 67,
+    "deterministicRecords": 67,
     "artifactRecords": 63
   },
-  "deterministic": {
+  "frozenSelectedDeterministic": {
     "pass": 7,
     "fail": 51,
+    "unavailable": 0
+  },
+  "currentlyEligibleDeterministic": {
+    "pass": 4,
+    "fail": 35,
     "unavailable": 0
   },
   "telemetryAvailability": {
     "totalSessionAiCredits": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "totalSessionNanoAiu": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "parentNanoAiu": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "parentCumulativeInputTokens": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "parentPeakInputTokens": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "parentOutputTokens": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "specialistCumulativeInputTokens": {
       "available": 33,
-      "unavailable": 30,
+      "unavailable": 34,
       "not_applicable": 0
     },
     "specialistPeakInputTokens": {
       "available": 33,
-      "unavailable": 30,
+      "unavailable": 34,
       "not_applicable": 0
     },
     "specialistOutputTokens": {
       "available": 33,
-      "unavailable": 30,
+      "unavailable": 34,
       "not_applicable": 0
     },
     "exposedToolCount": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "toolCallCount": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "toolResultCount": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "compactionEventCount": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "compactReturnBytes": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "wallLatencyMs": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "parentActiveLatencyMs": {
       "available": 63,
-      "unavailable": 0,
+      "unavailable": 4,
       "not_applicable": 0
     },
     "specialistLatencyMs": {
       "available": 33,
-      "unavailable": 30,
+      "unavailable": 34,
       "not_applicable": 0
     },
     "parentWaitLatencyMs": {
       "available": 33,
-      "unavailable": 30,
+      "unavailable": 34,
       "not_applicable": 0
     }
   },
@@ -115,32 +126,32 @@
     "parent": {
       "aiCredits": {
         "available": 63,
-        "unavailable": 0,
+        "unavailable": 4,
         "not_applicable": 0
       },
       "nanoAiu": {
         "available": 63,
-        "unavailable": 0,
+        "unavailable": 4,
         "not_applicable": 0
       },
       "inputTokens": {
         "available": 63,
-        "unavailable": 0,
+        "unavailable": 4,
         "not_applicable": 0
       },
       "peakInputTokens": {
         "available": 63,
-        "unavailable": 0,
+        "unavailable": 4,
         "not_applicable": 0
       },
       "outputTokens": {
         "available": 63,
-        "unavailable": 0,
+        "unavailable": 4,
         "not_applicable": 0
       },
       "cachedTokens": {
         "available": 63,
-        "unavailable": 0,
+        "unavailable": 4,
         "not_applicable": 0
       }
     },
@@ -148,42 +159,42 @@
       "aiCredits": {
         "available": 33,
         "unavailable": 0,
-        "not_applicable": 30
+        "not_applicable": 34
       },
       "nanoAiu": {
         "available": 33,
         "unavailable": 0,
-        "not_applicable": 30
+        "not_applicable": 34
       },
       "inputTokens": {
         "available": 33,
         "unavailable": 0,
-        "not_applicable": 30
+        "not_applicable": 34
       },
       "peakInputTokens": {
         "available": 33,
         "unavailable": 0,
-        "not_applicable": 30
+        "not_applicable": 34
       },
       "outputTokens": {
         "available": 33,
         "unavailable": 0,
-        "not_applicable": 30
+        "not_applicable": 34
       },
       "cachedTokens": {
         "available": 33,
         "unavailable": 0,
-        "not_applicable": 30
+        "not_applicable": 34
       }
     }
   },
   "compliance": {
     "compliant": 46,
-    "noncompliant": 17
+    "noncompliant": 21
   },
-  "selectedCompliance": {
-    "compliant": 46,
-    "noncompliant": 12
+  "currentlyEligibleCompliance": {
+    "compliant": 38,
+    "noncompliant": 1
   },
   "noncompliance": [
     {
@@ -202,7 +213,7 @@
       "runId": "P06-R1-treatment-A2",
       "scheduleId": "P06-R1-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "delegation call is not limited to the preregistered banner",
@@ -238,7 +249,7 @@
       "runId": "P08-R1-treatment-A2",
       "scheduleId": "P08-R1-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "specialist tools must target only the preregistered banner path",
@@ -261,7 +272,7 @@
       "runId": "P09-R1-treatment-A2",
       "scheduleId": "P09-R1-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "specialist tools must target only the preregistered banner path",
@@ -284,7 +295,7 @@
       "runId": "P04-R1-treatment-A2",
       "scheduleId": "P04-R1-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "delegation call is not limited to the preregistered banner",
@@ -297,10 +308,11 @@
       "runId": "P02-R1-treatment-A1",
       "scheduleId": "P02-R1-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "specialist tools must target only the preregistered banner path",
+        "specialist file changes must edit only the preregistered banner path",
         "specialist created an additional nested delegation"
       ]
     },
@@ -308,7 +320,7 @@
       "runId": "P04-R2-treatment-A1",
       "scheduleId": "P04-R2-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "delegation call is not limited to the preregistered banner",
@@ -322,7 +334,7 @@
       "runId": "P06-R2-treatment-A1",
       "scheduleId": "P06-R2-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "specialist tools must target only the preregistered banner path"
@@ -332,7 +344,7 @@
       "runId": "P08-R2-treatment-A1",
       "scheduleId": "P08-R2-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "delegation call is not limited to the preregistered banner",
@@ -342,10 +354,30 @@
       ]
     },
     {
+      "runId": "P09-R2-treatment-A1",
+      "scheduleId": "P09-R2-treatment",
+      "condition": "treatment",
+      "selected": false,
+      "compliant": false,
+      "reasons": [
+        "condition evidence unavailable because no CLI session was recorded"
+      ]
+    },
+    {
+      "runId": "P09-R2-treatment-A2",
+      "scheduleId": "P09-R2-treatment",
+      "condition": "treatment",
+      "selected": false,
+      "compliant": false,
+      "reasons": [
+        "condition evidence unavailable because no CLI session was recorded"
+      ]
+    },
+    {
       "runId": "P04-R3-treatment-A1",
       "scheduleId": "P04-R3-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "specialist tools must target only the preregistered banner path",
@@ -356,21 +388,42 @@
       "runId": "P06-R3-treatment-A1",
       "scheduleId": "P06-R3-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "delegation call is not limited to the preregistered banner",
         "delegation result does not match the banner-only call",
         "specialist tools must target only the preregistered banner path",
+        "specialist file changes must edit only the preregistered banner path",
         "specialist created an additional nested delegation",
         "specialist wrote in its own workspace and the parent copied the banner"
+      ]
+    },
+    {
+      "runId": "P09-R3-treatment-A1",
+      "scheduleId": "P09-R3-treatment",
+      "condition": "treatment",
+      "selected": false,
+      "compliant": false,
+      "reasons": [
+        "condition evidence unavailable because no CLI session was recorded"
+      ]
+    },
+    {
+      "runId": "P09-R3-treatment-A2",
+      "scheduleId": "P09-R3-treatment",
+      "condition": "treatment",
+      "selected": false,
+      "compliant": false,
+      "reasons": [
+        "condition evidence unavailable because no CLI session was recorded"
       ]
     },
     {
       "runId": "P08-R3-treatment-A1",
       "scheduleId": "P08-R3-treatment",
       "condition": "treatment",
-      "selected": true,
+      "selected": false,
       "compliant": false,
       "reasons": [
         "specialist tools must target only the preregistered banner path",
@@ -396,60 +449,197 @@
       "runId": "P06-R1-treatment-A1",
       "scheduleId": "P06-R1-treatment",
       "phase": "session_started",
-      "reason": "required_tool_unavailable"
+      "reason": "hash_mismatch"
+    },
+    {
+      "runId": "P06-R1-treatment-A2",
+      "scheduleId": "P06-R1-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
     },
     {
       "runId": "P10-R1-treatment-A1",
       "scheduleId": "P10-R1-treatment",
       "phase": "session_started",
-      "reason": "required_tool_unavailable"
+      "reason": "hash_mismatch"
     },
     {
       "runId": "P08-R1-treatment-A1",
       "scheduleId": "P08-R1-treatment",
       "phase": "session_started",
-      "reason": "required_tool_unavailable"
+      "reason": "hash_mismatch"
+    },
+    {
+      "runId": "P08-R1-treatment-A2",
+      "scheduleId": "P08-R1-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
     },
     {
       "runId": "P09-R1-treatment-A1",
       "scheduleId": "P09-R1-treatment",
       "phase": "session_started",
-      "reason": "required_tool_unavailable"
+      "reason": "hash_mismatch"
+    },
+    {
+      "runId": "P09-R1-treatment-A2",
+      "scheduleId": "P09-R1-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
     },
     {
       "runId": "P04-R1-treatment-A1",
       "scheduleId": "P04-R1-treatment",
       "phase": "session_started",
-      "reason": "required_tool_unavailable"
+      "reason": "hash_mismatch"
+    },
+    {
+      "runId": "P04-R1-treatment-A2",
+      "scheduleId": "P04-R1-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P02-R1-treatment-A1",
+      "scheduleId": "P02-R1-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P04-R2-treatment-A1",
+      "scheduleId": "P04-R2-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P08-R2-control-A1",
+      "scheduleId": "P08-R2-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P06-R2-treatment-A1",
+      "scheduleId": "P06-R2-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P09-R2-control-A1",
+      "scheduleId": "P09-R2-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P08-R2-treatment-A1",
+      "scheduleId": "P08-R2-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
     },
     {
       "runId": "P09-R2-treatment-A1",
       "scheduleId": "P09-R2-treatment",
-      "phase": "pre_execution",
-      "reason": "required_tool_unavailable"
+      "phase": "session_started",
+      "reason": "telemetry_collection_failure"
     },
     {
       "runId": "P09-R2-treatment-A2",
       "scheduleId": "P09-R2-treatment",
-      "phase": "pre_execution",
-      "reason": "required_tool_unavailable"
+      "phase": "session_started",
+      "reason": "telemetry_collection_failure"
+    },
+    {
+      "runId": "P04-R2-control-A1",
+      "scheduleId": "P04-R2-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P06-R2-control-A1",
+      "scheduleId": "P06-R2-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P04-R3-treatment-A1",
+      "scheduleId": "P04-R3-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P06-R3-treatment-A1",
+      "scheduleId": "P06-R3-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
     },
     {
       "runId": "P09-R3-treatment-A1",
       "scheduleId": "P09-R3-treatment",
-      "phase": "pre_execution",
-      "reason": "required_tool_unavailable"
+      "phase": "session_started",
+      "reason": "telemetry_collection_failure"
     },
     {
       "runId": "P09-R3-treatment-A2",
       "scheduleId": "P09-R3-treatment",
-      "phase": "pre_execution",
-      "reason": "required_tool_unavailable"
+      "phase": "session_started",
+      "reason": "telemetry_collection_failure"
+    },
+    {
+      "runId": "P08-R3-treatment-A1",
+      "scheduleId": "P08-R3-treatment",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P09-R3-control-A1",
+      "scheduleId": "P09-R3-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P08-R3-control-A1",
+      "scheduleId": "P08-R3-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P06-R3-control-A1",
+      "scheduleId": "P06-R3-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
+    },
+    {
+      "runId": "P04-R3-control-A1",
+      "scheduleId": "P04-R3-control",
+      "phase": "session_started",
+      "reason": "wrong_model"
     }
   ],
-  "missingSchedules": [
+  "originalMissingSchedules": [
     "P09-R2-treatment",
     "P09-R3-treatment"
+  ],
+  "retryExhaustedMissingSchedules": [
+    "P06-R1-treatment",
+    "P08-R1-treatment",
+    "P09-R1-treatment",
+    "P04-R1-treatment"
+  ],
+  "pendingRetrySchedules": [
+    "P02-R1-treatment",
+    "P04-R2-treatment",
+    "P08-R2-control",
+    "P06-R2-treatment",
+    "P09-R2-control",
+    "P08-R2-treatment",
+    "P04-R2-control",
+    "P06-R2-control",
+    "P04-R3-treatment",
+    "P06-R3-treatment",
+    "P08-R3-treatment",
+    "P09-R3-control",
+    "P08-R3-control",
+    "P06-R3-control",
+    "P04-R3-control"
   ],
   "deviations": [
     {
@@ -493,148 +683,247 @@
   ],
   "modelMismatches": [
     {
+      "scheduleId": "P06-R1-treatment",
       "runId": "P06-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "unavailable:not_explicitly_requested",
       "observedSpecialistModel": "claude-opus-4.8"
     },
     {
+      "scheduleId": "P08-R1-treatment",
       "runId": "P08-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P09-R1-treatment",
       "runId": "P09-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P04-R1-treatment",
       "runId": "P04-R1-treatment-A2",
+      "attempt": 2,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P02-R1-treatment",
       "runId": "P02-R1-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-haiku-4.5+gpt-5.6-sol",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P04-R2-treatment",
       "runId": "P04-R2-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "unavailable:not_explicitly_requested",
       "observedSpecialistModel": "claude-haiku-4.5+claude-opus-4.8"
     },
     {
+      "scheduleId": "P08-R2-control",
       "runId": "P08-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     },
     {
+      "scheduleId": "P06-R2-treatment",
       "runId": "P06-R2-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P09-R2-control",
       "runId": "P09-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     },
     {
+      "scheduleId": "P08-R2-treatment",
       "runId": "P08-R2-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P04-R2-control",
       "runId": "P04-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     },
     {
+      "scheduleId": "P06-R2-control",
       "runId": "P06-R2-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     },
     {
+      "scheduleId": "P04-R3-treatment",
       "runId": "P04-R3-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P06-R3-treatment",
       "runId": "P06-R3-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P08-R3-treatment",
       "runId": "P08-R3-treatment-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5"
     },
     {
+      "scheduleId": "P09-R3-control",
       "runId": "P09-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     },
     {
+      "scheduleId": "P08-R3-control",
       "runId": "P08-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     },
     {
+      "scheduleId": "P06-R3-control",
       "runId": "P06-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     },
     {
+      "scheduleId": "P04-R3-control",
       "runId": "P04-R3-control-A1",
+      "attempt": 1,
+      "frozenSelected": true,
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null
     }
   ],
+  "wrongModelRetryPlan": "raw/wrong-model-retry-plan.json",
+  "initialWorkspace": {
+    "passed": 62,
+    "failed": 5,
+    "failures": [
+      {
+        "runId": "P06-R1-treatment-A1",
+        "fixtureStatus": "pass",
+        "customizationStatus": "fail"
+      },
+      {
+        "runId": "P10-R1-treatment-A1",
+        "fixtureStatus": "pass",
+        "customizationStatus": "fail"
+      },
+      {
+        "runId": "P08-R1-treatment-A1",
+        "fixtureStatus": "pass",
+        "customizationStatus": "fail"
+      },
+      {
+        "runId": "P09-R1-treatment-A1",
+        "fixtureStatus": "pass",
+        "customizationStatus": "fail"
+      },
+      {
+        "runId": "P04-R1-treatment-A1",
+        "fixtureStatus": "pass",
+        "customizationStatus": "fail"
+      }
+    ]
+  },
   "telemetrySources": {
     "localSessionStore": {
-      "status": "available",
+      "status": "available_with_post_query_snapshot",
       "usageExportSha256": "29d854d22a98f8be4535cdd3d2ccbf3fa759879078c4b49f667fca42c300a637",
-      "fileEvidenceExportSha256": "e964a5db1640f4fdec6adf12141190c4dd3643ec638ed7bb43a288d6b1031db1"
+      "fileEvidenceExportSha256": "e964a5db1640f4fdec6adf12141190c4dd3643ec638ed7bb43a288d6b1031db1",
+      "sourceDatabaseSnapshot": {
+        "status": "available_post_query_snapshot",
+        "snapshotIdentity": "sha256:c5528b099e5a4060fcb17a33611ad2acd3e03cb33ab1646ce480d50b4933bf51",
+        "snapshotSha256": "c5528b099e5a4060fcb17a33611ad2acd3e03cb33ab1646ce480d50b4933bf51",
+        "snapshotBytes": 92352512,
+        "sourceDatabaseName": "session-store.db",
+        "capturedAt": "2026-07-29T12:44:38.067Z",
+        "queryTimeSnapshotStatus": "unavailable",
+        "queryTimeSnapshotReason": "query_time_database_snapshot_or_hash_was_not_captured"
+      }
     },
     "localEventStreams": {
       "status": "available",
-      "note": "Normalized records are bound to exact local events.jsonl event IDs and completion-export row IDs."
+      "note": "Normalized records reference exact-byte event slices and immutable source line/offset/hash identifiers."
     },
     "cloudEvents": {
       "status": "unavailable",
@@ -656,7 +945,7 @@
       "reason": "judging_not_started"
     },
     "observedModelMismatches": {
-      "status": "blocked",
+      "status": "retry_required",
       "count": 19,
       "runIds": [
         "P06-R1-treatment-A2",
@@ -679,7 +968,38 @@
         "P06-R3-control-A1",
         "P04-R3-control-A1"
       ],
-      "reason": "full_validator_requires_wrong_model_exclusion_but_authoritative_execution_index_selects_these_attempts"
+      "reason": "selected mismatches are excluded wrong_model; 15 real A2 retries remain pending and four schedules exhausted A2"
+    },
+    "pendingRetryStructure": {
+      "status": "blocked",
+      "schedules": [
+        "P02-R1-treatment",
+        "P04-R2-treatment",
+        "P08-R2-control",
+        "P06-R2-treatment",
+        "P09-R2-control",
+        "P08-R2-treatment",
+        "P04-R2-control",
+        "P06-R2-control",
+        "P04-R3-treatment",
+        "P06-R3-treatment",
+        "P08-R3-treatment",
+        "P09-R3-control",
+        "P08-R3-control",
+        "P06-R3-control",
+        "P04-R3-control"
+      ],
+      "reason": "full dataset structure remains incomplete until 15 real A2 attempts execute"
+    },
+    "telemetryCollectionFailures": {
+      "status": "collection_stage_only",
+      "runIds": [
+        "P09-R2-treatment-A1",
+        "P09-R2-treatment-A2",
+        "P09-R3-treatment-A1",
+        "P09-R3-treatment-A2"
+      ],
+      "reason": "full validator expects available aggregate events, while collection-stage records correctly preserve unavailable telemetry for created parent sessions"
     },
     "artifactBlinding": {
       "status": "blocked",
@@ -691,8 +1011,30 @@
   },
   "limitations": [
     "App project-session IDs and CLI telemetry-session IDs are distinct; records preserve project IDs while raw completion sources retain the authenticated CLI ID bridge.",
+    "Exact SQLite query-output bytes and SQL text are retained. The source database is bound to a consistent post-query snapshot hash; no query-time database snapshot/hash was captured.",
     "When the system prompt did not expose the complete tool registry in parseable form, exposedTools contains authenticated observed tool names only.",
     "No treatment-effect calculations or judge conclusions were produced."
   ],
-  "collectionIssues": []
+  "collectionIssues": [
+    {
+      "runId": "P09-R2-treatment-A1",
+      "issue": "created_parent_without_cli_session",
+      "handling": "session_started telemetry_collection_failure; schema-required prompt/completion timestamps equal exact app-session creation time; no artifact emitted"
+    },
+    {
+      "runId": "P09-R2-treatment-A2",
+      "issue": "created_parent_without_cli_session",
+      "handling": "session_started telemetry_collection_failure; schema-required prompt/completion timestamps equal exact app-session creation time; no artifact emitted"
+    },
+    {
+      "runId": "P09-R3-treatment-A1",
+      "issue": "created_parent_without_cli_session",
+      "handling": "session_started telemetry_collection_failure; schema-required prompt/completion timestamps equal exact app-session creation time; no artifact emitted"
+    },
+    {
+      "runId": "P09-R3-treatment-A2",
+      "issue": "created_parent_without_cli_session",
+      "handling": "session_started telemetry_collection_failure; schema-required prompt/completion timestamps equal exact app-session creation time; no artifact emitted"
+    }
+  ]
 }
