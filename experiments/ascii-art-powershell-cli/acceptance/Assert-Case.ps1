@@ -6,11 +6,25 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'Acceptance.Support.psm1') -Force
 
 $cli = Join-Path $Workspace 'src/TaskForge.ps1'
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "taskforge-$CaseId-$([guid]::NewGuid())"
 $dataFile = Join-Path $temporaryRoot 'data/tasks.json'
 $assertions = [System.Collections.Generic.List[object]]::new()
+$processTimeoutMilliseconds = 30000
+$bannerPaths = @{
+    P01 = 'assets/search.txt'
+    P02 = 'assets/import.txt'
+    P03 = 'assets/export.txt'
+    P04 = 'assets/config.txt'
+    P05 = 'assets/bulk.txt'
+    P06 = 'assets/due.txt'
+    P07 = 'assets/tags.txt'
+    P08 = 'assets/stats.txt'
+    P09 = 'assets/undo.txt'
+    P10 = 'assets/template.txt'
+}
 
 function Add-Assertion {
     param([string]$Id, [bool]$Passed, [string]$Message)
@@ -23,25 +37,17 @@ function Add-Assertion {
 
 function Invoke-Cli {
     param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    Invoke-AcceptanceProcess -FilePath $cli -Arguments $Arguments -TimeoutMilliseconds $processTimeoutMilliseconds
+}
 
-    $info = [System.Diagnostics.ProcessStartInfo]::new()
-    $info.FileName = (Get-Command pwsh).Source
-    $info.UseShellExecute = $false
-    $info.RedirectStandardOutput = $true
-    $info.RedirectStandardError = $true
-    $info.ArgumentList.Add('-NoProfile')
-    $info.ArgumentList.Add('-File')
-    $info.ArgumentList.Add($cli)
-    foreach ($argument in $Arguments) {
-        $info.ArgumentList.Add($argument)
-    }
-    $process = [System.Diagnostics.Process]::Start($info)
-    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-    $stderrTask = $process.StandardError.ReadToEndAsync()
-    $process.WaitForExit()
-    $stdout = $stdoutTask.GetAwaiter().GetResult().TrimEnd("`r", "`n")
-    $stderr = $stderrTask.GetAwaiter().GetResult().TrimEnd("`r", "`n")
-    [pscustomobject]@{ ExitCode = $process.ExitCode; StdOut = $stdout; StdErr = $stderr }
+function Test-BannerOutput {
+    param(
+        [Parameter(Mandatory)]$Result,
+        [Parameter(Mandatory)][string]$RelativePath
+    )
+
+    $assetPath = Join-Path $Workspace $RelativePath
+    return Test-AcceptanceBanner -Result $Result -AssetPath $assetPath
 }
 
 function Write-Tasks {
@@ -87,7 +93,7 @@ try {
             Add-Assertion 'search-status' ($filtered.ExitCode -eq 0 -and @($filtered.StdOut | ConvertFrom-Json).Count -eq 1) 'Status filter narrows matches.'
             $empty = Invoke-Cli 'search' '--query' 'absent' '--data-file' $dataFile
             Add-Assertion 'search-empty' ($empty.ExitCode -eq 0 -and $empty.StdOut -match 'No .*match') 'Text search has stable empty output.'
-            Add-Assertion 'search-banner' ($empty.StdOut.Contains('FIND')) 'Text search integrates the required banner.'
+            Add-Assertion 'search-banner' (Test-BannerOutput $empty $bannerPaths.P01) 'Text search emits the exact required banner asset.'
         }
         'P02' {
             Write-Tasks @($seedTasks[0])
@@ -101,7 +107,7 @@ try {
             $textCsv = Join-Path $temporaryRoot 'text.csv'
             "Title,Description,Status`nText import,,pending`n" | Set-Content -LiteralPath $textCsv -Encoding utf8NoBOM
             $textImport = Invoke-Cli 'import-csv' '--path' $textCsv '--data-file' $dataFile
-            Add-Assertion 'import-banner' ($textImport.ExitCode -eq 0 -and $textImport.StdOut.Contains('IMPORT')) 'Text import integrates the required banner.'
+            Add-Assertion 'import-banner' (Test-BannerOutput $textImport $bannerPaths.P02) 'Text import emits the exact required banner asset.'
             $badCsv = Join-Path $temporaryRoot 'invalid.csv'
             "Title,Description,Status`nGood,row,pending`n,missing,completed`n" | Set-Content -LiteralPath $badCsv -Encoding utf8NoBOM
             $before = Get-HashOrMissing $dataFile
@@ -117,7 +123,7 @@ try {
             Add-Assertion 'export-filtered' ($result.ExitCode -eq 0 -and $summary.exportedCount -eq 2 -and $exported.Count -eq 2) 'Filtered export writes the expected tasks and count.'
             Add-Assertion 'export-order' ($exported[0].id -eq 1 -and $exported[1].id -eq 3) 'Export is ordered by numeric ID.'
             $textExport = Invoke-Cli 'export-json' '--path' (Join-Path $temporaryRoot 'text-export.json') '--data-file' $dataFile
-            Add-Assertion 'export-banner' ($textExport.ExitCode -eq 0 -and $textExport.StdOut.Contains('EXPORT')) 'Text export integrates the required banner.'
+            Add-Assertion 'export-banner' (Test-BannerOutput $textExport $bannerPaths.P03) 'Text export emits the exact required banner asset.'
             [System.IO.File]::WriteAllText($destination, "sentinel`n")
             $bad = Invoke-Cli 'export-json' '--path' $destination '--status' 'invalid' '--data-file' $dataFile
             Add-Assertion 'export-invalid-atomic' ($bad.ExitCode -ne 0 -and (Get-Content -LiteralPath $destination -Raw) -eq "sentinel`n") 'Invalid status does not replace destination.'
@@ -139,7 +145,7 @@ try {
             $explicitTasks = if (Test-Path -LiteralPath $explicitData) { @((Get-Content -LiteralPath $explicitData -Raw) | ConvertFrom-Json) } else { @() }
             Add-Assertion 'config-override' ($explicit.ExitCode -eq 0 -and $explicitTasks.Count -eq 1) 'Explicit data-file overrides configured dataFile.'
             $textList = Invoke-Cli 'config' 'list' '--config-file' $config
-            Add-Assertion 'config-banner' ($textList.ExitCode -eq 0 -and $textList.StdOut.Contains('CONFIG')) 'Text config list integrates the required banner.'
+            Add-Assertion 'config-banner' (Test-BannerOutput $textList $bannerPaths.P04) 'Text config list emits the exact required banner asset.'
             $before = Get-HashOrMissing $config
             $bad = Invoke-Cli 'config' 'set' '--key' 'unknown' '--value' 'x' '--config-file' $config
             Add-Assertion 'config-invalid-atomic' ($bad.ExitCode -ne 0 -and (Get-HashOrMissing $config) -eq $before) 'Unknown key leaves config unchanged.'
@@ -149,16 +155,26 @@ try {
             $result = Invoke-Cli 'complete-many' '--ids' '1,2' '--data-file' $dataFile '--json'
             $summary = $result.StdOut | ConvertFrom-Json
             $tasks = Read-Tasks
-            Add-Assertion 'bulk-complete' ($result.ExitCode -eq 0 -and @($summary.changedIds).Count -eq 1 -and ($tasks | Where-Object status -eq 'completed').Count -eq 2) 'Bulk completion updates selected pending tasks and reports already-completed tasks.'
+            Add-Assertion 'bulk-complete' (
+                $result.ExitCode -eq 0 -and
+                (Test-ExactIntegerArray $summary.changedIds @(1)) -and
+                (Test-ExactIntegerArray $summary.alreadyCompletedIds @(2)) -and
+                ($tasks | Where-Object status -eq 'completed').Count -eq 2
+            ) 'Bulk completion reports exact changedIds [1] and alreadyCompletedIds [2].'
             $before = Get-HashOrMissing $dataFile
             $bad = Invoke-Cli 'complete-many' '--ids' '1,99' '--data-file' $dataFile
             Add-Assertion 'bulk-unknown-atomic' ($bad.ExitCode -ne 0 -and (Get-HashOrMissing $dataFile) -eq $before) 'Unknown ID leaves storage byte-identical.'
             $duplicate = Invoke-Cli 'complete-many' '--ids' '1,1' '--data-file' $dataFile
             Add-Assertion 'bulk-duplicate' ($duplicate.ExitCode -ne 0) 'Duplicate IDs are rejected.'
             $again = Invoke-Cli 'complete-many' '--ids' '1,2' '--data-file' $dataFile '--json'
-            Add-Assertion 'bulk-idempotent' ($again.ExitCode -eq 0 -and @($again.StdOut | ConvertFrom-Json).Count -ge 1) 'Repeated valid completion succeeds idempotently.'
+            $againSummary = $again.StdOut | ConvertFrom-Json
+            Add-Assertion 'bulk-idempotent' (
+                $again.ExitCode -eq 0 -and
+                (Test-ExactIntegerArray $againSummary.changedIds @()) -and
+                (Test-ExactIntegerArray $againSummary.alreadyCompletedIds @(1, 2))
+            ) 'Repeated completion reports changedIds [] and alreadyCompletedIds [1,2].'
             $textBulk = Invoke-Cli 'complete-many' '--ids' '1,2' '--data-file' $dataFile
-            Add-Assertion 'bulk-banner' ($textBulk.ExitCode -eq 0 -and $textBulk.StdOut.Contains('BULK')) 'Text bulk completion integrates the required banner.'
+            Add-Assertion 'bulk-banner' (Test-BannerOutput $textBulk $bannerPaths.P05) 'Text bulk completion emits the exact required banner asset.'
         }
         'P06' {
             $legacy = [pscustomobject]@{ id = 1; title = 'Legacy'; description = ''; status = 'pending'; createdAt = '2026-01-01T00:00:00Z' }
@@ -174,7 +190,7 @@ try {
             $includingCompleted = @((Invoke-Cli 'due' '--on-or-before' '2026-04-02' '--include-completed' '--data-file' $dataFile '--json').StdOut | ConvertFrom-Json)
             Add-Assertion 'due-completed-filter' ($completed.ExitCode -eq 0 -and $pendingOnly.Count -eq 1 -and $includingCompleted.Count -eq 2) 'Due reports exclude completed tasks by default and include them on request.'
             $textDue = Invoke-Cli 'due' '--on-or-before' '2026-04-02' '--data-file' $dataFile
-            Add-Assertion 'due-banner' ($textDue.ExitCode -eq 0 -and $textDue.StdOut.Contains('DUE')) 'Text due report integrates the required banner.'
+            Add-Assertion 'due-banner' (Test-BannerOutput $textDue $bannerPaths.P06) 'Text due report emits the exact required banner asset.'
             $before = Get-HashOrMissing $dataFile
             $bad = Invoke-Cli 'add' '--title' 'Bad date' '--due' '04/03/2026' '--data-file' $dataFile
             Add-Assertion 'due-invalid' ($bad.ExitCode -ne 0 -and (Get-HashOrMissing $dataFile) -eq $before) 'Invalid date leaves storage unchanged.'
@@ -187,7 +203,7 @@ try {
             $change = Invoke-Cli 'tag' '--id' '1' '--add' 'work,home' '--data-file' $dataFile '--json'
             Add-Assertion 'tags-change' ($change.ExitCode -eq 0) 'Tag command updates a legacy task.'
             $textChange = Invoke-Cli 'tag' '--id' '1' '--remove' 'home' '--data-file' $dataFile
-            Add-Assertion 'tags-banner' ($textChange.ExitCode -eq 0 -and $textChange.StdOut.Contains('TAGS')) 'Text tag changes integrate the required banner.'
+            Add-Assertion 'tags-banner' (Test-BannerOutput $textChange $bannerPaths.P07) 'Text tag changes emit the exact required banner asset.'
             $filtered = Invoke-Cli 'list' '--tag' 'work,urgent' '--data-file' $dataFile '--json'
             $matches = @($filtered.StdOut | ConvertFrom-Json)
             Add-Assertion 'tags-and-filter' ($matches.Count -eq 1 -and $matches[0].title -eq 'Tagged') 'List tag filtering uses AND semantics.'
@@ -205,7 +221,7 @@ try {
             Add-Assertion 'stats-dates' (@($stats.createdByDate).Count -eq 2 -and $stats.createdByDate[0].date -eq '2026-01-01') 'UTC date groups are ordered.'
             Add-Assertion 'stats-readonly' ((Get-HashOrMissing $dataFile) -eq $before) 'Stats does not rewrite storage.'
             $textStats = Invoke-Cli 'stats' '--data-file' $dataFile
-            Add-Assertion 'stats-banner' ($textStats.ExitCode -eq 0 -and $textStats.StdOut.Contains('STATS')) 'Text stats integrates the required banner.'
+            Add-Assertion 'stats-banner' (Test-BannerOutput $textStats $bannerPaths.P08) 'Text stats emits the exact required banner asset.'
             Write-Tasks @()
             $empty = (Invoke-Cli 'stats' '--data-file' $dataFile '--json').StdOut | ConvertFrom-Json
             Add-Assertion 'stats-empty' ($empty.total -eq 0 -and @($empty.createdByDate).Count -eq 0) 'Empty stats uses zeros and an empty date list.'
@@ -225,7 +241,7 @@ try {
             $remove = Invoke-Cli 'remove' '--id' '1' '--data-file' $dataFile
             $undoRemove = Invoke-Cli 'undo' '--data-file' $dataFile
             Add-Assertion 'undo-remove' ($remove.ExitCode -eq 0 -and $undoRemove.ExitCode -eq 0 -and (Read-Tasks).Count -eq 1) 'Undo restores a removed task.'
-            Add-Assertion 'undo-banner' ($undoRemove.StdOut.Contains('UNDO')) 'Text undo integrates the required banner.'
+            Add-Assertion 'undo-banner' (Test-BannerOutput $undoRemove $bannerPaths.P09) 'Text undo emits the exact required banner asset.'
         }
         'P10' {
             Write-Tasks @()
@@ -236,7 +252,7 @@ try {
             $templates = @($list.StdOut | ConvertFrom-Json)
             Add-Assertion 'template-order' ($templates.Count -eq 2 -and $templates[0].name.ToLowerInvariant() -eq 'alert') 'Templates list alphabetically.'
             $textList = Invoke-Cli 'template' 'list' '--data-file' $dataFile
-            Add-Assertion 'template-banner' ($textList.ExitCode -eq 0 -and $textList.StdOut.Contains('TEMPLATE')) 'Text template actions integrate the required banner.'
+            Add-Assertion 'template-banner' (Test-BannerOutput $textList $bannerPaths.P10) 'Text template actions emit the exact required banner asset.'
             $add = Invoke-Cli 'add' '--template' 'WEEKLY' '--title' 'Override' '--data-file' $dataFile '--json'
             $task = $add.StdOut | ConvertFrom-Json
             Add-Assertion 'template-add' ($add.ExitCode -eq 0 -and $task.title -eq 'Override' -and $task.description -eq 'Review work') 'Template lookup is case-insensitive and explicit values override.'

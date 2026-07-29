@@ -3,14 +3,15 @@
 ## Identity and immutable references
 
 - Protocol ID: `ascii-art-powershell-cli-v1`
-- Preregistration version: `1.0.0`
+- Preregistration version: `1.0.1`
 - Registration date: 2026-07-28
 - Repository: `cirvine-MSFT/agentskill-pattern`
 - Repository starting commit: `71635d9f6ba1e54e81e9f1f3eb081e51187e66bd`
 - All file hashes below use SHA-256 over bytes after canonical CRLF-to-LF normalization for registered text extensions (`sha256-normalized-lf-v1`); binary bytes are unchanged.
 - Prompt SHA-256: `b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3`.
+- Condition/model constants SHA-256: `3e0e6d764fd4952fea0fb5a6a35eed04b40dc1adffc7363394f387679aca4396`.
 - Fixture-lock SHA-256: `903cc7150f0305959fbdade2ceb7aa9b764537f1fa16804a72e0465d2550c183`; every measured workspace is created from files matching `fixture/fixture-lock.json`.
-- Acceptance-lock SHA-256: `f7123db0de43de23f9eb4fbf757c7642b312878d2617d57cb7a50f08bf38541e`.
+- Acceptance-lock SHA-256: `a006a176143bad1b4b7b679c1ade4496f1aa5459bd00b54b6200584b2260b8f7`.
 - Randomization SHA-256: `17b872a454c9141fef73b6be939b6226c3b54ec7efac72c56e7fd4a1d4447ba0`.
 - Judge-assignment SHA-256: `094c0fb07b5cff25f3229cb4996ac058d9355a313f4022ddbef4245e67f7715b`.
 - Schedule seed: decimal `20260728`, algorithm `mulberry32-v1`.
@@ -21,7 +22,7 @@
 - Copilot CLI protocol target: `1.0.71`; the actual version and host image must be recorded per run.
 - Optional Pester version: exactly `5.7.1`. Preflight uses it only when already installed. The normative measured-session test path is the repository-owned dependency-free PowerShell assertion runner.
 
-After registration, changes require a new versioned directory and protocol ID. Existing prompts, fixture lock, acceptance tests, seeds, conditions, metrics, hypotheses, exclusions, and analysis must not be edited. Corrections are appended to a dated deviation log in the new version, never silently rewritten.
+Version 1.0.1 is a pre-execution integrity amendment made while this preregistration PR remained unmerged and before any observation or judge session ran. It binds exact models/instructions, retry-selected judge artifacts, missing-data semantics, telemetry invariants, and acceptance anti-spoofing. After this version is merged, changes require a new versioned directory and protocol ID. Existing prompts, fixture lock, acceptance tests, seeds, conditions, metrics, hypotheses, exclusions, and analysis must not be edited. Corrections are appended to a dated deviation log in the new version, never silently rewritten.
 
 ## Questions and hypotheses
 
@@ -50,6 +51,8 @@ Both conditions receive the same prompt object from `prompts.json`, the same fix
 **Treatment coordinator instruction:** "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset."
 
 The coordinator records the exact injected instruction. Treatment is noncompliant if the specialist edits anything except the specified asset, if more than one specialist is used, or if the parent delegates non-banner work. Control is noncompliant if any nested session is created.
+
+`design/conditions.json` is the machine-readable authority for the exact instructions and requested/observed model IDs. An instruction mismatch is excluded as `condition_mismatch`; a requested or observed model mismatch is excluded as `wrong_model`. Unflagged mismatches invalidate dataset validation.
 
 ## Fresh-session and workspace rules
 
@@ -87,7 +90,8 @@ Exclude before outcome analysis only for:
 3. wrong parent model or, in treatment, wrong specialist model;
 4. contaminated/non-fresh session;
 5. missing telemetry caused by collection infrastructure failure;
-6. externally interrupted session or unavailable required platform tool.
+6. condition instruction mismatch;
+7. externally interrupted session or unavailable required platform tool.
 
 Ordinary implementation failures, timeouts after work begins, bad banners, test failures, voluntary early completion, and condition noncompliance remain intent-to-treat outcomes. Noncompliance is flagged from routing/file evidence and omitted only from the per-protocol sensitivity set. An excluded observation is retried once at the next unused retry slot with a new session/workspace and the same prompt, repetition, condition, and coordinator. Attempt 1 uses run ID suffix `-A1`; its retry uses `-A2`. Both records remain and are joined only by schedule ID plus explicit retry links. Analysis selects the sole non-excluded attempt for each schedule ID and retains excluded attempts for the flow/missingness report. A second infrastructure failure is reported missing; no further retries. Exclusions and compliance are decided from routing/manifests before deterministic or judge outcomes are opened. Report intent-to-treat (all started valid assignments) and per-protocol sensitivity sets.
 
@@ -104,19 +108,19 @@ Store source-faithful values plus availability metadata; never infer a missing f
 - wall latency, parent active latency, specialist latency, and wait latency where available;
 - routing evidence: requested model, observed model, session IDs, delegation call/result, timestamps, and raw event references.
 
-Every metric is `{status,value,unit,source}` where status is `available`, `unavailable`, or `not_applicable`. `unavailable` requires a reason. Zero is a measured value, not a missing-data marker. Preserve raw export files unchanged and record their hashes.
+Every metric is `{status,value,unit,source,unavailableReason}` where status is `available`, `unavailable`, or `not_applicable`. `available` requires a finite numeric value and nonempty source. `unavailable` requires a null value and nonempty reason. `not_applicable` requires a null value. Zero is a measured value, not a missing-data marker. Parent model split provenance is mandatory; treatment also requires specialist split and routing provenance. Preserve raw export files unchanged and record their hashes.
 
 ## Deterministic checks
 
-The external runner checks task behavior via the CLI process, isolated data files, exit status, JSON/text output, persistence, and negative cases. `validate-art.js` checks the exact asset path, UTF-8/ASCII-only bytes, line endings, line count, width bounds, allowed character class, required literal token, forbidden trailing whitespace, and final newline. It also scans the workspace for unexpected extra `.txt` banner assets. Fixture-owned baseline tests must pass before materialization.
+The external runner checks task behavior via the CLI process, isolated data files, exit status, JSON/text output, persistence, and negative cases. Each CLI process has a fixed 30-second timeout; timeout kills the full descendant process tree and records exit 124 as failure. Text banner checks require the asset's exact consecutive lines in stdout, preventing token-only spoofing. `validate-art.js` checks the exact asset path, UTF-8/ASCII-only bytes, line endings, line count, width bounds, allowed character class, required literal token, forbidden trailing whitespace, and final newline. It also scans the workspace for unexpected extra `.txt` banner assets. Fixture-owned baseline tests must pass before materialization.
 
-Deterministic result is pass only if all functional and art checks pass and the workspace does not contain modified acceptance material. Record individual assertions; do not collapse missing execution into failure.
+Deterministic result is `pass` only if functional, art, and tamper groups all pass; it is `unavailable` if any group is unavailable, otherwise `fail` if any group fails. Record individual assertions. Analysis treats unavailable as missing, never as failure.
 
 ## Blinded judge design
 
-After deterministic collection, generate anonymized bundles containing only the task prompt, terminal diff/source needed to assess it, test result, and rendered banner. Remove condition, model, session, branch, timing, token, and routing metadata. Randomize filenames and bundle order using `design/judge-assignments.json`.
+After deterministic collection and retry selection, materialize `schemas/judge-assignment.schema.json` assignments and `schemas/judge-bundle.schema.json` anonymized bundles. Every assignment, bundle, and judgment binds the blind ID to the selected non-excluded `runId`, source artifact-bundle SHA-256, and blind-bundle SHA-256. Bundles contain only the task prompt, terminal diff/source needed to assess it, test result, and rendered banner. Remove condition, model, parent/specialist session, branch, timing, token, and routing metadata. Randomize filenames and bundle order using `design/judge-assignments.json`.
 
-Six fresh GPT-5.6 Sol judge sessions each score one balanced block of ten primary artifacts plus one masked reliability duplicate. Every block's primary set contains one observation per prompt and, hidden from the judge, five observations per condition. A judge never sees paired primary observations side by side and receives no delegation information. Judge usage is excluded from all efficiency and latency metrics.
+Exactly six distinct fresh GPT-5.6 Sol judge session IDs are used, one per block. Each session scores one balanced block of ten primary artifacts plus one masked reliability duplicate; every judgment records and must match its assigned block/session. Every block's primary set contains one observation per prompt and, hidden from the judge, five observations per condition. A judge never sees paired primary observations side by side and receives no delegation information. Judge usage is excluded from all efficiency and latency metrics.
 
 Use `rubric.md` verbatim. Judges return schema-valid JSON only. A 10% deterministic sample is duplicated across blocks under different blind IDs to estimate exact/within-one agreement; duplicates are excluded from outcome means. Judge sessions cannot edit artifacts or run implementation agents.
 
@@ -134,7 +138,9 @@ Secondary outcomes include all telemetry fields, six rubric dimensions, total/pa
 
 For continuous outcomes compute each prompt-repetition treatment-minus-control pair, the mean and median paired difference, and percent change relative to control when defined. For binary pass compute paired difference in percentage points and discordant counts. Aggregate rubric dimensions on their 1-5 scale without treating missing judgments as zero.
 
-Confidence intervals use a seeded nonparametric cluster bootstrap with prompts as clusters (`seed=845621`, 10,000 draws): sample 10 prompt IDs with replacement and include all three within-prompt pairs for each sampled cluster. Report percentile 95% intervals. Also report prompt-level means, repetition-level results, intent-to-treat and per-protocol sensitivity, missingness by condition, and raw paired rows. No unpaired substitution, observation-level bootstrap, multiple-comparison significance claims, or post-hoc outcome switching.
+Confidence intervals use a seeded nonparametric cluster bootstrap with prompts as clusters (`seed=845621`, 10,000 draws): sample 10 prompt IDs with replacement and include all three within-prompt pairs for each sampled cluster. Binary effects and intervals are percentage points. Point estimates use available complete pairs, but a bootstrap interval is unavailable unless all 10 preregistered prompt clusters each have all three pairs; the report states the incomplete-cluster reason rather than silently bootstrapping fewer clusters. Also report prompt-level means, repetition-level results, intent-to-treat and per-protocol sensitivity, missingness/unavailable counts by condition, and raw paired rows. No unpaired substitution, observation-level bootstrap, multiple-comparison significance claims, or post-hoc outcome switching.
+
+Secondary telemetry analysis includes every top-level metric, all parent/specialist per-model credits and token fields (including cached tokens), tool result bytes and observed duration, compaction event/return sizes, routing event/delegation evidence, model mismatch counts, and per-run unavailable-field counts. Categorical routing identity is validated against the registered constants rather than averaged.
 
 Practical materiality markers, interpreted as descriptive thresholds rather than hypothesis-test cutoffs:
 

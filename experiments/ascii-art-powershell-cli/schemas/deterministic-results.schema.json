@@ -17,6 +17,37 @@
     "startedAt": { "type": "string", "format": "date-time" },
     "completedAt": { "type": "string", "format": "date-time" }
   },
+  "oneOf": [
+    {
+      "properties": {
+        "status": { "const": "pass" },
+        "functional": { "$ref": "#/$defs/passGroup" },
+        "art": { "$ref": "#/$defs/passGroup" },
+        "tamperCheck": { "$ref": "#/$defs/passGroup" }
+      }
+    },
+    {
+      "properties": {
+        "status": { "const": "fail" },
+        "functional": { "$ref": "#/$defs/availableGroup" },
+        "art": { "$ref": "#/$defs/availableGroup" },
+        "tamperCheck": { "$ref": "#/$defs/availableGroup" }
+      },
+      "anyOf": [
+        { "properties": { "functional": { "$ref": "#/$defs/failGroup" } } },
+        { "properties": { "art": { "$ref": "#/$defs/failGroup" } } },
+        { "properties": { "tamperCheck": { "$ref": "#/$defs/failGroup" } } }
+      ]
+    },
+    {
+      "properties": { "status": { "const": "unavailable" } },
+      "anyOf": [
+        { "properties": { "functional": { "$ref": "#/$defs/unavailableGroup" } } },
+        { "properties": { "art": { "$ref": "#/$defs/unavailableGroup" } } },
+        { "properties": { "tamperCheck": { "$ref": "#/$defs/unavailableGroup" } } }
+      ]
+    }
+  ],
   "$defs": {
     "checkGroup": {
       "type": "object",
@@ -38,6 +69,26 @@
           }
         }
       }
+    },
+    "passGroup": {
+      "type": "object",
+      "properties": { "status": { "const": "pass" } },
+      "required": ["status"]
+    },
+    "failGroup": {
+      "type": "object",
+      "properties": { "status": { "const": "fail" } },
+      "required": ["status"]
+    },
+    "unavailableGroup": {
+      "type": "object",
+      "properties": { "status": { "const": "unavailable" } },
+      "required": ["status"]
+    },
+    "availableGroup": {
+      "type": "object",
+      "properties": { "status": { "enum": ["pass", "fail"] } },
+      "required": ["status"]
     }
   }
 }

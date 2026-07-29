@@ -18,7 +18,10 @@ pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\scripts\preflight.p
 node .\experiments\ascii-art-powershell-cli\scripts\randomize.js --check
 node .\experiments\ascii-art-powershell-cli\scripts\create-judge-assignments.js --check
 node .\experiments\ascii-art-powershell-cli\scripts\validate-dataset.js
+node .\experiments\ascii-art-powershell-cli\scripts\test-integrity.js
+node .\experiments\ascii-art-powershell-cli\scripts\test-analysis.js
 pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\fixture\tests\Run-Tests.ps1
+pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\acceptance\tests\Test-AcceptanceSupport.ps1
 ```
 
 Acceptance tests are held outside the candidate workspace. For a completed observation:

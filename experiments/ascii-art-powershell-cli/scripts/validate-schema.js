@@ -26,7 +26,14 @@ function validateSchema(instance, schema, rootSchema = schema, location = '$') {
   if (schema.oneOf) {
     const matches = schema.oneOf.filter((candidate) => validateSchema(instance, candidate, rootSchema, location).length === 0);
     if (matches.length !== 1) errors.push(`${location} must match exactly one oneOf branch`);
-    return errors;
+  }
+  if (schema.anyOf) {
+    if (!schema.anyOf.some((candidate) => validateSchema(instance, candidate, rootSchema, location).length === 0)) {
+      errors.push(`${location} must match at least one anyOf branch`);
+    }
+  }
+  if (schema.allOf) {
+    schema.allOf.forEach((candidate) => errors.push(...validateSchema(instance, candidate, rootSchema, location)));
   }
   if (Object.hasOwn(schema, 'const') && JSON.stringify(instance) !== JSON.stringify(schema.const)) {
     errors.push(`${location} must equal the schema constant`);
@@ -57,6 +64,7 @@ function validateSchema(instance, schema, rootSchema = schema, location = '$') {
   }
   if (Array.isArray(instance)) {
     if (schema.minItems !== undefined && instance.length < schema.minItems) errors.push(`${location} has too few items`);
+    if (schema.maxItems !== undefined && instance.length > schema.maxItems) errors.push(`${location} has too many items`);
     if (schema.items) {
       instance.forEach((value, index) => errors.push(...validateSchema(value, schema.items, rootSchema, `${location}[${index}]`)));
     }

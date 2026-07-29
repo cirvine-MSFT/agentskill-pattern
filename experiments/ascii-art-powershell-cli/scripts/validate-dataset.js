@@ -5,11 +5,18 @@ const fs = require('fs');
 const path = require('path');
 const { readJson, root, sha256File, walkFiles } = require('./lib');
 const { validateSchema } = require('./validate-schema');
+const {
+  conditionErrors,
+  deterministicConsistencyErrors,
+  judgeBindingErrors,
+  telemetryMetricErrors
+} = require('./integrity');
 
 const errors = [];
 const prompts = readJson(path.join(root, 'prompts.json'));
 const schedule = readJson(path.join(root, 'design', 'randomization.json'));
 const assignments = readJson(path.join(root, 'design', 'judge-assignments.json'));
+const constants = readJson(path.join(root, 'design', 'conditions.json'));
 const protocol = fs.readFileSync(path.join(root, 'protocol.md'), 'utf8');
 
 function check(condition, message) {
@@ -27,6 +34,7 @@ check(prompts.every((prompt) => prompt.prompt.includes(prompt.banner.path)), 'ea
 check(prompts.every((prompt) => prompt.prompt.includes(prompt.banner.requiredToken)), 'each prompt must state its required token');
 for (const fixedFile of [
   'prompts.json',
+  'design/conditions.json',
   'fixture/fixture-lock.json',
   'acceptance/acceptance-lock.json',
   'design/randomization.json',
@@ -78,7 +86,15 @@ assignments.blocks.forEach((block) => {
 });
 
 const schemas = {};
-for (const schemaName of ['run-manifest', 'raw-telemetry', 'artifacts', 'deterministic-results', 'judgment']) {
+for (const schemaName of [
+  'run-manifest',
+  'raw-telemetry',
+  'artifacts',
+  'deterministic-results',
+  'judge-assignment',
+  'judge-bundle',
+  'judgment'
+]) {
   const schema = readJson(path.join(root, 'schemas', `${schemaName}.schema.json`));
   schemas[schemaName] = schema;
   check(schema.$schema === 'https://json-schema.org/draft/2020-12/schema', `${schemaName} must use JSON Schema 2020-12`);
@@ -116,6 +132,8 @@ if (rawJson.length > 0) {
   validateRecords(manifests, 'run-manifest');
   validateRecords(telemetry, 'raw-telemetry');
   validateRecords(deterministic, 'deterministic-results');
+  telemetry.forEach((record) => telemetryMetricErrors(record).forEach((error) => errors.push(`raw-telemetry ${record.runId}: ${error}`)));
+  deterministic.forEach((record) => deterministicConsistencyErrors(record).forEach((error) => errors.push(`deterministic-results ${record.runId}: ${error}`)));
   check(manifests.length >= 60 && manifests.length <= 120, `complete raw dataset must contain 60-120 run attempts, found ${manifests.length}`);
   check(telemetry.length === manifests.length, `raw dataset must contain one telemetry record per run attempt, found ${telemetry.length} for ${manifests.length} attempts`);
   check(deterministic.length === manifests.length, `raw dataset must contain one deterministic result per run attempt, found ${deterministic.length} for ${manifests.length} attempts`);
@@ -143,22 +161,7 @@ if (rawJson.length > 0) {
       check(telemetryRecord.scheduleId === manifest.scheduleId, `${manifest.runId} telemetry schedule ID must match`);
       check(telemetryRecord.routing.parent.sessionId === manifest.sessions.parent.sessionId, `${manifest.runId} parent routing session must match manifest`);
       check(telemetryRecord.routing.parent.observedModel === manifest.sessions.parent.observedModel, `${manifest.runId} parent routing model must match manifest`);
-      if (manifest.condition === 'treatment') {
-        check(Boolean(manifest.sessions.specialist.sessionId), `${manifest.runId} treatment manifest must identify a specialist session`);
-        check(telemetryRecord.routing.specialist.sessionId === manifest.sessions.specialist.sessionId, `${manifest.runId} specialist routing session must match manifest`);
-        check(telemetryRecord.routing.specialist.requestedModel === 'claude-haiku-4.5' && telemetryRecord.routing.specialist.observedModel === manifest.sessions.specialist.observedModel, `${manifest.runId} specialist routing model must match manifest`);
-        const specialistModel = telemetryRecord.models.find((model) => model.role === 'specialist');
-        check(Boolean(specialistModel), `${manifest.runId} treatment telemetry must contain a specialist model split`);
-        if (specialistModel) {
-          check(specialistModel.sessionId === manifest.sessions.specialist.sessionId && specialistModel.observedModel === manifest.sessions.specialist.observedModel, `${manifest.runId} specialist model split must match manifest`);
-        }
-        check(telemetryRecord.routing.delegationEvidence.status === 'available', `${manifest.runId} treatment delegation evidence must be available`);
-      } else {
-        check(manifest.sessions.specialist.status === 'not_applicable', `${manifest.runId} control manifest specialist must be not_applicable`);
-        check(telemetryRecord.routing.specialist.status === 'not_applicable', `${manifest.runId} control routing specialist must be not_applicable`);
-        check(!telemetryRecord.models.some((model) => model.role === 'specialist'), `${manifest.runId} control telemetry must not contain a specialist model split`);
-        check(telemetryRecord.routing.delegationEvidence.status === 'not_applicable', `${manifest.runId} control delegation evidence must be not_applicable`);
-      }
+      conditionErrors(manifest, telemetryRecord, constants).forEach((error) => errors.push(error));
     }
     if (deterministicRecord) {
       check(deterministicRecord.scheduleId === manifest.scheduleId && deterministicRecord.promptId === manifest.promptId, `${manifest.runId} deterministic provenance must match manifest`);
@@ -177,6 +180,7 @@ if (rawJson.length > 0) {
 
 const artifactJson = walkFiles(path.join(root, 'artifacts')).filter((file) => file.endsWith('.json'));
 const artifactManifests = artifactJson.map(readJson).filter((item) => item.protocolId && item.bundleSha256 && item.files);
+const blindBundles = artifactJson.map(readJson).filter((item) => item.protocolId && item.blindBundleSha256 && item.blindId && item.files);
 if (artifactJson.length > 0) {
   validateRecords(artifactManifests, 'artifacts');
   check(artifactManifests.length >= 60 && artifactManifests.length <= 120, `non-empty artifact dataset must contain 60-120 manifests, found ${artifactManifests.length}`);
@@ -193,10 +197,22 @@ if (artifactJson.length > 0) {
     }
   });
 }
+if (blindBundles.length > 0) {
+  validateRecords(blindBundles, 'judge-bundle');
+  check(blindBundles.length === 66, `non-empty blinded bundle dataset must contain 66 manifests, found ${blindBundles.length}`);
+  check(new Set(blindBundles.map((item) => item.blindId)).size === blindBundles.length, 'blinded bundle IDs must be unique');
+}
 
 const judgmentJson = walkFiles(path.join(root, 'judgments')).filter((file) => file.endsWith('.json'));
 const judgmentRecords = judgmentJson.map(readJson).filter((item) => item.protocolId && item.blindId && item.scores);
+const materializedManifests = judgmentJson.map(readJson).filter((item) => item.protocolId && Array.isArray(item.assignments));
 if (judgmentJson.length > 0) {
+  check(materializedManifests.length === 1, `judgment dataset must contain exactly one materialized assignment manifest, found ${materializedManifests.length}`);
+  materializedManifests.forEach((item) => validateRecords([item], 'judge-assignment'));
+  materializedManifests.forEach((item) => check(
+    item.designSha256 === sha256File(path.join(root, 'design', 'judge-assignments.json')),
+    'materialized judge assignments must bind the registered judge design hash'
+  ));
   validateRecords(judgmentRecords, 'judgment');
   check(judgmentRecords.length === 66, `non-empty judgment dataset must contain 66 records including duplicates, found ${judgmentRecords.length}`);
   check(new Set(judgmentRecords.map((item) => item.blindId)).size === judgmentRecords.length, 'judgment blind IDs must be unique');
@@ -210,6 +226,25 @@ if (judgmentJson.length > 0) {
     const expectedOverall = Math.round((scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length) * 100) / 100;
     check(Math.abs(judgment.overall - expectedOverall) < 1e-9, `${judgment.blindId} overall must equal the rounded arithmetic mean of dimension scores`);
   });
+  if (materializedManifests.length === 1) {
+    const selectedRuns = new Map();
+    observations.forEach((scheduledItem) => {
+      const selected = manifests
+        .filter((item) => item.scheduleId === scheduledItem.scheduleId && !item.exclusion.excluded)
+        .sort((left, right) => right.execution.attempt - left.execution.attempt)[0];
+      if (selected) selectedRuns.set(scheduledItem.scheduleId, selected);
+    });
+    const staticAssignments = assignments.blocks.flatMap((block) => block.artifacts.map((item) => ({ ...item, block: block.block })));
+    judgeBindingErrors(
+      materializedManifests[0].assignments,
+      staticAssignments,
+      selectedRuns,
+      artifactManifests,
+      blindBundles,
+      judgmentRecords,
+      constants
+    ).forEach((error) => errors.push(error));
+  }
 }
 
 if (errors.length > 0) {

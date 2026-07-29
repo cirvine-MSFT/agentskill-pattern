@@ -11,6 +11,7 @@ const {
   walkFiles,
   writeJson
 } = require('./lib');
+const { completePromptClusters, deterministicPassValue } = require('./integrity');
 
 const args = parseArguments(process.argv.slice(2));
 if (!args.runs || !args.judgments || !args.out) {
@@ -78,17 +79,41 @@ for (const scheduledItem of scheduled) {
   if (selected) selectedRuns.set(scheduledItem.scheduleId, selected);
 }
 
-const assignmentByBlind = new Map(assignments.blocks.flatMap((block) => block.artifacts)
-  .map((item) => [item.blindId, item]));
+const assignmentByBlind = new Map(assignments.blocks.flatMap((block) => (
+  block.artifacts.map((item) => [item.blindId, { ...item, block: block.block }])
+)));
+const materializedManifests = judgmentFiles
+  .map(({ value }) => value)
+  .filter((value) => value && Array.isArray(value.assignments));
+const materializedByBlind = new Map(
+  (materializedManifests[0]?.assignments || []).map((item) => [item.blindId, item])
+);
 const judgments = new Map();
 const judgmentsByBlind = new Map();
 for (const { value } of judgmentFiles) {
   if (value && value.blindId && assignmentByBlind.has(value.blindId)) {
     const assignment = assignmentByBlind.get(value.blindId);
+    const materialized = materializedByBlind.get(value.blindId);
+    const selected = selectedRuns.get(assignment.scheduleId);
+    if (materialized && (
+      !selected ||
+      materialized.selectedRunId !== selected.runId ||
+      value.selectedRunId !== selected.runId ||
+      value.artifactBundleSha256 !== selected.refs.artifactBundleSha256 ||
+      materialized.artifactBundleSha256 !== selected.refs.artifactBundleSha256 ||
+      value.blindBundleSha256 !== materialized.blindBundleSha256 ||
+      value.judgeSessionId !== materialized.judgeSessionId ||
+      value.block !== materialized.block
+    )) {
+      throw new Error(`Judgment ${value.blindId} is not bound to the selected retry artifact and assigned judge session.`);
+    }
     judgmentsByBlind.set(value.blindId, value);
     if (!assignment.duplicateOfBlindId) {
       judgments.set(assignment.scheduleId, value);
     }
+  }
+  if (judgmentsByBlind.size > 0 && (materializedManifests.length !== 1 || materializedByBlind.size !== 66)) {
+    throw new Error('Judgments require one complete materialized retry-bound assignment manifest.');
   }
 }
 
@@ -104,6 +129,9 @@ if (!args['allow-incomplete']) {
   }
   if (judgmentsByBlind.size !== 66) {
     throw new Error(`Judgment dataset is incomplete: expected 66 primary and reliability records, found ${judgmentsByBlind.size}.`);
+  }
+  if (materializedManifests.length !== 1 || materializedByBlind.size !== 66) {
+    throw new Error('Dataset requires one materialized judge-assignment manifest containing 66 retry-bound assignments.');
   }
 }
 
@@ -149,14 +177,15 @@ function analyzeScope(records) {
     const differences = complete.map((row) => row.difference);
     const controls = complete.map((row) => row.control);
     const treatments = complete.map((row) => row.treatment);
-    const promptIds = [...new Set(complete.map((row) => row.promptId))].sort();
+    const expectedPromptIds = [...new Set(scheduled.map((item) => item.promptId))].sort();
+    const clusterEligibility = completePromptClusters(complete, expectedPromptIds);
     const random = mulberry32(seedConfig.seed);
     const bootstrap = [];
-    if (promptIds.length > 0) {
+    if (clusterEligibility.eligible) {
       for (let draw = 0; draw < seedConfig.draws; draw += 1) {
         const sampled = [];
-        for (let index = 0; index < promptIds.length; index += 1) {
-          const selected = promptIds[Math.floor(random() * promptIds.length)];
+        for (let index = 0; index < expectedPromptIds.length; index += 1) {
+          const selected = expectedPromptIds[Math.floor(random() * expectedPromptIds.length)];
           sampled.push(...complete.filter((row) => row.promptId === selected).map((row) => row.difference));
         }
         bootstrap.push(mean(sampled));
@@ -165,6 +194,8 @@ function analyzeScope(records) {
     }
     const controlMean = mean(controls);
     const treatmentMean = mean(treatments);
+    const scale = binary ? 100 : 1;
+    const scaled = (value) => value === null ? null : value * scale;
     const conditionAvailability = Object.fromEntries(['control', 'treatment'].map((condition) => {
       const conditionRecords = records.filter((record) => record.condition === condition);
       const values = conditionRecords.map(getter).filter((value) => typeof value === 'number');
@@ -173,17 +204,17 @@ function analyzeScope(records) {
         includedRecords: conditionRecords.length,
         available: values.length,
         missingOrUnavailable: 30 - values.length,
-        mean: mean(values)
+        mean: scaled(mean(values))
       }];
     }));
-    const promptMeans = promptIds.map((promptId) => {
+    const promptMeans = expectedPromptIds.map((promptId) => {
       const rows = complete.filter((row) => row.promptId === promptId);
       return {
         promptId,
         completePairs: rows.length,
-        controlMean: mean(rows.map((row) => row.control)),
-        treatmentMean: mean(rows.map((row) => row.treatment)),
-        meanPairedDifference: mean(rows.map((row) => row.difference))
+        controlMean: scaled(mean(rows.map((row) => row.control))),
+        treatmentMean: scaled(mean(rows.map((row) => row.treatment))),
+        meanPairedDifference: scaled(mean(rows.map((row) => row.difference)))
       };
     });
     const repetitionMeans = [1, 2, 3].map((repetition) => {
@@ -191,25 +222,31 @@ function analyzeScope(records) {
       return {
         repetition,
         completePairs: rows.length,
-        controlMean: mean(rows.map((row) => row.control)),
-        treatmentMean: mean(rows.map((row) => row.treatment)),
-        meanPairedDifference: mean(rows.map((row) => row.difference))
+        controlMean: scaled(mean(rows.map((row) => row.control))),
+        treatmentMean: scaled(mean(rows.map((row) => row.treatment))),
+        meanPairedDifference: scaled(mean(rows.map((row) => row.difference)))
       };
     });
     return {
       outcome: name,
+      unit: binary ? 'percentage_points' : 'native',
       completePairs: complete.length,
       missingPairs: 30 - complete.length,
-      controlMean,
-      treatmentMean,
-      meanPairedDifference: mean(differences),
-      medianPairedDifference: median(differences),
-      percentChangeFromControl: controlMean === null || controlMean === 0
+      controlMean: scaled(controlMean),
+      treatmentMean: scaled(treatmentMean),
+      meanPairedDifference: scaled(mean(differences)),
+      medianPairedDifference: scaled(median(differences)),
+      percentChangeFromControl: binary || controlMean === null || controlMean === 0
         ? null
         : ((treatmentMean - controlMean) / controlMean) * 100,
       promptClusteredBootstrap95: bootstrap.length === 0
-        ? { lower: null, upper: null }
-        : { lower: percentile(bootstrap, 0.025), upper: percentile(bootstrap, 0.975) },
+        ? { status: 'unavailable', lower: null, upper: null, reason: clusterEligibility.reason }
+        : {
+            status: 'available',
+            lower: scaled(percentile(bootstrap, 0.025)),
+            upper: scaled(percentile(bootstrap, 0.975)),
+            reason: null
+          },
       missingnessByCondition: conditionAvailability,
       promptMeans,
       repetitionMeans,
@@ -219,7 +256,12 @@ function analyzeScope(records) {
         concordantPass: complete.filter((row) => row.control === 1 && row.treatment === 1).length,
         concordantFail: complete.filter((row) => row.control === 0 && row.treatment === 0).length
       } : null,
-      pairs: complete
+      pairs: complete.map((row) => ({
+        ...row,
+        control: row.control * scale,
+        treatment: row.treatment * scale,
+        difference: row.difference * scale
+      }))
     };
   }
 
@@ -245,8 +287,80 @@ function analyzeScope(records) {
   const outcomes = telemetryNames.map((name) => summarize(name, (record) => (
     record.telemetry ? metricValue(record.telemetry.metrics[name]) : null
   )));
+  const modelMetricNames = ['aiCredits', 'nanoAiu', 'inputTokens', 'peakInputTokens', 'outputTokens', 'cachedTokens'];
+  for (const role of ['parent', 'specialist']) {
+    for (const metricName of modelMetricNames) {
+      outcomes.push(summarize(`model.${role}.${metricName}`, (record) => {
+        const model = record.telemetry?.models.find((item) => item.role === role);
+        return model ? metricValue(model[metricName]) : null;
+      }));
+    }
+  }
+  outcomes.push(summarize('tools.resultBytesTotal', (record) => {
+    const values = (record.telemetry?.tools || []).map((item) => metricValue(item.resultBytes));
+    return values.length === 0 ? 0 : (values.every((value) => value !== null)
+      ? values.reduce((sum, value) => sum + value, 0)
+      : null);
+  }));
+  outcomes.push(summarize('tools.successfulResults', (record) => (
+    record.telemetry ? record.telemetry.tools.filter((item) => item.success === true).length : null
+  )));
+  outcomes.push(summarize('tools.durationMsTotal', (record) => {
+    if (!record.telemetry) return null;
+    const durations = record.telemetry.tools.map((item) => (
+      item.startedAt && item.completedAt
+        ? Date.parse(item.completedAt) - Date.parse(item.startedAt)
+        : null
+    ));
+    return durations.length === 0 ? 0 : (durations.every((value) => Number.isFinite(value) && value >= 0)
+      ? durations.reduce((sum, value) => sum + value, 0)
+      : null);
+  }));
+  outcomes.push(summarize('compaction.eventCount', (record) => (
+    record.telemetry ? record.telemetry.compaction.length : null
+  )));
+  outcomes.push(summarize('compaction.returnBytesTotal', (record) => {
+    const values = (record.telemetry?.compaction || []).map((item) => metricValue(item.returnBytes));
+    return values.length === 0 ? 0 : (values.every((value) => value !== null)
+      ? values.reduce((sum, value) => sum + value, 0)
+      : null);
+  }));
+  outcomes.push(summarize('routing.parentSourceEventCount', (record) => (
+    record.telemetry ? record.telemetry.routing.parent.sourceEventIds.length : null
+  )));
+  outcomes.push(summarize('routing.specialistSourceEventCount', (record) => {
+    const specialist = record.telemetry?.routing.specialist;
+    return specialist?.sourceEventIds ? specialist.sourceEventIds.length : null;
+  }));
+  outcomes.push(summarize('routing.delegationEvidenceAvailable', (record) => {
+    const status = record.telemetry?.routing.delegationEvidence.status;
+    return status === undefined || status === 'unavailable' ? null : Number(status === 'available');
+  }, true));
+  outcomes.push(summarize('routing.delegationLatencyMs', (record) => {
+    const evidence = record.telemetry?.routing.delegationEvidence;
+    if (!evidence || evidence.status === 'not_applicable') return null;
+    return evidence.status === 'available' && evidence.requestedAt && evidence.returnedAt
+      ? Date.parse(evidence.returnedAt) - Date.parse(evidence.requestedAt)
+      : null;
+  }));
+  outcomes.push(summarize('routing.modelMismatchCount', (record) => {
+    if (!record.telemetry) return null;
+    return record.telemetry.models.filter((model) => (
+      model.requestedModel !== model.observedModel
+    )).length;
+  }));
+  outcomes.push(summarize('telemetry.unavailableFieldCount', (record) => {
+    if (!record.telemetry) return null;
+    const metricObjects = [
+      ...Object.values(record.telemetry.metrics),
+      ...record.telemetry.models.flatMap((model) => modelMetricNames.map((name) => model[name])),
+      ...record.telemetry.tools.map((tool) => tool.resultBytes),
+      ...record.telemetry.compaction.map((event) => event.returnBytes)
+    ];
+    return metricObjects.filter((metric) => metric?.status === 'unavailable').length;
+  }));
   outcomes.push(summarize('deterministicPass', (record) => (
-    record.deterministic ? Number(record.deterministic.status === 'pass') : null
+    deterministicPassValue(record.deterministic)
   ), true));
   outcomes.push(summarize('overallQuality', (record) => (
     record.judgment && typeof record.judgment.overall === 'number' ? record.judgment.overall : null
@@ -273,7 +387,8 @@ const output = {
       seed: seedConfig.seed,
       draws: seedConfig.draws,
       cluster: seedConfig.cluster,
-      interval: 'percentile 95%'
+      interval: 'percentile 95%',
+      missingDataRule: 'Point estimates use available complete pairs. Confidence intervals are unavailable unless all 10 prompt clusters contain all three preregistered pairs.'
     }
   },
   dataset: {

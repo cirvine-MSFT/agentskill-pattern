@@ -126,17 +126,47 @@
           ]
         },
         "delegationEvidence": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["status", "callEventId", "resultEventId", "requestedAt", "returnedAt"],
-          "properties": {
-            "status": { "enum": ["available", "unavailable", "not_applicable"] },
-            "callEventId": { "type": ["string", "null"] },
-            "resultEventId": { "type": ["string", "null"] },
-            "requestedAt": { "type": ["string", "null"], "format": "date-time" },
-            "returnedAt": { "type": ["string", "null"], "format": "date-time" },
-            "unavailableReason": { "type": ["string", "null"] }
-          }
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "callEventId", "resultEventId", "requestedAt", "returnedAt", "unavailableReason"],
+              "properties": {
+                "status": { "const": "available" },
+                "callEventId": { "type": "string", "minLength": 1 },
+                "resultEventId": { "type": "string", "minLength": 1 },
+                "requestedAt": { "type": "string", "format": "date-time" },
+                "returnedAt": { "type": "string", "format": "date-time" },
+                "unavailableReason": { "type": "null" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "callEventId", "resultEventId", "requestedAt", "returnedAt", "unavailableReason"],
+              "properties": {
+                "status": { "const": "unavailable" },
+                "callEventId": { "type": "null" },
+                "resultEventId": { "type": "null" },
+                "requestedAt": { "type": "null" },
+                "returnedAt": { "type": "null" },
+                "unavailableReason": { "type": "string", "minLength": 1 }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "callEventId", "resultEventId", "requestedAt", "returnedAt", "unavailableReason"],
+              "properties": {
+                "status": { "const": "not_applicable" },
+                "callEventId": { "type": "null" },
+                "resultEventId": { "type": "null" },
+                "requestedAt": { "type": "null" },
+                "returnedAt": { "type": "null" },
+                "unavailableReason": { "const": "control_condition" }
+              }
+            }
+          ]
         }
       }
     },
@@ -158,16 +188,44 @@
   },
   "$defs": {
     "metric": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "value", "unit", "source", "unavailableReason"],
-      "properties": {
-        "status": { "enum": ["available", "unavailable", "not_applicable"] },
-        "value": { "type": ["number", "null"] },
-        "unit": { "type": "string" },
-        "source": { "type": ["string", "null"] },
-        "unavailableReason": { "type": ["string", "null"] }
-      }
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value", "unit", "source", "unavailableReason"],
+          "properties": {
+            "status": { "const": "available" },
+            "value": { "type": "number" },
+            "unit": { "type": "string", "minLength": 1 },
+            "source": { "type": "string", "minLength": 1 },
+            "unavailableReason": { "type": "null" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value", "unit", "source", "unavailableReason"],
+          "properties": {
+            "status": { "const": "unavailable" },
+            "value": { "type": "null" },
+            "unit": { "type": "string", "minLength": 1 },
+            "source": { "type": ["string", "null"] },
+            "unavailableReason": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value", "unit", "source", "unavailableReason"],
+          "properties": {
+            "status": { "const": "not_applicable" },
+            "value": { "type": "null" },
+            "unit": { "type": "string", "minLength": 1 },
+            "source": { "type": "null" },
+            "unavailableReason": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
     },
     "routingRef": {
       "type": "object",

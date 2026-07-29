@@ -54,8 +54,7 @@ if (!fs.existsSync(asset)) {
   }
 }
 
-const assetDirectory = path.join(workspace, 'assets');
-const textAssets = walkFiles(assetDirectory)
+const textAssets = walkFiles(workspace)
   .filter((file) => path.extname(file).toLowerCase() === '.txt')
   .map((file) => path.relative(workspace, file).split(path.sep).join('/'));
 if (textAssets.some((file) => file !== prompt.banner.path)) {
