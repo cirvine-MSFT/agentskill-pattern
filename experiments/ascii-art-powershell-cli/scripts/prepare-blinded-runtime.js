@@ -19,6 +19,11 @@ const {
   buildBlindContent,
   validateBlindContent
 } = require('./artifact-bundles');
+const {
+  expectedUnjudgeable,
+  isExpectedUnjudgeable,
+  validateRuntimeMetadata
+} = require('./runtime-assignments');
 const { validateSchema } = require('./validate-schema');
 
 const args = parseArguments(process.argv.slice(2));
@@ -40,14 +45,6 @@ const infrastructureReasons = new Set([
   'external_interruption',
   'required_tool_unavailable'
 ]);
-const expectedUnjudgeable = Object.freeze({
-  blindId: 'B0022',
-  scheduleId: 'P04-R1-control',
-  runId: 'P04-R1-control-A1',
-  candidatePhrase: 'control output',
-  reason: 'P04-R1-control-A1 source artifact candidate content contains a prohibited high-confidence condition-revealing provenance marker at $[property:1].value[0][property:0].value.'
-});
-
 function jsonValues(directory) {
   return walkFiles(path.resolve(directory))
     .filter((file) => file.toLowerCase().endsWith('.json'))
@@ -77,11 +74,6 @@ function selectedManifest(manifests, scheduleId) {
     throw new Error(`${scheduleId} has no selected run and is not an exhausted infrastructure schedule.`);
   }
   return null;
-}
-
-function containsCandidatePhrase(artifactDirectory, artifact, phrase) {
-  const bundlePath = path.resolve(artifactDirectory, artifact.bundlePath);
-  return fs.readFileSync(bundlePath, 'utf8').toLowerCase().includes(phrase.toLowerCase());
 }
 
 const manifests = jsonValues(args.runs).filter((value) => (
@@ -137,14 +129,14 @@ for (const selected of [...selectedBySchedule.values()].filter(Boolean)) {
       resultMatches[0]
     ));
   } catch (error) {
-    const isExpected = selected.scheduleId === expectedUnjudgeable.scheduleId &&
-      selected.runId === expectedUnjudgeable.runId &&
-      error.message === expectedUnjudgeable.reason &&
-      containsCandidatePhrase(
-        artifactDirectory,
-        artifactMatches[0],
-        expectedUnjudgeable.candidatePhrase
-      );
+    const isExpected = isExpectedUnjudgeable(
+      selected,
+      error,
+      fs.readFileSync(
+        path.resolve(artifactDirectory, artifactMatches[0].bundlePath),
+        'utf8'
+      )
+    );
     if (!isExpected) throw error;
     unjudgeable.push({ ...expectedUnjudgeable });
   }
@@ -277,7 +269,6 @@ const summary = {
     reason: `${missingScheduleIds.length} planned schedules have no selected artifact after exhausted infrastructure attempts, and ${unjudgeable.length} selected artifact is unjudgeable because the frozen provenance scanner rejected its candidate content. Runtime assignments retain only successfully bound blind IDs in original block and within-block order.`
   }
 };
-writeJson(summaryOutput, summary);
 
 const writtenFiles = walkFiles(outputDirectory);
 if (writtenFiles.length !== includedRows.length * 2) {
@@ -285,20 +276,24 @@ if (writtenFiles.length !== includedRows.length * 2) {
     `Blind directory contains ${writtenFiles.length} files; expected ${includedRows.length * 2}.`
   );
 }
-if (runtimeAssignments.blocks.some((block, index) => (
-  block.artifacts.some((item, itemIndex) => (
-    item !== assignments.blocks[index].artifacts.filter(
-      (candidate) => includedIds.has(candidate.blindId)
-    )[itemIndex]
-  ))
-))) {
-  throw new Error('Runtime assignments do not preserve original block and within-block order.');
+const runtimeValidation = validateRuntimeMetadata({
+  assignments,
+  runtimeAssignments,
+  summary,
+  selectedScheduleIds: new Set([...selectedBySchedule.entries()]
+    .filter(([, selected]) => selected)
+    .map(([scheduleId]) => scheduleId)),
+  authenticatedScheduleIds: new Set([...selectedBySchedule.entries()]
+    .filter(([, selected]) => selected && authenticationByRun.has(selected.runId))
+    .map(([scheduleId]) => scheduleId)),
+  observedUnjudgeable: unjudgeable,
+  sourceAssignmentsSha256: sha256RawFile(assignmentsPath),
+  bindingBlindIds: generated.map((item) => item.binding.blindId)
+});
+if (runtimeValidation.errors.length > 0) {
+  throw new Error(runtimeValidation.errors.join('\n'));
 }
-if (runtimeAssignments.blocks.flatMap((block) => block.artifacts).some((item) => (
-  item.duplicateOfBlindId && !includedIds.has(item.duplicateOfBlindId)
-))) {
-  throw new Error('Runtime assignments retain a reliability duplicate without its source primary.');
-}
+writeJson(summaryOutput, summary);
 
 console.log(
   `WROTE: ${includedRows.length} bound blind assignments; ` +
