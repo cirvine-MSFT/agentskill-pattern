@@ -7,13 +7,15 @@ the runtime to delegate to a separate, cost-tiered, tool-minimized **custom suba
 The subagent writes its output artifact directly to the workspace and returns a compact
 status to the parent, instead of streaming the work through the parent's own context.
 
-This is **not presented as a novel technique**. Each mechanism it composes — progressive
-disclosure, cost-tiered model selection, a narrow tool allowlist, an isolated subagent
-context, and an artifact-write-plus-compact-return — is independently documented by
-multiple vendors. What this repository names is the specific *wiring* of those
-mechanisms together, for use as a shared vocabulary within this repository and its
-reference implementations. See [Research and prior art](#research-and-prior-art) below
-for the evidence behind that claim.
+This is **not presented as a novel technique**. Progressive disclosure, cost-tiered
+model selection, narrow tool allowlists, isolated subagent contexts, and compact returns
+are independently documented across multiple platforms. Direct subagent artifact writes
+are a more specific implementation tactic; LangChain Deep Agents is the closest
+documented match found in the survey. What this repository names is the particular
+*wiring* of these mechanisms and tactics, for use as shared vocabulary within this
+repository and its reference implementations. See
+[Research and prior art](#research-and-prior-art) below for the evidence behind that
+claim.
 
 ## Pattern summary
 
