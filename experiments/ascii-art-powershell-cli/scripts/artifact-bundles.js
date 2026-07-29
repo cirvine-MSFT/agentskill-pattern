@@ -29,9 +29,83 @@ const conditionRevealingMarkers = [
   /\b(?:model[- ]?routing|routed?\s+to\s+(?:a\s+|the\s+)?(?:model|specialist|sub[- ]?agent|claude|gpt))\b/i,
   /\bcreate_banner_only\b/i
 ];
+const jsonEscapeDecodePasses = 2;
+const simpleJsonEscapes = Object.freeze({
+  '"': '"',
+  '\\': '\\',
+  '/': '/',
+  b: '\b',
+  f: '\f',
+  n: '\n',
+  r: '\r',
+  t: '\t'
+});
 
 function normalizeForLeakDetection(value) {
   return value.normalize('NFKC').toLowerCase();
+}
+
+function decodeJsonEscapesOnce(value) {
+  let decoded = '';
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== '\\' || index + 1 >= value.length) {
+      decoded += value[index];
+      continue;
+    }
+
+    const escapeType = value[index + 1];
+    if (Object.prototype.hasOwnProperty.call(simpleJsonEscapes, escapeType)) {
+      decoded += simpleJsonEscapes[escapeType];
+      index += 1;
+      continue;
+    }
+    if (escapeType !== 'u' || !/^[0-9a-f]{4}$/i.test(value.slice(index + 2, index + 6))) {
+      decoded += value[index];
+      continue;
+    }
+
+    const codeUnit = Number.parseInt(value.slice(index + 2, index + 6), 16);
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+      const lowEscape = value.slice(index + 6, index + 12);
+      if (/^\\u[0-9a-f]{4}$/i.test(lowEscape)) {
+        const lowCodeUnit = Number.parseInt(lowEscape.slice(2), 16);
+        if (lowCodeUnit >= 0xDC00 && lowCodeUnit <= 0xDFFF) {
+          const codePoint = 0x10000 + ((codeUnit - 0xD800) << 10) + (lowCodeUnit - 0xDC00);
+          decoded += String.fromCodePoint(codePoint);
+          index += 11;
+          continue;
+        }
+      }
+    }
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDFFF) {
+      decoded += value.slice(index, index + 6);
+      index += 5;
+      continue;
+    }
+
+    decoded += String.fromCharCode(codeUnit);
+    index += 5;
+  }
+  return decoded;
+}
+
+function canonicalVariants(value) {
+  const variants = new Set();
+  const add = (candidate) => {
+    const normalized = normalizeForLeakDetection(candidate);
+    variants.add(normalized);
+    variants.add(normalized.replace(/[\\/]+/g, '/'));
+  };
+
+  let candidate = value;
+  add(candidate);
+  for (let pass = 0; pass < jsonEscapeDecodePasses; pass += 1) {
+    const decoded = decodeJsonEscapesOnce(candidate);
+    if (decoded === candidate) break;
+    candidate = decoded;
+    add(candidate);
+  }
+  return [...variants];
 }
 
 function findStringLeaf(value, predicate) {
@@ -59,13 +133,14 @@ function findStringLeaf(value, predicate) {
 }
 
 function assertNoProhibitedMetadata(value, forbiddenValues, label) {
-  const normalizedForbidden = forbiddenValues
+  const forbiddenVariants = [...new Set(forbiddenValues
     .filter((item) => typeof item === 'string' && item.length > 0)
-    .map(normalizeForLeakDetection);
+    .flatMap(canonicalVariants))];
   const leakPath = findStringLeaf(value, (text) => {
-    const normalized = normalizeForLeakDetection(text);
-    return prohibitedMetadataAssignment.test(text) ||
-      normalizedForbidden.some((forbidden) => normalized.includes(forbidden));
+    return canonicalVariants(text).some((candidate) => (
+      prohibitedMetadataAssignment.test(candidate) ||
+      forbiddenVariants.some((forbidden) => candidate.includes(forbidden))
+    ));
   });
   if (leakPath) {
     throw new Error(
@@ -77,7 +152,9 @@ function assertNoProhibitedMetadata(value, forbiddenValues, label) {
 function assertNoConditionRevealingProvenance(value, label) {
   const leakPath = findStringLeaf(
     value,
-    (text) => conditionRevealingMarkers.some((marker) => marker.test(text))
+    (text) => canonicalVariants(text).some((candidate) => (
+      conditionRevealingMarkers.some((marker) => marker.test(candidate))
+    ))
   );
   if (leakPath) {
     throw new Error(
@@ -226,6 +303,7 @@ module.exports = {
   assertNoProhibitedMetadata,
   authenticateArtifactBundle,
   buildBlindContent,
+  canonicalVariants,
   sanitizedDeterministic,
   validateBlindContent
 };

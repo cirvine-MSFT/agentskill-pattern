@@ -65,7 +65,11 @@ Blind generation rejects high-confidence candidate provenance phrases that revea
 specialist/subagent use, condition arms, trial sessions, or model routing while allowing ordinary task
 language such as control flow, treatment plans, session caches, and data models. Control parent-wait
 latency is unavailable; treatment parent wait is accepted only when it exactly reconciles to authenticated
-delegation call/result timestamps. Exact forbidden values are matched after deterministic Unicode NFKC and
-locale-independent lowercase normalization, so model and identifier case variants are also rejected.
+delegation call/result timestamps. Exact forbidden values and candidate string leaves/keys are compared
+through bounded, deterministic canonical variants: Unicode NFKC plus locale-independent lowercase,
+normalized path separators, and up to two safe JSON-style escape-decoding passes. This rejects encoded
+Unicode (including surrogate pairs), escaped quotes/slashes/backslashes, doubled Windows separators,
+path-style variants, and decoded case variants without interpreting code, percent encoding, or base64;
+malformed escapes remain literal.
 
 See `protocol.md` for the immutable preregistration, telemetry definitions, exclusions, judging, and analysis.
