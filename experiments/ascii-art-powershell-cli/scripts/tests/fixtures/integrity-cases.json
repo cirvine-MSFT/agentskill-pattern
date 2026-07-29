@@ -20,6 +20,16 @@
     "expected": "must be explicitly excluded with reason wrong_model"
   },
   {
+    "id": "wrong-requested-treatment-specialist-model-not-excluded",
+    "mutation": "wrongRequestedTreatmentSpecialistModelNotExcluded",
+    "expected": "must be explicitly excluded with reason wrong_model"
+  },
+  {
+    "id": "wrong-observed-treatment-specialist-model-not-excluded",
+    "mutation": "wrongObservedTreatmentSpecialistModelNotExcluded",
+    "expected": "must be explicitly excluded with reason wrong_model"
+  },
+  {
     "id": "deterministic-pass-with-unavailable-child",
     "mutation": "deterministicPassWithUnavailableChild",
     "expected": "deterministic top-level status must reflect every child check"
@@ -28,6 +38,11 @@
     "id": "deterministic-pass-with-failed-child",
     "mutation": "deterministicPassWithFailedChild",
     "expected": "deterministic top-level status must reflect every child check"
+  },
+  {
+    "id": "deterministic-empty-child",
+    "mutation": "deterministicEmptyChild",
+    "expected": "has too few items"
   },
   {
     "id": "blind-binding-replaced-run",
@@ -40,6 +55,16 @@
     "expected": "judgment source artifact hash must match bound blind bundle"
   },
   {
+    "id": "blind-binding-replaced-artifact-hash",
+    "mutation": "blindBindingReplacedArtifactHash",
+    "expected": "source artifact hash must match selected run"
+  },
+  {
+    "id": "judgment-replaced-blind-hash",
+    "mutation": "judgmentReplacedBlindHash",
+    "expected": "judgment blind bundle hash must match bound blind bundle"
+  },
+  {
     "id": "judge-session-reused-across-blocks",
     "mutation": "judgeSessionReusedAcrossBlocks",
     "expected": "exactly six distinct judge session IDs"
@@ -48,6 +73,16 @@
     "id": "judgment-wrong-block",
     "mutation": "judgmentWrongBlock",
     "expected": "judge block must match assignment"
+  },
+  {
+    "id": "judge-session-split-within-block",
+    "mutation": "judgeSessionSplitWithinBlock",
+    "expected": "must use exactly one judge session"
+  },
+  {
+    "id": "wrong-judge-model",
+    "mutation": "wrongJudgeModel",
+    "expected": "must equal the schema constant"
   },
   {
     "id": "available-metric-null",
@@ -60,13 +95,48 @@
     "expected": "must match exactly one oneOf branch"
   },
   {
+    "id": "unavailable-metric-missing-reason",
+    "mutation": "unavailableMetricMissingReason",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
+    "id": "not-applicable-metric-missing-provenance",
+    "mutation": "notApplicableMetricMissingProvenance",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
     "id": "missing-parent-model-split",
     "mutation": "missingParentModelSplit",
     "expected": "exactly one parent model split"
   },
   {
+    "id": "wrong-parent-model-split-provenance",
+    "mutation": "wrongParentModelSplitProvenance",
+    "expected": "parent model split must match manifest provenance"
+  },
+  {
     "id": "treatment-missing-specialist-provenance",
     "mutation": "treatmentMissingSpecialistProvenance",
     "expected": "exactly one specialist model split"
+  },
+  {
+    "id": "treatment-wrong-specialist-provenance",
+    "mutation": "treatmentWrongSpecialistProvenance",
+    "expected": "specialist model split must match manifest provenance"
+  },
+  {
+    "id": "tool-wrong-session-provenance",
+    "mutation": "toolWrongSessionProvenance",
+    "expected": "tool event session must belong"
+  },
+  {
+    "id": "compaction-wrong-session-provenance",
+    "mutation": "compactionWrongSessionProvenance",
+    "expected": "compaction event session must belong"
+  },
+  {
+    "id": "compaction-count-mismatch",
+    "mutation": "compactionCountMismatch",
+    "expected": "compaction event count must exactly match"
   }
 ]

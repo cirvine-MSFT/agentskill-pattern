@@ -9,8 +9,8 @@
 - Repository starting commit: `71635d9f6ba1e54e81e9f1f3eb081e51187e66bd`
 - All file hashes below use SHA-256 over bytes after canonical CRLF-to-LF normalization for registered text extensions (`sha256-normalized-lf-v1`); binary bytes are unchanged.
 - Prompt SHA-256: `b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3`.
-- Fixture-lock SHA-256: `903cc7150f0305959fbdade2ceb7aa9b764537f1fa16804a72e0465d2550c183`; every measured workspace is created from files matching `fixture/fixture-lock.json`.
-- Acceptance-lock SHA-256: `b7e035ea4cb62005d0ec294db30e4a16f064a5273eadc9814602c8cfe8c06cdb`.
+- Fixture-lock SHA-256: `929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613`; every measured workspace is created from files matching `fixture/fixture-lock.json`.
+- Acceptance-lock SHA-256: `f21512f8022270fe0441d2c7d0fe5171b2416433adee8ebe82890bcaec364216`.
 - Randomization SHA-256: `17b872a454c9141fef73b6be939b6226c3b54ec7efac72c56e7fd4a1d4447ba0`.
 - Judge-assignment SHA-256: `6e9080eb0d83254aa2dadfbda544eaf8657f5fa3843a4bb57aea9cebdc2d36c8`.
 - Schedule seed: decimal `20260728`, algorithm `mulberry32-v1`.
@@ -100,7 +100,7 @@ Store source-faithful values plus availability metadata; never infer a missing f
 - parent cumulative input tokens, parent peak input tokens, and parent output tokens;
 - specialist cumulative/peak input and output tokens (treatment), with control marked `not_applicable`;
 - exposed-tool count if available, tool call count, tool result count, per-tool names/statuses/durations;
-- compact/compaction event count and returned byte size;
+- compaction event count and compact-return byte size, each with availability metadata in addition to source-faithful event records;
 - wall latency, parent active latency, specialist latency, and wait latency where available;
 - routing evidence: requested model, observed model, session IDs, delegation call/result, timestamps, and raw event references.
 
@@ -134,7 +134,7 @@ Secondary outcomes include all telemetry fields, six rubric dimensions, total/pa
 
 For continuous outcomes compute each prompt-repetition treatment-minus-control pair, the mean and median paired difference, and percent change relative to control when defined. For binary pass compute condition means, paired differences, and confidence intervals in percentage points, plus discordant counts. Aggregate rubric dimensions on their 1-5 scale without treating missing judgments as zero.
 
-Confidence intervals use a seeded nonparametric cluster bootstrap with prompts as clusters (`seed=845621`, 10,000 draws): sample exactly 10 prompt IDs with replacement and include all three within-prompt pairs for each sampled cluster. A confidence interval is unavailable unless all three pairs are available for every one of the 10 preregistered prompt clusters; the analysis reports the reason instead of silently reducing clusters or bootstrapping incomplete clusters. Point estimates still use complete pairs and explicitly report missing pairs by condition. Also report prompt-level means, repetition-level results, intent-to-treat and per-protocol sensitivity, missingness by condition, and raw paired rows. No unpaired substitution, observation-level bootstrap, multiple-comparison significance claims, or post-hoc outcome switching.
+Confidence intervals use a seeded nonparametric cluster bootstrap with prompts as clusters (`seed=845621`, 10,000 draws): sample exactly 10 prompt IDs with replacement and include all three within-prompt pairs for each sampled cluster. A confidence interval is unavailable unless all three pairs are available for every one of the 10 preregistered prompt clusters; each outcome reports an explicit complete/incomplete status and withholds inferential output rather than silently reducing clusters or bootstrapping incomplete clusters. Point estimates still use complete pairs and explicitly report missing pairs by condition. `--allow-incomplete` permits an intentional empty-foundation dry-run (and descriptive incomplete diagnostics), labels structural completeness explicitly, and never relaxes the complete-cluster rule. Also report prompt-level means, repetition-level results, intent-to-treat and per-protocol sensitivity, missingness by condition, and raw paired rows. No unpaired substitution, observation-level bootstrap, multiple-comparison significance claims, or post-hoc outcome switching.
 
 The secondary telemetry table is exhaustive rather than selective: by condition it reports each observed role/model split's AI credits, nano-AIU, cumulative and peak input tokens, output tokens, and cached tokens; aggregate exposed-tool/call/result counts; per-tool call, status, duration, and result-byte summaries; compaction event counts and compact-return bytes; routing/delegation evidence counts and raw-event reference counts; and unavailable/not-applicable/missing counts. Available metrics require numeric values and nonempty sources. Unavailable metrics require null values and nonempty reasons. Not-applicable metrics require null values, source, and reason. Treatment telemetry requires one provenance-matched parent split and one provenance-matched specialist split; control requires exactly one parent split and no specialist split.
 
