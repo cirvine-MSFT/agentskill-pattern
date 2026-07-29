@@ -10,7 +10,8 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'ProcessRunner.psm1') -Force
 
 $cli = Join-Path $Workspace 'src/TaskForge.ps1'
-$temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "taskforge-$CaseId-$([guid]::NewGuid())"
+$benchmarkRoot = Split-Path -Parent $PSScriptRoot
+$temporaryRoot = Join-Path $benchmarkRoot ".scratch/acceptance/taskforge-$CaseId-$([guid]::NewGuid())"
 $dataFile = Join-Path $temporaryRoot 'data/tasks.json'
 $assertions = [System.Collections.Generic.List[object]]::new()
 $invocationSequence = 0

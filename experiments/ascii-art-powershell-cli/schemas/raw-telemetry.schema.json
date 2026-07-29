@@ -26,6 +26,7 @@
         "exposedToolCount",
         "toolCallCount",
         "toolResultCount",
+        "compactionEventCount",
         "compactReturnBytes",
         "wallLatencyMs",
         "parentActiveLatencyMs",
@@ -45,6 +46,7 @@
         "exposedToolCount": { "$ref": "#/$defs/metric" },
         "toolCallCount": { "$ref": "#/$defs/metric" },
         "toolResultCount": { "$ref": "#/$defs/metric" },
+        "compactionEventCount": { "$ref": "#/$defs/metric" },
         "compactReturnBytes": { "$ref": "#/$defs/metric" },
         "wallLatencyMs": { "$ref": "#/$defs/metric" },
         "parentActiveLatencyMs": { "$ref": "#/$defs/metric" },
@@ -223,8 +225,8 @@
             "status": { "const": "not_applicable" },
             "value": { "type": "null" },
             "unit": { "type": "string", "minLength": 1 },
-            "source": { "type": "null" },
-            "unavailableReason": { "type": "null" }
+            "source": { "type": "string", "minLength": 1 },
+            "unavailableReason": { "type": "string", "minLength": 1 }
           }
         }
       ]

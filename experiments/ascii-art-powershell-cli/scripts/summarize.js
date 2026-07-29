@@ -124,13 +124,23 @@ for (const { value } of judgmentFiles) {
   }
 }
 
+const structurallyMissing = scheduled.filter((item) => (
+  !selectedRuns.has(item.scheduleId) ||
+  !telemetry.has(selectedRuns.get(item.scheduleId)?.runId) ||
+  !deterministic.has(selectedRuns.get(item.scheduleId)?.runId) ||
+  !judgments.has(item.scheduleId)
+));
+const structurallyComplete = structurallyMissing.length === 0 &&
+  judgmentsByBlind.size === 66 &&
+  blindBundles.size === 66;
+const emptyFoundationDryRun = manifests.size === 0 &&
+  telemetry.size === 0 &&
+  deterministic.size === 0 &&
+  blindBundles.size === 0 &&
+  judgmentsByBlind.size === 0;
+
 if (!args['allow-incomplete']) {
-  const missing = scheduled.filter((item) => (
-    !selectedRuns.has(item.scheduleId) ||
-    !telemetry.has(selectedRuns.get(item.scheduleId)?.runId) ||
-    !deterministic.has(selectedRuns.get(item.scheduleId)?.runId) ||
-    !judgments.has(item.scheduleId)
-  ));
+  const missing = structurallyMissing;
   if (missing.length > 0) {
     throw new Error(`Dataset is incomplete: ${missing.length} of 60 scheduled observations lack a manifest, telemetry, deterministic result, or judgment.`);
   }
@@ -186,9 +196,11 @@ function analyzeScope(records) {
     const differences = complete.map((row) => row.difference * scale);
     const controls = complete.map((row) => row.control * scale);
     const treatments = complete.map((row) => row.treatment * scale);
-    const promptIds = [...new Set(complete.map((row) => row.promptId))].sort();
-    const bootstrapEligible = promptIds.length === 10 &&
-      promptIds.every((promptId) => complete.filter((row) => row.promptId === promptId).length === 3);
+    const promptIds = [...new Set(pairs.map((row) => row.promptId))].sort();
+    const completePromptClusters = promptIds.filter((promptId) => (
+      complete.filter((row) => row.promptId === promptId).length === 3
+    )).length;
+    const bootstrapEligible = promptIds.length === 10 && completePromptClusters === 10;
     const random = mulberry32(seedConfig.seed);
     const bootstrap = [];
     if (bootstrapEligible) {
@@ -238,6 +250,14 @@ function analyzeScope(records) {
     return {
       outcome: name,
       unit: binary ? 'percentage_points' : 'source_unit',
+      completeness: {
+        status: bootstrapEligible ? 'complete' : 'incomplete',
+        requiredPromptClusters: 10,
+        completePromptClusters,
+        requiredPairsPerCluster: 3,
+        completePairs: complete.length,
+        inferentialOutput: bootstrapEligible ? 'available' : 'withheld'
+      },
       completePairs: complete.length,
       missingPairs: 30 - complete.length,
       controlMean,
@@ -294,6 +314,7 @@ function analyzeScope(records) {
     'exposedToolCount',
     'toolCallCount',
     'toolResultCount',
+    'compactionEventCount',
     'compactReturnBytes',
     'wallLatencyMs',
     'parentActiveLatencyMs',
@@ -375,6 +396,7 @@ function analyzeScope(records) {
       compaction: {
         events: compaction.length,
         observationsWithEvents: conditionRecords.filter((record) => record.telemetry.compaction.length > 0).length,
+        aggregateEventCount: availabilitySummary(conditionRecords.map((record) => record.telemetry.metrics.compactionEventCount)),
         returnBytes: availabilitySummary(compaction.map((event) => event.returnBytes)),
         aggregateCompactReturnBytes: availabilitySummary(conditionRecords.map((record) => record.telemetry.metrics.compactReturnBytes))
       },
@@ -434,7 +456,14 @@ const output = {
     telemetryRecords: telemetry.size,
     deterministicResults: deterministic.size,
     blindBundles: blindBundles.size,
-    judgments: judgments.size
+    judgments: judgments.size,
+    completeness: {
+      status: structurallyComplete
+        ? 'complete'
+        : (emptyFoundationDryRun ? 'empty_foundation_dry_run' : 'incomplete'),
+      structurallyMissingObservations: structurallyMissing.length,
+      inferentialOutputRequiresCompleteOutcomeClusters: true
+    }
   },
   judgeReliability: (() => {
     const dimensions = ['function', 'codeQuality', 'integration', 'recognizability', 'composition', 'cleanliness'];

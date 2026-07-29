@@ -2,8 +2,8 @@
 'use strict';
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
@@ -46,8 +46,8 @@ function notApplicable(unit = 'count') {
     status: 'not_applicable',
     value: null,
     unit,
-    source: null,
-    unavailableReason: null
+    source: 'protocol:condition-applicability',
+    unavailableReason: 'control_condition'
   };
 }
 
@@ -129,12 +129,14 @@ function createDataset(directory) {
       'totalSessionAiCredits', 'totalSessionNanoAiu', 'parentNanoAiu',
       'parentCumulativeInputTokens', 'parentPeakInputTokens', 'parentOutputTokens',
       'specialistCumulativeInputTokens', 'specialistPeakInputTokens', 'specialistOutputTokens',
-      'exposedToolCount', 'toolCallCount', 'toolResultCount', 'compactReturnBytes',
+      'exposedToolCount', 'toolCallCount', 'toolResultCount', 'compactionEventCount', 'compactReturnBytes',
       'wallLatencyMs', 'parentActiveLatencyMs', 'specialistLatencyMs', 'parentWaitLatencyMs'
     ];
     const metrics = Object.fromEntries(aggregateMetricNames.map((name, index) => [
       name,
-      !treatment && name.startsWith('specialist') ? notApplicable() : metric(index + 1)
+      !treatment && name.startsWith('specialist')
+        ? notApplicable()
+        : metric(name === 'compactionEventCount' ? 1 : index + 1)
     ]));
     const modelMetrics = {
       aiCredits: metric(1, 'credits'),
@@ -355,6 +357,22 @@ function mutate(state, name) {
       treatmentTelemetry.models.find((model) => model.role === 'specialist').observedModel = 'wrong-specialist';
       break;
     }
+    case 'wrongRequestedTreatmentSpecialistModelNotExcluded': {
+      const treatment = firstTreatment(state);
+      const treatmentTelemetry = state.telemetry.get(treatment.runId);
+      treatment.sessions.specialist.requestedModel = 'wrong-specialist';
+      treatmentTelemetry.routing.specialist.requestedModel = 'wrong-specialist';
+      treatmentTelemetry.models.find((model) => model.role === 'specialist').requestedModel = 'wrong-specialist';
+      break;
+    }
+    case 'wrongObservedTreatmentSpecialistModelNotExcluded': {
+      const treatment = firstTreatment(state);
+      const treatmentTelemetry = state.telemetry.get(treatment.runId);
+      treatment.sessions.specialist.observedModel = 'wrong-specialist';
+      treatmentTelemetry.routing.specialist.observedModel = 'wrong-specialist';
+      treatmentTelemetry.models.find((model) => model.role === 'specialist').observedModel = 'wrong-specialist';
+      break;
+    }
     case 'wrongModelExcluded':
       firstManifest.sessions.parent.observedModel = 'wrong-parent';
       firstManifest.exclusion = { excluded: true, reason: 'wrong_model', retryOf: null, retryId: `${firstManifest.scheduleId}-A2` };
@@ -383,11 +401,20 @@ function mutate(state, name) {
         assertions: [{ id: 'functional', status: 'fail', message: 'failed' }]
       };
       break;
+    case 'deterministicEmptyChild':
+      firstDeterministic.art.assertions = [];
+      break;
     case 'blindBindingReplacedRun':
       firstBinding.runId = `${firstBinding.scheduleId}-A2`;
       break;
+    case 'blindBindingReplacedArtifactHash':
+      firstBinding.sourceArtifactBundleSha256 = 'f'.repeat(64);
+      break;
     case 'judgmentReplacedArtifactHash':
       firstJudgment.sourceArtifactBundleSha256 = 'f'.repeat(64);
+      break;
+    case 'judgmentReplacedBlindHash':
+      firstJudgment.blindBundleSha256 = 'f'.repeat(64);
       break;
     case 'judgeSessionReusedAcrossBlocks':
       state.judgments.forEach((judgment) => {
@@ -396,6 +423,12 @@ function mutate(state, name) {
       break;
     case 'judgmentWrongBlock':
       firstJudgment.judgeBlock = firstJudgment.judgeBlock === 1 ? 2 : 1;
+      break;
+    case 'judgeSessionSplitWithinBlock':
+      firstJudgment.judgeSessionId = 'judge-session-split';
+      break;
+    case 'wrongJudgeModel':
+      firstJudgment.judgeModel = 'wrong-judge';
       break;
     case 'availableMetricNull':
       firstTelemetry.metrics.totalSessionAiCredits.value = null;
@@ -409,8 +442,31 @@ function mutate(state, name) {
         unavailableReason: 'not exposed'
       };
       break;
+    case 'unavailableMetricMissingReason':
+      firstTelemetry.metrics.totalSessionAiCredits = {
+        status: 'unavailable',
+        value: null,
+        unit: 'credits',
+        source: null,
+        unavailableReason: ''
+      };
+      break;
+    case 'notApplicableMetricMissingProvenance': {
+      const control = [...state.manifests.values()].find((item) => item.condition === 'control');
+      state.telemetry.get(control.runId).metrics.specialistOutputTokens = {
+        status: 'not_applicable',
+        value: null,
+        unit: 'tokens',
+        source: null,
+        unavailableReason: null
+      };
+      break;
+    }
     case 'missingParentModelSplit':
       firstTelemetry.models = firstTelemetry.models.filter((model) => model.role !== 'parent');
+      break;
+    case 'wrongParentModelSplitProvenance':
+      firstTelemetry.models.find((model) => model.role === 'parent').sessionId = 'wrong-parent-session';
       break;
     case 'treatmentMissingSpecialistProvenance': {
       const treatment = firstTreatment(state);
@@ -418,13 +474,29 @@ function mutate(state, name) {
         .filter((model) => model.role !== 'specialist');
       break;
     }
+    case 'treatmentWrongSpecialistProvenance': {
+      const treatment = firstTreatment(state);
+      state.telemetry.get(treatment.runId).models
+        .find((model) => model.role === 'specialist').sessionId = 'wrong-specialist-session';
+      break;
+    }
+    case 'toolWrongSessionProvenance':
+      firstTelemetry.tools[0].sessionId = 'unrelated-session';
+      break;
+    case 'compactionWrongSessionProvenance':
+      firstTelemetry.compaction[0].sessionId = 'unrelated-session';
+      break;
+    case 'compactionCountMismatch':
+      firstTelemetry.metrics.compactionEventCount.value = 2;
+      break;
     default:
       throw new Error(`Unknown mutation ${name}`);
   }
   state.persist();
 }
 
-const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ascii-benchmark-regression-'));
+const temporaryRoot = path.join(root, '.scratch', 'tests', `ascii-benchmark-regression-${crypto.randomUUID()}`);
+fs.mkdirSync(temporaryRoot, { recursive: true });
 try {
   const positiveDirectory = path.join(temporaryRoot, 'positive');
   const positive = createDataset(positiveDirectory);
@@ -458,6 +530,16 @@ try {
   retryTelemetry.routing.parent.observedModel = parentModel;
   retryTelemetry.models[0].sessionId = retryManifest.sessions.parent.sessionId;
   retryTelemetry.models[0].observedModel = parentModel;
+  retryTelemetry.tools.forEach((tool) => {
+    if (tool.sessionId === wrong.sessions.parent.sessionId) {
+      tool.sessionId = retryManifest.sessions.parent.sessionId;
+    }
+  });
+  retryTelemetry.compaction.forEach((event) => {
+    if (event.sessionId === wrong.sessions.parent.sessionId) {
+      event.sessionId = retryManifest.sessions.parent.sessionId;
+    }
+  });
   const retryDeterministic = structuredClone(excluded.deterministic.get(originalRunId));
   retryDeterministic.runId = retryId;
   const retryArtifact = structuredClone(excluded.artifacts.get(originalRunId));
@@ -502,13 +584,45 @@ try {
   assert.strictEqual(result.status, 0, result.stderr);
   let summary = readJson(summaryPath);
   let binary = summary.intentToTreat.outcomes.find((item) => item.outcome === 'deterministicPass');
+  assert.strictEqual(summary.dataset.completeness.status, 'complete');
   assert.strictEqual(binary.unit, 'percentage_points');
   assert.strictEqual(binary.meanPairedDifference, 100);
+  assert.strictEqual(binary.completeness.status, 'complete');
+  assert.strictEqual(binary.completeness.inferentialOutput, 'available');
   assert.strictEqual(binary.promptClusteredBootstrap95.status, 'available');
   assert.ok(summary.intentToTreat.secondaryTelemetry.treatment.models[`${'specialist'}:${specialistModel}`].cachedTokens);
   assert.strictEqual(summary.intentToTreat.secondaryTelemetry.control.toolEvents.view.calls, 30);
   assert.strictEqual(summary.intentToTreat.secondaryTelemetry.treatment.compaction.events, 30);
+  assert.strictEqual(summary.intentToTreat.secondaryTelemetry.treatment.compaction.aggregateEventCount.mean, 1);
   assert.strictEqual(summary.intentToTreat.secondaryTelemetry.treatment.routingEvidence.delegationStatus.available, 30);
+
+  const emptyDirectory = path.join(temporaryRoot, 'empty-foundation');
+  for (const name of ['raw', 'artifacts', 'judgments']) {
+    fs.mkdirSync(path.join(emptyDirectory, name), { recursive: true });
+  }
+  const emptySummaryPath = path.join(emptyDirectory, 'summary.json');
+  result = runNode('summarize.js', [
+    '--runs', path.join(emptyDirectory, 'raw'),
+    '--artifacts', path.join(emptyDirectory, 'artifacts'),
+    '--judgments', path.join(emptyDirectory, 'judgments'),
+    '--out', emptySummaryPath
+  ]);
+  assert.notStrictEqual(result.status, 0, 'Empty analysis must require an intentional --allow-incomplete dry-run.');
+  result = runNode('summarize.js', [
+    '--runs', path.join(emptyDirectory, 'raw'),
+    '--artifacts', path.join(emptyDirectory, 'artifacts'),
+    '--judgments', path.join(emptyDirectory, 'judgments'),
+    '--out', emptySummaryPath,
+    '--allow-incomplete'
+  ]);
+  assert.strictEqual(result.status, 0, result.stderr);
+  const emptySummary = readJson(emptySummaryPath);
+  assert.strictEqual(emptySummary.dataset.completeness.status, 'empty_foundation_dry_run');
+  assert.ok(emptySummary.intentToTreat.outcomes.every((outcome) => (
+    outcome.completeness.status === 'incomplete' &&
+    outcome.completeness.inferentialOutput === 'withheld' &&
+    outcome.promptClusteredBootstrap95.status === 'unavailable'
+  )));
 
   const unavailable = positive.deterministic.get(observations[0].scheduleId + '-A1');
   unavailable.status = 'unavailable';
@@ -530,6 +644,8 @@ try {
   binary = summary.intentToTreat.outcomes.find((item) => item.outcome === 'deterministicPass');
   assert.strictEqual(binary.completePairs, 29);
   assert.strictEqual(binary.missingPairs, 1);
+  assert.strictEqual(binary.completeness.status, 'incomplete');
+  assert.strictEqual(binary.completeness.inferentialOutput, 'withheld');
   assert.strictEqual(binary.promptClusteredBootstrap95.status, 'unavailable');
 
   console.log(`PASS: ${cases.length} integrity negatives, excluded wrong-model positive, and analysis regressions`);

@@ -5,7 +5,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $scriptPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'src/TaskForge.ps1'
-$temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "taskforge-base-$([guid]::NewGuid())"
+$benchmarkRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$temporaryRoot = Join-Path $benchmarkRoot ".scratch/fixture/taskforge-base-$([guid]::NewGuid())"
 $dataFile = Join-Path $temporaryRoot 'tasks.json'
 $failures = [System.Collections.Generic.List[string]]::new()
 

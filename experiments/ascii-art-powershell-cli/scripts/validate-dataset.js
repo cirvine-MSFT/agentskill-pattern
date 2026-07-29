@@ -174,6 +174,10 @@ if (rawJson.length > 0) {
       check(telemetryRecord.routing.parent.observedModel === manifest.sessions.parent.observedModel, `${manifest.runId} parent routing model must match manifest`);
       const parentSplits = telemetryRecord.models.filter((model) => model.role === 'parent');
       const specialistSplits = telemetryRecord.models.filter((model) => model.role === 'specialist');
+      const allowedTelemetrySessionIds = new Set([manifest.sessions.parent.sessionId]);
+      if (manifest.condition === 'treatment' && manifest.sessions.specialist.sessionId) {
+        allowedTelemetrySessionIds.add(manifest.sessions.specialist.sessionId);
+      }
       check(parentSplits.length === 1, `${manifest.runId} telemetry must contain exactly one parent model split`);
       if (parentSplits.length === 1) {
         const parentSplit = parentSplits[0];
@@ -204,6 +208,21 @@ if (rawJson.length > 0) {
         check(telemetryRecord.routing.specialist.status === 'not_applicable', `${manifest.runId} control routing specialist must be not_applicable`);
         check(specialistSplits.length === 0, `${manifest.runId} control telemetry must not contain a specialist model split`);
         check(telemetryRecord.routing.delegationEvidence.status === 'not_applicable', `${manifest.runId} control delegation evidence must be not_applicable`);
+      }
+      telemetryRecord.tools.forEach((tool) => {
+        check(allowedTelemetrySessionIds.has(tool.sessionId), `${manifest.runId} tool event session must belong to the manifest parent or treatment specialist`);
+      });
+      telemetryRecord.compaction.forEach((event) => {
+        check(allowedTelemetrySessionIds.has(event.sessionId), `${manifest.runId} compaction event session must belong to the manifest parent or treatment specialist`);
+      });
+      const compactionEventCount = telemetryRecord.metrics.compactionEventCount;
+      if (compactionEventCount.status === 'available') {
+        check(
+          Number.isInteger(compactionEventCount.value) &&
+          compactionEventCount.value >= 0 &&
+          compactionEventCount.value === telemetryRecord.compaction.length,
+          `${manifest.runId} available compaction event count must exactly match source event records`
+        );
       }
     }
     if (deterministicRecord) {

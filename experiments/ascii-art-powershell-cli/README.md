@@ -42,6 +42,9 @@ node .\experiments\ascii-art-powershell-cli\scripts\summarize.js `
   --out .\experiments\ascii-art-powershell-cli\results\summary.json
 ```
 
+An intentional no-result foundation smoke test may add `--allow-incomplete`; its summary is labeled
+`empty_foundation_dry_run`, and every outcome with incomplete prompt clusters withholds its interval.
+
 Before judging, materialize the blinded bundle files and bind them to the selected runs and source artifact hashes:
 
 ```powershell

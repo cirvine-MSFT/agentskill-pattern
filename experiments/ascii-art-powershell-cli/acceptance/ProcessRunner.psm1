@@ -1,5 +1,31 @@
 Set-StrictMode -Version Latest
 
+function Stop-ProcessTreeById {
+    param([Parameter(Mandatory)][int]$ProcessId)
+
+    try {
+        $target = [System.Diagnostics.Process]::GetProcessById($ProcessId)
+    }
+    catch [System.ArgumentException] {
+        return
+    }
+
+    try {
+        $target.Kill($true)
+        if (-not $target.WaitForExit(5000)) {
+            throw "Process tree rooted at PID $ProcessId did not exit after termination."
+        }
+    }
+    catch [System.InvalidOperationException] {
+        if (-not $target.HasExited) {
+            throw
+        }
+    }
+    finally {
+        $target.Dispose()
+    }
+}
+
 function Invoke-BoundedProcess {
     [CmdletBinding()]
     param(
@@ -22,8 +48,7 @@ function Invoke-BoundedProcess {
     $stderrTask = $process.StandardError.ReadToEndAsync()
     $timedOut = -not $process.WaitForExit($TimeoutMilliseconds)
     if ($timedOut) {
-        $process.Kill($true)
-        $process.WaitForExit()
+        Stop-ProcessTreeById -ProcessId $process.Id
     }
 
     [pscustomobject]@{

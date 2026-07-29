@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $assertCase = Join-Path $root 'acceptance/Assert-Case.ps1'
-$temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "ascii-acceptance-regression-$([guid]::NewGuid())"
+$temporaryRoot = Join-Path $root ".scratch/tests/ascii-acceptance-regression-$([guid]::NewGuid())"
 
 function Invoke-Case {
     param(
