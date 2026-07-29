@@ -83,7 +83,7 @@ CrewAI agents can delegate tasks to other agents via an `allow_delegation` flag,
 ### 3.8 Academic literature — cost routing and multi-agent frameworks (component-level only)
 
 - **FrugalGPT** demonstrates that cascading across LLMs of different cost tiers can match or exceed the accuracy of always using the most expensive model, while cutting cost by up to 98% in some experiments ([arXiv:2305.05176](https://arxiv.org/abs/2305.05176), 2023-05-09).
-- **RouteLLM** shows a learned router that dynamically chooses between a strong and weak model can cut serving costs by more than 2x with limited quality loss ([arXiv:2406.18665](https://arxiv.org/abs/2406.18665), 2024-06-26; ICLR 2025 poster).
+- **RouteLLM** shows a learned router that dynamically chooses between a strong and weak model can cut serving costs by more than 2x with limited quality loss ([arXiv:2406.18665](https://arxiv.org/abs/2406.18665), 2024-06-26).
 - **AutoGen** presents an open-source framework for customizable, conversable multi-agent applications ([arXiv:2308.08155](https://arxiv.org/abs/2308.08155), 2023-08-16).
 
 **Relevance:** component-only. These papers substantiate the general principle that routing between model cost tiers reduces spend without necessarily sacrificing quality, and that multi-agent conversation frameworks are an established research area — but none study a Skill-triggered discovery/trigger layer as part of the routing decision, and none focus on tool-schema/context minimization specifically.
