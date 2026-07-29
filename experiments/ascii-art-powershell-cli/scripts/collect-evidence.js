@@ -2332,8 +2332,10 @@ function main() {
 }
 
 function runLocked() {
-  fs.mkdirSync(rawRoot, { recursive: true });
-  const lockPath = path.join(rawRoot, '.collection.lock');
+  const lockPath = path.join(
+    os.tmpdir(),
+    `ascii-art-collection-${sha256(Buffer.from(outputRoot, 'utf8')).slice(0, 16)}.lock`
+  );
   let lock;
   try {
     lock = fs.openSync(lockPath, 'wx');
