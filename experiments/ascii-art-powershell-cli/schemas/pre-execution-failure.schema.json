@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cirvine-MSFT/agentskill-pattern/ascii-art-powershell-cli/pre-execution-failure.schema.json",
+  "title": "Benchmark pre-execution failure",
+  "description": "An excluded attempt for which no parent session was created and no model execution evidence or outcome exists.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocolId",
+    "recordType",
+    "runId",
+    "scheduleId",
+    "promptId",
+    "repetition",
+    "condition",
+    "conditionInstruction",
+    "attempt",
+    "execution",
+    "exclusion"
+  ],
+  "properties": {
+    "protocolId": { "const": "ascii-art-powershell-cli-v1" },
+    "recordType": { "const": "pre_execution_failure" },
+    "runId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A[1-2]$" },
+    "scheduleId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)$" },
+    "promptId": { "type": "string", "pattern": "^P(0[1-9]|10)$" },
+    "repetition": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "condition": { "enum": ["control", "treatment"] },
+    "conditionInstruction": {
+      "enum": [
+        "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+        "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset."
+      ]
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "status", "availability"],
+      "properties": {
+        "phase": { "const": "pre_execution" },
+        "status": { "const": "excluded" },
+        "availability": { "const": "not_created" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["block", "position", "attempt"],
+      "properties": {
+        "block": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "position": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 2 }
+      }
+    },
+    "exclusion": {
+      "description": "A pre-execution A1 points to A2; a pre-execution A2 points back to A1.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["excluded", "reason", "retryOf", "retryId"],
+          "properties": {
+            "excluded": { "const": true },
+            "reason": {
+              "enum": [
+                "session_creation_failure",
+                "hash_mismatch",
+                "external_interruption",
+                "required_tool_unavailable"
+              ]
+            },
+            "retryOf": { "type": "null" },
+            "retryId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A2$" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["excluded", "reason", "retryOf", "retryId"],
+          "properties": {
+            "excluded": { "const": true },
+            "reason": {
+              "enum": [
+                "session_creation_failure",
+                "hash_mismatch",
+                "external_interruption",
+                "required_tool_unavailable"
+              ]
+            },
+            "retryOf": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A1$" },
+            "retryId": { "type": "null" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,458 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "seed": 20260728,
+  "algorithm": "mulberry32-v1",
+  "blockDesign": "six blocks; each prompt once and each condition five times per block; adjacent block pairs are complementary repetitions",
+  "blocks": [
+    {
+      "block": 1,
+      "observations": [
+        {
+          "scheduleId": "P09-R1-control",
+          "promptId": "P09",
+          "repetition": 1,
+          "condition": "control",
+          "position": 1
+        },
+        {
+          "scheduleId": "P08-R1-control",
+          "promptId": "P08",
+          "repetition": 1,
+          "condition": "control",
+          "position": 2
+        },
+        {
+          "scheduleId": "P04-R1-control",
+          "promptId": "P04",
+          "repetition": 1,
+          "condition": "control",
+          "position": 3
+        },
+        {
+          "scheduleId": "P07-R1-control",
+          "promptId": "P07",
+          "repetition": 1,
+          "condition": "control",
+          "position": 4
+        },
+        {
+          "scheduleId": "P06-R1-treatment",
+          "promptId": "P06",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 5
+        },
+        {
+          "scheduleId": "P05-R1-treatment",
+          "promptId": "P05",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 6
+        },
+        {
+          "scheduleId": "P03-R1-treatment",
+          "promptId": "P03",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 7
+        },
+        {
+          "scheduleId": "P10-R1-treatment",
+          "promptId": "P10",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 8
+        },
+        {
+          "scheduleId": "P02-R1-control",
+          "promptId": "P02",
+          "repetition": 1,
+          "condition": "control",
+          "position": 9
+        },
+        {
+          "scheduleId": "P01-R1-treatment",
+          "promptId": "P01",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 10
+        }
+      ]
+    },
+    {
+      "block": 2,
+      "observations": [
+        {
+          "scheduleId": "P08-R1-treatment",
+          "promptId": "P08",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 1
+        },
+        {
+          "scheduleId": "P05-R1-control",
+          "promptId": "P05",
+          "repetition": 1,
+          "condition": "control",
+          "position": 2
+        },
+        {
+          "scheduleId": "P09-R1-treatment",
+          "promptId": "P09",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 3
+        },
+        {
+          "scheduleId": "P03-R1-control",
+          "promptId": "P03",
+          "repetition": 1,
+          "condition": "control",
+          "position": 4
+        },
+        {
+          "scheduleId": "P01-R1-control",
+          "promptId": "P01",
+          "repetition": 1,
+          "condition": "control",
+          "position": 5
+        },
+        {
+          "scheduleId": "P04-R1-treatment",
+          "promptId": "P04",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 6
+        },
+        {
+          "scheduleId": "P10-R1-control",
+          "promptId": "P10",
+          "repetition": 1,
+          "condition": "control",
+          "position": 7
+        },
+        {
+          "scheduleId": "P07-R1-treatment",
+          "promptId": "P07",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 8
+        },
+        {
+          "scheduleId": "P06-R1-control",
+          "promptId": "P06",
+          "repetition": 1,
+          "condition": "control",
+          "position": 9
+        },
+        {
+          "scheduleId": "P02-R1-treatment",
+          "promptId": "P02",
+          "repetition": 1,
+          "condition": "treatment",
+          "position": 10
+        }
+      ]
+    },
+    {
+      "block": 3,
+      "observations": [
+        {
+          "scheduleId": "P02-R2-control",
+          "promptId": "P02",
+          "repetition": 2,
+          "condition": "control",
+          "position": 1
+        },
+        {
+          "scheduleId": "P04-R2-treatment",
+          "promptId": "P04",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 2
+        },
+        {
+          "scheduleId": "P08-R2-control",
+          "promptId": "P08",
+          "repetition": 2,
+          "condition": "control",
+          "position": 3
+        },
+        {
+          "scheduleId": "P01-R2-treatment",
+          "promptId": "P01",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 4
+        },
+        {
+          "scheduleId": "P07-R2-control",
+          "promptId": "P07",
+          "repetition": 2,
+          "condition": "control",
+          "position": 5
+        },
+        {
+          "scheduleId": "P05-R2-treatment",
+          "promptId": "P05",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 6
+        },
+        {
+          "scheduleId": "P03-R2-control",
+          "promptId": "P03",
+          "repetition": 2,
+          "condition": "control",
+          "position": 7
+        },
+        {
+          "scheduleId": "P10-R2-treatment",
+          "promptId": "P10",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 8
+        },
+        {
+          "scheduleId": "P06-R2-treatment",
+          "promptId": "P06",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 9
+        },
+        {
+          "scheduleId": "P09-R2-control",
+          "promptId": "P09",
+          "repetition": 2,
+          "condition": "control",
+          "position": 10
+        }
+      ]
+    },
+    {
+      "block": 4,
+      "observations": [
+        {
+          "scheduleId": "P01-R2-control",
+          "promptId": "P01",
+          "repetition": 2,
+          "condition": "control",
+          "position": 1
+        },
+        {
+          "scheduleId": "P02-R2-treatment",
+          "promptId": "P02",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 2
+        },
+        {
+          "scheduleId": "P03-R2-treatment",
+          "promptId": "P03",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 3
+        },
+        {
+          "scheduleId": "P07-R2-treatment",
+          "promptId": "P07",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 4
+        },
+        {
+          "scheduleId": "P08-R2-treatment",
+          "promptId": "P08",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 5
+        },
+        {
+          "scheduleId": "P05-R2-control",
+          "promptId": "P05",
+          "repetition": 2,
+          "condition": "control",
+          "position": 6
+        },
+        {
+          "scheduleId": "P09-R2-treatment",
+          "promptId": "P09",
+          "repetition": 2,
+          "condition": "treatment",
+          "position": 7
+        },
+        {
+          "scheduleId": "P04-R2-control",
+          "promptId": "P04",
+          "repetition": 2,
+          "condition": "control",
+          "position": 8
+        },
+        {
+          "scheduleId": "P06-R2-control",
+          "promptId": "P06",
+          "repetition": 2,
+          "condition": "control",
+          "position": 9
+        },
+        {
+          "scheduleId": "P10-R2-control",
+          "promptId": "P10",
+          "repetition": 2,
+          "condition": "control",
+          "position": 10
+        }
+      ]
+    },
+    {
+      "block": 5,
+      "observations": [
+        {
+          "scheduleId": "P04-R3-treatment",
+          "promptId": "P04",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 1
+        },
+        {
+          "scheduleId": "P06-R3-treatment",
+          "promptId": "P06",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 2
+        },
+        {
+          "scheduleId": "P01-R3-control",
+          "promptId": "P01",
+          "repetition": 3,
+          "condition": "control",
+          "position": 3
+        },
+        {
+          "scheduleId": "P07-R3-control",
+          "promptId": "P07",
+          "repetition": 3,
+          "condition": "control",
+          "position": 4
+        },
+        {
+          "scheduleId": "P02-R3-treatment",
+          "promptId": "P02",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 5
+        },
+        {
+          "scheduleId": "P10-R3-control",
+          "promptId": "P10",
+          "repetition": 3,
+          "condition": "control",
+          "position": 6
+        },
+        {
+          "scheduleId": "P03-R3-control",
+          "promptId": "P03",
+          "repetition": 3,
+          "condition": "control",
+          "position": 7
+        },
+        {
+          "scheduleId": "P09-R3-treatment",
+          "promptId": "P09",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 8
+        },
+        {
+          "scheduleId": "P05-R3-control",
+          "promptId": "P05",
+          "repetition": 3,
+          "condition": "control",
+          "position": 9
+        },
+        {
+          "scheduleId": "P08-R3-treatment",
+          "promptId": "P08",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 10
+        }
+      ]
+    },
+    {
+      "block": 6,
+      "observations": [
+        {
+          "scheduleId": "P01-R3-treatment",
+          "promptId": "P01",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 1
+        },
+        {
+          "scheduleId": "P05-R3-treatment",
+          "promptId": "P05",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 2
+        },
+        {
+          "scheduleId": "P09-R3-control",
+          "promptId": "P09",
+          "repetition": 3,
+          "condition": "control",
+          "position": 3
+        },
+        {
+          "scheduleId": "P10-R3-treatment",
+          "promptId": "P10",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 4
+        },
+        {
+          "scheduleId": "P08-R3-control",
+          "promptId": "P08",
+          "repetition": 3,
+          "condition": "control",
+          "position": 5
+        },
+        {
+          "scheduleId": "P03-R3-treatment",
+          "promptId": "P03",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 6
+        },
+        {
+          "scheduleId": "P06-R3-control",
+          "promptId": "P06",
+          "repetition": 3,
+          "condition": "control",
+          "position": 7
+        },
+        {
+          "scheduleId": "P07-R3-treatment",
+          "promptId": "P07",
+          "repetition": 3,
+          "condition": "treatment",
+          "position": 8
+        },
+        {
+          "scheduleId": "P04-R3-control",
+          "promptId": "P04",
+          "repetition": 3,
+          "condition": "control",
+          "position": 9
+        },
+        {
+          "scheduleId": "P02-R3-control",
+          "promptId": "P02",
+          "repetition": 3,
+          "condition": "control",
+          "position": 10
+        }
+      ]
+    }
+  ]
+}

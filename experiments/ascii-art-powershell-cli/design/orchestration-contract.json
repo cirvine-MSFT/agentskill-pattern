@@ -1,0 +1,97 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "hierarchy": {
+    "rootSessions": 1,
+    "caseCoordinators": 10,
+    "observationsPerCoordinator": 6,
+    "parentSessions": 60,
+    "specialistsPerControl": 0,
+    "specialistsPerTreatment": 1
+  },
+  "freshness": {
+    "newParentSession": true,
+    "emptyConversationHistory": true,
+    "newWorkspace": true,
+    "verifyFixtureLockBeforePrompt": true
+  },
+  "platform": {
+    "operatingSystem": "Windows_NT",
+    "processIsolation": "kill-on-close-job-object"
+  },
+  "conditionCompliance": {
+    "source": "authenticated_raw_events",
+    "requiredEvidence": [
+      "manifest condition-evidence event ID sets",
+      "delegation call/result event IDs",
+      "tool call/result event IDs",
+      "specialist file-change event IDs"
+    ],
+    "selfAssertedComplianceAccepted": false,
+    "unavailableEvidencePolicy": "exclude_as_telemetry_collection_failure"
+  },
+  "attemptContract": {
+    "sessionStarted": {
+      "record": "run-manifest.json",
+      "phase": "session_started",
+      "status": ["included", "excluded"],
+      "availability": "evidence_required",
+      "requiredEvidence": ["session IDs", "telemetry", "deterministic result", "condition evidence"],
+      "artifactPolicy": "required for selected included attempts; optional for excluded attempts"
+    },
+    "preExecutionExcluded": {
+      "record": "pre-execution-failure.json",
+      "phase": "pre_execution",
+      "status": "excluded",
+      "availability": "not_created",
+      "allowedReasons": [
+        "session_creation_failure",
+        "hash_mismatch",
+        "external_interruption",
+        "required_tool_unavailable"
+      ],
+      "forbiddenEvidence": [
+        "session IDs",
+        "commit or workspace references",
+        "telemetry",
+        "deterministic result",
+        "artifact",
+        "condition evidence",
+        "outcome or completion state"
+      ]
+    }
+  },
+  "collectionKeys": [
+    "runId",
+    "rootSessionId",
+    "coordinatorSessionId",
+    "parentSessionId",
+    "specialistSessionId",
+    "benchmarkCommitSha",
+    "initialTreeSha",
+    "terminalCommitSha",
+    "artifactBundleSha256"
+  ],
+  "returnArtifacts": [
+    "run-manifest.json",
+    "pre-execution-failure.json (instead of run-manifest.json only when no parent session was created)",
+    "raw-telemetry.json",
+    "artifacts.json",
+    "deterministic-results.json"
+  ],
+  "runEnvironment": [
+    "copilotCliVersion",
+    "hostImage",
+    "operatingSystem",
+    "powershellVersion",
+    "nodeVersion"
+  ],
+  "prohibitions": [
+    "merge trial branches",
+    "collect by branch head instead of terminalCommitSha",
+    "reuse a parent or specialist session",
+    "expose acceptance files, schedules, conditions, or prior outputs to a parent",
+    "delegate non-banner work in treatment",
+    "create a nested session in control",
+    "fabricate session, telemetry, deterministic, artifact, commit, condition, or outcome evidence for a pre-execution failure"
+  ]
+}
