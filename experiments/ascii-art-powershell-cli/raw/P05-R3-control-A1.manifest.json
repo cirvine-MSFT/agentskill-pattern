@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P05-R3-control-A1",
+  "scheduleId": "P05-R3-control",
+  "promptId": "P05",
+  "repetition": 3,
+  "condition": "control",
+  "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 5,
+    "position": 9,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "0be7b9c7-a816-4bff-b494-e2b3732aed27"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "bb0cc8e7-fc50-4c62-bbe6-fb010a9c57e0",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "status": "not_applicable",
+      "reason": "control_condition"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "2344c47fefc3282088909c7fd4b7885c21488d68",
+    "terminalCommitSha": "6525f2181219d5c58cfad7a19795d97de7793947",
+    "artifactBundleSha256": "b07502223b64531c4b07b9b624dd5568e6fb577146dedfd74bb5e77a3f420679"
+  },
+  "workspace": {
+    "identifier": "P05/cirvine-msft-congenial-bassoon",
+    "branch": "cirvine-msft-bulk-complete-tasks"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T08:45:16.432Z",
+    "promptSentAt": "2026-07-29T08:45:27.844Z",
+    "completedAt": "2026-07-29T08:58:43.952Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

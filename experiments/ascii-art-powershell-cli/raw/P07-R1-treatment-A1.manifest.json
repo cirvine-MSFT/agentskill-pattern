@@ -1,0 +1,89 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P07-R1-treatment-A1",
+  "scheduleId": "P07-R1-treatment",
+  "promptId": "P07",
+  "repetition": 1,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "local-authenticated-P07-R1-treatment-A1:411ada48-4330-4b7d-8bf0-91e438d8b9e2:delegation"
+    ],
+    "delegationResultEventIds": [
+      "local-authenticated-P07-R1-treatment-A1:8e413150-e8c4-43aa-87bb-02c0aa91254c:delegation"
+    ],
+    "specialistToolCallEventIds": [
+      "local-authenticated-P07-R1-treatment-A1:383c2d43-9730-4b03-bced-65972afe513f:tool",
+      "local-authenticated-P07-R1-treatment-A1:9ecb0ff5-3036-4cf3-b977-777fd5345ddd:tool",
+      "local-authenticated-P07-R1-treatment-A1:c0cc6ec8-4f13-419d-9eae-883e4f437e9a:tool",
+      "local-authenticated-P07-R1-treatment-A1:b217d234-f0d7-41d7-80a5-c6d06c87b031:tool"
+    ],
+    "specialistToolResultEventIds": [
+      "local-authenticated-P07-R1-treatment-A1:b7a21223-01e3-4aa0-9c02-ec706afcb9e5:tool",
+      "local-authenticated-P07-R1-treatment-A1:d871e51d-e6b4-42d1-a9f8-b577e5dbeb7e:tool",
+      "local-authenticated-P07-R1-treatment-A1:c8c6336f-6c1b-4b91-8978-d4cfa8ce1e81:tool",
+      "local-authenticated-P07-R1-treatment-A1:346ccb1a-34c8-4749-a574-32630d9e30a8:tool"
+    ],
+    "specialistFileChangeEventIds": [
+      "local-authenticated-P07-R1-treatment-A1:file:c17a991d-83c0-4e97-b956-61dc4e5e4dd6:1:a3b9f4b1bafc3732"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 2,
+    "position": 8,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "4407ddb2-ca6d-488f-8b27-287057d17692"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "b971536e-b279-4d1f-98c8-67ecbb9ca336",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "sessionId": "call_8rbZrU0DhgDoxZiomLxzCCJF",
+      "requestedModel": "claude-haiku-4.5",
+      "observedModel": "claude-haiku-4.5"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "a73a7e61a2448f098b1380796b1726cce14c0957",
+    "terminalCommitSha": "c2bf896fe389dd82e6debc5ee8f061dae11aee80",
+    "artifactBundleSha256": "2484cfe2ea0c82c1693ce3c8d1999d5e003b51edc1b55e1d661654a7cef4ebc1"
+  },
+  "workspace": {
+    "identifier": "P07/cirvine-msft-shiny-invention",
+    "branch": "cirvine-msft-taskforge-tag-support"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:55:31.659Z",
+    "promptSentAt": "2026-07-29T07:55:42.963Z",
+    "completedAt": "2026-07-29T08:00:34.345Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

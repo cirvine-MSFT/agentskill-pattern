@@ -1,0 +1,128 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P08-R3-control-A1",
+  "scheduleId": "P08-R3-control",
+  "promptId": "P08",
+  "status": "fail",
+  "unavailableReason": null,
+  "functional": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "stats-counts",
+        "status": "pass",
+        "message": "Stats reports correct totals."
+      },
+      {
+        "id": "stats-percentage",
+        "status": "pass",
+        "message": "Completion percentage is one-decimal invariant."
+      },
+      {
+        "id": "acceptance-exception",
+        "status": "fail",
+        "message": "The property 'createdByDate' cannot be found on this object. Verify that the property exists."
+      }
+    ]
+  },
+  "art": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-1",
+        "status": "fail",
+        "message": "asset must use LF line endings"
+      },
+      {
+        "id": "art-2",
+        "status": "fail",
+        "message": "line 1 contains a forbidden character"
+      },
+      {
+        "id": "art-3",
+        "status": "fail",
+        "message": "line 2 contains a forbidden character"
+      },
+      {
+        "id": "art-4",
+        "status": "fail",
+        "message": "line 3 contains a forbidden character"
+      },
+      {
+        "id": "art-5",
+        "status": "fail",
+        "message": "line 4 contains a forbidden character"
+      },
+      {
+        "id": "art-6",
+        "status": "fail",
+        "message": "line 5 contains a forbidden character"
+      },
+      {
+        "id": "art-7",
+        "status": "fail",
+        "message": "line 6 contains a forbidden character"
+      },
+      {
+        "id": "art-8",
+        "status": "fail",
+        "message": "line 7 contains a forbidden character"
+      },
+      {
+        "id": "art-9",
+        "status": "fail",
+        "message": "line 8 contains a forbidden character"
+      },
+      {
+        "id": "art-10",
+        "status": "fail",
+        "message": "line 9 contains a forbidden character"
+      },
+      {
+        "id": "art-11",
+        "status": "fail",
+        "message": "line 10 contains a forbidden character"
+      },
+      {
+        "id": "art-12",
+        "status": "fail",
+        "message": "line 11 contains a forbidden character"
+      },
+      {
+        "id": "art-13",
+        "status": "fail",
+        "message": "line 12 contains a forbidden character"
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit ae8dc2c4f24e7b4cd1543ee50d1e962029cd42b3."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T11:10:57.518Z",
+  "completedAt": "2026-07-29T11:11:00.502Z"
+}

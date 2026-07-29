@@ -1,0 +1,148 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P04-R3-control-A1",
+  "scheduleId": "P04-R3-control",
+  "promptId": "P04",
+  "status": "fail",
+  "unavailableReason": null,
+  "functional": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "config-set",
+        "status": "fail",
+        "message": "Supported configuration keys can be set."
+      },
+      {
+        "id": "config-defaults",
+        "status": "fail",
+        "message": "Relative dataFile and defaultJson are applied."
+      },
+      {
+        "id": "config-list-json",
+        "status": "pass",
+        "message": "JSON config list is valid and banner-free."
+      },
+      {
+        "id": "config-get",
+        "status": "fail",
+        "message": "Config get returns a stored value."
+      },
+      {
+        "id": "config-override",
+        "status": "pass",
+        "message": "Explicit data-file overrides configured dataFile."
+      },
+      {
+        "id": "config-banner",
+        "status": "pass",
+        "message": "Text config list renders the exact registered banner once before expected settings."
+      },
+      {
+        "id": "config-invalid-atomic",
+        "status": "pass",
+        "message": "Unknown key leaves config unchanged."
+      }
+    ]
+  },
+  "art": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-1",
+        "status": "fail",
+        "message": "asset must use LF line endings"
+      },
+      {
+        "id": "art-2",
+        "status": "fail",
+        "message": "line 1 contains a forbidden character"
+      },
+      {
+        "id": "art-3",
+        "status": "fail",
+        "message": "line 2 contains a forbidden character"
+      },
+      {
+        "id": "art-4",
+        "status": "fail",
+        "message": "line 3 contains a forbidden character"
+      },
+      {
+        "id": "art-5",
+        "status": "fail",
+        "message": "line 4 contains a forbidden character"
+      },
+      {
+        "id": "art-6",
+        "status": "fail",
+        "message": "line 5 contains a forbidden character"
+      },
+      {
+        "id": "art-7",
+        "status": "fail",
+        "message": "line 6 contains a forbidden character"
+      },
+      {
+        "id": "art-8",
+        "status": "fail",
+        "message": "line 7 contains a forbidden character"
+      },
+      {
+        "id": "art-9",
+        "status": "fail",
+        "message": "line 8 contains a forbidden character"
+      },
+      {
+        "id": "art-10",
+        "status": "fail",
+        "message": "line 9 contains a forbidden character"
+      },
+      {
+        "id": "art-11",
+        "status": "fail",
+        "message": "line 10 contains a forbidden character"
+      },
+      {
+        "id": "art-12",
+        "status": "fail",
+        "message": "line 11 contains a forbidden character"
+      },
+      {
+        "id": "art-13",
+        "status": "fail",
+        "message": "line 12 contains a forbidden character"
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit d7269158af618a440b200de7e1bff0ae9ec5f683."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T11:11:27.277Z",
+  "completedAt": "2026-07-29T11:11:37.412Z"
+}

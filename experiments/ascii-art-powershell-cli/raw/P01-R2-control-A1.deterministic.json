@@ -1,0 +1,138 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P01-R2-control-A1",
+  "scheduleId": "P01-R2-control",
+  "promptId": "P01",
+  "status": "fail",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "search-json",
+        "status": "pass",
+        "message": "JSON search finds title and description matches case-insensitively."
+      },
+      {
+        "id": "search-json-clean",
+        "status": "pass",
+        "message": "JSON search output is banner-free."
+      },
+      {
+        "id": "search-status",
+        "status": "pass",
+        "message": "Status filter narrows matches."
+      },
+      {
+        "id": "search-empty",
+        "status": "pass",
+        "message": "Text search has stable empty output."
+      },
+      {
+        "id": "search-banner",
+        "status": "pass",
+        "message": "Text search renders the exact registered banner once before its expected result."
+      }
+    ]
+  },
+  "art": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-1",
+        "status": "fail",
+        "message": "asset must use LF line endings"
+      },
+      {
+        "id": "art-2",
+        "status": "fail",
+        "message": "line 1 contains a forbidden character"
+      },
+      {
+        "id": "art-3",
+        "status": "fail",
+        "message": "line 2 contains a forbidden character"
+      },
+      {
+        "id": "art-4",
+        "status": "fail",
+        "message": "line 3 contains a forbidden character"
+      },
+      {
+        "id": "art-5",
+        "status": "fail",
+        "message": "line 4 contains a forbidden character"
+      },
+      {
+        "id": "art-6",
+        "status": "fail",
+        "message": "line 5 contains a forbidden character"
+      },
+      {
+        "id": "art-7",
+        "status": "fail",
+        "message": "line 6 contains a forbidden character"
+      },
+      {
+        "id": "art-8",
+        "status": "fail",
+        "message": "line 7 contains a forbidden character"
+      },
+      {
+        "id": "art-9",
+        "status": "fail",
+        "message": "line 8 contains a forbidden character"
+      },
+      {
+        "id": "art-10",
+        "status": "fail",
+        "message": "line 9 contains a forbidden character"
+      },
+      {
+        "id": "art-11",
+        "status": "fail",
+        "message": "line 10 contains a forbidden character"
+      },
+      {
+        "id": "art-12",
+        "status": "fail",
+        "message": "line 11 contains a forbidden character"
+      },
+      {
+        "id": "art-13",
+        "status": "fail",
+        "message": "line 12 contains a forbidden character"
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit 078becb804eb484d6eca6ac09de11b34401a0b61."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T11:07:53.635Z",
+  "completedAt": "2026-07-29T11:07:58.683Z"
+}

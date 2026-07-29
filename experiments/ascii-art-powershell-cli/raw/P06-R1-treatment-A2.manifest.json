@@ -1,0 +1,95 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P06-R1-treatment-A2",
+  "scheduleId": "P06-R1-treatment",
+  "promptId": "P06",
+  "repetition": 1,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "local-authenticated-P06-R1-treatment-A2:bb6bc72e-acb0-4ac4-943b-23d33611594b:delegation"
+    ],
+    "delegationResultEventIds": [
+      "local-authenticated-P06-R1-treatment-A2:501a8321-6606-4ed1-bd2c-418be82b5f05:delegation"
+    ],
+    "specialistToolCallEventIds": [
+      "local-authenticated-P06-R1-treatment-A2:110dbb0a-2fd3-427f-a8ce-b5f13ece10ac:tool",
+      "local-authenticated-P06-R1-treatment-A2:744b5b7a-d7d7-441e-a8c1-e95d8b1fb324:tool",
+      "local-authenticated-P06-R1-treatment-A2:7b5d3c33-4f77-4cff-b180-1ff8d1854e34:tool",
+      "local-authenticated-P06-R1-treatment-A2:6a350a8a-8141-4e1b-b0df-1904360105bf:tool",
+      "local-authenticated-P06-R1-treatment-A2:785973ab-7202-4f86-843d-57a78803cec6:tool",
+      "local-authenticated-P06-R1-treatment-A2:5e9ea304-edcf-40d8-b048-bb7580ba6660:tool",
+      "local-authenticated-P06-R1-treatment-A2:17f2d3b6-594b-4278-8c88-6432b6e5d5ab:tool"
+    ],
+    "specialistToolResultEventIds": [
+      "local-authenticated-P06-R1-treatment-A2:e7ef4595-4236-45b8-8d89-e83ced9e17d5:tool",
+      "local-authenticated-P06-R1-treatment-A2:9d2e2412-5e5f-4732-abe6-20bb38ff9530:tool",
+      "local-authenticated-P06-R1-treatment-A2:13e431fb-beda-4f14-9894-b5c61422a28c:tool",
+      "local-authenticated-P06-R1-treatment-A2:e1e8310a-aa1f-43ff-95d4-d7dd1a94ac86:tool",
+      "local-authenticated-P06-R1-treatment-A2:7168ca1f-053a-4159-b5cc-e9634584f556:tool",
+      "local-authenticated-P06-R1-treatment-A2:83d80b04-fdc0-48ce-9b80-6885ee7d84f9:tool",
+      "local-authenticated-P06-R1-treatment-A2:1b151405-ad6d-49eb-8349-0b704cfad58d:tool"
+    ],
+    "specialistFileChangeEventIds": [
+      "local-authenticated-P06-R1-treatment-A2:file:8566255d-eb21-48ec-965e-357ee5311070:0:7f1a687fa8173a37"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 1,
+    "position": 5,
+    "attempt": 2,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "c7f34df7-d21b-432b-ae9f-abed7a5d7807",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "claude-opus-4.8"
+    },
+    "specialist": {
+      "sessionId": "8534f6e1-8152-4e05-a2ff-dda86ccfd403",
+      "requestedModel": "unavailable:not_explicitly_requested",
+      "observedModel": "claude-opus-4.8"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "b20758abbd070747a687fe28a806ee426320902a",
+    "terminalCommitSha": "dd47be53b743bf809e55170a552b22c0bc6a7125",
+    "artifactBundleSha256": "eefa816ce72c4e04350f9b8dd6859ce2c9b52578ac3ddeb91bb88f68df5df29f"
+  },
+  "workspace": {
+    "identifier": "P06/cirvine-msft-ubiquitous-couscous",
+    "branch": "cirvine-msft-add-due-command"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:58:42.861Z",
+    "promptSentAt": "2026-07-29T07:58:52.072Z",
+    "completedAt": "2026-07-29T08:17:17.342Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": "P06-R1-treatment-A1",
+    "retryId": null
+  }
+}

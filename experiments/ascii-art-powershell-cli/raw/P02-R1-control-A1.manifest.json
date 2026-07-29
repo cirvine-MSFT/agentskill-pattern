@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P02-R1-control-A1",
+  "scheduleId": "P02-R1-control",
+  "promptId": "P02",
+  "repetition": 1,
+  "condition": "control",
+  "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 1,
+    "position": 9,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "d0f3bd66-4ee0-47f0-ad7b-87ee6a20f8c1"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "cc831b20-6018-4e70-b71a-38e262a66e45",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "status": "not_applicable",
+      "reason": "control_condition"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "6be727be22d6a6a9ba10f5d263384ff335c632c2",
+    "terminalCommitSha": "ea7df1ef26afe3fb3449e80317af4da42777337a",
+    "artifactBundleSha256": "d23fd1fa49715065b2164d3cf9f040fb23183cd2cc884fd0e15809ee7d58596d"
+  },
+  "workspace": {
+    "identifier": "P02/cirvine-msft-bookish-invention",
+    "branch": "cirvine-msft-add-csv-import"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:42:55.576Z",
+    "promptSentAt": "2026-07-29T07:43:22.790Z",
+    "completedAt": "2026-07-29T07:57:11.836Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

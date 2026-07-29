@@ -1,0 +1,83 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P08-R1-treatment-A1",
+  "scheduleId": "P08-R1-treatment",
+  "promptId": "P08",
+  "status": "pass",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "stats-counts",
+        "status": "pass",
+        "message": "Stats reports correct totals."
+      },
+      {
+        "id": "stats-percentage",
+        "status": "pass",
+        "message": "Completion percentage is one-decimal invariant."
+      },
+      {
+        "id": "stats-dates",
+        "status": "pass",
+        "message": "UTC date groups are ordered."
+      },
+      {
+        "id": "stats-readonly",
+        "status": "pass",
+        "message": "Stats does not rewrite storage."
+      },
+      {
+        "id": "stats-banner",
+        "status": "pass",
+        "message": "Text stats renders the exact registered banner once before its expected dashboard."
+      },
+      {
+        "id": "stats-empty",
+        "status": "pass",
+        "message": "Empty stats uses zeros and an empty date list."
+      }
+    ]
+  },
+  "art": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit b69fb95af15ff6cf350d0d53e6bb4068ce99b1d9."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T11:04:39.529Z",
+  "completedAt": "2026-07-29T11:04:44.487Z"
+}

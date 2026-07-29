@@ -1,0 +1,93 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P04-R1-treatment-A1",
+  "scheduleId": "P04-R1-treatment",
+  "promptId": "P04",
+  "repetition": 1,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "excluded",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "local-authenticated-P04-R1-treatment-A1:635d4e28-7dad-4694-8fe8-5268fbe3653f:delegation"
+    ],
+    "delegationResultEventIds": [
+      "local-authenticated-P04-R1-treatment-A1:178b7ff1-d116-435e-842c-bda7f127689f:delegation"
+    ],
+    "specialistToolCallEventIds": [
+      "local-authenticated-P04-R1-treatment-A1:71c8a968-9abe-4740-9c0a-99ad09c0d8f5:tool",
+      "local-authenticated-P04-R1-treatment-A1:378c2dba-0aee-480d-905d-9630cecb454e:tool",
+      "local-authenticated-P04-R1-treatment-A1:9fbaaeb3-6b7b-4b12-a69a-1d919b68b130:tool",
+      "local-authenticated-P04-R1-treatment-A1:36873358-50e4-405e-8dc3-6ac18461720f:tool",
+      "local-authenticated-P04-R1-treatment-A1:07702a0f-e721-49ec-8ba1-617aede319d3:tool",
+      "local-authenticated-P04-R1-treatment-A1:d5e2d17c-c0f7-421f-8b99-06797c45c3e2:tool"
+    ],
+    "specialistToolResultEventIds": [
+      "local-authenticated-P04-R1-treatment-A1:c31cb37d-09ae-4942-9865-d23ea67d2709:tool",
+      "local-authenticated-P04-R1-treatment-A1:477c5cb0-1691-4a54-9739-8bf40e95c3de:tool",
+      "local-authenticated-P04-R1-treatment-A1:948fdcb5-c2bf-4b47-8b4e-7d0ad6fe4b39:tool",
+      "local-authenticated-P04-R1-treatment-A1:cc1e4744-d1ab-42d8-96c1-76843e373df7:tool",
+      "local-authenticated-P04-R1-treatment-A1:e5de1395-de0b-478b-806d-518a23ffa345:tool",
+      "local-authenticated-P04-R1-treatment-A1:923bd10d-2240-4270-a9e9-e2ffcecbaf15:tool"
+    ],
+    "specialistFileChangeEventIds": [
+      "local-authenticated-P04-R1-treatment-A1:file:5db585dc-0bbf-4851-ad04-4c3c9b6b52f8:0:c2e9f21b825d049b"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 2,
+    "position": 6,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "3758d931-1114-427d-8356-bf4a4e8425c5"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "a4baa2a9-e1dc-4b01-b189-2937f853c08e",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "sessionId": "call_yaLYb0iTAtVMXBSqI5tum8L2",
+      "requestedModel": "claude-haiku-4.5",
+      "observedModel": "claude-haiku-4.5"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "e7ac2f2f7f6cdad3310e7deee6e84c6e452ec5e5",
+    "terminalCommitSha": "445c6bb10a142d7357830f5d9115f188f2ecc0e1",
+    "artifactBundleSha256": "09916fa75e4f4f8d3260ccc2925bc9b2ff5866fe3cc03291e3ef8bcc7aa9dc6f"
+  },
+  "workspace": {
+    "identifier": "P04/cirvine-msft-redesigned-journey",
+    "branch": "cirvine-msft-add-taskforge-config"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:55:16.506Z",
+    "promptSentAt": "2026-07-29T07:55:27.391Z",
+    "completedAt": "2026-07-29T08:02:13.463Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": true,
+    "reason": "required_tool_unavailable",
+    "retryOf": null,
+    "retryId": "P04-R1-treatment-A2"
+  }
+}

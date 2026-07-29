@@ -1,0 +1,170 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "promptId": "P08",
+  "prompt": "Work in the provided TaskForge PowerShell CLI fixture. Inspect the existing source and tests before changing anything. Add a read-only `stats` command that reports total, pending, completed, and completion percentage rounded to one decimal using invariant formatting. Also report counts created on each UTC calendar date, ordered ascending; empty storage must produce zeros and an empty date list. Support `--json` with stable property names and types, and ensure the command never rewrites storage. Preserve all existing commands, add focused fixture-owned tests, and run the repository-owned test command. Separately create `assets/stats.txt` and integrate it so non-JSON statistics display the banner before the dashboard, while JSON output is banner-free. The asset must be exactly 12 lines, every line 20-48 characters, ASCII only, use only spaces plus `A-Z 0-9 + | / \\ _ * . # ( ) : = -`, contain the literal `STATS`, have no trailing whitespace, and end with one newline.",
+  "deterministic": {
+    "status": "fail",
+    "groups": [
+      {
+        "name": "functional",
+        "status": "pass",
+        "assertions": [
+          {
+            "id": "stats-counts",
+            "status": "pass",
+            "message": "Stats reports correct totals."
+          },
+          {
+            "id": "stats-percentage",
+            "status": "pass",
+            "message": "Completion percentage is one-decimal invariant."
+          },
+          {
+            "id": "stats-dates",
+            "status": "pass",
+            "message": "UTC date groups are ordered."
+          },
+          {
+            "id": "stats-readonly",
+            "status": "pass",
+            "message": "Stats does not rewrite storage."
+          },
+          {
+            "id": "stats-banner",
+            "status": "pass",
+            "message": "Text stats renders the exact registered banner once before its expected dashboard."
+          },
+          {
+            "id": "stats-empty",
+            "status": "pass",
+            "message": "Empty stats uses zeros and an empty date list."
+          }
+        ]
+      },
+      {
+        "name": "art",
+        "status": "fail",
+        "assertions": [
+          {
+            "id": "art-1",
+            "status": "fail",
+            "message": "asset must use LF line endings"
+          },
+          {
+            "id": "art-2",
+            "status": "fail",
+            "message": "line 1 contains a forbidden character"
+          },
+          {
+            "id": "art-3",
+            "status": "fail",
+            "message": "line 2 contains a forbidden character"
+          },
+          {
+            "id": "art-4",
+            "status": "fail",
+            "message": "line 3 contains a forbidden character"
+          },
+          {
+            "id": "art-5",
+            "status": "fail",
+            "message": "line 4 contains a forbidden character"
+          },
+          {
+            "id": "art-6",
+            "status": "fail",
+            "message": "line 5 contains a forbidden character"
+          },
+          {
+            "id": "art-7",
+            "status": "fail",
+            "message": "line 6 contains a forbidden character"
+          },
+          {
+            "id": "art-8",
+            "status": "fail",
+            "message": "line 7 contains a forbidden character"
+          },
+          {
+            "id": "art-9",
+            "status": "fail",
+            "message": "line 8 contains a forbidden character"
+          },
+          {
+            "id": "art-10",
+            "status": "fail",
+            "message": "line 9 contains a forbidden character"
+          },
+          {
+            "id": "art-11",
+            "status": "fail",
+            "message": "line 10 contains a forbidden character"
+          },
+          {
+            "id": "art-12",
+            "status": "fail",
+            "message": "line 11 contains a forbidden character"
+          },
+          {
+            "id": "art-13",
+            "status": "fail",
+            "message": "line 12 contains a forbidden character"
+          }
+        ]
+      },
+      {
+        "name": "tamperCheck",
+        "status": "pass",
+        "assertions": [
+          {
+            "id": "initial-fixture-lock",
+            "status": "pass",
+            "message": "Initial candidate commit matches the registered fixture lock."
+          },
+          {
+            "id": "terminal-fixture-lock-provenance",
+            "status": "pass",
+            "message": "Terminal candidate commit changed fixture-owned files and its lock; external acceptance remained isolated."
+          },
+          {
+            "id": "acceptance-contamination",
+            "status": "pass",
+            "message": "No external acceptance or benchmark control files are present in the candidate commit."
+          },
+          {
+            "id": "terminal-commit-materialized",
+            "status": "pass",
+            "message": "Candidate was materialized from exact terminal commit a709e4a76a0f36fbe668c5ec7b4b76564d76d032."
+          }
+        ]
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "terminal.diff",
+      "role": "diff",
+      "content": "diff --git a/assets/stats.txt b/assets/stats.txt\nnew file mode 100644\nindex 0000000..3890176\n--- /dev/null\n+++ b/assets/stats.txt\n@@ -0,0 +1,12 @@\n++--------------------------------------+\n+|            TASKFORGE STATS           |\n+|                                      |\n+|  TOTAL TASKS / STATUS DASHBOARD      |\n+|  COMPLETED + PENDING                 |\n+|  COMPLETION PERCENTAGE               |\n+|                                      |\n+|  CREATED BY UTC CALENDAR DATE        |\n+|  ASCENDING DAILY COUNTS              |\n+|                                      |\n+|  READ ONLY STATISTICS                |\n++--------------------------------------+\ndiff --git a/src/TaskForge.ps1 b/src/TaskForge.ps1\nindex 281095a..eb4a015 100644\n--- a/src/TaskForge.ps1\n+++ b/src/TaskForge.ps1\n@@ -56,6 +56,56 @@ try {\n                 $tasks | ForEach-Object { \"[{0}] #{1} {2}\" -f $_.status, $_.id, $_.title }\n             }\n         }\n+        'stats' {\n+            Assert-KnownOptions -Options $options -Allowed @('data-file', 'json')\n+            $tasks = @(Read-TaskStore -Path $dataFile)\n+            $completed = @($tasks | Where-Object { $_.status -eq 'completed' }).Count\n+            $pending = @($tasks | Where-Object { $_.status -eq 'pending' }).Count\n+            $completionPercentage = if ($tasks.Count -eq 0) {\n+                [double]0\n+            }\n+            else {\n+                [Math]::Round(($completed * 100.0) / $tasks.Count, 1)\n+            }\n+            $createdByDate = @(\n+                $tasks |\n+                    Group-Object {\n+                        [DateTimeOffset]::Parse(\n+                            [string]$_.createdAt,\n+                            [Globalization.CultureInfo]::InvariantCulture,\n+                            [Globalization.DateTimeStyles]::RoundtripKind\n+                        ).UtcDateTime.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)\n+                    } |\n+                    Sort-Object Name |\n+                    ForEach-Object {\n+                        [pscustomobject][ordered]@{\n+                            date = [string]$_.Name\n+                            count = [int]$_.Count\n+                        }\n+                    }\n+            )\n+            $statistics = [pscustomobject][ordered]@{\n+                total = [int]$tasks.Count\n+                pending = [int]$pending\n+                completed = [int]$completed\n+                completionPercentage = [double]$completionPercentage\n+                createdByDate = $createdByDate\n+            }\n+\n+            if ($asJson) {\n+                Write-TaskForgeOutput -Value $statistics -AsJson $true\n+            }\n+            else {\n+                Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'assets/stats.txt')\n+                'TaskForge Statistics'\n+                \"Total: $($statistics.total)\"\n+                \"Pending: $($statistics.pending)\"\n+                \"Completed: $($statistics.completed)\"\n+                \"Completion: $($statistics.completionPercentage.ToString('F1', [Globalization.CultureInfo]::InvariantCulture))%\"\n+                'Created by UTC date:'\n+                $statistics.createdByDate | ForEach-Object { \"  $($_.date): $($_.count)\" }\n+            }\n+        }\n         'complete' {\n             Assert-KnownOptions -Options $options -Allowed @('id', 'data-file', 'json')\n             $idText = Get-RequiredOption -Options $options -Name 'id'\n@@ -104,6 +154,7 @@ try {\n TaskForge\n   add --title TEXT [--description TEXT] [--data-file PATH] [--json]\n   list [--data-file PATH] [--json]\n+  stats [--data-file PATH] [--json]\n   complete --id ID [--data-file PATH] [--json]\n   remove --id ID [--data-file PATH] [--json]\n '@\ndiff --git a/tests/Run-Tests.ps1 b/tests/Run-Tests.ps1\nindex 6005bc8..1a6090a 100644\n--- a/tests/Run-Tests.ps1\n+++ b/tests/Run-Tests.ps1\n@@ -38,10 +38,58 @@ try {\n     Assert-True ($list.ExitCode -eq 0) 'list should succeed'\n     Assert-True (@($list.Output | ConvertFrom-Json).Count -eq 1) 'list should return the stored task'\n \n+    $statsBeforeComplete = Invoke-TaskForge @('stats', '--data-file', $dataFile, '--json')\n+    Assert-True ($statsBeforeComplete.ExitCode -eq 0) 'stats should succeed'\n+    $pendingStats = $statsBeforeComplete.Output | ConvertFrom-Json\n+    Assert-True (\n+        $pendingStats.total -eq 1 -and\n+        $pendingStats.pending -eq 1 -and\n+        $pendingStats.completed -eq 0 -and\n+        $pendingStats.completionPercentage -eq 0.0\n+    ) 'stats should report pending task totals'\n+\n     $complete = Invoke-TaskForge @('complete', '--id', '1', '--data-file', $dataFile, '--json')\n     Assert-True ($complete.ExitCode -eq 0) 'complete should succeed'\n     Assert-True (($complete.Output | ConvertFrom-Json).status -eq 'completed') 'complete should persist completed status'\n \n+    $fixtureTasks = @(\n+        [ordered]@{ id = 1; title = 'One'; description = ''; status = 'completed'; createdAt = '2024-01-02T23:30:00-02:00' }\n+        [ordered]@{ id = 2; title = 'Two'; description = ''; status = 'completed'; createdAt = '2024-01-02T03:00:00Z' }\n+        [ordered]@{ id = 3; title = 'Three'; description = ''; status = 'pending'; createdAt = '2024-01-01T23:30:00-02:00' }\n+    )\n+    $fixtureJson = ConvertTo-Json -InputObject $fixtureTasks -Depth 8\n+    [System.IO.File]::WriteAllText($dataFile, \"$fixtureJson`n\", [System.Text.UTF8Encoding]::new($false))\n+    $beforeStats = [System.IO.File]::ReadAllBytes($dataFile)\n+\n+    $stats = Invoke-TaskForge @('stats', '--data-file', $dataFile, '--json')\n+    Assert-True ($stats.ExitCode -eq 0) 'JSON stats should succeed'\n+    $statistics = $stats.Output | ConvertFrom-Json\n+    Assert-True (\n+        $statistics.total -eq 3 -and\n+        $statistics.pending -eq 1 -and\n+        $statistics.completed -eq 2 -and\n+        $statistics.completionPercentage -eq 66.7\n+    ) 'JSON stats should report totals and one-decimal completion percentage'\n+    Assert-True (\n+        @($statistics.createdByDate).Count -eq 2 -and\n+        $statistics.createdByDate[0].date -eq '2024-01-02' -and\n+        $statistics.createdByDate[0].count -eq 2 -and\n+        $statistics.createdByDate[1].date -eq '2024-01-03' -and\n+        $statistics.createdByDate[1].count -eq 1\n+    ) 'JSON stats should group created tasks by ascending UTC calendar date'\n+    Assert-True ($stats.Output -notmatch 'STATS') 'JSON stats should not include the banner'\n+    $afterStats = [System.IO.File]::ReadAllBytes($dataFile)\n+    Assert-True ([Convert]::ToBase64String($beforeStats) -eq [Convert]::ToBase64String($afterStats)) 'stats should not rewrite storage'\n+\n+    $textStats = Invoke-TaskForge @('stats', '--data-file', $dataFile)\n+    Assert-True (\n+        $textStats.ExitCode -eq 0 -and\n+        $textStats.Output.Contains('STATS') -and\n+        $textStats.Output.IndexOf('STATS') -lt $textStats.Output.IndexOf('TaskForge Statistics') -and\n+        $textStats.Output.Contains('Completion: 66.7%') -and\n+        $textStats.Output.Contains('2024-01-02: 2')\n+    ) 'text stats should show the banner before the invariant dashboard'\n+\n     $missing = Invoke-TaskForge @('complete', '--id', '99', '--data-file', $dataFile)\n     Assert-True ($missing.ExitCode -ne 0) 'completing an unknown task should fail'\n \n@@ -49,9 +97,22 @@ try {\n     Assert-True ($remove.ExitCode -eq 0) 'remove should succeed'\n     Assert-True (($remove.Output | ConvertFrom-Json).removedId -eq 1) 'remove should report the removed ID'\n \n+    Remove-Item -LiteralPath $dataFile -Force\n     $empty = Invoke-TaskForge @('list', '--data-file', $dataFile)\n     Assert-True ($empty.Output -eq 'No tasks.') 'empty list should have stable text'\n \n+    $emptyStats = Invoke-TaskForge @('stats', '--data-file', $dataFile, '--json')\n+    $emptyStatistics = $emptyStats.Output | ConvertFrom-Json\n+    Assert-True (\n+        $emptyStats.ExitCode -eq 0 -and\n+        $emptyStatistics.total -eq 0 -and\n+        $emptyStatistics.pending -eq 0 -and\n+        $emptyStatistics.completed -eq 0 -and\n+        $emptyStatistics.completionPercentage -eq 0.0 -and\n+        @($emptyStatistics.createdByDate).Count -eq 0 -and\n+        -not (Test-Path -LiteralPath $dataFile)\n+    ) 'empty stats should return zeros and an empty date list without creating storage'\n+\n     $help = Invoke-TaskForge @('help')\n     Assert-True ($help.ExitCode -eq 0 -and $help.Output.Contains('TaskForge')) 'help should succeed'\n \n@@ -59,7 +120,7 @@ try {\n         $failures | ForEach-Object { [Console]::Error.WriteLine(\"FAIL: $_\") }\n         exit 1\n     }\n-    \"PASS: 8 base fixture assertions\"\n+    \"PASS: 16 fixture assertions\"\n }\n finally {\n     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue\n"
+    },
+    {
+      "path": "src/TaskForge.Core.psm1",
+      "role": "source",
+      "content": "Set-StrictMode -Version Latest\r\n\r\nfunction Read-TaskStore {\r\n    param([Parameter(Mandatory)][string]$Path)\r\n\r\n    if (-not (Test-Path -LiteralPath $Path)) {\r\n        return @()\r\n    }\r\n\r\n    $content = Get-Content -LiteralPath $Path -Raw\r\n    if ([string]::IsNullOrWhiteSpace($content)) {\r\n        return @()\r\n    }\r\n\r\n    $parsed = ConvertFrom-Json -InputObject $content\r\n    return @($parsed)\r\n}\r\n\r\nfunction Write-TaskStore {\r\n    param(\r\n        [Parameter(Mandatory)][string]$Path,\r\n        [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Tasks\r\n    )\r\n\r\n    $parent = Split-Path -Parent $Path\r\n    if ($parent -and -not (Test-Path -LiteralPath $parent)) {\r\n        New-Item -ItemType Directory -Path $parent -Force | Out-Null\r\n    }\r\n\r\n    $temporary = \"$Path.$PID.tmp\"\r\n    $json = ConvertTo-Json -InputObject @($Tasks) -Depth 8\r\n    [System.IO.File]::WriteAllText($temporary, \"$json`n\", [System.Text.UTF8Encoding]::new($false))\r\n    Move-Item -LiteralPath $temporary -Destination $Path -Force\r\n}\r\n\r\nfunction ConvertFrom-TaskForgeArguments {\r\n    param([AllowEmptyCollection()][string[]]$Arguments)\r\n\r\n    $options = [ordered]@{}\r\n    for ($index = 0; $index -lt $Arguments.Count; $index++) {\r\n        $token = $Arguments[$index]\r\n        if (-not $token.StartsWith('--')) {\r\n            throw \"Unexpected argument: $token\"\r\n        }\r\n\r\n        $name = $token.Substring(2)\r\n        if ([string]::IsNullOrWhiteSpace($name)) {\r\n            throw 'Option name cannot be empty.'\r\n        }\r\n        if ($options.Contains($name)) {\r\n            throw \"Duplicate option: --$name\"\r\n        }\r\n\r\n        if (($index + 1) -lt $Arguments.Count -and -not $Arguments[$index + 1].StartsWith('--')) {\r\n            $options[$name] = $Arguments[++$index]\r\n        }\r\n        else {\r\n            $options[$name] = $true\r\n        }\r\n    }\r\n\r\n    return $options\r\n}\r\n\r\nfunction Get-RequiredOption {\r\n    param(\r\n        [Parameter(Mandatory)][System.Collections.IDictionary]$Options,\r\n        [Parameter(Mandatory)][string]$Name\r\n    )\r\n\r\n    if (-not $Options.Contains($Name) -or $Options[$Name] -is [bool] -or\r\n        [string]::IsNullOrWhiteSpace([string]$Options[$Name])) {\r\n        throw \"Missing required option: --$Name\"\r\n    }\r\n    return [string]$Options[$Name]\r\n}\r\n\r\nfunction Assert-KnownOptions {\r\n    param(\r\n        [Parameter(Mandatory)][System.Collections.IDictionary]$Options,\r\n        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$Allowed\r\n    )\r\n\r\n    foreach ($name in $Options.Keys) {\r\n        if ($name -notin $Allowed) {\r\n            throw \"Unknown option: --$name\"\r\n        }\r\n    }\r\n}\r\n\r\nfunction Write-TaskForgeOutput {\r\n    param(\r\n        [Parameter(Mandatory)]$Value,\r\n        [Parameter(Mandatory)][bool]$AsJson\r\n    )\r\n\r\n    if ($AsJson) {\r\n        ConvertTo-Json -InputObject $Value -Depth 8 -Compress\r\n    }\r\n    else {\r\n        [string]$Value\r\n    }\r\n}\r\n\r\nExport-ModuleMember -Function *\r\n"
+    },
+    {
+      "path": "src/TaskForge.ps1",
+      "role": "source",
+      "content": "[CmdletBinding()]\r\nparam(\r\n    [Parameter(Position = 0)]\r\n    [string]$Command = 'help',\r\n\r\n    [Parameter(Position = 1, ValueFromRemainingArguments)]\r\n    [string[]]$CliArguments = @()\r\n)\r\n\r\nSet-StrictMode -Version Latest\r\n$ErrorActionPreference = 'Stop'\r\nImport-Module (Join-Path $PSScriptRoot 'TaskForge.Core.psm1') -Force -WarningAction SilentlyContinue\r\n\r\ntry {\r\n    $options = ConvertFrom-TaskForgeArguments -Arguments $CliArguments\r\n    $defaultDataFile = Join-Path (Split-Path -Parent $PSScriptRoot) 'data/tasks.json'\r\n    $dataFile = if ($options.Contains('data-file')) {\r\n        Get-RequiredOption -Options $options -Name 'data-file'\r\n    }\r\n    else {\r\n        $defaultDataFile\r\n    }\r\n    $asJson = $options.Contains('json')\r\n\r\n    switch ($Command.ToLowerInvariant()) {\r\n        'add' {\r\n            Assert-KnownOptions -Options $options -Allowed @('title', 'description', 'data-file', 'json')\r\n            $title = Get-RequiredOption -Options $options -Name 'title'\r\n            $tasks = @(Read-TaskStore -Path $dataFile)\r\n            $nextId = if ($tasks.Count -eq 0) { 1 } else { 1 + [int](($tasks | Measure-Object -Property id -Maximum).Maximum) }\r\n            $task = [ordered]@{\r\n                id = $nextId\r\n                title = $title.Trim()\r\n                description = if ($options.Contains('description')) { [string]$options['description'] } else { '' }\r\n                status = 'pending'\r\n                createdAt = [DateTimeOffset]::UtcNow.ToString('o')\r\n            }\r\n            Write-TaskStore -Path $dataFile -Tasks @($tasks + [pscustomobject]$task)\r\n            if ($asJson) {\r\n                Write-TaskForgeOutput -Value ([pscustomobject]$task) -AsJson $true\r\n            }\r\n            else {\r\n                \"Added task ${nextId}: $($task.title)\"\r\n            }\r\n        }\r\n        'list' {\r\n            Assert-KnownOptions -Options $options -Allowed @('data-file', 'json')\r\n            $tasks = @(Read-TaskStore -Path $dataFile | Sort-Object { [int]$_.id })\r\n            if ($asJson) {\r\n                Write-TaskForgeOutput -Value $tasks -AsJson $true\r\n            }\r\n            elseif ($tasks.Count -eq 0) {\r\n                'No tasks.'\r\n            }\r\n            else {\r\n                $tasks | ForEach-Object { \"[{0}] #{1} {2}\" -f $_.status, $_.id, $_.title }\r\n            }\r\n        }\r\n        'stats' {\r\n            Assert-KnownOptions -Options $options -Allowed @('data-file', 'json')\r\n            $tasks = @(Read-TaskStore -Path $dataFile)\r\n            $completed = @($tasks | Where-Object { $_.status -eq 'completed' }).Count\r\n            $pending = @($tasks | Where-Object { $_.status -eq 'pending' }).Count\r\n            $completionPercentage = if ($tasks.Count -eq 0) {\r\n                [double]0\r\n            }\r\n            else {\r\n                [Math]::Round(($completed * 100.0) / $tasks.Count, 1)\r\n            }\r\n            $createdByDate = @(\r\n                $tasks |\r\n                    Group-Object {\r\n                        [DateTimeOffset]::Parse(\r\n                            [string]$_.createdAt,\r\n                            [Globalization.CultureInfo]::InvariantCulture,\r\n                            [Globalization.DateTimeStyles]::RoundtripKind\r\n                        ).UtcDateTime.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)\r\n                    } |\r\n                    Sort-Object Name |\r\n                    ForEach-Object {\r\n                        [pscustomobject][ordered]@{\r\n                            date = [string]$_.Name\r\n                            count = [int]$_.Count\r\n                        }\r\n                    }\r\n            )\r\n            $statistics = [pscustomobject][ordered]@{\r\n                total = [int]$tasks.Count\r\n                pending = [int]$pending\r\n                completed = [int]$completed\r\n                completionPercentage = [double]$completionPercentage\r\n                createdByDate = $createdByDate\r\n            }\r\n\r\n            if ($asJson) {\r\n                Write-TaskForgeOutput -Value $statistics -AsJson $true\r\n            }\r\n            else {\r\n                Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'assets/stats.txt')\r\n                'TaskForge Statistics'\r\n                \"Total: $($statistics.total)\"\r\n                \"Pending: $($statistics.pending)\"\r\n                \"Completed: $($statistics.completed)\"\r\n                \"Completion: $($statistics.completionPercentage.ToString('F1', [Globalization.CultureInfo]::InvariantCulture))%\"\r\n                'Created by UTC date:'\r\n                $statistics.createdByDate | ForEach-Object { \"  $($_.date): $($_.count)\" }\r\n            }\r\n        }\r\n        'complete' {\r\n            Assert-KnownOptions -Options $options -Allowed @('id', 'data-file', 'json')\r\n            $idText = Get-RequiredOption -Options $options -Name 'id'\r\n            $id = 0\r\n            if (-not [int]::TryParse($idText, [ref]$id) -or $id -le 0) {\r\n                throw '--id must be a positive integer.'\r\n            }\r\n            $tasks = @(Read-TaskStore -Path $dataFile)\r\n            $task = $tasks | Where-Object { [int]$_.id -eq $id } | Select-Object -First 1\r\n            if ($null -eq $task) {\r\n                throw \"Task $id was not found.\"\r\n            }\r\n            $task.status = 'completed'\r\n            Write-TaskStore -Path $dataFile -Tasks $tasks\r\n            if ($asJson) {\r\n                Write-TaskForgeOutput -Value $task -AsJson $true\r\n            }\r\n            else {\r\n                \"Completed task $id.\"\r\n            }\r\n        }\r\n        'remove' {\r\n            Assert-KnownOptions -Options $options -Allowed @('id', 'data-file', 'json')\r\n            $idText = Get-RequiredOption -Options $options -Name 'id'\r\n            $id = 0\r\n            if (-not [int]::TryParse($idText, [ref]$id) -or $id -le 0) {\r\n                throw '--id must be a positive integer.'\r\n            }\r\n            $tasks = @(Read-TaskStore -Path $dataFile)\r\n            $remaining = @($tasks | Where-Object { [int]$_.id -ne $id })\r\n            if ($remaining.Count -eq $tasks.Count) {\r\n                throw \"Task $id was not found.\"\r\n            }\r\n            Write-TaskStore -Path $dataFile -Tasks $remaining\r\n            $summary = [pscustomobject]@{ removedId = $id }\r\n            if ($asJson) {\r\n                Write-TaskForgeOutput -Value $summary -AsJson $true\r\n            }\r\n            else {\r\n                \"Removed task $id.\"\r\n            }\r\n        }\r\n        'help' {\r\n            Assert-KnownOptions -Options $options -Allowed @()\r\n            @'\r\nTaskForge\r\n  add --title TEXT [--description TEXT] [--data-file PATH] [--json]\r\n  list [--data-file PATH] [--json]\r\n  stats [--data-file PATH] [--json]\r\n  complete --id ID [--data-file PATH] [--json]\r\n  remove --id ID [--data-file PATH] [--json]\r\n'@\r\n        }\r\n        default {\r\n            throw \"Unknown command: $Command\"\r\n        }\r\n    }\r\n}\r\ncatch {\r\n    [Console]::Error.WriteLine(\"TaskForge: $($_.Exception.Message)\")\r\n    exit 1\r\n}\r\n"
+    },
+    {
+      "path": "tests/Run-Tests.ps1",
+      "role": "fixture_test",
+      "content": "[CmdletBinding()]\r\nparam()\r\n\r\nSet-StrictMode -Version Latest\r\n$ErrorActionPreference = 'Stop'\r\n\r\n$scriptPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'src/TaskForge.ps1'\r\n$benchmarkRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)\r\n$temporaryRoot = Join-Path $benchmarkRoot \".scratch/fixture/taskforge-base-$([guid]::NewGuid())\"\r\n$dataFile = Join-Path $temporaryRoot 'tasks.json'\r\n$failures = [System.Collections.Generic.List[string]]::new()\r\n\r\nfunction Assert-True {\r\n    param([bool]$Condition, [string]$Message)\r\n    if (-not $Condition) {\r\n        $failures.Add($Message)\r\n    }\r\n}\r\n\r\nfunction Invoke-TaskForge {\r\n    param([string[]]$Arguments)\r\n    $output = @(& $PSHOME\\pwsh -NoProfile -File $scriptPath @Arguments 2>&1)\r\n    [pscustomobject]@{\r\n        ExitCode = $LASTEXITCODE\r\n        Output = ($output -join \"`n\")\r\n    }\r\n}\r\n\r\ntry {\r\n    New-Item -ItemType Directory -Path $temporaryRoot -Force | Out-Null\r\n\r\n    $add = Invoke-TaskForge @('add', '--title', 'First task', '--description', 'Fixture test', '--data-file', $dataFile, '--json')\r\n    Assert-True ($add.ExitCode -eq 0) 'add should succeed'\r\n    $added = $add.Output | ConvertFrom-Json\r\n    Assert-True ($added.id -eq 1 -and $added.status -eq 'pending') 'add should return a pending task with ID 1'\r\n\r\n    $list = Invoke-TaskForge @('list', '--data-file', $dataFile, '--json')\r\n    Assert-True ($list.ExitCode -eq 0) 'list should succeed'\r\n    Assert-True (@($list.Output | ConvertFrom-Json).Count -eq 1) 'list should return the stored task'\r\n\r\n    $statsBeforeComplete = Invoke-TaskForge @('stats', '--data-file', $dataFile, '--json')\r\n    Assert-True ($statsBeforeComplete.ExitCode -eq 0) 'stats should succeed'\r\n    $pendingStats = $statsBeforeComplete.Output | ConvertFrom-Json\r\n    Assert-True (\r\n        $pendingStats.total -eq 1 -and\r\n        $pendingStats.pending -eq 1 -and\r\n        $pendingStats.completed -eq 0 -and\r\n        $pendingStats.completionPercentage -eq 0.0\r\n    ) 'stats should report pending task totals'\r\n\r\n    $complete = Invoke-TaskForge @('complete', '--id', '1', '--data-file', $dataFile, '--json')\r\n    Assert-True ($complete.ExitCode -eq 0) 'complete should succeed'\r\n    Assert-True (($complete.Output | ConvertFrom-Json).status -eq 'completed') 'complete should persist completed status'\r\n\r\n    $fixtureTasks = @(\r\n        [ordered]@{ id = 1; title = 'One'; description = ''; status = 'completed'; createdAt = '2024-01-02T23:30:00-02:00' }\r\n        [ordered]@{ id = 2; title = 'Two'; description = ''; status = 'completed'; createdAt = '2024-01-02T03:00:00Z' }\r\n        [ordered]@{ id = 3; title = 'Three'; description = ''; status = 'pending'; createdAt = '2024-01-01T23:30:00-02:00' }\r\n    )\r\n    $fixtureJson = ConvertTo-Json -InputObject $fixtureTasks -Depth 8\r\n    [System.IO.File]::WriteAllText($dataFile, \"$fixtureJson`n\", [System.Text.UTF8Encoding]::new($false))\r\n    $beforeStats = [System.IO.File]::ReadAllBytes($dataFile)\r\n\r\n    $stats = Invoke-TaskForge @('stats', '--data-file', $dataFile, '--json')\r\n    Assert-True ($stats.ExitCode -eq 0) 'JSON stats should succeed'\r\n    $statistics = $stats.Output | ConvertFrom-Json\r\n    Assert-True (\r\n        $statistics.total -eq 3 -and\r\n        $statistics.pending -eq 1 -and\r\n        $statistics.completed -eq 2 -and\r\n        $statistics.completionPercentage -eq 66.7\r\n    ) 'JSON stats should report totals and one-decimal completion percentage'\r\n    Assert-True (\r\n        @($statistics.createdByDate).Count -eq 2 -and\r\n        $statistics.createdByDate[0].date -eq '2024-01-02' -and\r\n        $statistics.createdByDate[0].count -eq 2 -and\r\n        $statistics.createdByDate[1].date -eq '2024-01-03' -and\r\n        $statistics.createdByDate[1].count -eq 1\r\n    ) 'JSON stats should group created tasks by ascending UTC calendar date'\r\n    Assert-True ($stats.Output -notmatch 'STATS') 'JSON stats should not include the banner'\r\n    $afterStats = [System.IO.File]::ReadAllBytes($dataFile)\r\n    Assert-True ([Convert]::ToBase64String($beforeStats) -eq [Convert]::ToBase64String($afterStats)) 'stats should not rewrite storage'\r\n\r\n    $textStats = Invoke-TaskForge @('stats', '--data-file', $dataFile)\r\n    Assert-True (\r\n        $textStats.ExitCode -eq 0 -and\r\n        $textStats.Output.Contains('STATS') -and\r\n        $textStats.Output.IndexOf('STATS') -lt $textStats.Output.IndexOf('TaskForge Statistics') -and\r\n        $textStats.Output.Contains('Completion: 66.7%') -and\r\n        $textStats.Output.Contains('2024-01-02: 2')\r\n    ) 'text stats should show the banner before the invariant dashboard'\r\n\r\n    $missing = Invoke-TaskForge @('complete', '--id', '99', '--data-file', $dataFile)\r\n    Assert-True ($missing.ExitCode -ne 0) 'completing an unknown task should fail'\r\n\r\n    $remove = Invoke-TaskForge @('remove', '--id', '1', '--data-file', $dataFile, '--json')\r\n    Assert-True ($remove.ExitCode -eq 0) 'remove should succeed'\r\n    Assert-True (($remove.Output | ConvertFrom-Json).removedId -eq 1) 'remove should report the removed ID'\r\n\r\n    Remove-Item -LiteralPath $dataFile -Force\r\n    $empty = Invoke-TaskForge @('list', '--data-file', $dataFile)\r\n    Assert-True ($empty.Output -eq 'No tasks.') 'empty list should have stable text'\r\n\r\n    $emptyStats = Invoke-TaskForge @('stats', '--data-file', $dataFile, '--json')\r\n    $emptyStatistics = $emptyStats.Output | ConvertFrom-Json\r\n    Assert-True (\r\n        $emptyStats.ExitCode -eq 0 -and\r\n        $emptyStatistics.total -eq 0 -and\r\n        $emptyStatistics.pending -eq 0 -and\r\n        $emptyStatistics.completed -eq 0 -and\r\n        $emptyStatistics.completionPercentage -eq 0.0 -and\r\n        @($emptyStatistics.createdByDate).Count -eq 0 -and\r\n        -not (Test-Path -LiteralPath $dataFile)\r\n    ) 'empty stats should return zeros and an empty date list without creating storage'\r\n\r\n    $help = Invoke-TaskForge @('help')\r\n    Assert-True ($help.ExitCode -eq 0 -and $help.Output.Contains('TaskForge')) 'help should succeed'\r\n\r\n    if ($failures.Count -gt 0) {\r\n        $failures | ForEach-Object { [Console]::Error.WriteLine(\"FAIL: $_\") }\r\n        exit 1\r\n    }\r\n    \"PASS: 16 fixture assertions\"\r\n}\r\nfinally {\r\n    Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue\r\n}\r\n"
+    },
+    {
+      "path": "assets/stats.txt",
+      "role": "banner",
+      "content": "+--------------------------------------+\r\n|            TASKFORGE STATS           |\r\n|                                      |\r\n|  TOTAL TASKS / STATUS DASHBOARD      |\r\n|  COMPLETED + PENDING                 |\r\n|  COMPLETION PERCENTAGE               |\r\n|                                      |\r\n|  CREATED BY UTC CALENDAR DATE        |\r\n|  ASCENDING DAILY COUNTS              |\r\n|                                      |\r\n|  READ ONLY STATISTICS                |\r\n+--------------------------------------+\r\n"
+    }
+  ]
+}

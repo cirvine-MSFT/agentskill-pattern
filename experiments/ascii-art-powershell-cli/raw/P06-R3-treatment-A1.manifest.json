@@ -1,0 +1,139 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P06-R3-treatment-A1",
+  "scheduleId": "P06-R3-treatment",
+  "promptId": "P06",
+  "repetition": 3,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "local-authenticated-P06-R3-treatment-A1:6383be36-9ed5-48dd-a783-b87e092d3fb3:delegation"
+    ],
+    "delegationResultEventIds": [
+      "local-authenticated-P06-R3-treatment-A1:ef1c3135-7edf-42dc-9805-fceb90b3af77:delegation"
+    ],
+    "specialistToolCallEventIds": [
+      "local-authenticated-P06-R3-treatment-A1:045b2821-887e-4499-be7d-5f249f7c6c6c:tool",
+      "local-authenticated-P06-R3-treatment-A1:78a49efe-2f4d-426d-a7e4-f30c3c1c3bcf:tool",
+      "local-authenticated-P06-R3-treatment-A1:083702fa-5c31-4408-86ac-dd731bcace5f:tool",
+      "local-authenticated-P06-R3-treatment-A1:fc1f6ba4-413a-4741-87b3-c65f2c5f1e37:tool",
+      "local-authenticated-P06-R3-treatment-A1:1ff1ee51-48af-4212-ad03-d3e6e354744e:tool",
+      "local-authenticated-P06-R3-treatment-A1:d787a748-4992-49c5-bfff-472eb5366872:tool",
+      "local-authenticated-P06-R3-treatment-A1:19fba8cd-90d3-4651-b3ef-cf46b85d7fb9:tool",
+      "local-authenticated-P06-R3-treatment-A1:09e6ca66-5ec5-4000-ab7d-0b5020674b2d:tool",
+      "local-authenticated-P06-R3-treatment-A1:faeccff3-ad26-4ba0-bede-0de861cd7726:tool",
+      "local-authenticated-P06-R3-treatment-A1:820a8fb2-5711-4f3a-a657-7f8b9d9aedb4:tool",
+      "local-authenticated-P06-R3-treatment-A1:d4ed99ad-3afa-41e2-bffe-785dad3bb545:tool",
+      "local-authenticated-P06-R3-treatment-A1:56aa54df-4615-4b34-b0cb-a90876a6dfeb:tool",
+      "local-authenticated-P06-R3-treatment-A1:12c09142-c0aa-44d7-89a7-f737888637af:tool",
+      "local-authenticated-P06-R3-treatment-A1:61d3d5c8-46a9-42a2-8068-316255a044cd:tool",
+      "local-authenticated-P06-R3-treatment-A1:81894a92-2272-4e95-bfd2-a5fe9a2d8490:tool",
+      "local-authenticated-P06-R3-treatment-A1:99ba467c-ccac-4a32-9278-5e51b6f6c9d3:tool",
+      "local-authenticated-P06-R3-treatment-A1:e52ea2d1-ff51-41d9-8c85-b1f7bbab06a4:tool",
+      "local-authenticated-P06-R3-treatment-A1:817b644d-dadd-4544-ad03-ec7d3bd32328:tool",
+      "local-authenticated-P06-R3-treatment-A1:3a2db947-57dc-494e-9bc5-360499ffa155:tool",
+      "local-authenticated-P06-R3-treatment-A1:645e66c2-162e-4100-8a4f-4274fbe6fffe:tool",
+      "local-authenticated-P06-R3-treatment-A1:be000be5-7627-4320-8c58-e7913093f1c9:tool",
+      "local-authenticated-P06-R3-treatment-A1:4f36ebe6-2bf0-4abd-821f-a37b14724081:tool",
+      "local-authenticated-P06-R3-treatment-A1:c4db6469-482f-4543-9fff-04e20aff22a1:tool",
+      "local-authenticated-P06-R3-treatment-A1:a5b71556-bf73-4c90-a14c-b702b0e310f3:tool",
+      "local-authenticated-P06-R3-treatment-A1:b656fffc-dcb7-4012-beac-ac8d9ec7bc6f:tool",
+      "local-authenticated-P06-R3-treatment-A1:e9dbde02-b915-4348-9468-d2d17c22f225:tool",
+      "local-authenticated-P06-R3-treatment-A1:fa1a4f4e-d394-4fd9-90e9-6d45d0b7b1ec:tool",
+      "local-authenticated-P06-R3-treatment-A1:1f285307-9322-4623-85c0-b8bdcf33ad8b:tool",
+      "local-authenticated-P06-R3-treatment-A1:2b345976-0a5b-4b93-986d-e1a476a7acd0:tool"
+    ],
+    "specialistToolResultEventIds": [
+      "local-authenticated-P06-R3-treatment-A1:899d7230-6ac7-42d1-942b-2672645ff8af:tool",
+      "local-authenticated-P06-R3-treatment-A1:d05b3cfe-ff87-4c59-852a-7f7c9b41f5e9:tool",
+      "local-authenticated-P06-R3-treatment-A1:cdfeedb2-cf59-4098-8c57-b64f98421a9a:tool",
+      "local-authenticated-P06-R3-treatment-A1:bc4984a1-99e2-4288-a816-1c2f0697232f:tool",
+      "local-authenticated-P06-R3-treatment-A1:934f09c2-9fce-422e-ab04-86c47e9d35c8:tool",
+      "local-authenticated-P06-R3-treatment-A1:28266042-150a-4a71-a228-3efaffa2802e:tool",
+      "local-authenticated-P06-R3-treatment-A1:44967aef-00cb-44ff-b44e-2b00baf25148:tool",
+      "local-authenticated-P06-R3-treatment-A1:f2cfb63b-532b-41eb-9fc1-45756498f5c5:tool",
+      "local-authenticated-P06-R3-treatment-A1:2563c571-d231-449d-87f7-7bdc663b17ad:tool",
+      "local-authenticated-P06-R3-treatment-A1:5402010c-4c52-47df-aab4-e321e8b7ddff:tool",
+      "local-authenticated-P06-R3-treatment-A1:61a0ffa7-fadb-4ff4-9167-618b240c2f1a:tool",
+      "local-authenticated-P06-R3-treatment-A1:4f1107a0-23d6-4d90-a4bb-47d060a937ea:tool",
+      "local-authenticated-P06-R3-treatment-A1:56ece108-8956-4c61-ba29-255dea60754c:tool",
+      "local-authenticated-P06-R3-treatment-A1:610aa408-57fd-4c28-bc6a-a2d5a1d783bf:tool",
+      "local-authenticated-P06-R3-treatment-A1:39c060ac-9880-4f8c-8778-8f6b456471e5:tool",
+      "local-authenticated-P06-R3-treatment-A1:062eb341-b54a-44ee-9bef-a6da39fa6a96:tool",
+      "local-authenticated-P06-R3-treatment-A1:27776d86-297a-43cb-9dee-eb0a1cca3111:tool",
+      "local-authenticated-P06-R3-treatment-A1:f02d19e7-502c-4ba4-ad73-24a1a4e1dc7d:tool",
+      "local-authenticated-P06-R3-treatment-A1:f5e549fb-e055-49f9-b79c-cd74807976e7:tool",
+      "local-authenticated-P06-R3-treatment-A1:9ce93472-7636-43a2-8f77-92491ae03cb4:tool",
+      "local-authenticated-P06-R3-treatment-A1:2a2fe2b2-3cfb-4ebf-a05a-6dba6c36afde:tool",
+      "local-authenticated-P06-R3-treatment-A1:7386dc1d-b968-460c-a0cc-e5374c1b33df:tool",
+      "local-authenticated-P06-R3-treatment-A1:5490d579-ef2b-47bf-822c-bd182a1bdd2b:tool",
+      "local-authenticated-P06-R3-treatment-A1:606ed487-e89a-4638-be3f-e0999a96ade5:tool",
+      "local-authenticated-P06-R3-treatment-A1:2f47c3c0-97c3-49af-b5b7-7c30e7cf3011:tool",
+      "local-authenticated-P06-R3-treatment-A1:7539ef66-e692-4cd5-9e36-0277d8935a8c:tool",
+      "local-authenticated-P06-R3-treatment-A1:c67e33e3-8e78-4717-ab50-5bad230951c5:tool",
+      "local-authenticated-P06-R3-treatment-A1:27527581-40ac-4441-8fe4-f9bfd94d6773:tool",
+      "local-authenticated-P06-R3-treatment-A1:e602ec8b-0175-4838-b320-2117501deed9:tool"
+    ],
+    "specialistFileChangeEventIds": [
+      "local-authenticated-P06-R3-treatment-A1:file:0c712a7f-5b0c-404d-aa8d-2a2c93394446:1:086dc41f9471e4a9"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 5,
+    "position": 2,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "c60eb99d-9767-4c3e-aaaa-a2c5df7a0827"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "a17fd9eb-d28e-4e79-b229-e31e1908d334",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "claude-opus-4.8"
+    },
+    "specialist": {
+      "sessionId": "8da47afc-000e-4abe-9bbe-45d63dde079b",
+      "requestedModel": "claude-haiku-4.5",
+      "observedModel": "claude-haiku-4.5"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "b20758abbd070747a687fe28a806ee426320902a",
+    "terminalCommitSha": "87116d77fd866750a49ba970f09586fe33ff1f55",
+    "artifactBundleSha256": "129e9906421ad60716be335018942ab82e1e33c46182a0a4a9d24ee2d5368266"
+  },
+  "workspace": {
+    "identifier": "P06/cirvine-msft-turbo-dollop",
+    "branch": "cirvine-msft-turbo-dollop"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T08:44:37.450Z",
+    "promptSentAt": "2026-07-29T08:45:14.346Z",
+    "completedAt": "2026-07-29T09:03:37.530Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

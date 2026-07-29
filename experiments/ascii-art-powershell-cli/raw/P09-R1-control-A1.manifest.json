@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P09-R1-control-A1",
+  "scheduleId": "P09-R1-control",
+  "promptId": "P09",
+  "repetition": 1,
+  "condition": "control",
+  "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 1,
+    "position": 1,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "75eac705-af11-4fb9-ab5d-7995349dc76c"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "5c9f5462-dd99-4ca7-b20f-1f50b71f3fd0",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "status": "not_applicable",
+      "reason": "control_condition"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "5a77e038b9322b76c17b66172adbb8f35372d3d9",
+    "terminalCommitSha": "ab8d57a07fff3ac73eea75c521f7bb7d4b3a903f",
+    "artifactBundleSha256": "14223068e981327157398f26f13dbd9adbbb1f55d8e2703e7a7ae2cc7d3c171a"
+  },
+  "workspace": {
+    "identifier": "P09/cirvine-msft-legendary-happiness",
+    "branch": "cirvine-msft-taskforge-durable-undo"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:42:33.512Z",
+    "promptSentAt": "2026-07-29T07:43:22.270Z",
+    "completedAt": "2026-07-29T07:57:58.938Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

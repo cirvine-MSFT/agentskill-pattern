@@ -1,0 +1,120 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P04-R2-treatment-A1",
+  "scheduleId": "P04-R2-treatment",
+  "promptId": "P04",
+  "repetition": 2,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "local-authenticated-P04-R2-treatment-A1:f84de907-be5e-4d75-86f2-723fb0618820:delegation"
+    ],
+    "delegationResultEventIds": [
+      "local-authenticated-P04-R2-treatment-A1:6d8a9657-c39a-4b2c-a283-e0d5c1116167:delegation"
+    ],
+    "specialistToolCallEventIds": [
+      "local-authenticated-P04-R2-treatment-A1:9fb97394-c898-42e7-ba51-8aeb34c500c3:tool",
+      "local-authenticated-P04-R2-treatment-A1:b83d6669-b2f0-4a3f-b1ce-eb20115f5d4e:tool",
+      "local-authenticated-P04-R2-treatment-A1:4507b7cc-fbe9-45dc-b5cf-554d3211d347:tool",
+      "local-authenticated-P04-R2-treatment-A1:fdb68ee6-b16e-4ea4-8f40-89863a306511:tool",
+      "local-authenticated-P04-R2-treatment-A1:9ebd186b-c88d-4158-a2e8-0b33660e9ff5:tool",
+      "local-authenticated-P04-R2-treatment-A1:5073cb01-5b84-4ceb-8894-6921a276ffaf:tool",
+      "local-authenticated-P04-R2-treatment-A1:a846bc9f-d6c4-4220-8bd7-3b43516640b5:tool",
+      "local-authenticated-P04-R2-treatment-A1:e75beb59-153c-496d-967e-22f115d8fa79:tool",
+      "local-authenticated-P04-R2-treatment-A1:5f2228b3-7470-46f6-a8c7-a2dc86e2aa9d:tool",
+      "local-authenticated-P04-R2-treatment-A1:71a9bdfb-5a60-4e60-b640-192ab87f6ea3:tool",
+      "local-authenticated-P04-R2-treatment-A1:4895af49-f664-417a-8ddd-e556dcc5dcbf:tool",
+      "local-authenticated-P04-R2-treatment-A1:7abaa820-1971-4e5e-b3fc-6a0a77950a1f:tool",
+      "local-authenticated-P04-R2-treatment-A1:82b2164d-f27e-4d63-a782-82ed4cd93b9b:tool",
+      "local-authenticated-P04-R2-treatment-A1:eb840d0b-375a-4f4d-aa25-1cb2aa886455:tool",
+      "local-authenticated-P04-R2-treatment-A1:382b7ff9-a9d8-4b71-a7dd-1c6399de91cc:tool",
+      "local-authenticated-P04-R2-treatment-A1:33a814e7-6933-433a-88de-0917b39b87d6:tool",
+      "local-authenticated-P04-R2-treatment-A1:0233ae1d-12fe-4d65-a813-0292751b6cfe:tool",
+      "local-authenticated-P04-R2-treatment-A1:91f51c4d-f49c-4cff-bc5d-fb92627638e2:tool",
+      "local-authenticated-P04-R2-treatment-A1:ff67ce29-d4cb-46aa-b976-dbd923629898:tool"
+    ],
+    "specialistToolResultEventIds": [
+      "local-authenticated-P04-R2-treatment-A1:27a116af-e88f-4bf6-9d98-973ca4dad882:tool",
+      "local-authenticated-P04-R2-treatment-A1:3aedfa7b-bfab-49a6-886b-83ca231064ed:tool",
+      "local-authenticated-P04-R2-treatment-A1:c821d157-d4f9-449a-89c9-9dc04bd5e984:tool",
+      "local-authenticated-P04-R2-treatment-A1:1aa2b2f7-677f-4558-b0a7-ca0c183706a8:tool",
+      "local-authenticated-P04-R2-treatment-A1:da267d9d-9aaf-4e8c-af3d-defbca2642fd:tool",
+      "local-authenticated-P04-R2-treatment-A1:d2900a2d-39d1-457d-a1fb-8f53e83ccb16:tool",
+      "local-authenticated-P04-R2-treatment-A1:60cbcbce-b8d4-458e-b563-029b1fe8c674:tool",
+      "local-authenticated-P04-R2-treatment-A1:bfd31360-edfb-4e02-ab12-c796996133e0:tool",
+      "local-authenticated-P04-R2-treatment-A1:e436539c-e4f0-4e5d-9bc8-ea059b3c3989:tool",
+      "local-authenticated-P04-R2-treatment-A1:12213fe4-706d-46f0-831b-bce17f7066b2:tool",
+      "local-authenticated-P04-R2-treatment-A1:6a508a57-73af-4413-b779-7be43a335215:tool",
+      "local-authenticated-P04-R2-treatment-A1:b4569554-34d3-4632-ad0e-27e460a0b790:tool",
+      "local-authenticated-P04-R2-treatment-A1:03420369-a947-4703-a4de-7b0be0a86162:tool",
+      "local-authenticated-P04-R2-treatment-A1:1ab72715-4054-4cbd-a5e1-4d23120b56e4:tool",
+      "local-authenticated-P04-R2-treatment-A1:43573037-5942-4f33-ab59-06be3e6b8b6a:tool",
+      "local-authenticated-P04-R2-treatment-A1:6a3686a6-9789-4f57-8eec-71b1ef786918:tool",
+      "local-authenticated-P04-R2-treatment-A1:5beecf70-9dc2-4d79-9603-0c56996651ab:tool",
+      "local-authenticated-P04-R2-treatment-A1:109a740c-9fe1-4bfc-98f8-8390c9fc28dc:tool",
+      "local-authenticated-P04-R2-treatment-A1:652a2314-7b1e-4fc2-906b-8cbe384ce663:tool"
+    ],
+    "specialistFileChangeEventIds": [
+      "local-authenticated-P04-R2-treatment-A1:file:e831e1b4-7f26-4f57-b375-beb9c15cdafe:1:de66c6db59c08824",
+      "local-authenticated-P04-R2-treatment-A1:file:e831e1b4-7f26-4f57-b375-beb9c15cdafe:1:2316408f27fb0441"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 3,
+    "position": 2,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "3758d931-1114-427d-8356-bf4a4e8425c5"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "ed2a4753-1e05-41ef-a597-35ba88f96e9b",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "claude-opus-4.8"
+    },
+    "specialist": {
+      "sessionId": "b8a2a35c-18e1-487c-a81a-c396c0cbb6d6",
+      "requestedModel": "unavailable:not_explicitly_requested",
+      "observedModel": "claude-haiku-4.5+claude-opus-4.8"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "95763e51905ac9a7b8ccee65bdaa11eb8a9f96c7",
+    "terminalCommitSha": "68535f372df12f960ec80f3de7cc3b52ce9c8b03",
+    "artifactBundleSha256": "9d2b86a17c156a52ae88a508e7e9b7693fe0804d7c4e49b71e53883accc16e6d"
+  },
+  "workspace": {
+    "identifier": "P04/cirvine-msft-animated-carnival",
+    "branch": "cirvine-msft-animated-carnival"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T08:17:15.030Z",
+    "promptSentAt": "2026-07-29T08:17:26.072Z",
+    "completedAt": "2026-07-29T08:37:37.540Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

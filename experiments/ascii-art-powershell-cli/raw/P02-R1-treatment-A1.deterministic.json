@@ -1,0 +1,83 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P02-R1-treatment-A1",
+  "scheduleId": "P02-R1-treatment",
+  "promptId": "P02",
+  "status": "fail",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "import-valid",
+        "status": "pass",
+        "message": "Valid rows import with a stable count."
+      },
+      {
+        "id": "import-ids",
+        "status": "pass",
+        "message": "Imported IDs are sequential."
+      },
+      {
+        "id": "import-banner",
+        "status": "pass",
+        "message": "Text import renders the exact registered banner once before its expected count result."
+      },
+      {
+        "id": "import-atomic",
+        "status": "pass",
+        "message": "Invalid CSV leaves storage byte-identical."
+      }
+    ]
+  },
+  "art": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-1",
+        "status": "fail",
+        "message": "line 7 contains a forbidden character"
+      },
+      {
+        "id": "art-2",
+        "status": "fail",
+        "message": "line 8 contains a forbidden character"
+      },
+      {
+        "id": "art-3",
+        "status": "fail",
+        "message": "line 9 contains a forbidden character"
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit b37fba9c2b7b9c93733e44ef2327cfeab73c4466."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T11:06:24.167Z",
+  "completedAt": "2026-07-29T11:06:29.456Z"
+}

@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P04-R2-control-A1",
+  "scheduleId": "P04-R2-control",
+  "promptId": "P04",
+  "repetition": 2,
+  "condition": "control",
+  "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 4,
+    "position": 8,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "3758d931-1114-427d-8356-bf4a4e8425c5"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "678dfa27-f1e8-4f65-b7c5-03e3afe4f9a3",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "claude-opus-4.8"
+    },
+    "specialist": {
+      "status": "not_applicable",
+      "reason": "control_condition"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "e7ac2f2f7f6cdad3310e7deee6e84c6e452ec5e5",
+    "terminalCommitSha": "87a691d91ea3e1dee2b5969809b2b58d07528289",
+    "artifactBundleSha256": "44d7ff9a1b6e223894f6c56fb34a2b139e4fbe69c3f29898d6ad69f5b625a2ee"
+  },
+  "workspace": {
+    "identifier": "P04/cirvine-msft-sturdy-funicular",
+    "branch": "cirvine-msft-sturdy-funicular"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T08:35:27.265Z",
+    "promptSentAt": "2026-07-29T08:35:36.597Z",
+    "completedAt": "2026-07-29T08:51:55.064Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

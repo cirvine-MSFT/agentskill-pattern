@@ -1,0 +1,97 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P03-R1-treatment-A1",
+  "scheduleId": "P03-R1-treatment",
+  "promptId": "P03",
+  "repetition": 1,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "local-authenticated-P03-R1-treatment-A1:a5c34715-ff6b-477a-8a54-1acb42ce6202:delegation"
+    ],
+    "delegationResultEventIds": [
+      "local-authenticated-P03-R1-treatment-A1:dfb1b652-80f7-4176-94b0-4a18884b5ec8:delegation"
+    ],
+    "specialistToolCallEventIds": [
+      "local-authenticated-P03-R1-treatment-A1:a81b0794-3a67-4b51-8b28-4861cb0e32e5:tool",
+      "local-authenticated-P03-R1-treatment-A1:2fe301ad-1f7c-4a52-88cc-2ed8d1bcd206:tool",
+      "local-authenticated-P03-R1-treatment-A1:4de527ab-e37b-41b3-9995-27d56b88325c:tool",
+      "local-authenticated-P03-R1-treatment-A1:c0f7ec01-00f9-4c6e-9dbf-84e927c202c3:tool",
+      "local-authenticated-P03-R1-treatment-A1:b7658742-6184-442e-b79f-b290e06d1c08:tool",
+      "local-authenticated-P03-R1-treatment-A1:4c4d79eb-ec5e-4279-986b-aca8b7c57519:tool",
+      "local-authenticated-P03-R1-treatment-A1:39fa5cf1-a9d6-4d97-8e1e-72de03e2f5b6:tool",
+      "local-authenticated-P03-R1-treatment-A1:298153da-98ec-4410-9c12-59ff11ccd4a2:tool"
+    ],
+    "specialistToolResultEventIds": [
+      "local-authenticated-P03-R1-treatment-A1:4301ae0a-793d-41b5-ab78-30d15a300238:tool",
+      "local-authenticated-P03-R1-treatment-A1:ebadd7e3-ffb1-4181-9acd-e0462367ce72:tool",
+      "local-authenticated-P03-R1-treatment-A1:7c86a238-3064-4734-ac2f-fefeda8c3294:tool",
+      "local-authenticated-P03-R1-treatment-A1:9df8ab3e-b9b5-4978-8431-dd6995581625:tool",
+      "local-authenticated-P03-R1-treatment-A1:7c0624b8-1c99-4e7d-92d4-2f71d5ab37d4:tool",
+      "local-authenticated-P03-R1-treatment-A1:10691a27-8e82-4602-a0bc-92c8a055138a:tool",
+      "local-authenticated-P03-R1-treatment-A1:47111694-0f43-428f-bd40-f52775f7e623:tool",
+      "local-authenticated-P03-R1-treatment-A1:0952968f-562a-4c08-a6e3-e9d8b5f44de6:tool"
+    ],
+    "specialistFileChangeEventIds": [
+      "local-authenticated-P03-R1-treatment-A1:file:0485d1ec-1ac5-4e02-97fd-0979e2e1abe8:1:6fc9fd5ceefb1b7f"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 1,
+    "position": 7,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "06feefbf-813f-4078-affd-24cd0e652292"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "37cda972-ebfd-4ec5-8f30-f79a9fcbb8ad",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "sessionId": "call_ZDUi4MTfNomEIWWfLm69qDWI",
+      "requestedModel": "claude-haiku-4.5",
+      "observedModel": "claude-haiku-4.5"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "142ac8f3fec89eac0594bb3c14732011beedbe0a",
+    "terminalCommitSha": "17118dc638a32c2d7bd6aff8b5df3d94dbb983ad",
+    "artifactBundleSha256": "7b20c77f4118a2dbdc80172a57d40078bddf50267a9ce2ed7dd6af2cf4b4ad22"
+  },
+  "workspace": {
+    "identifier": "P03/cirvine-msft-crispy-engine",
+    "branch": "cirvine-msft-add-json-export"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:42:47.855Z",
+    "promptSentAt": "2026-07-29T07:43:24.654Z",
+    "completedAt": "2026-07-29T07:49:01.335Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

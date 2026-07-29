@@ -1,0 +1,143 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P10-R3-control-A1",
+  "scheduleId": "P10-R3-control",
+  "promptId": "P10",
+  "status": "fail",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "template-save",
+        "status": "pass",
+        "message": "Templates persist successfully."
+      },
+      {
+        "id": "template-order",
+        "status": "pass",
+        "message": "Templates list alphabetically."
+      },
+      {
+        "id": "template-banner",
+        "status": "pass",
+        "message": "Text template actions render the exact registered banner once before expected templates."
+      },
+      {
+        "id": "template-add",
+        "status": "pass",
+        "message": "Template lookup is case-insensitive and explicit values override."
+      },
+      {
+        "id": "template-missing",
+        "status": "pass",
+        "message": "Missing template leaves tasks unchanged."
+      },
+      {
+        "id": "template-remove",
+        "status": "pass",
+        "message": "Template removal is case-insensitive."
+      }
+    ]
+  },
+  "art": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-1",
+        "status": "fail",
+        "message": "asset must use LF line endings"
+      },
+      {
+        "id": "art-2",
+        "status": "fail",
+        "message": "line 1 contains a forbidden character"
+      },
+      {
+        "id": "art-3",
+        "status": "fail",
+        "message": "line 2 contains a forbidden character"
+      },
+      {
+        "id": "art-4",
+        "status": "fail",
+        "message": "line 3 contains a forbidden character"
+      },
+      {
+        "id": "art-5",
+        "status": "fail",
+        "message": "line 4 contains a forbidden character"
+      },
+      {
+        "id": "art-6",
+        "status": "fail",
+        "message": "line 5 contains a forbidden character"
+      },
+      {
+        "id": "art-7",
+        "status": "fail",
+        "message": "line 6 contains a forbidden character"
+      },
+      {
+        "id": "art-8",
+        "status": "fail",
+        "message": "line 7 contains a forbidden character"
+      },
+      {
+        "id": "art-9",
+        "status": "fail",
+        "message": "line 8 contains a forbidden character"
+      },
+      {
+        "id": "art-10",
+        "status": "fail",
+        "message": "line 9 contains a forbidden character"
+      },
+      {
+        "id": "art-11",
+        "status": "fail",
+        "message": "line 10 contains a forbidden character"
+      },
+      {
+        "id": "art-12",
+        "status": "fail",
+        "message": "line 11 contains a forbidden character"
+      },
+      {
+        "id": "art-13",
+        "status": "fail",
+        "message": "line 12 contains a forbidden character"
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit changed fixture-owned files and its lock; external acceptance remained isolated."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit f19ca9c4c894c9d0b4969390c5ddb427e80e9b18."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T11:09:52.767Z",
+  "completedAt": "2026-07-29T11:10:02.312Z"
+}

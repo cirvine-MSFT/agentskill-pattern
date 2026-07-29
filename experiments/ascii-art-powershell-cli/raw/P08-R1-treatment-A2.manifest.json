@@ -1,0 +1,115 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P08-R1-treatment-A2",
+  "scheduleId": "P08-R1-treatment",
+  "promptId": "P08",
+  "repetition": 1,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "local-authenticated-P08-R1-treatment-A2:7d3e59af-e61a-4475-8c9c-d899e59c691e:delegation"
+    ],
+    "delegationResultEventIds": [
+      "local-authenticated-P08-R1-treatment-A2:4716a6df-5f06-4727-99ef-5d32e96a0855:delegation"
+    ],
+    "specialistToolCallEventIds": [
+      "local-authenticated-P08-R1-treatment-A2:12d85264-da3f-42f0-8499-8a12916e7770:tool",
+      "local-authenticated-P08-R1-treatment-A2:791fef25-f906-4343-b92a-27cf89ef7eed:tool",
+      "local-authenticated-P08-R1-treatment-A2:a869d282-dbe9-48a7-ad4c-314eeafae650:tool",
+      "local-authenticated-P08-R1-treatment-A2:03995f77-98c3-4c90-9512-220a587b8e77:tool",
+      "local-authenticated-P08-R1-treatment-A2:9b92c3b1-18ec-49a5-a774-74925e3fcc2c:tool",
+      "local-authenticated-P08-R1-treatment-A2:470ea335-611c-437d-a1f2-ce534bd8aba1:tool",
+      "local-authenticated-P08-R1-treatment-A2:6876ce2b-d444-44c2-9a70-02c9613f46bb:tool",
+      "local-authenticated-P08-R1-treatment-A2:be9483de-b7bd-48a6-8176-f046861980fc:tool",
+      "local-authenticated-P08-R1-treatment-A2:73b07036-9a0d-424d-84ce-5ef330e3ae0c:tool",
+      "local-authenticated-P08-R1-treatment-A2:3ae01ea0-fbb4-463a-a5b2-b934f6dabf5f:tool",
+      "local-authenticated-P08-R1-treatment-A2:665f5a97-48b7-4c6e-89d2-de7f923f09a2:tool",
+      "local-authenticated-P08-R1-treatment-A2:e06e6a90-83b6-4071-a7bb-4337b88a5db8:tool",
+      "local-authenticated-P08-R1-treatment-A2:73eedd5f-3be8-467e-84cd-31ff8544c30e:tool",
+      "local-authenticated-P08-R1-treatment-A2:5e5f0838-74b7-4088-acfb-df50d8e16d2b:tool",
+      "local-authenticated-P08-R1-treatment-A2:59a6da8c-07a3-4c42-bfcb-985e9df5fbb7:tool",
+      "local-authenticated-P08-R1-treatment-A2:3e0d1675-ba75-44be-a9d1-bc84d5fb5645:tool",
+      "local-authenticated-P08-R1-treatment-A2:170a4c6a-3b5d-43ee-b286-82bfe89f589c:tool"
+    ],
+    "specialistToolResultEventIds": [
+      "local-authenticated-P08-R1-treatment-A2:dd9bc507-8b17-4e8b-9836-89ceca720f27:tool",
+      "local-authenticated-P08-R1-treatment-A2:b38a6bd0-2da9-4a7d-b6a6-fd8a2a26ba3b:tool",
+      "local-authenticated-P08-R1-treatment-A2:6a529fd9-e5a6-44f1-a958-49c2dc3eda9d:tool",
+      "local-authenticated-P08-R1-treatment-A2:7ed48a4b-c0d3-47ea-a341-1f2ed1ff0401:tool",
+      "local-authenticated-P08-R1-treatment-A2:b2025aa7-22ee-4d99-987b-682c3607fe81:tool",
+      "local-authenticated-P08-R1-treatment-A2:d528dff9-1bfb-40dc-a0c4-1a92d35c4ef0:tool",
+      "local-authenticated-P08-R1-treatment-A2:362a9d9a-377d-4824-91db-9159eeabef9c:tool",
+      "local-authenticated-P08-R1-treatment-A2:a4d93e88-c6ee-47f0-b8ba-b759ab02d05e:tool",
+      "local-authenticated-P08-R1-treatment-A2:977cdaf7-5214-4c84-a3bd-f8d5041cbe51:tool",
+      "local-authenticated-P08-R1-treatment-A2:63f057f1-1a7b-4c32-a2c4-bb33148638e4:tool",
+      "local-authenticated-P08-R1-treatment-A2:c6739355-0dcf-404c-95db-9065c7533062:tool",
+      "local-authenticated-P08-R1-treatment-A2:c1363ddf-f46c-4cd9-921c-9a6433a4ef1e:tool",
+      "local-authenticated-P08-R1-treatment-A2:60b4658a-a79a-4587-bf72-c1c223f86ab9:tool",
+      "local-authenticated-P08-R1-treatment-A2:4151992e-30c9-432e-8d9b-da312fe1bbcc:tool",
+      "local-authenticated-P08-R1-treatment-A2:a49964b2-0d20-4236-98c2-d3aee8c482db:tool",
+      "local-authenticated-P08-R1-treatment-A2:92add73d-02f4-4526-bddc-4c8799965386:tool",
+      "local-authenticated-P08-R1-treatment-A2:ed1fc2c8-0afb-4eb6-bc57-342f9ef16393:tool"
+    ],
+    "specialistFileChangeEventIds": [
+      "local-authenticated-P08-R1-treatment-A2:file:7be1f43d-7550-4c53-8bad-cf2b530a5c0a:1:e7cb0a64d47b1f6f"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 2,
+    "position": 1,
+    "attempt": 2,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "42f7d602-f6fd-4629-991f-4091a0a13e5c"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "4a9d61b0-02d9-4189-a040-4c28f4be59a0",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "claude-opus-4.8"
+    },
+    "specialist": {
+      "sessionId": "fe4dfa6b-0224-447c-8939-6bdb558e2828",
+      "requestedModel": "claude-haiku-4.5",
+      "observedModel": "claude-haiku-4.5"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "e1486b5c07ed816e377c65e91458187f0af4334c",
+    "terminalCommitSha": "f144e46b78ba5ede1bbb12fbdf242273afd34765",
+    "artifactBundleSha256": "1e5b6188faac419137e31a9a233f18faf67aced813a3947ceab0179498ee5992"
+  },
+  "workspace": {
+    "identifier": "P08/cirvine-msft-friendly-robot",
+    "branch": "cirvine-msft-friendly-robot"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:59:25.817Z",
+    "promptSentAt": "2026-07-29T07:59:33.982Z",
+    "completedAt": "2026-07-29T08:17:26.474Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": "P08-R1-treatment-A1",
+    "retryId": null
+  }
+}
