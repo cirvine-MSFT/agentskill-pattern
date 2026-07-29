@@ -1,0 +1,11 @@
+{
+  "blindId": "B0018",
+  "function": 5,
+  "codeQuality": 5,
+  "integration": 5,
+  "recognizability": 3,
+  "composition": 3,
+  "cleanliness": 5,
+  "overall": 4.33,
+  "rationale": "All deterministic checks pass. Export filtering, numeric ordering, UTF-8 output, missing-directory creation, destination replacement, storage preservation, invalid-status atomicity, stable summaries, and banner separation are directly implemented and tested. The dedicated atomic JSON helper uses a unique sibling temporary file with cleanup in finally, and the command rejects exporting over task storage. Help and fixture tests cover the required paths without weakening existing behavior. The banner repeatedly exposes EXPORT and is unmistakably labeled, but its mixed rows of symbols and repeated words only weakly depict an export operation. Spacing and line patterns are serviceable yet visually noisy and less deliberate than a unified framed design. The diff is focused and free of unrelated artifacts."
+}

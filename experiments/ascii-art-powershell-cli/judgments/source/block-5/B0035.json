@@ -1,0 +1,11 @@
+{
+  "blindId": "B0035",
+  "function": 5,
+  "codeQuality": 4,
+  "integration": 5,
+  "recognizability": 3,
+  "composition": 3,
+  "cleanliness": 5,
+  "overall": 4.17,
+  "rationale": "The due-date feature is complete and deterministic checks confirm strict date validation, legacy compatibility, cutoff-relative overdue labeling, ordering, completed-task filtering, banner integration, and unchanged storage on invalid input. Date parsing is centralized, invariant, and independent of the machine clock. The report preserves the useful task fields and help and tests cover normal, invalid, JSON, text, and compatibility paths. Code is generally clear, although stored due dates are reparsed during reporting and one malformed legacy due value would fail the whole report; the pipeline also embeds several responsibilities in one command block. The banner is readable and repeatedly emphasizes DUE, but its hard-coded date is unrelated to the supplied cutoff and can mislead users. Uneven text widths and generic status lines weaken composition, making it resemble a simple boxed notice rather than a polished subject-specific illustration. The diff is otherwise focused and clean."
+}

@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0040",
+  "judgeBlock": 4,
+  "judgeSessionId": "312c3232-6246-43a8-bb1e-d27876a67011",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P07-R3-treatment-A1",
+  "sourceArtifactBundleSha256": "07b80d96fbae48f59378a66b6db55543e2e24366aca5c1253848667c0c4ad0e2",
+  "blindBundleSha256": "b8f7dde3686fbc9065cfcbb979f9b62e10c888f441f2fbb81628065f57e66a85",
+  "scores": {
+    "function": 3,
+    "codeQuality": 4,
+    "integration": 3,
+    "recognizability": 4,
+    "composition": 3,
+    "cleanliness": 4
+  },
+  "overall": 3.5,
+  "rationale": "Tag normalization, de-duplication, AND filtering, invalid-input atomicity, JSON cleanliness, and banner integration are all evidenced as working. However, the deterministic legacy-task mutation check fails, which is a material compatibility defect in an explicitly required path and lowers both function and integration. The helpers are sensibly factored and the CLI/help/tests are broadly coherent, though the generalized repeatable-option parser adds some complexity. The framed banner makes TAGS immediately visible at terminal size, but repeated labels and alternating blank rows produce a basic, somewhat mechanical composition rather than a polished subject illustration. The diff is focused and tamper checks pass.",
+  "duplicateOf": null
+}

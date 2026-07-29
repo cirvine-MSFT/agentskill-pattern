@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0030",
+  "judgeBlock": 6,
+  "judgeSessionId": "088841aa-27bd-4eb8-a807-f065867c5c50",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P05-R1-treatment-A1",
+  "sourceArtifactBundleSha256": "88835db0a6833387af4faa5e782eb72ec1165c3c8eca896cd3c1d2776e1ce49b",
+  "blindBundleSha256": "6f67470e5398453349afa0b49a605cc1f92363798875a7596b75a68d117c5674",
+  "scores": {
+    "function": 4,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 2,
+    "composition": 3,
+    "cleanliness": 5
+  },
+  "overall": 3.83,
+  "rationale": "All deterministic checks pass, including exact changed/already-completed ID sets, duplicate and malformed input rejection, unknown-ID atomicity, idempotent repeat behavior, and banner-free JSON. Validation occurs before mutation, and the command uses the existing atomic store writer. The code is readable and preserves input order, although repeated array concatenation and an unconditional write when every task is already complete are minor rough edges. Help and focused tests are comprehensive and preserve existing commands. The banner contains BULK but reads as a generic configuration/data protocol listing rather than visibly representing bulk task completion, so subject recognizability is weak. Equal-weight technical lines provide consistency but little hierarchy or focal structure. The diff remains tightly scoped.",
+  "duplicateOf": null
+}

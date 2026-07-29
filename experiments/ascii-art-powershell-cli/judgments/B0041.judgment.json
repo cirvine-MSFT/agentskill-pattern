@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0041",
+  "judgeBlock": 5,
+  "judgeSessionId": "61f2a399-901b-4496-b426-fada12803468",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P07-R3-control-A1",
+  "sourceArtifactBundleSha256": "6df591722e70277917dc445e705853d2b3a8d1a882b5cbbee1e6b508799fe249",
+  "blindBundleSha256": "10b1565a04383b717e599a45d74ab4c8fbea1824b9c86be108b48a70057ab019",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "The implementation covers normalized lowercase tags, validation, de-duplication, sorting, add and remove mutation, repeatable and comma-separated AND filters, legacy tasks, JSON output, and atomic invalid-input behavior. Deterministic checks pass every functional and art assertion, while fixture tests exercise conflicting options, legacy records, banner placement, and compound filters. The parser extension for selected repeatable options is coherent and reusable, and tag normalization is centralized. Code quality is slightly reduced by normalizing existing stored tags through the same strict validator, which could make otherwise readable legacy data fail if old tags do not match the new grammar, and by the manual AND loop where a set comparison could be clearer. The banner is immediately recognizable, balanced, and polished, with TAGS as the focal point and concise add/remove/filter context. The diff is focused and clean.",
+  "duplicateOf": null
+}

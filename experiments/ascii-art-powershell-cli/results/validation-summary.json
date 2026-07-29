@@ -1,0 +1,49 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "judgmentProvenanceValidation": {
+    "exitCode": 0,
+    "status": "pass",
+    "message": "PASS: 49 judgments derived from pinned vendored sources (manifest 56637bdbc1df505d4f4e0d14591af9c6713aa704a9209c8cfb80ba27593839ae)",
+    "sourceManifestPath": "judgments/source/manifest.json",
+    "sourceManifestSha256": "56637bdbc1df505d4f4e0d14591af9c6713aa704a9209c8cfb80ba27593839ae"
+  },
+  "standardValidation": {
+    "exitCode": 0,
+    "status": "pass",
+    "message": "PASS: preregistered dataset design is complete and internally consistent"
+  },
+  "strictCompletenessValidation": {
+    "exitCode": 1,
+    "status": "expected_incomplete",
+    "unexpectedFailures": 0,
+    "expectedGateFailures": [
+      "FAIL: P06-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P08-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P04-R1-treatment completeness gate requires one selected included run",
+      "FAIL: P04-R2-treatment completeness gate requires one selected included run",
+      "FAIL: P08-R2-control completeness gate requires one selected included run",
+      "FAIL: P09-R2-control completeness gate requires one selected included run",
+      "FAIL: P08-R2-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R2-treatment completeness gate requires one selected included run",
+      "FAIL: P04-R3-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R3-treatment completeness gate requires one selected included run",
+      "FAIL: P08-R3-treatment completeness gate requires one selected included run",
+      "FAIL: P09-R3-control completeness gate requires one selected included run",
+      "FAIL: P08-R3-control completeness gate requires one selected included run"
+    ]
+  },
+  "generatedSummary": {
+    "path": "results/summary.json",
+    "allowIncomplete": true,
+    "counts": {
+      "scheduled": 60,
+      "runAttempts": 82,
+      "excludedAttempts": 36,
+      "selectedRuns": 46,
+      "judgments": 45,
+      "missingSchedules": 14
+    },
+    "inferentialOutput": "withheld"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0015",
+  "judgeBlock": 3,
+  "judgeSessionId": "9648435b-5b13-4dad-a703-f1f6aeccd11b",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P03-R2-control-A1",
+  "sourceArtifactBundleSha256": "3811124240291b84900adb00576b4715b5364906d3db6ba4106ec8e3aeb6f79a",
+  "blindBundleSha256": "890ad03b0ead0cf3dc20ffb08dfa551ba2ee12602f24baef0d4454fd90144ea0",
+  "scores": {
+    "function": 3,
+    "codeQuality": 4,
+    "integration": 4,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 4
+  },
+  "overall": 4.17,
+  "rationale": "Normal export behavior is strong and deterministic checks confirm filtering, numeric ordering, invalid-status safety, banner integration, and art constraints. The shared atomic JSON writer is clear, reusable, UTF-8 safe, and cleans temporary files. However, export-json does not reject a destination equal to the selected task data file. In that case it can replace task storage with the filtered export, directly violating the requirement to never alter task storage; the fixture tests omit this important collision case. Status input is also normalized to lowercase, accepting values outside the documented spellings. Help and output conventions are otherwise integrated well. The banner is exceptionally clear at terminal size: a balanced frame, centered TASKFORGE/EXPORT hierarchy, concise task-data and JSON messaging, consistent width, and effective whitespace make the subject immediately recognizable. The diff is focused, with only a modest shared-writer refactor.",
+  "duplicateOf": null
+}

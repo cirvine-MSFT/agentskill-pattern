@@ -17,6 +17,7 @@ Requires Windows_NT, PowerShell 7+, and Node.js 20+. Windows job objects are the
 pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\scripts\preflight.ps1
 node .\experiments\ascii-art-powershell-cli\scripts\randomize.js --check
 node .\experiments\ascii-art-powershell-cli\scripts\create-judge-assignments.js --check
+node .\experiments\ascii-art-powershell-cli\scripts\import-judgments.js --check
 node .\experiments\ascii-art-powershell-cli\scripts\validate-dataset.js
 node .\experiments\ascii-art-powershell-cli\scripts\tests\run-tests.js
 pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\scripts\tests\Run-AcceptanceHarness.Tests.ps1
@@ -73,3 +74,11 @@ path-style variants, and decoded case variants without interpreting code, percen
 malformed escapes remain literal.
 
 See `protocol.md` for the immutable preregistration, telemetry definitions, exclusions, judging, and analysis.
+
+The completed run vendors all 49 exact source-score Git blobs under
+`judgments/source/block-N/`. Its canonical manifest records source commit/tree IDs,
+authenticated judge session/model evidence, counts, byte lengths, and per-file
+SHA-256/Git blob hashes. `import-judgments.js --check` verifies that provenance,
+binding joins and hashes, score arithmetic, and byte-exact derivation of every
+`*.judgment.json`; `reproduce-results.js` runs this check before dataset validation
+and summary generation.

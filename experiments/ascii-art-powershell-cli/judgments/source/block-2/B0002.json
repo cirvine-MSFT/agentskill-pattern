@@ -1,0 +1,11 @@
+{
+  "blindId": "B0002",
+  "function": 5,
+  "codeQuality": 4,
+  "integration": 3,
+  "recognizability": 5,
+  "composition": 4,
+  "cleanliness": 5,
+  "overall": 4.33,
+  "rationale": "All deterministic functional checks pass: search is required-query, literal, case-insensitive across title and description, supports status filtering, sorts stably, provides useful empty text output, keeps JSON machine-readable, and places the banner before text results. The implementation is direct and idiomatic, with focused tests for literal punctuation, case folding, status filtering, missing and invalid arguments, output modes, help, and preserved commands. However, deterministic art checks fail because lines 3, 5, and 11 contain forbidden lowercase characters, so the integrated asset does not satisfy the explicit deliverable contract. Visually, the banner is highly recognizable as a search interface, with FIND, a search field, results area, status, and clear framing. Its repeated underscores create coherent structure, though line lengths and internal alignment vary slightly. The source diff remains focused and clean."
+}

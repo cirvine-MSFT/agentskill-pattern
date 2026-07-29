@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0028",
+  "judgeBlock": 4,
+  "judgeSessionId": "312c3232-6246-43a8-bb1e-d27876a67011",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P05-R2-treatment-A1",
+  "sourceArtifactBundleSha256": "88ceb2cb442a761e65a7d563bba135b0392f3eab4bd0bbf222e41c69512a8252",
+  "blindBundleSha256": "95bf93f6f8ae96d25214a7e4eb985760522439da375c78a6c625522ef62dbcb3",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 2,
+    "composition": 2,
+    "cleanliness": 5
+  },
+  "overall": 3.83,
+  "rationale": "All deterministic behavior passes: parsing rejects malformed and duplicate IDs, unknown IDs leave storage byte-identical, successful changes use the existing atomic store writer, summaries preserve exact ID sets, repeated calls are idempotent, and JSON/text output conventions are respected. The implementation is clear and reasonably factored, with focused tests and help integration; reading the banner before the write is a minor sequencing choice but not a demonstrated defect. The banner satisfies mechanical constraints and contains BULK, yet it is mostly a list of unrelated operational labels, including upload, delete, transfer, archive, and formatting text. It does not form a recognizable bulk-completion image or strong visual hierarchy, and uneven line concepts make the composition feel like filler. The diff is focused and clean.",
+  "duplicateOf": null
+}

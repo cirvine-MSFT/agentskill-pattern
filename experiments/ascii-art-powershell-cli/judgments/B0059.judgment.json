@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0059",
+  "judgeBlock": 5,
+  "judgeSessionId": "61f2a399-901b-4496-b426-fada12803468",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P10-R1-treatment-A2",
+  "sourceArtifactBundleSha256": "3ba2bf86bd0ddc9ca97ace4a62307d0142d54ceb871bdc980293731e13687a85",
+  "blindBundleSha256": "b611f9ec0504a70e64f61a78fd992ba255df2ba812d8ed45e183bc30505abfa4",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 3,
+    "composition": 3,
+    "cleanliness": 4
+  },
+  "overall": 4,
+  "rationale": "The template feature is comprehensive: save, list, remove, companion persistence, case-insensitive uniqueness and lookup, overrides, validation, JSON output, alphabetical listing, help, and failure atomicity are all implemented and confirmed by deterministic functional checks. Shared store, lookup, validation, and banner helpers keep the substantial change understandable, although command parsing and nested action handling make the main script considerably more complex. Atomic writes are centralized and temporary files are cleaned. The banner clearly says TEMPLATE and presents a readable panel, but deterministic art validation reports forbidden lowercase characters on most lines, so it does not meet the explicit alphabet requirement. Visually it is explanatory prose rather than strongly recognizable ASCII art, with acceptable but plain hierarchy. The diff remains relevant, though it also relocates fixture scratch output without a direct feature need.",
+  "duplicateOf": null
+}

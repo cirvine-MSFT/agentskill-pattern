@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0035",
+  "judgeBlock": 5,
+  "judgeSessionId": "61f2a399-901b-4496-b426-fada12803468",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P06-R3-treatment-A2",
+  "sourceArtifactBundleSha256": "d842870ae936d1935f705532c24bb3f0014849abb34cd0960594738b4ef3a746",
+  "blindBundleSha256": "d2cb646869f283b72708cb8ac71eacea1d7a8fb2cab4af40d584f85b95658a0f",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 3,
+    "composition": 3,
+    "cleanliness": 5
+  },
+  "overall": 4.17,
+  "rationale": "The due-date feature is complete and deterministic checks confirm strict date validation, legacy compatibility, cutoff-relative overdue labeling, ordering, completed-task filtering, banner integration, and unchanged storage on invalid input. Date parsing is centralized, invariant, and independent of the machine clock. The report preserves the useful task fields and help and tests cover normal, invalid, JSON, text, and compatibility paths. Code is generally clear, although stored due dates are reparsed during reporting and one malformed legacy due value would fail the whole report; the pipeline also embeds several responsibilities in one command block. The banner is readable and repeatedly emphasizes DUE, but its hard-coded date is unrelated to the supplied cutoff and can mislead users. Uneven text widths and generic status lines weaken composition, making it resemble a simple boxed notice rather than a polished subject-specific illustration. The diff is otherwise focused and clean.",
+  "duplicateOf": null
+}

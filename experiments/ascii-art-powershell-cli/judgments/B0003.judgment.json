@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0003",
+  "judgeBlock": 3,
+  "judgeSessionId": "9648435b-5b13-4dad-a703-f1f6aeccd11b",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P01-R2-control-A1",
+  "sourceArtifactBundleSha256": "08c2633c43efbf572fc961a9a8ce6e81c7a23b76e71d2a4bd400b20a71fca226",
+  "blindBundleSha256": "724f65ed2c9ddc7e8caaeb842a0075cfaf804920852e4dc5b9ef47bee0720414",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "The search command correctly requires a query, performs ordinal case-insensitive literal matching across title and description, applies the optional status filter, sorts by numeric ID, and provides stable empty text and array JSON results. Deterministic checks confirm title/description search, clean JSON, filtering, empty output, exact banner placement, and art constraints. Help and tests integrate the feature without changing persistence. The implementation is direct and readable, though it assumes stored title and description properties are non-null strings and relies on PowerShell's case-insensitive membership behavior for status validation rather than explicitly enforcing documented spellings. The banner is immediately recognizable and unusually informative: FIND TASKS FAST is prominent, TITLE + DESCRIPTION and status lines explain behavior, RESULTS BELOW guides the eye, and the consistent double-bar frame, spacing, and centered hierarchy are polished at terminal size. The diff is focused and clean.",
+  "duplicateOf": null
+}

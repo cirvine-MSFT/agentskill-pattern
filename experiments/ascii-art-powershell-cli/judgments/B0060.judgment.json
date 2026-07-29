@@ -1,0 +1,21 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "blindId": "B0060",
+  "judgeBlock": 6,
+  "judgeSessionId": "088841aa-27bd-4eb8-a807-f065867c5c50",
+  "judgeModel": "gpt-5.6-sol",
+  "runId": "P10-R1-control-A1",
+  "sourceArtifactBundleSha256": "28f64282b39563f4759852273d33f67979cdbf4da4f41ed70e41e7cdfe17df16",
+  "blindBundleSha256": "5955b5397e4f19fde8fd4421756bc32e6bbbdfcfce975c2ef790cc414b83048f",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "All deterministic checks pass for persistence, stable alphabetical listing, case-insensitive lookup and removal, explicit overrides, missing-template safety, and banner behavior. The sibling template store is derived consistently from the selected data file and written through a reusable atomic JSON helper. Validation occurs before writes, existing task data remains compatible, and JSON/text conventions plus help are fully integrated. The implementation is well factored across store, name, lookup, and banner helpers; minor duplication between task and template readers and silent temporary-file cleanup keep it just below exceptional code quality. The banner has a strong centered frame, prominent TASKFORGE TEMPLATE SYSTEM title, clear action vocabulary, and balanced whitespace. Tests are focused and the diff contains only relevant source, asset, help, and fixture-test changes.",
+  "duplicateOf": null
+}

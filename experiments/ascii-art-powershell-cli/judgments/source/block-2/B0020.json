@@ -1,0 +1,11 @@
+{
+  "blindId": "B0020",
+  "function": 2,
+  "codeQuality": 3,
+  "integration": 2,
+  "recognizability": 5,
+  "composition": 4,
+  "cleanliness": 4,
+  "overall": 3.33,
+  "rationale": "The deterministic evaluation reports major failures in supported config set, configured defaults, and config get; only explicit data-file override, JSON list cleanliness, banner display, and invalid-write atomicity pass. Because setting and retrieving supported keys and applying both defaults are central requirements, the feature is only partially usable. The code has useful path, config parsing, boolean parsing, and atomic-write helpers, but the command interface and default application do not match the required behavior under evaluation. It also introduces extra --no-json and valued --json behavior, increasing complexity beyond the prompt. Help and tests are present, yet they do not prevent the observed integration failures. The banner itself is strong and recognizable, with a clear CONFIG CONTROL PANEL title, settings rows, action labels, balanced spacing, and consistent framing. The diff is otherwise focused and the art contract passes."
+}
