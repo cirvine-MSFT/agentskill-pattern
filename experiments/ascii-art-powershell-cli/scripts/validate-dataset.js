@@ -18,6 +18,11 @@ const {
   walkFiles
 } = require('./lib');
 const { authenticateArtifactBundle, validateBlindContent } = require('./artifact-bundles');
+const {
+  expectedUnjudgeable,
+  isExpectedUnjudgeable,
+  validateRuntimeMetadata
+} = require('./runtime-assignments');
 const { validateTelemetryConsistency } = require('./telemetry-integrity');
 const { validateSchema } = require('./validate-schema');
 
@@ -27,6 +32,14 @@ const errors = [];
 const prompts = readJson(path.join(root, 'prompts.json'));
 const schedule = readJson(path.join(root, 'design', 'randomization.json'));
 const assignments = readJson(path.join(root, 'design', 'judge-assignments.json'));
+const runtimeAssignmentsPath = path.join(dataRoot, 'design', 'assignments-runtime.json');
+const runtimeSummaryPath = path.join(dataRoot, 'results', 'blinding-summary.json');
+const runtimeAssignments = fs.existsSync(runtimeAssignmentsPath)
+  ? readJson(runtimeAssignmentsPath)
+  : null;
+const runtimeSummary = fs.existsSync(runtimeSummaryPath)
+  ? readJson(runtimeSummaryPath)
+  : null;
 const protocol = fs.readFileSync(path.join(root, 'protocol.md'), 'utf8');
 const rawRoot = path.join(dataRoot, 'raw');
 const artifactRoot = path.join(dataRoot, 'artifacts');
@@ -549,7 +562,7 @@ const selectedBySchedule = new Map(observations.map((scheduledItem) => [
 ]));
 const selectedManifests = [...selectedBySchedule.values()].filter(Boolean);
 const requireComplete = Boolean(args['require-complete']) ||
-  fs.existsSync(path.join(dataRoot, 'results', 'collection-summary.json'));
+  (!runtimeAssignments && fs.existsSync(path.join(dataRoot, 'results', 'collection-summary.json')));
 if (requireComplete) {
   observations.forEach((scheduledItem) => {
     check(
@@ -558,8 +571,14 @@ if (requireComplete) {
     );
   });
 }
-const expectedJudged = judged.filter((assignment) => selectedBySchedule.has(assignment.scheduleId) &&
-  selectedBySchedule.get(assignment.scheduleId));
+const runtimeJudged = runtimeAssignments
+  ? runtimeAssignments.blocks.flatMap((block) => (
+    block.artifacts.map((item) => ({ ...item, block: block.block }))
+  ))
+  : null;
+const expectedJudged = runtimeJudged || judged.filter((assignment) => (
+  selectedBySchedule.has(assignment.scheduleId) && selectedBySchedule.get(assignment.scheduleId)
+));
 
 const artifactJson = walkFiles(path.join(dataRoot, 'artifacts')).filter((file) => file.endsWith('.json'));
 const artifactObjects = artifactJson.map(readJson);
@@ -586,6 +605,7 @@ preExecutionManifests.forEach((manifest) => {
   );
 });
 const authenticatedArtifacts = new Map();
+const observedUnjudgeable = [];
 if (artifactJson.length > 0) {
   validateRecords(artifactManifests, 'artifacts');
   check(
@@ -616,22 +636,66 @@ if (artifactJson.length > 0) {
             authenticateArtifactBundle(artifactRoot, artifact, manifest, prompt, deterministicRecord)
           );
         } catch (error) {
-          errors.push(error.message);
+          let candidateText = '';
+          try {
+            const candidatePath = resolveContainedPath(
+              artifactRoot,
+              artifact.bundlePath,
+              `${artifact.runId} source artifact candidate path`
+            );
+            candidateText = fs.readFileSync(candidatePath, 'utf8');
+          } catch (readError) {
+            errors.push(readError.message);
+          }
+          if (runtimeAssignments && isExpectedUnjudgeable(manifest, error, candidateText)) {
+            observedUnjudgeable.push({ ...expectedUnjudgeable });
+          } else {
+            errors.push(error.message);
+          }
         }
       }
     }
   });
 }
 
-if (blindBundles.length > 0) {
+if (runtimeAssignments) {
+  check(Boolean(runtimeSummary), 'runtime assignments require results/blinding-summary.json');
+  if (runtimeSummary) {
+    const selectedScheduleIds = new Set(selectedManifests.map((manifest) => manifest.scheduleId));
+    const authenticatedScheduleIds = new Set(selectedManifests
+      .filter((manifest) => authenticatedArtifacts.has(manifest.runId))
+      .map((manifest) => manifest.scheduleId));
+    const runtimeValidation = validateRuntimeMetadata({
+      assignments,
+      runtimeAssignments,
+      summary: runtimeSummary,
+      selectedScheduleIds,
+      authenticatedScheduleIds,
+      observedUnjudgeable,
+      sourceAssignmentsSha256: sha256RawFile(path.join(root, 'design', 'judge-assignments.json')),
+      bindingBlindIds: blindBundles.map((binding) => binding.blindId)
+    });
+    runtimeValidation.errors.forEach((error) => errors.push(error));
+  }
+} else {
+  check(!runtimeSummary, 'blinding summary requires design/assignments-runtime.json');
+}
+
+if (blindBundles.length > 0 || runtimeAssignments) {
   validateRecords(blindBundles, 'blind-bundle');
   check(
     blindBundles.length === expectedJudged.length,
     `bound blind bundle dataset must contain ${expectedJudged.length} records for selected schedules, found ${blindBundles.length}`
   );
   check(new Set(blindBundles.map((item) => item.blindId)).size === blindBundles.length, 'bound blind bundle IDs must be unique');
+  expectedJudged.forEach((assignment) => {
+    check(
+      blindBundles.filter((binding) => binding.blindId === assignment.blindId).length === 1,
+      `${assignment.blindId} runtime assignment must have exactly one bound blind bundle`
+    );
+  });
   blindBundles.forEach((binding) => {
-    const assignment = judged.find((item) => item.blindId === binding.blindId);
+    const assignment = expectedJudged.find((item) => item.blindId === binding.blindId);
     const selected = selectedBySchedule.get(binding.scheduleId);
     const artifact = artifactManifests.find((item) => item.runId === binding.runId);
     check(Boolean(assignment), `${binding.blindId} bound blind bundle must have a preregistered assignment`);
@@ -668,9 +732,10 @@ if (blindBundles.length > 0) {
   });
 }
 
-const judgmentJson = walkFiles(path.join(dataRoot, 'judgments')).filter((file) => file.endsWith('.json'));
-const judgmentRecords = judgmentJson.map(readJson).filter((item) => item.protocolId && item.blindId && item.scores);
-if (judgmentJson.length > 0) {
+const judgmentJson = walkFiles(path.join(dataRoot, 'judgments'))
+  .filter((file) => file.endsWith('.judgment.json'));
+const judgmentRecords = judgmentJson.map(readJson);
+if (judgmentRecords.length > 0) {
   validateRecords(judgmentRecords, 'judgment');
   check(
     judgmentRecords.length === expectedJudged.length,
@@ -682,7 +747,7 @@ if (judgmentJson.length > 0) {
   );
   check(new Set(judgmentRecords.map((item) => item.blindId)).size === judgmentRecords.length, 'judgment blind IDs must be unique');
   judgmentRecords.forEach((judgment) => {
-    const assignment = judged.find((item) => item.blindId === judgment.blindId);
+    const assignment = expectedJudged.find((item) => item.blindId === judgment.blindId);
     const binding = blindBundles.find((item) => item.blindId === judgment.blindId);
     check(Boolean(assignment), `${judgment.blindId} must have a judge assignment`);
     if (assignment) {
@@ -699,16 +764,21 @@ if (judgmentJson.length > 0) {
     const expectedOverall = Math.round((scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length) * 100) / 100;
     check(Math.abs(judgment.overall - expectedOverall) < 1e-9, `${judgment.blindId} overall must equal the rounded arithmetic mean of dimension scores`);
   });
-  const sessionsByBlock = assignments.blocks.map((block) => {
+  const judgmentBlocks = runtimeAssignments ? runtimeAssignments.blocks : assignments.blocks;
+  const sessionsByBlock = judgmentBlocks.map((block) => {
     const blockJudgments = judgmentRecords.filter((item) => item.judgeBlock === block.block);
-    const expectedBlockArtifacts = block.artifacts.filter((item) => selectedBySchedule.get(item.scheduleId));
+    const expectedBlockArtifacts = runtimeAssignments
+      ? block.artifacts
+      : block.artifacts.filter((item) => selectedBySchedule.get(item.scheduleId));
     const sessionIds = new Set(blockJudgments.map((item) => item.judgeSessionId));
     check(blockJudgments.length === expectedBlockArtifacts.length, `judge block ${block.block} must contain exactly ${expectedBlockArtifacts.length} judgments for selected schedules`);
     check(sessionIds.size === (expectedBlockArtifacts.length > 0 ? 1 : 0), `non-empty judge block ${block.block} must use exactly one judge session`);
     return sessionIds.size === 1 ? [...sessionIds][0] : null;
   });
-  const expectedJudgeSessionCount = assignments.blocks.filter((block) => (
-    block.artifacts.some((item) => selectedBySchedule.get(item.scheduleId))
+  const expectedJudgeSessionCount = judgmentBlocks.filter((block) => (
+    runtimeAssignments
+      ? block.artifacts.length > 0
+      : block.artifacts.some((item) => selectedBySchedule.get(item.scheduleId))
   )).length;
   check(
     new Set(sessionsByBlock.filter(Boolean)).size === expectedJudgeSessionCount,

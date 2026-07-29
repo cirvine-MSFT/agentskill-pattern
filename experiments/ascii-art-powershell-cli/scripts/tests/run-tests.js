@@ -15,6 +15,7 @@ const {
   root,
   sha256,
   sha256File,
+  sha256RawFile,
   specialistModel,
   writeJson
 } = require('../lib');
@@ -25,6 +26,10 @@ const {
   canonicalVariants,
   sanitizedDeterministic
 } = require('../artifact-bundles');
+const {
+  expectedUnjudgeable,
+  validateRuntimeMetadata
+} = require('../runtime-assignments');
 const { validateSchema } = require('../validate-schema');
 
 const scriptRoot = path.join(root, 'scripts');
@@ -1081,6 +1086,125 @@ try {
   const positive = createDataset(positiveDirectory);
   let result = validate(positiveDirectory);
   assert.strictEqual(result.status, 0, result.stderr);
+
+  const runtimeAssignments = readJson(path.join(root, 'design', 'assignments-runtime.json'));
+  const runtimeSummary = readJson(path.join(root, 'results', 'blinding-summary.json'));
+  const missingScheduleIds = new Set(runtimeSummary.missingScheduleIds);
+  const selectedScheduleIds = new Set(assignments.blocks
+    .flatMap((block) => block.artifacts)
+    .filter((assignment) => (
+      !assignment.duplicateOfBlindId && !missingScheduleIds.has(assignment.scheduleId)
+    ))
+    .map((assignment) => assignment.scheduleId));
+  const authenticatedScheduleIds = new Set([...selectedScheduleIds]
+    .filter((scheduleId) => scheduleId !== expectedUnjudgeable.scheduleId));
+  const runtimeValidationArguments = {
+    assignments,
+    runtimeAssignments,
+    summary: runtimeSummary,
+    selectedScheduleIds,
+    authenticatedScheduleIds,
+    observedUnjudgeable: [{ ...expectedUnjudgeable }],
+    sourceAssignmentsSha256: sha256RawFile(path.join(root, 'design', 'judge-assignments.json')),
+    bindingBlindIds: runtimeAssignments.blocks
+      .flatMap((block) => block.artifacts)
+      .map((assignment) => assignment.blindId)
+  };
+  const runtimeValidation = validateRuntimeMetadata(runtimeValidationArguments);
+  assert.deepStrictEqual(runtimeValidation.errors, []);
+  const runtimeRows = runtimeAssignments.blocks.flatMap((block) => block.artifacts);
+  assert.strictEqual(runtimeRows.length, 49);
+  assert.strictEqual(runtimeRows.filter((item) => !item.duplicateOfBlindId).length, 45);
+  assert.strictEqual(runtimeRows.filter((item) => item.duplicateOfBlindId).length, 4);
+  assert.deepStrictEqual(
+    runtimeAssignments.blocks.map((block) => block.artifacts.length),
+    [9, 9, 7, 7, 8, 9]
+  );
+
+  function assertRuntimeMutationFails(mutator, expected) {
+    const mutated = structuredClone(runtimeAssignments);
+    mutator(mutated);
+    const validation = validateRuntimeMetadata({
+      ...runtimeValidationArguments,
+      runtimeAssignments: mutated
+    });
+    assert.ok(validation.errors.some((error) => error.includes(expected)), validation.errors.join('\n'));
+  }
+
+  const excludedAssignment = assignments.blocks[0].artifacts
+    .find((item) => item.blindId === 'B0043');
+  assertRuntimeMutationFails(
+    (mutated) => mutated.blocks[0].artifacts.splice(1, 0, excludedAssignment),
+    'exactly the recorded bindings'
+  );
+  assertRuntimeMutationFails(
+    (mutated) => { mutated.blocks[0].artifacts[0] = excludedAssignment; },
+    'exactly the recorded bindings'
+  );
+  assertRuntimeMutationFails(
+    (mutated) => {
+      [mutated.blocks[0].artifacts[0], mutated.blocks[0].artifacts[1]] =
+        [mutated.blocks[0].artifacts[1], mutated.blocks[0].artifacts[0]];
+    },
+    'exactly the recorded bindings'
+  );
+  assertRuntimeMutationFails(
+    (mutated) => { mutated.blocks[0].artifacts.shift(); },
+    'exactly the recorded bindings'
+  );
+  assert.ok(validateRuntimeMetadata({
+    ...runtimeValidationArguments,
+    observedUnjudgeable: []
+  }).errors.some((error) => error.includes('sole exact frozen scanner rejection')));
+  assert.ok(validateRuntimeMetadata({
+    ...runtimeValidationArguments,
+    observedUnjudgeable: [{
+      ...expectedUnjudgeable,
+      reason: `${expectedUnjudgeable.reason} weakened`
+    }]
+  }).errors.some((error) => error.includes('sole exact frozen scanner rejection')));
+  assert.ok(validateRuntimeMetadata({
+    ...runtimeValidationArguments,
+    observedUnjudgeable: [
+      { ...expectedUnjudgeable },
+      {
+        blindId: 'B0001',
+        scheduleId: 'P01-R3-control',
+        runId: 'P01-R3-control-A1',
+        candidatePhrase: 'unexpected',
+        reason: 'unrecorded scanner rejection'
+      }
+    ]
+  }).errors.some((error) => error.includes('sole exact frozen scanner rejection')));
+  assert.ok(validateRuntimeMetadata({
+    ...runtimeValidationArguments,
+    authenticatedScheduleIds: new Set(selectedScheduleIds)
+  }).errors.some((error) => error.includes('must remain rejected')));
+  assert.throws(
+    () => assertNoConditionRevealingProvenance(
+      'configured defaultJson should control output',
+      'B0022 frozen phrase regression'
+    ),
+    /condition-revealing provenance marker/
+  );
+
+  const savedJudgments = new Map(positive.judgments);
+  positive.judgments.clear();
+  positive.persist();
+  writeJson(
+    path.join(positiveDirectory, 'judgments', 'assignments-runtime.json'),
+    runtimeAssignments
+  );
+  result = validate(positiveDirectory);
+  assert.strictEqual(
+    result.status,
+    0,
+    `Non-judgment runtime metadata unexpectedly triggered score/session validation.\n${result.stderr}`
+  );
+  positive.judgments.clear();
+  savedJudgments.forEach((value, key) => positive.judgments.set(key, value));
+  positive.persist();
+
   assert.doesNotThrow(() => assertNoConditionRevealingProvenance({
     source: 'The control flow updates the session cache model and records a treatment plan.',
     output: 'Ask a specialist when normal task policy requires one.'
