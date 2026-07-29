@@ -1,0 +1,11 @@
+{
+  "blindId": "B0015",
+  "function": 3,
+  "codeQuality": 4,
+  "integration": 4,
+  "recognizability": 5,
+  "composition": 5,
+  "cleanliness": 4,
+  "overall": 4.17,
+  "rationale": "Normal export behavior is strong and deterministic checks confirm filtering, numeric ordering, invalid-status safety, banner integration, and art constraints. The shared atomic JSON writer is clear, reusable, UTF-8 safe, and cleans temporary files. However, export-json does not reject a destination equal to the selected task data file. In that case it can replace task storage with the filtered export, directly violating the requirement to never alter task storage; the fixture tests omit this important collision case. Status input is also normalized to lowercase, accepting values outside the documented spellings. Help and output conventions are otherwise integrated well. The banner is exceptionally clear at terminal size: a balanced frame, centered TASKFORGE/EXPORT hierarchy, concise task-data and JSON messaging, consistent width, and effective whitespace make the subject immediately recognizable. The diff is focused, with only a modest shared-writer refactor."
+}

@@ -129,10 +129,11 @@ Its immutable control is tag `experiment-control-v1` at
 `6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; its frozen treatment is tag
 `experiment-treatment-v1` at `ac0895c23c4c811cf10e5af5b42efcde12c14849`.
 The [completed benchmark report](../../experiments/ascii-art-powershell-cli/report.md)
-finds higher treatment credits and parent cumulative input, lower deterministic and
-blinded quality, and lower wall latency among available complete pairs. Fourteen of
-60 schedules are missing, primarily from model dispatch, so inference and
-significance claims were withheld. See the
+finds higher treatment total nano-AIU and parent cumulative input, lower
+deterministic and blinded quality, and lower wall latency among available complete
+pairs. Neither preregistered efficiency marker was reached. Fourteen of 60 schedules
+are missing, primarily from model dispatch, so inference and significance claims
+were withheld. See the
 [repository README](../../README.md#benchmark) and
 [observability and measurement](../agent-skill-pattern.md#observability-and-measurement)
 for how measured results will be distinguished from inferred claims when the benchmark

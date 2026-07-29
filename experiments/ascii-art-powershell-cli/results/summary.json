@@ -8,6 +8,37 @@
       "draws": 10000,
       "cluster": "promptId",
       "interval": "percentile 95%"
+    },
+    "preregisteredMaterialityMarkers": {
+      "source": "protocol.md#outcomes-and-analysis",
+      "markers": [
+        {
+          "outcome": "totalSessionNanoAiu",
+          "criterion": "treatment_percent_change_at_or_below",
+          "thresholdPercent": -10,
+          "intentToTreat": {
+            "observedPercentChange": 55.5490330004867,
+            "reached": false
+          },
+          "perProtocolSensitivity": {
+            "observedPercentChange": 53.59084438070263,
+            "reached": false
+          }
+        },
+        {
+          "outcome": "parentCumulativeInputTokens",
+          "criterion": "treatment_percent_change_at_or_below",
+          "thresholdPercent": -15,
+          "intentToTreat": {
+            "observedPercentChange": 53.93773499681524,
+            "reached": false
+          },
+          "perProtocolSensitivity": {
+            "observedPercentChange": 54.98575230019955,
+            "reached": false
+          }
+        }
+      ]
     }
   },
   "dataset": {

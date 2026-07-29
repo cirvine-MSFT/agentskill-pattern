@@ -1,0 +1,11 @@
+{
+  "blindId": "B0004",
+  "function": 5,
+  "codeQuality": 4,
+  "integration": 5,
+  "recognizability": 3,
+  "composition": 2,
+  "cleanliness": 5,
+  "overall": 4,
+  "rationale": "All deterministic checks pass: literal case-insensitive title and description matching, optional status filtering, stable numeric ordering, useful zero-match text, banner-free JSON, and exact banner placement. The implementation uses OrdinalIgnoreCase and IndexOf, which is a direct and robust way to guarantee literal matching, and it preserves existing command and persistence behavior with focused tests and help text. FIND and search terminology make the subject recognizable, but the banner resembles a flat configuration dump rather than deliberate ASCII art. It also says CASE=SENSITIVE_ON despite the feature being case-insensitive, weakening semantic clarity. Line lengths vary without a visual frame or hierarchy, so composition is functional but rough. The diff is focused and all cleanliness and tamper checks pass."
+}

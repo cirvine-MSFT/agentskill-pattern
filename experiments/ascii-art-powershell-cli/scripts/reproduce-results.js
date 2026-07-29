@@ -2,14 +2,14 @@
 'use strict';
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const {
   canonicalJson,
   parseArguments,
   readJson,
-  root
+  root,
+  sha256RawFile
 } = require('./lib');
 
 const args = parseArguments(process.argv.slice(2));
@@ -18,11 +18,18 @@ const judgeUsage = readJson(path.join(root, 'results', 'judge-usage.json'));
 const summaryPath = path.join(root, 'results', 'summary.json');
 const validationPath = path.join(root, 'results', 'validation-summary.json');
 const temporaryDirectory = args.check
-  ? fs.mkdtempSync(path.join(os.tmpdir(), 'ascii-benchmark-results-'))
+  ? fs.mkdtempSync(path.join(root, '.reproduce-results-'))
   : null;
 const generatedSummaryPath = args.check
   ? path.join(temporaryDirectory, 'summary.json')
   : summaryPath;
+
+function cleanup() {
+  if (temporaryDirectory) {
+    fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+}
+process.once('exit', cleanup);
 
 function run(script, extraArgs = []) {
   return spawnSync(process.execPath, [path.join(root, 'scripts', script), ...extraArgs], {
@@ -33,6 +40,11 @@ function run(script, extraArgs = []) {
 
 function lines(value) {
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+const judgmentProvenance = run('import-judgments.js', ['--check']);
+if (judgmentProvenance.status !== 0) {
+  throw new Error(`Judgment provenance validation failed:\n${judgmentProvenance.stderr}`);
 }
 
 const standard = run('validate-dataset.js');
@@ -96,6 +108,13 @@ for (const scope of ['intentToTreat', 'perProtocol']) {
 
 const validationSummary = {
   protocolId: collection.protocolId,
+  judgmentProvenanceValidation: {
+    exitCode: judgmentProvenance.status,
+    status: 'pass',
+    message: lines(judgmentProvenance.stdout)[0],
+    sourceManifestPath: 'judgments/source/manifest.json',
+    sourceManifestSha256: sha256RawFile(path.join(root, 'judgments', 'source', 'manifest.json'))
+  },
   standardValidation: {
     exitCode: standard.status,
     status: 'pass',
@@ -134,7 +153,5 @@ if (args.check) {
 }
 compareOrWrite(validationPath, validationSummary);
 
-if (temporaryDirectory) {
-  fs.rmSync(temporaryDirectory, { recursive: true, force: true });
-}
+cleanup();
 console.log(`${args.check ? 'PASS' : 'WROTE'}: validated incomplete descriptive results`);

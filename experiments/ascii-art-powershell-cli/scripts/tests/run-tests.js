@@ -1745,6 +1745,15 @@ try {
   assert.strictEqual(binary.completeness.status, 'complete');
   assert.strictEqual(binary.completeness.inferentialOutput, 'available');
   assert.strictEqual(binary.promptClusteredBootstrap95.status, 'available');
+  const materialityMarkers = summary.analysis.preregisteredMaterialityMarkers.markers;
+  assert.deepStrictEqual(
+    materialityMarkers.map(({ outcome, thresholdPercent }) => ({ outcome, thresholdPercent })),
+    [
+      { outcome: 'totalSessionNanoAiu', thresholdPercent: -10 },
+      { outcome: 'parentCumulativeInputTokens', thresholdPercent: -15 }
+    ]
+  );
+  assert.ok(materialityMarkers.every((marker) => marker.intentToTreat.reached === false));
   assert.ok(summary.intentToTreat.secondaryTelemetry.treatment.models[`${'specialist'}:${specialistModel}`].cachedTokens);
   assert.strictEqual(summary.intentToTreat.secondaryTelemetry.treatment.exposedTools.write_file, 30);
   assert.strictEqual(summary.intentToTreat.secondaryTelemetry.control.toolEvents.view.calls, 30);
@@ -2097,7 +2106,75 @@ try {
     properties: { x: { type: 'integer' } }
   }).length > 0);
 
-  console.log(`PASS: ${cases.length} fixture integrity negatives, 6 pre-execution negatives, excluded positives, and analysis regressions`);
+  const provenanceDirectory = path.join(temporaryRoot, 'judgment-provenance');
+  for (const name of ['artifacts', 'design', 'judgments', 'results']) {
+    fs.cpSync(path.join(root, name), path.join(provenanceDirectory, name), { recursive: true });
+  }
+  const checkJudgmentImport = () => runNode(
+    'import-judgments.js',
+    ['--check', '--data-root', provenanceDirectory]
+  );
+  result = checkJudgmentImport();
+  assert.strictEqual(result.status, 0, result.stderr);
+
+  function assertProvenanceTamperRejected(relativePath, mutate, label) {
+    const target = path.join(provenanceDirectory, relativePath);
+    const original = fs.readFileSync(target);
+    try {
+      mutate(target, original);
+      const tampered = checkJudgmentImport();
+      assert.notStrictEqual(tampered.status, 0, `${label} unexpectedly passed judgment import.`);
+    } finally {
+      fs.writeFileSync(target, original);
+    }
+  }
+
+  assertProvenanceTamperRejected(
+    path.join('judgments', 'source', 'block-1', 'B0001.json'),
+    (target, original) => fs.writeFileSync(target, Buffer.concat([original, Buffer.from(' ')])),
+    'Vendored source tampering'
+  );
+  assertProvenanceTamperRejected(
+    path.join('judgments', 'source', 'manifest.json'),
+    (target, original) => fs.writeFileSync(target, Buffer.concat([original, Buffer.from(' ')])),
+    'Source manifest tampering'
+  );
+  assertProvenanceTamperRejected(
+    path.join('judgments', 'B0001.judgment.json'),
+    (target, original) => fs.writeFileSync(target, Buffer.concat([original, Buffer.from(' ')])),
+    'Derived judgment tampering'
+  );
+  assertProvenanceTamperRejected(
+    path.join('artifacts', 'blind', 'B0001.binding.json'),
+    (target) => {
+      const binding = readJson(target);
+      binding.scheduleId = 'P01-R1-control';
+      writeJson(target, binding);
+    },
+    'Binding join tampering'
+  );
+  assertProvenanceTamperRejected(
+    path.join('results', 'judge-usage.json'),
+    (target) => {
+      const usage = readJson(target);
+      usage.sessions[0].models = ['unauthenticated-model'];
+      writeJson(target, usage);
+    },
+    'Authenticated judge model tampering'
+  );
+  const unexpectedSource = path.join(
+    provenanceDirectory,
+    'judgments',
+    'source',
+    'block-1',
+    'unexpected.json'
+  );
+  fs.writeFileSync(unexpectedSource, '{}\n', 'utf8');
+  result = checkJudgmentImport();
+  assert.notStrictEqual(result.status, 0, 'Unexpected vendored source unexpectedly passed judgment import.');
+  fs.rmSync(unexpectedSource);
+
+  console.log(`PASS: ${cases.length} fixture integrity negatives, judgment provenance tampering, excluded positives, and analysis regressions`);
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true });
 }

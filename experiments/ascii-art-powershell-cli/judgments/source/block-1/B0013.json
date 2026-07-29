@@ -1,0 +1,13 @@
+{
+  "blindId": "B0013",
+  "scores": {
+    "function": 5,
+    "codeQuality": 4,
+    "integration": 5,
+    "recognizability": 5,
+    "composition": 5,
+    "cleanliness": 5
+  },
+  "overall": 4.83,
+  "rationale": "All deterministic checks pass. Export validates status before touching the destination, prevents overwriting task storage, filters and sorts by numeric ID, creates parent directories, emits UTF-8 without a BOM, atomically replaces the destination, and leaves task storage unchanged. JSON and text summaries are stable and help/tests cover valid, filtered, invalid, same-path, and banner cases. The atomic writer is well isolated; destination path normalization is appropriate. The banner immediately communicates TaskForge export, JSON archiving, ordering, and safe atomic writing. Its consistent frame, centered hierarchy, and generous spacing are polished and legible. The diff is focused."
+}

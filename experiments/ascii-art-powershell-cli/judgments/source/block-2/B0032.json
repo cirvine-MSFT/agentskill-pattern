@@ -1,0 +1,11 @@
+{
+  "blindId": "B0032",
+  "function": 5,
+  "codeQuality": 4,
+  "integration": 5,
+  "recognizability": 5,
+  "composition": 4,
+  "cleanliness": 5,
+  "overall": 4.67,
+  "rationale": "All deterministic checks pass. Strict invariant date parsing is shared by add and due reporting; tasks without due dates remain compatible; reports exclude undated and, by default, completed tasks; cutoff filtering, overdue derivation, and due-date-then-ID sorting are deterministic and independent of the machine clock. JSON output is clean, text output has stable labels, and invalid dates do not alter storage. Help and focused tests cover legacy data, omitted and invalid dates, ordering, completion filtering, output modes, and asset constraints. The banner clearly communicates DUE and a due report through centered labels, date-oriented wording, and a strong framed layout. Its hierarchy and symmetry are good, although several explanatory lines make the center slightly more textual than illustrative. The diff is focused and preserves existing behavior."
+}

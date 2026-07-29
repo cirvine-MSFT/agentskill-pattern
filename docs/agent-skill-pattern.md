@@ -126,8 +126,9 @@ GitHub Copilot's own billing documentation is the **measured** evidence for this
 differential — see
 [prior-art.md §3.3](research/prior-art.md#33-github-copilot--custom-agents-agent-skills-and-sub-agent-orchestration-the-reference-platform)
 for the cited, dated pricing figures. Whether the smaller model produces
-acceptably-equivalent output quality for a given task is a claim this repository does
-**not** make without a benchmark; see [Observability and measurement](#observability-and-measurement).
+acceptably-equivalent output quality for a given task does not follow from pricing.
+The completed reference benchmark is descriptive and structurally incomplete; see
+[Observability and measurement](#observability-and-measurement).
 
 ## Direct artifact write and compact return
 
@@ -182,8 +183,9 @@ for how this is applied concretely.
   worst-case failure mode of this pattern, since the parent has no visibility into the
   subagent's intermediate steps to detect it otherwise.
 - **Model-quality mismatch.** The cheaper subagent model may not produce
-  acceptably-equivalent output for a given task. This is an empirical question this
-  repository does not yet have benchmark evidence for (see below).
+  acceptably-equivalent output for a given task. The completed reference benchmark
+  found lower deterministic and blinded quality among available complete pairs, but
+  its incomplete dataset prevents a general causal claim (see below).
 - **Recursive delegation, if the structural control is misconfigured.** If a subagent's
   tool allowlist is ever changed to include the delegation tool, the prose guard becomes
   the only remaining control, which this pattern explicitly does not treat as sufficient
@@ -198,8 +200,9 @@ for how this is applied concretely.
   allowlist would need to be re-authored per task rather than reused.
 - The task is a **one-off**, where the fixed cost of authoring and maintaining a
   `SKILL.md` and a custom agent definition exceeds the savings from delegating it.
-- **Quality is uncertain and unverified** — until a benchmark exists for a given task
-  shape, delegating to a cheaper model is a hypothesis, not a validated optimization.
+- **Quality is uncertain or unverified for the task shape** — delegating to a cheaper
+  model is not a validated optimization merely because model pricing is lower. The
+  completed reference benchmark did not support its proposed efficiency benefit.
 
 ## Observability and measurement
 
@@ -209,9 +212,12 @@ observability should distinguish:
 - **Measured evidence:** the per-token price differential between the parent and
   subagent models (measured, from GitHub Copilot's own billing documentation — see
   [prior-art.md §6](research/prior-art.md#6-measured-vs-inferred-schema-token-cost-claims)),
-  and, once available, the results of the planned benchmark at
-  `experiments/ascii-art-powershell-cli` (not yet merged; see the
-  [repository README](../README.md#benchmark)).
+  and the descriptive results of the completed, structurally incomplete benchmark at
+  `experiments/ascii-art-powershell-cli` (see the
+  [report](../experiments/ascii-art-powershell-cli/report.md)). Among 20 complete
+  pairs, treatment total nano-AIU and parent cumulative input were higher, not lower;
+  neither preregistered efficiency marker was reached. Missing schedules require
+  inference and general-effect claims to remain withheld.
 - **Inferred, not yet measured:** the claim that a narrower tool allowlist reduces the
   subagent's context/token footprint is supported directionally by first-party
   qualitative guidance (Anthropic's context-engineering post, LangChain's Deep Agents

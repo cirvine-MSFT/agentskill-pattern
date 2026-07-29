@@ -84,9 +84,11 @@ The completed benchmark is available at
 immutable control is tag `experiment-control-v1` at
 `6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; its frozen treatment is tag
 `experiment-treatment-v1` at `ac0895c23c4c811cf10e5af5b42efcde12c14849`.
-In 20 complete intent-to-treat pairs, treatment used 69.7% more total AI credits and
+In 20 complete intent-to-treat pairs, treatment used 55.5% more total nano-AIU and
 53.9% more parent cumulative input, with deterministic pass 25 percentage points
 lower and blinded overall quality 0.883 points lower; wall latency was 54.9% lower.
+Neither preregistered efficiency marker (10% lower total nano-AIU and 15% lower
+parent cumulative input) was reached.
 Fourteen of 60 schedules are missing, so inference and significance claims are
 withheld. See the [report](experiments/ascii-art-powershell-cli/report.md),
 [raw evidence](experiments/ascii-art-powershell-cli/raw/), and

@@ -67,7 +67,8 @@ const prompts = readJson(path.join(root, 'prompts.json'));
 const scheduled = schedule.blocks.flatMap((block) => block.observations);
 const runFiles = loadJsonFiles(args.runs);
 const artifactFiles = loadJsonFiles(args.artifacts);
-const judgmentFiles = loadJsonFiles(args.judgments);
+const judgmentFiles = loadJsonFiles(args.judgments)
+  .filter(({ file }) => file.endsWith('.judgment.json'));
 
 const manifests = new Map();
 const telemetry = new Map();
@@ -514,6 +515,31 @@ function analyzeScope(records) {
   };
 }
 
+const intentToTreat = analyzeScope(buildRecords('intentToTreat'));
+const perProtocol = analyzeScope(buildRecords('perProtocol'));
+
+function materialityMarker(outcome, thresholdPercent) {
+  const intentToTreatPercentChange = intentToTreat.outcomes
+    .find((item) => item.outcome === outcome)?.percentChangeFromControl ?? null;
+  const perProtocolPercentChange = perProtocol.outcomes
+    .find((item) => item.outcome === outcome)?.percentChangeFromControl ?? null;
+  return {
+    outcome,
+    criterion: 'treatment_percent_change_at_or_below',
+    thresholdPercent,
+    intentToTreat: {
+      observedPercentChange: intentToTreatPercentChange,
+      reached: intentToTreatPercentChange !== null &&
+        intentToTreatPercentChange <= thresholdPercent
+    },
+    perProtocolSensitivity: {
+      observedPercentChange: perProtocolPercentChange,
+      reached: perProtocolPercentChange !== null &&
+        perProtocolPercentChange <= thresholdPercent
+    }
+  };
+}
+
 const output = {
   protocolId: 'ascii-art-powershell-cli-v1',
   generatedAt,
@@ -524,6 +550,13 @@ const output = {
       draws: seedConfig.draws,
       cluster: seedConfig.cluster,
       interval: 'percentile 95%'
+    },
+    preregisteredMaterialityMarkers: {
+      source: 'protocol.md#outcomes-and-analysis',
+      markers: [
+        materialityMarker('totalSessionNanoAiu', -10),
+        materialityMarker('parentCumulativeInputTokens', -15)
+      ]
     }
   },
   dataset: {
@@ -582,8 +615,8 @@ const output = {
       pairs: availablePairs
     };
   })(),
-  intentToTreat: analyzeScope(buildRecords('intentToTreat')),
-  perProtocol: analyzeScope(buildRecords('perProtocol'))
+  intentToTreat,
+  perProtocol
 };
 
 writeJson(path.resolve(args.out), output);

@@ -10,6 +10,7 @@ Machine-readable sources:
 
 - [raw run evidence](raw/) and [authenticated artifacts](artifacts/)
 - [49 blinded judgment records](judgments/)
+- [vendored source-score provenance](judgments/source/manifest.json)
 - [collection flow and deviations](results/collection-summary.json)
 - [runtime blinding realization](results/blinding-summary.json)
 - [descriptive paired summary](results/summary.json)
@@ -42,7 +43,14 @@ conditions available for that outcome; no unpaired observation was substituted.
 | Judge assignments | SHA-256 `14f31cedff85e984e83bf947975f18aba58cf9cf872d330bafbfa1936badf9fc` |
 | Parent / specialist / judge | `gpt-5.6-sol` / `claude-haiku-4.5` / `gpt-5.6-sol` |
 
-The six score sources were exact commits `905c0898997aba295b5254e3ada4a003b91b3d8f`,
+The 49 exact source-score blobs are vendored under
+[`judgments/source/`](judgments/source/) with byte length, SHA-256, Git blob SHA-1,
+judge block/session/model, commit tree, and score-tree provenance. The manifest is
+hash-pinned as
+`56637bdbc1df505d4f4e0d14591af9c6713aa704a9209c8cfb80ba27593839ae`
+in the importer, so source, manifest, or derived-judgment changes fail reproduction
+without access to the original worktrees. The six source commits were
+`905c0898997aba295b5254e3ada4a003b91b3d8f`,
 `9e0b915a4f84b3bacca443dd911e9ddbf638d24c`,
 `516f639fb639712c00bc1c5ea56c245b1e0b759a`,
 `1ebaba7375af2c9ca7943aee84e48b47c361fc7d`,
@@ -100,10 +108,12 @@ are shown in billions of nano-AIU. Percent change is
 | Wall latency, seconds | 802.43 (799.71) | 361.54 (326.91) | -440.89 | -489.51 | -54.9% |
 | Parent active latency, seconds | 149.02 (149.71) | 230.48 (218.81) | +81.46 | +68.30 | +54.7% |
 
-The requested practical markers of **20% lower total credits** and **25% lower
-parent cumulative input** were not reached. Their observed directions were reversed:
-total credits were 69.7% higher and parent cumulative input was 53.9% higher in
-treatment among complete ITT pairs. These are point estimates only.
+Neither preregistered efficiency marker was reached. The frozen protocol defines
+material improvement as treatment total nano-AIU at least 10% lower and parent
+cumulative input at least 15% lower. Their observed ITT directions were reversed:
+total nano-AIU was 55.5% higher and parent cumulative input was 53.9% higher in
+treatment among complete pairs. These are point estimates only; total AI credits
+remain a reported outcome but have no preregistered materiality threshold.
 
 Specialist metrics have no control counterpart and therefore no paired effect.
 Across 20 selected treatments, the specialist means were 2.4255 AI credits, 5.629
@@ -213,9 +223,10 @@ node scripts\reproduce-results.js --check
 ```
 
 The first command runs the official validator, verifies that strict completeness
-fails only the 14 registered gates, and regenerates `results/summary.json` with
-`--allow-incomplete` plus `results/validation-summary.json`. The second checks both
-generated files byte-for-byte.
+fails only the 14 registered gates, verifies all vendored judgment provenance, and
+regenerates `results/summary.json` with `--allow-incomplete` plus
+`results/validation-summary.json`. The second checks both generated files
+byte-for-byte.
 
 Judge usage can be re-exported on the machine holding the six local judge sessions:
 
@@ -223,6 +234,13 @@ Judge usage can be re-exported on the machine holding the six local judge sessio
 python scripts\export-judge-usage.py --out results\judge-usage.json
 ```
 
-The judgment importer is also reproducible from the six exact committed score
-worktrees via `scripts\import-judgments.js --block-1 <dir> ... --block-6 <dir>`;
-`--check` verifies all 49 committed judgment files without rewriting them.
+The full reproduction command invokes this independent judgment check:
+
+```powershell
+node scripts\import-judgments.js --check
+```
+
+To recreate the vendored source directory itself from the original six exact local
+commits, use `--vendor-sources --block-1 <dir> ... --block-6 <dir>`. Normal import
+and `--check` use only committed source bytes, the pinned manifest, merged bindings,
+and authenticated judge usage.
