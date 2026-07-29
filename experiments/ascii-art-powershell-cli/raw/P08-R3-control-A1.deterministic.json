@@ -1,0 +1,73 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P08-R3-control-A1",
+  "scheduleId": "P08-R3-control",
+  "promptId": "P08",
+  "status": "fail",
+  "unavailableReason": null,
+  "functional": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "stats-counts",
+        "status": "pass",
+        "message": "Stats reports correct totals."
+      },
+      {
+        "id": "stats-percentage",
+        "status": "pass",
+        "message": "Completion percentage is one-decimal invariant."
+      },
+      {
+        "id": "acceptance-exception",
+        "status": "fail",
+        "message": "The property 'createdByDate' cannot be found on this object. Verify that the property exists."
+      }
+    ]
+  },
+  "art": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit ae8dc2c4f24e7b4cd1543ee50d1e962029cd42b3."
+      },
+      {
+        "id": "evaluated-bundle-byte-identity",
+        "status": "pass",
+        "message": "Every evaluated source, fixture test, and banner byte matched the terminal Git blob bytes used by the artifact bundle."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T15:59:32.662Z",
+  "completedAt": "2026-07-29T15:59:36.308Z"
+}

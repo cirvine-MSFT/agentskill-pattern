@@ -1,0 +1,88 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P10-R3-treatment-A1",
+  "scheduleId": "P10-R3-treatment",
+  "promptId": "P10",
+  "status": "pass",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "template-save",
+        "status": "pass",
+        "message": "Templates persist successfully."
+      },
+      {
+        "id": "template-order",
+        "status": "pass",
+        "message": "Templates list alphabetically."
+      },
+      {
+        "id": "template-banner",
+        "status": "pass",
+        "message": "Text template actions render the exact registered banner once before expected templates."
+      },
+      {
+        "id": "template-add",
+        "status": "pass",
+        "message": "Template lookup is case-insensitive and explicit values override."
+      },
+      {
+        "id": "template-missing",
+        "status": "pass",
+        "message": "Missing template leaves tasks unchanged."
+      },
+      {
+        "id": "template-remove",
+        "status": "pass",
+        "message": "Template removal is case-insensitive."
+      }
+    ]
+  },
+  "art": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit b9ced14089ea2628ba6499d76dfb206685818e04."
+      },
+      {
+        "id": "evaluated-bundle-byte-identity",
+        "status": "pass",
+        "message": "Every evaluated source, fixture test, and banner byte matched the terminal Git blob bytes used by the artifact bundle."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T15:59:15.435Z",
+  "completedAt": "2026-07-29T15:59:28.339Z"
+}

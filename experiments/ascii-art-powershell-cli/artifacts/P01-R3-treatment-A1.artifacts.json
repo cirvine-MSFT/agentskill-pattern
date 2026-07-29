@@ -1,0 +1,41 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P01-R3-treatment-A1",
+  "scheduleId": "P01-R3-treatment",
+  "sessionId": "dbc28d4e-2dae-4d50-ba84-acae2f6b38b0",
+  "terminalCommitSha": "c8b168962635635c51c75c1976918fe533be3770",
+  "bundlePath": "P01-R3-treatment-A1.bundle.json",
+  "bundleSha256": "b54c708ab7c476a7e2d9f3a00381de7e5a91ea5bbb7a5c0589cf7bdaafe20a89",
+  "files": [
+    {
+      "path": "terminal.diff",
+      "sha256": "01df59a13ec87e79aa36b4eff94730afb6f817b97452ac8e82f6ec7329b1b3ee",
+      "bytes": 9121,
+      "role": "diff"
+    },
+    {
+      "path": "src/TaskForge.Core.psm1",
+      "sha256": "2a815b0a0872cd3eec81d63ca797c374ac2f979f2f51d44e7a423f8bf800243d",
+      "bytes": 2826,
+      "role": "source"
+    },
+    {
+      "path": "src/TaskForge.ps1",
+      "sha256": "68b5983c75d4be2dd6008924b5c34f4db76f31ca2700bfad6dd90d86caa9d61b",
+      "bytes": 6214,
+      "role": "source"
+    },
+    {
+      "path": "tests/Run-Tests.ps1",
+      "sha256": "00e6d76766e747a5d9f2d60cb8ae4cf1264712901e4d09ba60a593fa80ac98ad",
+      "bytes": 6775,
+      "role": "fixture_test"
+    },
+    {
+      "path": "assets/search.txt",
+      "sha256": "4355845bf98df342b0aa3f2b558c0f2e4a725be8417b929037251cbc21e988f3",
+      "bytes": 295,
+      "role": "banner"
+    }
+  ]
+}

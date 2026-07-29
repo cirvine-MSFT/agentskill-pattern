@@ -1,0 +1,102 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P03-R1-treatment-A1",
+  "scheduleId": "P03-R1-treatment",
+  "promptId": "P03",
+  "repetition": 1,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:23:origin:54:offset:102021:sha:937d34835c72ff3923ec:id:a5c34715-ff6b-477a-8a54-1acb42ce6202:delegation-call"
+    ],
+    "delegationResultEventIds": [
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:35:origin:92:offset:174618:sha:8481d3a4c7b6d4762c29:id:dfb1b652-80f7-4176-94b0-4a18884b5ec8:delegation-result"
+    ],
+    "specialistToolCallEventIds": [
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:29:origin:74:offset:132410:sha:02080f1d3aeff32e70ca:id:a81b0794-3a67-4b51-8b28-4861cb0e32e5:tool-call",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:32:origin:81:offset:153131:sha:248a093e68c80ea51b3f:id:2fe301ad-1f7c-4a52-88cc-2ed8d1bcd206:tool-call",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:65:origin:172:offset:367065:sha:a6d4246b0a5f5e2fa775:id:4de527ab-e37b-41b3-9995-27d56b88325c:tool-call",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:68:origin:179:offset:382758:sha:9baf3c94bad60c5f0417:id:c0f7ec01-00f9-4c6e-9dbf-84e927c202c3:tool-call",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:71:origin:186:offset:399539:sha:0576930e08ce5191f6a4:id:b7658742-6184-442e-b79f-b290e06d1c08:tool-call",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:74:origin:193:offset:414108:sha:7271a83f0fd16c202ef8:id:4c4d79eb-ec5e-4279-986b-aca8b7c57519:tool-call",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:77:origin:200:offset:443593:sha:7fe2ea0fc1cf3a76e4ab:id:39fa5cf1-a9d6-4d97-8e1e-72de03e2f5b6:tool-call",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:80:origin:207:offset:469791:sha:01ccf51758ba69c14c10:id:298153da-98ec-4410-9c12-59ff11ccd4a2:tool-call"
+    ],
+    "specialistToolResultEventIds": [
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:30:origin:79:offset:136655:sha:d5845c811ead2e48dd0e:id:4301ae0a-793d-41b5-ab78-30d15a300238:tool-result",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:33:origin:86:offset:156130:sha:0030eb913080b48f3973:id:ebadd7e3-ffb1-4181-9acd-e0462367ce72:tool-result",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:66:origin:177:offset:372269:sha:cae480510a549e449d88:id:7c86a238-3064-4734-ac2f-fefeda8c3294:tool-result",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:69:origin:184:offset:385757:sha:daffe598b981fc7f8ee1:id:9df8ab3e-b9b5-4978-8431-dd6995581625:tool-result",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:72:origin:191:offset:404743:sha:08040fc0da2819e43d36:id:7c0624b8-1c99-4e7d-92d4-2f71d5ab37d4:tool-result",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:75:origin:198:offset:419296:sha:846a084e77f01ed022bc:id:10691a27-8e82-4602-a0bc-92c8a055138a:tool-result",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:78:origin:205:offset:447293:sha:07774e66ca81af07e371:id:47111694-0f43-428f-bd40-f52775f7e623:tool-result",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:81:origin:212:offset:474995:sha:508938c7d8380978a59f:id:0952968f-562a-4c08-a6e3-e9d8b5f44de6:tool-result"
+    ],
+    "specialistFileChangeEventIds": [
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:30:origin:79:offset:136655:sha:d5845c811ead2e48dd0e:id:4301ae0a-793d-41b5-ab78-30d15a300238:tool-result:file-change",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:66:origin:177:offset:372269:sha:cae480510a549e449d88:id:7c86a238-3064-4734-ac2f-fefeda8c3294:tool-result:file-change",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:72:origin:191:offset:404743:sha:08040fc0da2819e43d36:id:7c0624b8-1c99-4e7d-92d4-2f71d5ab37d4:tool-result:file-change",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:75:origin:198:offset:419296:sha:846a084e77f01ed022bc:id:10691a27-8e82-4602-a0bc-92c8a055138a:tool-result:file-change",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:78:origin:205:offset:447293:sha:07774e66ca81af07e371:id:47111694-0f43-428f-bd40-f52775f7e623:tool-result:file-change",
+      "events-parent-P03-R1-treatment-A1-de98aa1b84ea0d6b:line:81:origin:212:offset:474995:sha:508938c7d8380978a59f:id:0952968f-562a-4c08-a6e3-e9d8b5f44de6:tool-result:file-change"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 1,
+    "position": 7,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "06feefbf-813f-4078-affd-24cd0e652292"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "37cda972-ebfd-4ec5-8f30-f79a9fcbb8ad",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "sessionId": "call_ZDUi4MTfNomEIWWfLm69qDWI",
+      "requestedModel": "claude-haiku-4.5",
+      "observedModel": "claude-haiku-4.5"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
+    "terminalCommitSha": "17118dc638a32c2d7bd6aff8b5df3d94dbb983ad",
+    "artifactBundleSha256": "818bfa68f40fb04d21d051b915f2e70de3036b12ebfdfec623fbabbb4d871e51"
+  },
+  "workspace": {
+    "identifier": "P03/cirvine-msft-crispy-engine",
+    "branch": "cirvine-msft-add-json-export"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:42:47.855Z",
+    "promptSentAt": "2026-07-29T07:43:24.654Z",
+    "completedAt": "2026-07-29T07:49:01.335Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

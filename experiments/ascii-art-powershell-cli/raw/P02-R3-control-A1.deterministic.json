@@ -1,0 +1,78 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P02-R3-control-A1",
+  "scheduleId": "P02-R3-control",
+  "promptId": "P02",
+  "status": "pass",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "import-valid",
+        "status": "pass",
+        "message": "Valid rows import with a stable count."
+      },
+      {
+        "id": "import-ids",
+        "status": "pass",
+        "message": "Imported IDs are sequential."
+      },
+      {
+        "id": "import-banner",
+        "status": "pass",
+        "message": "Text import renders the exact registered banner once before its expected count result."
+      },
+      {
+        "id": "import-atomic",
+        "status": "pass",
+        "message": "Invalid CSV leaves storage byte-identical."
+      }
+    ]
+  },
+  "art": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit 09dac676501f347e6969f5577104543f302a6a41."
+      },
+      {
+        "id": "evaluated-bundle-byte-identity",
+        "status": "pass",
+        "message": "Every evaluated source, fixture test, and banner byte matched the terminal Git blob bytes used by the artifact bundle."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T16:01:59.487Z",
+  "completedAt": "2026-07-29T16:02:05.543Z"
+}

@@ -1,0 +1,85 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P07-R3-treatment-A1",
+  "scheduleId": "P07-R3-treatment",
+  "promptId": "P07",
+  "repetition": 3,
+  "condition": "treatment",
+  "conditionInstruction": "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [
+      "events-parent-P07-R3-treatment-A1-bcfb87b6b5755964:line:31:origin:72:offset:106029:sha:2abe8c2901810e103809:id:9907d975-246b-401b-89e9-c011167e9cfe:delegation-call"
+    ],
+    "delegationResultEventIds": [
+      "events-parent-P07-R3-treatment-A1-bcfb87b6b5755964:line:44:origin:111:offset:230829:sha:5bc8aa59c499b56395b6:id:97ec711f-5721-4b79-a38b-459453854106:delegation-result"
+    ],
+    "specialistToolCallEventIds": [
+      "events-parent-P07-R3-treatment-A1-bcfb87b6b5755964:line:38:origin:93:offset:155765:sha:d7bb22e94c26f7781216:id:98ebb0e6-0572-4de8-920e-e67f99fd5bb4:tool-call",
+      "events-parent-P07-R3-treatment-A1-bcfb87b6b5755964:line:41:origin:100:offset:193015:sha:2a3f302886144a715eba:id:9364f368-8612-4829-ac20-34384ea0ca98:tool-call"
+    ],
+    "specialistToolResultEventIds": [
+      "events-parent-P07-R3-treatment-A1-bcfb87b6b5755964:line:39:origin:98:offset:160256:sha:a090c9cd9fae642eb5e5:id:3e92c980-20e8-414c-9c56-c8d3535e2234:tool-result",
+      "events-parent-P07-R3-treatment-A1-bcfb87b6b5755964:line:42:origin:105:offset:196018:sha:abdb44cd01b0f7f8186a:id:d84476f8-0905-485e-8772-92a4669d3084:tool-result"
+    ],
+    "specialistFileChangeEventIds": [
+      "events-parent-P07-R3-treatment-A1-bcfb87b6b5755964:line:39:origin:98:offset:160256:sha:a090c9cd9fae642eb5e5:id:3e92c980-20e8-414c-9c56-c8d3535e2234:tool-result:file-change"
+    ],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 6,
+    "position": 8,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "4407ddb2-ca6d-488f-8b27-287057d17692"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "5f8308b6-c02d-42ce-9b73-fbc2e0cc151c",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "sessionId": "call_pJ2plEjmBRXPtY12oHzpHrmD",
+      "requestedModel": "claude-haiku-4.5",
+      "observedModel": "claude-haiku-4.5"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "0a1d57e065aae15046dffa554391c6423544b9cb",
+    "terminalCommitSha": "98a2e88bbe4ec20810408c880fd81b1502531130",
+    "artifactBundleSha256": "07b80d96fbae48f59378a66b6db55543e2e24366aca5c1253848667c0c4ad0e2"
+  },
+  "workspace": {
+    "identifier": "P07/cirvine-msft-jubilant-system",
+    "branch": "cirvine-msft-task-tags-cli-p07"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T08:57:41.680Z",
+    "promptSentAt": "2026-07-29T08:57:58.474Z",
+    "completedAt": "2026-07-29T09:05:32.610Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

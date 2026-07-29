@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P01-R1-control-A1",
+  "scheduleId": "P01-R1-control",
+  "promptId": "P01",
+  "repetition": 1,
+  "condition": "control",
+  "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "included",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 2,
+    "position": 5,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "a0dddf03-f35a-4e77-b5ba-a54404c3e07e"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "086ea1ef-e541-45d7-9b58-4498f916d09c",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "gpt-5.6-sol"
+    },
+    "specialist": {
+      "status": "not_applicable",
+      "reason": "control_condition"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "4422c7decda3b320821eb06d7fde0c247b54078f",
+    "terminalCommitSha": "8a534bfd479ef1dd4cbc76b675b5d6ee5560d109",
+    "artifactBundleSha256": "dc49c8a24397c6d633b2a877d06e92305cd66a22b2860dd12b6150ffd3976c75"
+  },
+  "workspace": {
+    "identifier": "P01/cirvine-msft-cautious-spoon",
+    "branch": "cirvine-msft-implement-task-search"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T07:55:14.832Z",
+    "promptSentAt": "2026-07-29T07:55:25.683Z",
+    "completedAt": "2026-07-29T08:09:39.422Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": false,
+    "reason": null,
+    "retryOf": null,
+    "retryId": null
+  }
+}

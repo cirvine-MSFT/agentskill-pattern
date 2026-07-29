@@ -1,0 +1,72 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P04-R3-control-A1",
+  "scheduleId": "P04-R3-control",
+  "promptId": "P04",
+  "repetition": 3,
+  "condition": "control",
+  "conditionInstruction": "Complete the task yourself. Do not create or use nested sessions. Inspect and edit the fixture, create the required banner asset, and run repository-owned tests.",
+  "attempt": {
+    "phase": "session_started",
+    "status": "excluded",
+    "availability": "evidence_required"
+  },
+  "conditionEvidence": {
+    "status": "available",
+    "delegationCallEventIds": [],
+    "delegationResultEventIds": [],
+    "specialistToolCallEventIds": [],
+    "specialistToolResultEventIds": [],
+    "specialistFileChangeEventIds": [],
+    "unavailableReason": null
+  },
+  "execution": {
+    "block": 6,
+    "position": 9,
+    "attempt": 1,
+    "rootSessionId": "952af58c-cc33-4334-b86f-de9845fb5f38",
+    "coordinatorSessionId": "3758d931-1114-427d-8356-bf4a4e8425c5"
+  },
+  "environment": {
+    "copilotCliVersion": "1.0.71",
+    "hostImage": "local-windows-worktree",
+    "operatingSystem": "Windows_NT",
+    "powershellVersion": "7.6.4",
+    "nodeVersion": "v22.22.1"
+  },
+  "sessions": {
+    "parent": {
+      "sessionId": "fd0cf6f9-4b05-4eb6-95f0-f7044f03f370",
+      "requestedModel": "gpt-5.6-sol",
+      "observedModel": "claude-opus-4.8"
+    },
+    "specialist": {
+      "status": "not_applicable",
+      "reason": "control_condition"
+    }
+  },
+  "refs": {
+    "benchmarkCommitSha": "71635d9f6ba1e54e81e9f1f3eb081e51187e66bd",
+    "fixtureLockSha256": "929f1b04f0c646241d975c719ff3e59671319b578028016508e87110123b3613",
+    "promptsSha256": "b9f218b8d744803c30aad7f52dee06eaa10d2fce2191668b54b0be02faff02e3",
+    "initialTreeSha": "4422c7decda3b320821eb06d7fde0c247b54078f",
+    "terminalCommitSha": "d7269158af618a440b200de7e1bff0ae9ec5f683",
+    "artifactBundleSha256": "24a1b3eb0497ada58339c70b400090e105d46d26b903fbfde38b2be2f07b2073"
+  },
+  "workspace": {
+    "identifier": "P04/cirvine-msft-silver-engine",
+    "branch": "cirvine-msft-silver-engine"
+  },
+  "timestamps": {
+    "createdAt": "2026-07-29T08:58:01.368Z",
+    "promptSentAt": "2026-07-29T08:58:10.834Z",
+    "completedAt": "2026-07-29T09:15:06.295Z"
+  },
+  "completion": "completed",
+  "exclusion": {
+    "excluded": true,
+    "reason": "wrong_model",
+    "retryOf": null,
+    "retryId": "P04-R3-control-A2"
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P09-R1-treatment-A2",
+  "scheduleId": "P09-R1-treatment",
+  "promptId": "P09",
+  "status": "fail",
+  "unavailableReason": null,
+  "functional": {
+    "status": "fail",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "undo-add",
+        "status": "fail",
+        "message": "Undo restores exact pre-add storage across processes."
+      },
+      {
+        "id": "undo-consumed",
+        "status": "pass",
+        "message": "Successful undo consumes the record."
+      },
+      {
+        "id": "undo-failed-preserves",
+        "status": "pass",
+        "message": "Failed mutation does not replace a valid undo record."
+      },
+      {
+        "id": "undo-remove",
+        "status": "pass",
+        "message": "Undo restores a removed task."
+      },
+      {
+        "id": "undo-banner",
+        "status": "pass",
+        "message": "Text undo renders the exact registered banner once before its expected result."
+      }
+    ]
+  },
+  "art": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit cce75d0bf2965947b0ca323791e956bfe5a3fef2."
+      },
+      {
+        "id": "evaluated-bundle-byte-identity",
+        "status": "pass",
+        "message": "Every evaluated source, fixture test, and banner byte matched the terminal Git blob bytes used by the artifact bundle."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T15:41:51.513Z",
+  "completedAt": "2026-07-29T15:42:04.275Z"
+}

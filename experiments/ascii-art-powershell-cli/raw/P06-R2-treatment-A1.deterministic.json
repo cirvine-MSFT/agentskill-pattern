@@ -1,0 +1,83 @@
+{
+  "protocolId": "ascii-art-powershell-cli-v1",
+  "runId": "P06-R2-treatment-A1",
+  "scheduleId": "P06-R2-treatment",
+  "promptId": "P06",
+  "status": "pass",
+  "unavailableReason": null,
+  "functional": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "due-add",
+        "status": "pass",
+        "message": "Add accepts strict due dates while retaining legacy data."
+      },
+      {
+        "id": "due-order",
+        "status": "pass",
+        "message": "Due report filters, sorts, and derives overdue from supplied date."
+      },
+      {
+        "id": "due-completed-filter",
+        "status": "pass",
+        "message": "Due reports exclude completed tasks by default and include them on request."
+      },
+      {
+        "id": "due-banner",
+        "status": "pass",
+        "message": "Text due report renders the exact registered banner once before expected results."
+      },
+      {
+        "id": "due-invalid",
+        "status": "pass",
+        "message": "Invalid date leaves storage unchanged."
+      }
+    ]
+  },
+  "art": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "art-constraints",
+        "status": "pass",
+        "message": "All deterministic art constraints passed."
+      }
+    ]
+  },
+  "tamperCheck": {
+    "status": "pass",
+    "unavailableReason": null,
+    "assertions": [
+      {
+        "id": "initial-fixture-lock",
+        "status": "pass",
+        "message": "Initial candidate commit matches the registered fixture lock."
+      },
+      {
+        "id": "terminal-fixture-lock-provenance",
+        "status": "pass",
+        "message": "Terminal candidate commit preserves the initial fixture lock."
+      },
+      {
+        "id": "acceptance-contamination",
+        "status": "pass",
+        "message": "No external acceptance or benchmark control files are present in the candidate commit."
+      },
+      {
+        "id": "terminal-commit-materialized",
+        "status": "pass",
+        "message": "Candidate was materialized from exact terminal commit 4e40505c67ddac41c146173471160a2641607053."
+      },
+      {
+        "id": "evaluated-bundle-byte-identity",
+        "status": "pass",
+        "message": "Every evaluated source, fixture test, and banner byte matched the terminal Git blob bytes used by the artifact bundle."
+      }
+    ]
+  },
+  "startedAt": "2026-07-29T15:48:06.155Z",
+  "completedAt": "2026-07-29T15:48:19.038Z"
+}
