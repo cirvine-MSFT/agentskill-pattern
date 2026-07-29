@@ -282,14 +282,20 @@ for (const record of manifests) {
 }
 
 check(retryPlan.mismatchedSelectedAttempts.length === 19, 'wrong-model plan must contain 19 selected mismatches');
-check(retryPlan.executeRealA2.length === 15, 'wrong-model plan must require 15 real A2 retries');
+check(retryPlan.requiresRealA2.length === 15, 'wrong-model plan must require 15 real A2 retries');
 check(retryPlan.exhaustedMissingSchedules.length === 4, 'wrong-model plan must mark four exhausted schedules missing');
 for (const entry of retryPlan.mismatchedSelectedAttempts) {
   const manifest = manifestByRun.get(entry.runId);
   check(Boolean(manifest), `${entry.runId} wrong-model manifest is missing`);
   if (!manifest) continue;
+  check(entry.parentSessionId === manifest.sessions.parent.sessionId, `${entry.runId} retry plan parent session ID mismatch`);
+  check(entry.requestedParentModel === manifest.sessions.parent.requestedModel, `${entry.runId} retry plan requested parent model mismatch`);
+  check(entry.observedParentModel === manifest.sessions.parent.observedModel, `${entry.runId} retry plan observed parent model mismatch`);
+  if (manifest.condition === 'treatment') {
+    check(entry.specialistSessionId === (manifest.sessions.specialist.sessionId || null), `${entry.runId} retry plan specialist session ID mismatch`);
+  }
   check(manifest.exclusion.excluded && manifest.exclusion.reason === 'wrong_model', `${entry.runId} must be excluded wrong_model`);
-  if (entry.action === 'execute_real_A2') {
+  if (entry.action === 'requires_real_A2') {
     check(manifest.exclusion.retryId === `${entry.scheduleId}-A2`, `${entry.runId} must reserve its real A2 retry`);
     check(!manifestByRun.has(`${entry.scheduleId}-A2`), `${entry.scheduleId} must not fabricate A2`);
   } else {
@@ -299,11 +305,16 @@ for (const entry of retryPlan.mismatchedSelectedAttempts) {
 
 const p06Deviation = summary.noncompliance.find((item) => item.scheduleId === 'P06-R3-treatment');
 check(p06Deviation?.reasons.includes('specialist wrote in its own workspace and the parent copied the banner'), 'P06-R3-treatment copy deviation must be explicit');
+check(
+  summary.collectionStage === 'provisional_execution_evidence_awaiting_wrong_model_retries',
+  'summary collection stage must remain provisional while real A2 retries are pending'
+);
 check(summary.counts.startedAttempts === 67, 'summary started count must reconcile');
 check(summary.counts.preExecutionAttempts === 0, 'summary pre-execution count must be zero');
 check(summary.counts.wrongModelExcludedFrozenSelections === 19, 'summary wrong-model count must reconcile');
 check(summary.counts.pendingRealA2Schedules === 15, 'summary pending retry count must reconcile');
 check(summary.counts.retryExhaustedMissingSchedules === 4, 'summary exhausted retry count must reconcile');
+check(summary.counts.knownMissingSchedules === 6, 'summary known missing count must reconcile');
 check(summary.counts.finalSelectedCount === null, 'final selected count must remain unavailable pending retries');
 check(summary.telemetrySources.localSessionStore.status === 'available_with_post_query_snapshot', 'summary must qualify SQLite provenance');
 check(summary.telemetrySources.cloudEvents.status === 'unavailable', 'summary must disclose unavailable cloud events');

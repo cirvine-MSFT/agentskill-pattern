@@ -1,7 +1,7 @@
 {
   "protocolId": "ascii-art-powershell-cli-v1",
   "recordType": "wrong_model_retry_plan",
-  "generatedAt": "2026-07-29T12:44:36.346Z",
+  "generatedAt": "2026-07-29T13:04:18.084Z",
   "selectionStatus": "not_final_pending_real_retries",
   "mismatchedSelectedAttempts": [
     {
@@ -9,212 +9,250 @@
       "runId": "P06-R1-treatment-A2",
       "attempt": 2,
       "frozenSelected": true,
+      "parentSessionId": "c7f34df7-d21b-432b-ae9f-abed7a5d7807",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "8534f6e1-8152-4e05-a2ff-dda86ccfd403",
       "requestedSpecialistModel": "unavailable:not_explicitly_requested",
       "observedSpecialistModel": "claude-opus-4.8",
-      "action": "retry_exhausted_schedule_missing"
+      "action": "schedule_exhausted_missing"
     },
     {
       "scheduleId": "P08-R1-treatment",
       "runId": "P08-R1-treatment-A2",
       "attempt": 2,
       "frozenSelected": true,
+      "parentSessionId": "4a9d61b0-02d9-4189-a040-4c28f4be59a0",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "fe4dfa6b-0224-447c-8939-6bdb558e2828",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "retry_exhausted_schedule_missing"
+      "action": "schedule_exhausted_missing"
     },
     {
       "scheduleId": "P09-R1-treatment",
       "runId": "P09-R1-treatment-A2",
       "attempt": 2,
       "frozenSelected": true,
+      "parentSessionId": "6bd24c63-4d0e-492b-97b8-c96daf088cae",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "b5c4ff20-eea3-4d9d-a0af-8b25aa6ef4ae",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "retry_exhausted_schedule_missing"
+      "action": "schedule_exhausted_missing"
     },
     {
       "scheduleId": "P04-R1-treatment",
       "runId": "P04-R1-treatment-A2",
       "attempt": 2,
       "frozenSelected": true,
+      "parentSessionId": "74a484a4-2fd1-44b1-870f-aa813be12595",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "48486960-c8fc-483e-92d6-190db206f7fb",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "retry_exhausted_schedule_missing"
+      "action": "schedule_exhausted_missing"
     },
     {
       "scheduleId": "P02-R1-treatment",
       "runId": "P02-R1-treatment-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "fb2776b6-29e5-4d4e-8931-3d39ffe6e34b",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-haiku-4.5+gpt-5.6-sol",
+      "specialistSessionId": "call_cgkV4fGpHNFl3xcl4SQRwAFD",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P04-R2-treatment",
       "runId": "P04-R2-treatment-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "ed2a4753-1e05-41ef-a597-35ba88f96e9b",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "b8a2a35c-18e1-487c-a81a-c396c0cbb6d6",
       "requestedSpecialistModel": "unavailable:not_explicitly_requested",
       "observedSpecialistModel": "claude-haiku-4.5+claude-opus-4.8",
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P08-R2-control",
       "runId": "P08-R2-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "82a21f26-b75c-4497-8b7b-a2053ddee5a0",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P06-R2-treatment",
       "runId": "P06-R2-treatment-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "061aa152-ada3-4a37-9dbb-5fd0099aca09",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "4b17ce8b-5e16-4872-a462-f75cec6e74c5",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P09-R2-control",
       "runId": "P09-R2-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "a6c776a0-1247-40b3-afea-f2063b140361",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P08-R2-treatment",
       "runId": "P08-R2-treatment-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "65840909-c396-492b-a5f9-8db70de098ab",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "9fb72695-262b-4a50-b9e3-34f49f06d4fa",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P04-R2-control",
       "runId": "P04-R2-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "678dfa27-f1e8-4f65-b7c5-03e3afe4f9a3",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P06-R2-control",
       "runId": "P06-R2-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "b342ee41-0cdf-4771-af9c-0d50718bd8a2",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P04-R3-treatment",
       "runId": "P04-R3-treatment-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "7cbf0c2a-f9f7-405e-b6f0-8bf5e3ffc5c7",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "a37f16fb-db0e-422a-8320-ae1e11117252",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P06-R3-treatment",
       "runId": "P06-R3-treatment-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "a17fd9eb-d28e-4e79-b229-e31e1908d334",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "8da47afc-000e-4abe-9bbe-45d63dde079b",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P08-R3-treatment",
       "runId": "P08-R3-treatment-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "16f532ad-a147-43f6-b3bf-371dac40e69f",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": "1a13bab5-64cf-4d0a-9c6b-078cdab39dfb",
       "requestedSpecialistModel": "claude-haiku-4.5",
       "observedSpecialistModel": "claude-haiku-4.5",
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P09-R3-control",
       "runId": "P09-R3-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "8a69c470-a1f7-48f0-bf05-2efb412c609e",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P08-R3-control",
       "runId": "P08-R3-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "4cbde383-a286-4685-b467-3e3fef907b50",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P06-R3-control",
       "runId": "P06-R3-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "147c0c74-61c9-476c-84d6-f53c24aa45a4",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     },
     {
       "scheduleId": "P04-R3-control",
       "runId": "P04-R3-control-A1",
       "attempt": 1,
       "frozenSelected": true,
+      "parentSessionId": "fd0cf6f9-4b05-4eb6-95f0-f7044f03f370",
       "requestedParentModel": "gpt-5.6-sol",
       "observedParentModel": "claude-opus-4.8",
+      "specialistSessionId": null,
       "requestedSpecialistModel": null,
       "observedSpecialistModel": null,
-      "action": "execute_real_A2"
+      "action": "requires_real_A2"
     }
   ],
-  "executeRealA2": [
+  "requiresRealA2": [
     "P02-R1-treatment",
     "P04-R2-treatment",
     "P08-R2-control",
@@ -238,7 +276,7 @@
     "P04-R1-treatment"
   ],
   "rules": {
-    "executeRealA2": "Create a real A2 attempt; no placeholder record exists in this collection.",
-    "retryExhaustedScheduleMissing": "The mismatched A2 is excluded wrong_model and no further retry is allowed."
+    "requiresRealA2": "Create a real A2 attempt; no placeholder record exists in this collection.",
+    "scheduleExhaustedMissing": "The mismatched A2 is excluded wrong_model and no further retry is allowed."
   }
 }

@@ -22,14 +22,24 @@ const initial = walkFiles(rawRoot)
   .map(readJson);
 const manifestByRun = new Map(manifests.map((record) => [record.runId, record]));
 
+assert.strictEqual(
+  summary.collectionStage,
+  'provisional_execution_evidence_awaiting_wrong_model_retries'
+);
 assert.strictEqual(retryPlan.mismatchedSelectedAttempts.length, 19);
-assert.strictEqual(retryPlan.executeRealA2.length, 15);
+assert.strictEqual(retryPlan.requiresRealA2.length, 15);
 assert.strictEqual(retryPlan.exhaustedMissingSchedules.length, 4);
 for (const entry of retryPlan.mismatchedSelectedAttempts) {
   const manifest = manifestByRun.get(entry.runId);
   assert(manifest, `${entry.runId} manifest missing`);
+  assert.strictEqual(entry.parentSessionId, manifest.sessions.parent.sessionId);
+  assert.strictEqual(entry.requestedParentModel, manifest.sessions.parent.requestedModel);
+  assert.strictEqual(entry.observedParentModel, manifest.sessions.parent.observedModel);
+  if (manifest.condition === 'treatment') {
+    assert.strictEqual(entry.specialistSessionId, manifest.sessions.specialist.sessionId || null);
+  }
   assert.strictEqual(manifest.exclusion.reason, 'wrong_model');
-  if (entry.action === 'execute_real_A2') {
+  if (entry.action === 'requires_real_A2') {
     assert.strictEqual(manifest.exclusion.retryId, `${entry.scheduleId}-A2`);
     assert(!manifestByRun.has(`${entry.scheduleId}-A2`), `${entry.scheduleId} A2 was fabricated`);
   } else {
@@ -118,6 +128,7 @@ assert(p06Deviation.reasons.includes(
 assert.strictEqual(summary.counts.finalSelectedCount, null);
 assert.strictEqual(summary.counts.pendingRealA2Schedules, 15);
 assert.strictEqual(summary.counts.retryExhaustedMissingSchedules, 4);
+assert.strictEqual(summary.counts.knownMissingSchedules, 6);
 assert.strictEqual(summary.fullDatasetStageGates.artifactBlinding.status, 'blocked');
 assert.strictEqual(manifestByRun.get('P04-R1-control-A1').exclusion.excluded, false);
 assert.strictEqual(

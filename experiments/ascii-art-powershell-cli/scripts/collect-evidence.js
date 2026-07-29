@@ -2105,8 +2105,10 @@ function main() {
           runId: attempt.run_id,
           attempt: attempt.attempt,
           frozenSelected: frozenSelectedRunIds.has(attempt.run_id),
+          parentSessionId: attempt.parent_session_id,
           requestedParentModel: parentModel,
           observedParentModel: evidence.parentObservedModel,
+          specialistSessionId: specialist?.sessionId || null,
           requestedSpecialistModel: specialist?.requestedModel || null,
           observedSpecialistModel: specialist ? evidence.specialistObservedModel : null
         });
@@ -2123,13 +2125,13 @@ function main() {
   const retryPlanEntries = selectedModelMismatches.map((record) => {
     const scheduleAttempts = attemptsBySchedule.get(record.scheduleId);
     const action = record.attempt === 1 && !scheduleAttempts.some((item) => item.attempt === 2)
-      ? 'execute_real_A2'
-      : 'retry_exhausted_schedule_missing';
+      ? 'requires_real_A2'
+      : 'schedule_exhausted_missing';
     return { ...record, action };
   });
-  const retryRequired = retryPlanEntries.filter((entry) => entry.action === 'execute_real_A2');
+  const retryRequired = retryPlanEntries.filter((entry) => entry.action === 'requires_real_A2');
   const retryExhausted = retryPlanEntries.filter((entry) => (
-    entry.action === 'retry_exhausted_schedule_missing'
+    entry.action === 'schedule_exhausted_missing'
   ));
   const wrongModelRetryPlan = {
     protocolId,
@@ -2137,11 +2139,11 @@ function main() {
     generatedAt: collectedAt,
     selectionStatus: 'not_final_pending_real_retries',
     mismatchedSelectedAttempts: retryPlanEntries,
-    executeRealA2: retryRequired.map((entry) => entry.scheduleId),
+    requiresRealA2: retryRequired.map((entry) => entry.scheduleId),
     exhaustedMissingSchedules: retryExhausted.map((entry) => entry.scheduleId),
     rules: {
-      executeRealA2: 'Create a real A2 attempt; no placeholder record exists in this collection.',
-      retryExhaustedScheduleMissing: 'The mismatched A2 is excluded wrong_model and no further retry is allowed.'
+      requiresRealA2: 'Create a real A2 attempt; no placeholder record exists in this collection.',
+      scheduleExhaustedMissing: 'The mismatched A2 is excluded wrong_model and no further retry is allowed.'
     }
   };
   writeJson(path.join(rawRoot, 'wrong-model-retry-plan.json'), wrongModelRetryPlan);
@@ -2191,7 +2193,7 @@ function main() {
   ]));
   const summary = {
     protocolId,
-    collectionStage: 'execution_evidence_frozen_no_judgments',
+    collectionStage: 'provisional_execution_evidence_awaiting_wrong_model_retries',
     collectedAt,
     counts: {
       plannedSchedules: executionIndex.selectedRuns.length,
@@ -2203,6 +2205,8 @@ function main() {
       originalStructurallyMissingSchedules: executionIndex.selectedRuns
         .filter((run) => run.status === 'missing').length,
       retryExhaustedMissingSchedules: retryExhausted.length,
+      knownMissingSchedules: executionIndex.selectedRuns
+        .filter((run) => run.status === 'missing').length + retryExhausted.length,
       finalSelectedCount: null,
       finalSelectedCountReason: 'pending_real_A2_execution',
       startedAttempts: records.filter((record) => record.attempt.phase === 'session_started').length,
