@@ -73,7 +73,9 @@ The live GitHub Copilot reference implementation consists of the
 [`ascii-art` custom agent](.github/agents/ascii-art.agent.md). The
 [implementation notes](docs/reference-implementations/ascii-art.md) describe how the
 minimal router delegates bounded asset work to Claude Haiku 4.5 with only `read` and
-`edit`, direct artifact writes, and terse status returns.
+`edit`, direct artifact writes, and terse status returns. The parent prepares the
+target's parent directory before delegation and retains all CLI/source integration and
+integration verification.
 
 ## Benchmark
 
@@ -102,8 +104,10 @@ search methodology.
 ## Status
 
 This repository contains the pattern documentation, benchmark foundation, and live
-GitHub Copilot reference implementation. An isolated CLI routing smoke has passed, but
-the benchmark treatment is not yet frozen and no measured benchmark results exist.
+GitHub Copilot reference implementation. A clean CLI routing smoke has passed with
+parent-owned directory preparation and integration, asset-only delegation, and the
+Claude Haiku 4.5 `read`/`edit` boundary. The benchmark treatment is not yet frozen and
+no measured benchmark results exist.
 
 ## License
 
