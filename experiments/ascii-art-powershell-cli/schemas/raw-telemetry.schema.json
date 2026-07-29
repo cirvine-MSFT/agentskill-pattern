@@ -51,7 +51,10 @@
         "wallLatencyMs": { "$ref": "#/$defs/metric" },
         "parentActiveLatencyMs": { "$ref": "#/$defs/metric" },
         "specialistLatencyMs": { "$ref": "#/$defs/metric" },
-        "parentWaitLatencyMs": { "$ref": "#/$defs/metric" }
+        "parentWaitLatencyMs": {
+          "description": "Control is unavailable with reason control_condition_no_delegation_wait. Treatment is available only when it exactly equals returnedAt - requestedAt from the authenticated delegation result/call events (0 ms tolerance); otherwise it is unavailable.",
+          "allOf": [{ "$ref": "#/$defs/metric" }]
+        }
       }
     },
     "models": {

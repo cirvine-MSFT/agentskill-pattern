@@ -11,7 +11,10 @@ const {
   walkFiles,
   writeJson
 } = require('./lib');
-const { evaluateConditionCompliance } = require('./telemetry-integrity');
+const {
+  evaluateConditionCompliance,
+  reconcileParentWaitLatency
+} = require('./telemetry-integrity');
 
 const args = parseArguments(process.argv.slice(2));
 if (!args.runs || !args.artifacts || !args.judgments || !args.out) {
@@ -80,6 +83,25 @@ for (const scheduledItem of scheduled) {
   const selected = attempts.find((manifest) => !manifest.exclusion.excluded);
   if (selected) selectedRuns.set(scheduledItem.scheduleId, selected);
 }
+const missingScheduleIds = scheduled
+  .filter((scheduledItem) => !selectedRuns.has(scheduledItem.scheduleId))
+  .map((scheduledItem) => scheduledItem.scheduleId);
+const excludedMissingSchedules = scheduled.flatMap((scheduledItem) => {
+  if (!missingScheduleIds.includes(scheduledItem.scheduleId)) return [];
+  const attempts = [...manifests.values()]
+    .filter((manifest) => manifest.scheduleId === scheduledItem.scheduleId)
+    .sort((left, right) => left.execution.attempt - right.execution.attempt);
+  if (attempts.length === 0 || attempts.some((manifest) => !manifest.exclusion.excluded)) return [];
+  return [{
+    scheduleId: scheduledItem.scheduleId,
+    condition: scheduledItem.condition,
+    attempts: attempts.map((manifest) => ({
+      runId: manifest.runId,
+      reason: manifest.exclusion.reason
+    }))
+  }];
+});
+const allSchedulesSelected = selectedRuns.size === scheduled.length;
 
 const assignmentByBlind = new Map(assignments.blocks.flatMap((block) => block.artifacts
   .map((item) => [item.blindId, { ...item, block: block.block }])));
@@ -215,7 +237,9 @@ function analyzeScope(records) {
     const completePromptClusters = promptIds.filter((promptId) => (
       complete.filter((row) => row.promptId === promptId).length === 3
     )).length;
-    const bootstrapEligible = promptIds.length === 10 && completePromptClusters === 10;
+    const bootstrapEligible = allSchedulesSelected &&
+      promptIds.length === 10 &&
+      completePromptClusters === 10;
     const random = mulberry32(seedConfig.seed);
     const bootstrap = [];
     if (bootstrapEligible) {
@@ -336,9 +360,13 @@ function analyzeScope(records) {
     'specialistLatencyMs',
     'parentWaitLatencyMs'
   ];
-  const outcomes = telemetryNames.map((name) => summarize(name, (record) => (
-    record.telemetry ? metricValue(record.telemetry.metrics[name]) : null
-  )));
+  const outcomes = telemetryNames.map((name) => summarize(name, (record) => {
+    if (!record.telemetry) return null;
+    if (name === 'parentWaitLatencyMs') {
+      return reconcileParentWaitLatency(record.manifest, record.telemetry);
+    }
+    return metricValue(record.telemetry.metrics[name]);
+  }));
   outcomes.push(summarize('deterministicPass', (record) => (
     !record.deterministic || record.deterministic.status === 'unavailable'
       ? null
@@ -492,6 +520,8 @@ const output = {
         ? 'complete'
         : (emptyFoundationDryRun ? 'empty_foundation_dry_run' : 'incomplete'),
       structurallyMissingObservations: structurallyMissing.length,
+      missingScheduleIds,
+      excludedMissingSchedules,
       inferentialOutputRequiresCompleteOutcomeClusters: true
     }
   },

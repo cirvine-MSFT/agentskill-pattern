@@ -68,6 +68,56 @@ function reconcileMetric(target, source, label, errors) {
   }
 }
 
+function reconcileParentWaitLatency(manifest, telemetry, errors = []) {
+  const metric = telemetry?.metrics?.parentWaitLatencyMs;
+  if (manifest?.condition === 'control') {
+    requireUnavailable(
+      metric,
+      'parentWaitLatencyMs',
+      errors,
+      'control_condition_no_delegation_wait'
+    );
+    return null;
+  }
+
+  const evidence = telemetry?.routing?.delegationEvidence;
+  const events = telemetry?.events || [];
+  const call = evidence?.callEventId
+    ? events.find((event) => event.eventId === evidence.callEventId)
+    : null;
+  const result = evidence?.resultEventId
+    ? events.find((event) => event.eventId === evidence.resultEventId)
+    : null;
+  const authenticatedBoundaries = evidence?.status === 'available' &&
+    evidence.callEventId !== null &&
+    evidence.resultEventId !== null &&
+    evidence.requestedAt !== null &&
+    evidence.returnedAt !== null &&
+    call?.type === 'delegation_call' &&
+    result?.type === 'delegation_result' &&
+    call.sessionId === manifest?.sessions?.parent?.sessionId &&
+    result.sessionId === manifest?.sessions?.parent?.sessionId &&
+    call.callId === result.callId &&
+    call.timestamp === evidence.requestedAt &&
+    result.timestamp === evidence.returnedAt;
+
+  if (!authenticatedBoundaries) {
+    requireUnavailable(metric, 'parentWaitLatencyMs without authenticated delegation boundaries', errors);
+    return null;
+  }
+
+  const expected = Date.parse(evidence.returnedAt) - Date.parse(evidence.requestedAt);
+  if (!Number.isFinite(expected) || expected < 0) {
+    errors.push('parentWaitLatencyMs authenticated delegation boundaries must be chronologically ordered');
+    return null;
+  }
+  if (!metric || metric.status !== 'available' || metric.value !== expected) {
+    errors.push(`parentWaitLatencyMs must equal authenticated delegation wait ${expected} ms with 0 ms tolerance`);
+    return null;
+  }
+  return expected;
+}
+
 function validateEventShape(event, errors) {
   const populated = (name) => event[name] !== null;
   const requireNull = (...names) => names.forEach((name) => {
@@ -403,6 +453,7 @@ function validateTelemetryConsistency(manifest, telemetry, prompt) {
         requireUnavailable(telemetry.metrics.specialistLatencyMs, 'specialistLatencyMs', errors);
       }
   }
+  reconcileParentWaitLatency(manifest, telemetry, errors);
 
   const manifestEvidence = manifest.conditionEvidence;
   const expectedEvidence = derivedConditionEvidence(manifest, telemetry);
@@ -442,5 +493,6 @@ module.exports = {
   derivedConditionEvidence,
   evaluateConditionCompliance,
   metricValue,
+  reconcileParentWaitLatency,
   validateTelemetryConsistency
 };

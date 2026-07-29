@@ -34,12 +34,35 @@ const assignments = readJson(path.join(root, 'design', 'judge-assignments.json')
 const prompts = readJson(path.join(root, 'prompts.json'));
 const artifactDirectory = path.resolve(args.artifacts);
 const outputDirectory = path.resolve(args.out);
+const infrastructureReasons = new Set([
+  'session_creation_failure',
+  'hash_mismatch',
+  'wrong_model',
+  'non_fresh_session',
+  'telemetry_collection_failure',
+  'external_interruption',
+  'required_tool_unavailable'
+]);
+let written = 0;
 
 for (const block of assignments.blocks) {
   for (const assignment of block.artifacts) {
     const selected = manifests.filter((manifest) => (
       manifest.scheduleId === assignment.scheduleId && !manifest.exclusion.excluded
     ));
+    if (selected.length === 0) {
+      const attempts = manifests
+        .filter((manifest) => manifest.scheduleId === assignment.scheduleId)
+        .sort((left, right) => left.execution.attempt - right.execution.attempt);
+      const exhausted = attempts.length === 2 &&
+        attempts.every((manifest) => manifest.exclusion.excluded &&
+          infrastructureReasons.has(manifest.exclusion.reason)) &&
+        attempts[0].execution.attempt === 1 &&
+        attempts[1].execution.attempt === 2 &&
+        attempts[0].exclusion.retryId === attempts[1].runId &&
+        attempts[1].exclusion.retryOf === attempts[0].runId;
+      if (exhausted) continue;
+    }
     if (selected.length !== 1) {
       throw new Error(`${assignment.blindId} requires exactly one selected run for ${assignment.scheduleId}.`);
     }
@@ -74,7 +97,8 @@ for (const block of assignments.blocks) {
       blindBundlePath,
       blindBundleSha256: sha256(Buffer.from(blindBytes, 'utf8'))
     });
+    written += 1;
   }
 }
 
-console.log(`WROTE: 66 bound blind bundle assignments to ${outputDirectory}`);
+console.log(`WROTE: ${written} bound blind bundle assignments to ${outputDirectory}`);

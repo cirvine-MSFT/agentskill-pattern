@@ -16,18 +16,39 @@ const { validateSchema } = require('./validate-schema');
 
 const sourceSchema = readJson(path.join(root, 'schemas', 'artifact-bundle.schema.json'));
 const blindSchema = readJson(path.join(root, 'schemas', 'blind-content.schema.json'));
-const prohibitedMetadataAssignment = /\b(?:condition(?:Instruction)?|requestedModel|observedModel|model|sessionId|targetSessionId|coordinatorSessionId|scheduleId|runId|routing|delegationEvidence)\b(?:\\?["'])?\s*(?::|=)/im;
+const prohibitedMetadataAssignment = /(?:\b(?:condition(?:Instruction)?|requestedModel|observedModel|parentModel|specialistModel|judgeModel|sessionId|targetSessionId|coordinatorSessionId|scheduleId|runId|modelRouting|delegationEvidence)\b(?:\\?["'])?\s*(?::|=)|(?:\\?["'])routing(?:\\?["'])\s*:)/im;
+const conditionRevealingMarkers = [
+  /\b(?:generated|created|written|produced|implemented|edited|authored)\s+by\s+(?:a\s+|the\s+)?(?:delegated\s+)?(?:specialist|sub[- ]?agent|nested\s+(?:agent|session)|delegate)\b/i,
+  /\bdelegat(?:ed|ion|ing)\s+(?:to|by|via|through|a\s+|the\s+)?(?:specialist|sub[- ]?agent|nested\s+(?:agent|session))\b/i,
+  /\b(?:delegated\s+specialist|specialist\s+(?:session|agent|model)|sub[- ]?agent\s+(?:session|model)|nested\s+(?:agent|session))\b/i,
+  /\b(?:control|treatment)\s+(?:condition|arm|group|run|session|candidate|artifact|output)\b/i,
+  /\b(?:condition|experimental\s+arm|benchmark\s+arm)\s*(?:is|was|:|=)\s*(?:control|treatment)\b/i,
+  /\b(?:parent|specialist|nested|delegated|coordinator|root|trial|judge)\s+session\b/i,
+  /\bsession\s+(?:id|identifier)\b/i,
+  /\b(?:requested|observed|parent|specialist|judge)\s+model\b/i,
+  /\b(?:model[- ]?routing|routed?\s+to\s+(?:a\s+|the\s+)?(?:model|specialist|sub[- ]?agent|claude|gpt))\b/i,
+  /\bcreate_banner_only\b/i
+];
 
 function assertNoProhibitedMetadata(serialized, forbiddenValues, label) {
   const containsForbidden = (value) => {
-    if (value === 'control' || value === 'treatment') {
-      return new RegExp(`\\b${value}\\b`, 'i').test(serialized);
-    }
     return typeof value === 'string' && value.length > 0 && serialized.includes(value);
   };
   if (prohibitedMetadataAssignment.test(serialized) ||
       forbiddenValues.some(containsForbidden)) {
     throw new Error(`${label} contains condition/model/session/run metadata leakage, including routing metadata.`);
+  }
+}
+
+function assertNoConditionRevealingProvenance(value, label) {
+  const textValues = (item) => {
+    if (typeof item === 'string') return [item];
+    if (Array.isArray(item)) return item.flatMap(textValues);
+    if (item && typeof item === 'object') return Object.values(item).flatMap(textValues);
+    return [];
+  };
+  if (textValues(value).some((text) => conditionRevealingMarkers.some((marker) => marker.test(text)))) {
+    throw new Error(`${label} contains a prohibited high-confidence condition-revealing provenance marker.`);
   }
 }
 
@@ -100,7 +121,6 @@ function authenticateArtifactBundle(artifactRoot, artifact, manifest, prompt, de
   });
   const serialized = canonicalJson(source);
   const forbiddenValues = [
-    manifest.condition,
     manifest.conditionInstruction,
     manifest.runId,
     manifest.scheduleId,
@@ -120,6 +140,10 @@ function authenticateArtifactBundle(artifactRoot, artifact, manifest, prompt, de
     'create_banner_only'
   ];
   assertNoProhibitedMetadata(serialized, forbiddenValues, `${artifact.runId} source artifact`);
+  assertNoConditionRevealingProvenance({
+    deterministic: source.deterministic,
+    files: source.files
+  }, `${artifact.runId} source artifact candidate content`);
 
   const expectedFiles = source.files.map((file) => {
     const bytes = Buffer.from(file.content, 'utf8');
@@ -155,9 +179,13 @@ function validateBlindContent(blindId, source, blindPath) {
   }
   assertNoProhibitedMetadata(
     canonicalJson(value),
-    ['control', 'treatment', parentModel, specialistModel, 'create_banner_only'],
+    [parentModel, specialistModel, 'create_banner_only'],
     `${blindId} blind bundle`
   );
+  assertNoConditionRevealingProvenance({
+    deterministic: value.deterministic,
+    files: value.files
+  }, `${blindId} blind bundle candidate content`);
   const expectedBytes = canonicalJson(buildBlindContent(blindId, source));
   const actualBytes = fs.readFileSync(blindPath, 'utf8');
   if (actualBytes !== expectedBytes) {
@@ -167,6 +195,7 @@ function validateBlindContent(blindId, source, blindPath) {
 }
 
 module.exports = {
+  assertNoConditionRevealingProvenance,
   assertNoProhibitedMetadata,
   authenticateArtifactBundle,
   buildBlindContent,

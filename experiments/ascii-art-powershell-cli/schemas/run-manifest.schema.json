@@ -132,6 +132,7 @@
     },
     "completion": { "enum": ["completed", "failed", "timed_out", "interrupted"] },
     "exclusion": {
+      "description": "Attempt shape: an included initial has no retry links; an excluded initial points to its A2 retry; an A2 retry points to A1 and is either included or excluded for a second allowed infrastructure failure.",
       "oneOf": [
         {
           "type": "object",
@@ -140,8 +141,19 @@
           "properties": {
             "excluded": { "const": false },
             "reason": { "type": "null" },
-            "retryOf": { "type": ["string", "null"] },
-            "retryId": { "type": ["string", "null"] }
+            "retryOf": { "type": "null" },
+            "retryId": { "type": "null" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["excluded", "reason", "retryOf", "retryId"],
+          "properties": {
+            "excluded": { "const": false },
+            "reason": { "type": "null" },
+            "retryOf": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A1$" },
+            "retryId": { "type": "null" }
           }
         },
         {
@@ -161,8 +173,29 @@
                 "required_tool_unavailable"
               ]
             },
-            "retryOf": { "type": ["string", "null"] },
-            "retryId": { "type": ["string", "null"] }
+            "retryOf": { "type": "null" },
+            "retryId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A2$" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["excluded", "reason", "retryOf", "retryId"],
+          "properties": {
+            "excluded": { "const": true },
+            "reason": {
+              "enum": [
+                "session_creation_failure",
+                "hash_mismatch",
+                "wrong_model",
+                "non_fresh_session",
+                "telemetry_collection_failure",
+                "external_interruption",
+                "required_tool_unavailable"
+              ]
+            },
+            "retryOf": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A1$" },
+            "retryId": { "type": "null" }
           }
         }
       ]

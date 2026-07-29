@@ -44,6 +44,9 @@ node .\experiments\ascii-art-powershell-cli\scripts\summarize.js `
 
 An intentional no-result foundation smoke test may add `--allow-incomplete`; its summary is labeled
 `empty_foundation_dry_run`, and every outcome with incomplete prompt clusters withholds its interval.
+The same flag produces descriptive diagnostics when both allowed attempts for a planned schedule are
+excluded for infrastructure reasons. The schedule remains one of 60 planned IDs, is reported with both
+exclusion reasons, has no artifact/judgment requirement, and globally withholds inferential output.
 
 Before judging, generate blinded bundles directly from exact-byte-authenticated selected source artifacts and bind them to selected runs:
 
@@ -53,5 +56,11 @@ node .\experiments\ascii-art-powershell-cli\scripts\bind-blind-bundles.js `
   --artifacts .\experiments\ascii-art-powershell-cli\artifacts `
   --out .\experiments\ascii-art-powershell-cli\artifacts
 ```
+
+Blind generation rejects high-confidence candidate provenance phrases that reveal delegation,
+specialist/subagent use, condition arms, trial sessions, or model routing while allowing ordinary task
+language such as control flow, treatment plans, session caches, and data models. Control parent-wait
+latency is unavailable; treatment parent wait is accepted only when it exactly reconciles to authenticated
+delegation call/result timestamps.
 
 See `protocol.md` for the immutable preregistration, telemetry definitions, exclusions, judging, and analysis.

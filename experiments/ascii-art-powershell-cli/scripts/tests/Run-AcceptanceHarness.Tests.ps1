@@ -112,6 +112,64 @@ else {
         throw 'Malformed candidate JSON was misclassified as unavailable instead of failed.'
     }
 
+    $p02Workspace = Join-Path $temporaryRoot 'p02'
+    New-Item -ItemType Directory -Path (Join-Path $p02Workspace 'src') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $p02Workspace 'assets') -Force | Out-Null
+    @'
+param([Parameter(ValueFromRemainingArguments)][string[]]$CliArguments)
+$pathIndex = [Array]::IndexOf($CliArguments, '--path')
+$dataIndex = [Array]::IndexOf($CliArguments, '--data-file')
+$csvPath = $CliArguments[$pathIndex + 1]
+$dataFile = $CliArguments[$dataIndex + 1]
+$rows = @(Import-Csv -LiteralPath $csvPath)
+if ($rows.Count -eq 0 -or @($rows | Where-Object { [string]::IsNullOrWhiteSpace($_.Title) }).Count -gt 0) {
+    [Console]::Error.WriteLine('invalid row')
+    exit 1
+}
+$tasks = @((Get-Content -LiteralPath $dataFile -Raw) | ConvertFrom-Json)
+$nextId = 1 + [int](($tasks | Measure-Object -Property id -Maximum).Maximum)
+$importedIds = @()
+foreach ($row in $rows) {
+    $importedIds += $nextId
+    $tasks += [pscustomobject]@{
+        id = $nextId
+        title = $row.Title
+        description = if ($null -eq $row.Description) { '' } else { $row.Description }
+        status = if ([string]::IsNullOrWhiteSpace($row.Status)) { 'pending' } else { $row.Status }
+        createdAt = '2026-07-28T00:00:00.000Z'
+    }
+    $nextId += 1
+}
+[System.IO.File]::WriteAllText(
+    $dataFile,
+    "$(ConvertTo-Json -InputObject @($tasks) -Depth 8)`n",
+    [System.Text.UTF8Encoding]::new($false)
+)
+if ($CliArguments -contains '--json') {
+    [pscustomobject]@{ importedCount = $rows.Count; importedIds = @($importedIds) } | ConvertTo-Json
+}
+else {
+    $root = Split-Path -Parent $PSScriptRoot
+    [System.IO.File]::ReadAllText((Join-Path $root 'assets/import.txt')).TrimEnd("`r", "`n")
+    if (-not (Test-Path -LiteralPath (Join-Path $root 'banner-only'))) {
+        "Imported $($rows.Count) task."
+    }
+}
+'@ | Set-Content -LiteralPath (Join-Path $p02Workspace 'src/TaskForge.ps1') -Encoding utf8NoBOM
+    (1..12 | ForEach-Object { '+++++++++IMPORT+++++++++' }) -join "`n" |
+        ForEach-Object { [System.IO.File]::WriteAllText((Join-Path $p02Workspace 'assets/import.txt'), "$_`n", [System.Text.UTF8Encoding]::new($false)) }
+    $p02Positive = Invoke-Case $p02Workspace -CaseId P02
+    if ($p02Positive.ExitCode -ne 0 -or $p02Positive.Result.status -ne 'pass') {
+        throw "P02 banner plus result output unexpectedly failed acceptance: $($p02Positive.Result | ConvertTo-Json -Depth 8 -Compress)"
+    }
+    New-Item -ItemType File -Path (Join-Path $p02Workspace 'banner-only') | Out-Null
+    $p02BannerOnly = Invoke-Case $p02Workspace -CaseId P02
+    $p02BannerAssertion = @($p02BannerOnly.Result.assertions | Where-Object id -eq 'import-banner')
+    if ($p02BannerOnly.ExitCode -eq 0 -or $p02BannerOnly.Result.status -ne 'fail' -or
+        $p02BannerAssertion.Count -ne 1 -or $p02BannerAssertion[0].status -ne 'fail') {
+        throw 'Banner-only P02 text import unexpectedly passed import-banner acceptance.'
+    }
+
     $p05Workspace = Join-Path $temporaryRoot 'p05'
     New-Item -ItemType Directory -Path (Join-Path $p05Workspace 'src') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $p05Workspace 'assets') -Force | Out-Null
@@ -248,7 +306,7 @@ $child = [System.Diagnostics.Process]::Start($info)
         }
     }
 
-    'PASS: acceptance classifies missing/invalid candidates, enforces one leading banner, validates typed P05 arrays, and bounds Windows process trees'
+    'PASS: acceptance classifies missing/invalid candidates, requires one leading banner plus expected text results, validates typed P05 arrays, and bounds Windows process trees'
 }
 finally {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue

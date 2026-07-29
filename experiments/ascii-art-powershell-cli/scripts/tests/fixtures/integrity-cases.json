@@ -323,5 +323,50 @@
     "id": "judge-root-session-overlap",
     "mutation": "judgeRootSessionOverlap",
     "expected": "judge session IDs must be disjoint"
+  },
+  {
+    "id": "source-artifact-delegated-specialist-leak",
+    "mutation": "sourceArtifactDelegatedSpecialistLeak",
+    "expected": "condition-revealing provenance marker"
+  },
+  {
+    "id": "source-artifact-subagent-leak",
+    "mutation": "sourceArtifactSubagentLeak",
+    "expected": "condition-revealing provenance marker"
+  },
+  {
+    "id": "source-artifact-treatment-leak",
+    "mutation": "sourceArtifactTreatmentLeak",
+    "expected": "condition-revealing provenance marker"
+  },
+  {
+    "id": "source-artifact-control-leak",
+    "mutation": "sourceArtifactControlLeak",
+    "expected": "condition-revealing provenance marker"
+  },
+  {
+    "id": "source-artifact-session-phrase-leak",
+    "mutation": "sourceArtifactSessionLeakPhrase",
+    "expected": "condition-revealing provenance marker"
+  },
+  {
+    "id": "source-artifact-model-routing-leak",
+    "mutation": "sourceArtifactModelRoutingLeak",
+    "expected": "condition-revealing provenance marker"
+  },
+  {
+    "id": "control-parent-wait-available",
+    "mutation": "controlParentWaitAvailable",
+    "expected": "parentWaitLatencyMs must be unavailable"
+  },
+  {
+    "id": "treatment-parent-wait-arbitrary-without-evidence",
+    "mutation": "treatmentParentWaitArbitraryWithoutEvidence",
+    "expected": "parentWaitLatencyMs without authenticated delegation boundaries must be unavailable"
+  },
+  {
+    "id": "treatment-parent-wait-mismatch",
+    "mutation": "treatmentParentWaitMismatch",
+    "expected": "parentWaitLatencyMs must equal authenticated delegation wait"
   }
 ]

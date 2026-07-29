@@ -29,6 +29,15 @@ const assignments = readJson(path.join(root, 'design', 'judge-assignments.json')
 const protocol = fs.readFileSync(path.join(root, 'protocol.md'), 'utf8');
 const rawRoot = path.join(dataRoot, 'raw');
 const artifactRoot = path.join(dataRoot, 'artifacts');
+const infrastructureReasons = new Set([
+  'session_creation_failure',
+  'hash_mismatch',
+  'wrong_model',
+  'non_fresh_session',
+  'telemetry_collection_failure',
+  'external_interruption',
+  'required_tool_unavailable'
+]);
 
 function check(condition, message) {
   if (!condition) {
@@ -340,14 +349,27 @@ if (rawJson.length > 0) {
     }
   });
   observations.forEach((scheduledItem) => {
-    const attempts = manifests.filter((item) => item.scheduleId === scheduledItem.scheduleId);
+    const attempts = manifests
+      .filter((item) => item.scheduleId === scheduledItem.scheduleId)
+      .sort((left, right) => left.execution.attempt - right.execution.attempt);
+    const included = attempts.filter((item) => !item.exclusion.excluded);
     check(attempts.length >= 1 && attempts.length <= 2, `${scheduledItem.scheduleId} must have one or two attempts`);
-    check(attempts.filter((item) => !item.exclusion.excluded).length === 1, `${scheduledItem.scheduleId} must have exactly one included attempt`);
-    if (attempts.length === 2) {
-      const first = attempts.find((item) => item.execution.attempt === 1);
-      const retry = attempts.find((item) => item.execution.attempt === 2);
-      check(Boolean(first && first.exclusion.excluded), `${scheduledItem.scheduleId} retry requires an excluded first attempt`);
-      check(Boolean(retry), `${scheduledItem.scheduleId} retry requires attempt 2`);
+    if (attempts.length === 1) {
+      const first = attempts[0];
+      check(
+        first.execution.attempt === 1 &&
+        !first.exclusion.excluded &&
+        first.exclusion.retryOf === null &&
+        first.exclusion.retryId === null,
+        `${scheduledItem.scheduleId} single-attempt schedule must contain one included initial attempt without retry linkage`
+      );
+    } else if (attempts.length === 2) {
+      const [first, retry] = attempts;
+      check(
+        first.execution.attempt === 1 && retry.execution.attempt === 2,
+        `${scheduledItem.scheduleId} retry schedule must contain attempts 1 and 2 exactly once`
+      );
+      check(first.exclusion.excluded, `${scheduledItem.scheduleId} retry requires an excluded first attempt`);
       if (first && retry) {
         check(
           first.exclusion.retryOf === null &&
@@ -357,14 +379,29 @@ if (rawJson.length > 0) {
           `${scheduledItem.scheduleId} retry attempts must have reciprocal retryId/retryOf linkage`
         );
       }
-    } else {
       check(
-        attempts[0].exclusion.retryOf === null && attempts[0].exclusion.retryId === null,
-        `${scheduledItem.scheduleId} single attempt must not record retry linkage`
+        included.length === 1
+          ? !retry.exclusion.excluded
+          : (included.length === 0 && retry.exclusion.excluded),
+        `${scheduledItem.scheduleId} retry schedule must have one included retry or two excluded infrastructure attempts`
       );
+      if (included.length === 0) {
+        check(
+          attempts.every((attempt) => infrastructureReasons.has(attempt.exclusion.reason)),
+          `${scheduledItem.scheduleId} twice-excluded schedule must use allowed infrastructure reasons`
+        );
+      }
     }
   });
 }
+
+const selectedBySchedule = new Map(observations.map((scheduledItem) => [
+  scheduledItem.scheduleId,
+  manifests.find((manifest) => manifest.scheduleId === scheduledItem.scheduleId && !manifest.exclusion.excluded)
+]));
+const selectedManifests = [...selectedBySchedule.values()].filter(Boolean);
+const expectedJudged = judged.filter((assignment) => selectedBySchedule.has(assignment.scheduleId) &&
+  selectedBySchedule.get(assignment.scheduleId));
 
 const artifactJson = walkFiles(path.join(dataRoot, 'artifacts')).filter((file) => file.endsWith('.json'));
 const artifactManifests = artifactJson.map(readJson).filter((item) => item.protocolId && item.bundleSha256 && item.files);
@@ -372,9 +409,17 @@ const blindBundles = artifactJson.map(readJson).filter((item) => item.protocolId
 const authenticatedArtifacts = new Map();
 if (artifactJson.length > 0) {
   validateRecords(artifactManifests, 'artifacts');
-  check(artifactManifests.length >= 60 && artifactManifests.length <= 120, `non-empty artifact dataset must contain 60-120 manifests, found ${artifactManifests.length}`);
+  check(
+    artifactManifests.length >= selectedManifests.length && artifactManifests.length <= manifests.length,
+    `artifact dataset must contain every selected included schedule and may retain excluded-attempt artifacts, found ${artifactManifests.length} for ${selectedManifests.length} selected schedules`
+  );
   check(new Set(artifactManifests.map((item) => item.runId)).size === artifactManifests.length, 'artifact run IDs must be unique');
-  check(artifactManifests.length === manifests.length, 'artifact dataset must contain one manifest per run attempt');
+  selectedManifests.forEach((manifest) => {
+    check(
+      artifactManifests.some((artifact) => artifact.runId === manifest.runId),
+      `${manifest.runId} selected included attempt must have an artifact manifest`
+    );
+  });
   artifactManifests.forEach((artifact) => {
     const manifest = manifests.find((item) => item.runId === artifact.runId);
     check(Boolean(manifest), `${artifact.runId} artifact must have a matching run manifest`);
@@ -399,13 +444,12 @@ if (artifactJson.length > 0) {
   });
 }
 
-const selectedBySchedule = new Map(observations.map((scheduledItem) => [
-  scheduledItem.scheduleId,
-  manifests.find((manifest) => manifest.scheduleId === scheduledItem.scheduleId && !manifest.exclusion.excluded)
-]));
 if (blindBundles.length > 0) {
   validateRecords(blindBundles, 'blind-bundle');
-  check(blindBundles.length === 66, `bound blind bundle dataset must contain 66 records, found ${blindBundles.length}`);
+  check(
+    blindBundles.length === expectedJudged.length,
+    `bound blind bundle dataset must contain ${expectedJudged.length} records for selected schedules, found ${blindBundles.length}`
+  );
   check(new Set(blindBundles.map((item) => item.blindId)).size === blindBundles.length, 'bound blind bundle IDs must be unique');
   blindBundles.forEach((binding) => {
     const assignment = judged.find((item) => item.blindId === binding.blindId);
@@ -449,8 +493,14 @@ const judgmentJson = walkFiles(path.join(dataRoot, 'judgments')).filter((file) =
 const judgmentRecords = judgmentJson.map(readJson).filter((item) => item.protocolId && item.blindId && item.scores);
 if (judgmentJson.length > 0) {
   validateRecords(judgmentRecords, 'judgment');
-  check(judgmentRecords.length === 66, `non-empty judgment dataset must contain 66 records including duplicates, found ${judgmentRecords.length}`);
-  check(blindBundles.length === 66, `judgments require 66 run- and hash-bound blind bundles, found ${blindBundles.length}`);
+  check(
+    judgmentRecords.length === expectedJudged.length,
+    `judgment dataset must contain ${expectedJudged.length} records for selected schedules including duplicates, found ${judgmentRecords.length}`
+  );
+  check(
+    blindBundles.length === expectedJudged.length,
+    `judgments require ${expectedJudged.length} run- and hash-bound blind bundles, found ${blindBundles.length}`
+  );
   check(new Set(judgmentRecords.map((item) => item.blindId)).size === judgmentRecords.length, 'judgment blind IDs must be unique');
   judgmentRecords.forEach((judgment) => {
     const assignment = judged.find((item) => item.blindId === judgment.blindId);
@@ -472,12 +522,21 @@ if (judgmentJson.length > 0) {
   });
   const sessionsByBlock = assignments.blocks.map((block) => {
     const blockJudgments = judgmentRecords.filter((item) => item.judgeBlock === block.block);
+    const expectedBlockArtifacts = block.artifacts.filter((item) => selectedBySchedule.get(item.scheduleId));
     const sessionIds = new Set(blockJudgments.map((item) => item.judgeSessionId));
-    check(blockJudgments.length === block.artifacts.length, `judge block ${block.block} must contain exactly ${block.artifacts.length} judgments`);
-    check(sessionIds.size === 1, `judge block ${block.block} must use exactly one judge session`);
+    check(blockJudgments.length === expectedBlockArtifacts.length, `judge block ${block.block} must contain exactly ${expectedBlockArtifacts.length} judgments for selected schedules`);
+    check(sessionIds.size === (expectedBlockArtifacts.length > 0 ? 1 : 0), `non-empty judge block ${block.block} must use exactly one judge session`);
     return sessionIds.size === 1 ? [...sessionIds][0] : null;
   });
-  check(new Set(sessionsByBlock.filter(Boolean)).size === 6, 'judgments must use exactly six distinct judge session IDs, one per assigned block');
+  const expectedJudgeSessionCount = assignments.blocks.filter((block) => (
+    block.artifacts.some((item) => selectedBySchedule.get(item.scheduleId))
+  )).length;
+  check(
+    new Set(sessionsByBlock.filter(Boolean)).size === expectedJudgeSessionCount,
+    expectedJudgeSessionCount === 6
+      ? 'judgments must use exactly six distinct judge session IDs, one per non-empty assigned block'
+      : `judgments must use exactly ${expectedJudgeSessionCount} distinct judge session IDs, one per non-empty assigned block`
+  );
   const trialSessionIds = new Set(manifests.flatMap((manifest) => [
     manifest.execution.rootSessionId,
     manifest.execution.coordinatorSessionId,
