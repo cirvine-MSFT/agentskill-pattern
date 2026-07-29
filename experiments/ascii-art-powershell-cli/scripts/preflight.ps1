@@ -7,6 +7,10 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $failures = [System.Collections.Generic.List[string]]::new()
 
+if (-not $IsWindows) {
+    $failures.Add('Windows_NT is required for normative job-object process-tree isolation.')
+}
+
 function Get-CanonicalTextSha256 {
     param([Parameter(Mandatory)][string]$Path)
     $text = [System.IO.File]::ReadAllText($Path).Replace("`r`n", "`n")

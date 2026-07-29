@@ -138,5 +138,190 @@
     "id": "compaction-count-mismatch",
     "mutation": "compactionCountMismatch",
     "expected": "compaction event count must exactly match"
+  },
+  {
+    "id": "authenticated-artifact-bytes-tampered",
+    "mutation": "authenticatedArtifactBytesTampered",
+    "expected": "authenticated artifact bundle bytes do not match"
+  },
+  {
+    "id": "source-artifact-metadata-leak",
+    "mutation": "sourceArtifactMetadataLeak",
+    "expected": "leaks metadata or violates its schema"
+  },
+  {
+    "id": "source-artifact-session-value-leak",
+    "mutation": "sourceArtifactSessionLeak",
+    "expected": "condition/model/session/run metadata leakage"
+  },
+  {
+    "id": "blind-bundle-not-generated",
+    "mutation": "blindBundleNotGenerated",
+    "expected": "was not generated from the authenticated selected artifact bytes"
+  },
+  {
+    "id": "passed-art-missing-banner",
+    "mutation": "passedArtMissingBanner",
+    "expected": "passed deterministic art must contain the preregistered banner"
+  },
+  {
+    "id": "unbound-delegation-event",
+    "mutation": "unboundDelegationEvent",
+    "expected": "callEventId must bind"
+  },
+  {
+    "id": "self-asserted-condition-compliance",
+    "mutation": "selfAssertedConditionCompliance",
+    "expected": "conditionCompliance is not allowed"
+  },
+  {
+    "id": "unbound-tool-event",
+    "mutation": "unboundToolEvent",
+    "expected": "call record must bind to its raw tool_call event"
+  },
+  {
+    "id": "parent-specialist-session-overlap",
+    "mutation": "parentSpecialistSessionOverlap",
+    "expected": "parent and specialist session ID sets must be mutually disjoint"
+  },
+  {
+    "id": "parent-coordinator-session-overlap",
+    "mutation": "parentCoordinatorSessionOverlap",
+    "expected": "parent and coordinator session ID sets must be disjoint"
+  },
+  {
+    "id": "judge-trial-session-overlap",
+    "mutation": "judgeTrialSessionOverlap",
+    "expected": "judge session IDs must be disjoint"
+  },
+  {
+    "id": "control-specialist-aggregate-available",
+    "mutation": "controlSpecialistAggregateAvailable",
+    "expected": "specialistOutputTokens must be unavailable"
+  },
+  {
+    "id": "negative-metric",
+    "mutation": "negativeMetric",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
+    "id": "tool-call-aggregate-mismatch",
+    "mutation": "toolCallAggregateMismatch",
+    "expected": "toolCallCount must be available and equal"
+  },
+  {
+    "id": "tool-result-aggregate-mismatch",
+    "mutation": "toolResultAggregateMismatch",
+    "expected": "toolResultCount must be available and equal"
+  },
+  {
+    "id": "model-aggregate-mismatch",
+    "mutation": "modelAggregateMismatch",
+    "expected": "parent.inputTokens must be available and equal"
+  },
+  {
+    "id": "partial-model-usage-with-available-total",
+    "mutation": "partialModelUsageWithAvailableTotal",
+    "expected": "totalSessionAiCredits must be unavailable"
+  },
+  {
+    "id": "raw-source-hash-tampered",
+    "mutation": "rawSourceHashTampered",
+    "expected": "raw source hash must authenticate exact bytes"
+  },
+  {
+    "id": "hidden-authenticated-raw-event",
+    "mutation": "hiddenAuthenticatedRawEvent",
+    "expected": "normalized events must include every authenticated raw-source event exactly once"
+  },
+  {
+    "id": "excluded-with-null-reason",
+    "mutation": "excludedWithNullReason",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
+    "id": "included-with-exclusion-reason",
+    "mutation": "includedWithExclusionReason",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
+    "id": "non-windows-run-environment",
+    "mutation": "nonWindowsRunEnvironment",
+    "expected": "must equal the schema constant"
+  },
+  {
+    "id": "blind-bundle-unrelated-artifact",
+    "mutation": "blindBundleUnrelatedArtifact",
+    "expected": "was not generated from the authenticated selected artifact bytes"
+  },
+  {
+    "id": "blind-bundle-metadata-leak",
+    "mutation": "blindBundleMetadataLeak",
+    "expected": "blind bundle violates its metadata-safe schema"
+  },
+  {
+    "id": "source-artifact-routing-leak",
+    "mutation": "sourceArtifactRoutingLeak",
+    "expected": "condition/model/session/run metadata leakage"
+  },
+  {
+    "id": "source-artifact-quoted-metadata-leak",
+    "mutation": "sourceArtifactQuotedMetadataLeak",
+    "expected": "condition/model/session/run metadata leakage"
+  },
+  {
+    "id": "manifest-condition-evidence-unbound",
+    "mutation": "manifestConditionEvidenceUnbound",
+    "expected": "manifest condition evidence delegationCallEventIds must bind exactly"
+  },
+  {
+    "id": "unavailable-treatment-evidence-included",
+    "mutation": "unavailableTreatmentEvidenceIncluded",
+    "expected": "unavailable treatment delegation evidence must be excluded"
+  },
+  {
+    "id": "unavailable-control-evidence-included",
+    "mutation": "unavailableControlEvidenceIncluded",
+    "expected": "unavailable control delegation evidence must be excluded"
+  },
+  {
+    "id": "cross-observation-parent-specialist-overlap",
+    "mutation": "crossObservationParentSpecialistOverlap",
+    "expected": "parent and specialist session ID sets must be mutually disjoint"
+  },
+  {
+    "id": "specialist-session-reused",
+    "mutation": "specialistSessionReused",
+    "expected": "specialist session IDs must be unique"
+  },
+  {
+    "id": "specialist-latency-mismatch",
+    "mutation": "specialistLatencyMismatch",
+    "expected": "specialistLatencyMs must be available and equal"
+  },
+  {
+    "id": "negative-tool-duration",
+    "mutation": "negativeToolDuration",
+    "expected": "completion must not precede its start"
+  },
+  {
+    "id": "total-model-aggregate-mismatch",
+    "mutation": "totalModelAggregateMismatch",
+    "expected": "totalSessionNanoAiu must be available and equal"
+  },
+  {
+    "id": "outcome-based-exclusion-reason",
+    "mutation": "outcomeBasedExclusionReason",
+    "expected": "must match exactly one oneOf branch"
+  },
+  {
+    "id": "control-specialist-aggregate-wrong-reason",
+    "mutation": "controlSpecialistAggregateWrongReason",
+    "expected": "specialistOutputTokens must be unavailable with null value and a reason"
+  },
+  {
+    "id": "judge-root-session-overlap",
+    "mutation": "judgeRootSessionOverlap",
+    "expected": "judge session IDs must be disjoint"
   }
 ]

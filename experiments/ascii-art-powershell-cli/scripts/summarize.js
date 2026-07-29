@@ -11,6 +11,7 @@ const {
   walkFiles,
   writeJson
 } = require('./lib');
+const { evaluateConditionCompliance } = require('./telemetry-integrity');
 
 const args = parseArguments(process.argv.slice(2));
 if (!args.runs || !args.artifacts || !args.judgments || !args.out) {
@@ -55,6 +56,7 @@ function metricValue(metric) {
 const schedule = readJson(path.join(root, 'design', 'randomization.json'));
 const assignments = readJson(path.join(root, 'design', 'judge-assignments.json'));
 const seedConfig = readJson(path.join(root, 'design', 'seed.json')).bootstrap;
+const prompts = readJson(path.join(root, 'prompts.json'));
 const scheduled = schedule.blocks.flatMap((block) => block.observations);
 const runFiles = loadJsonFiles(args.runs);
 const artifactFiles = loadJsonFiles(args.artifacts);
@@ -121,6 +123,15 @@ for (const { value } of judgmentFiles) {
     if (new Set(sessionsByBlock).size !== 6) {
       throw new Error('Judgments must use exactly six distinct judge sessions, one per assigned block.');
     }
+    const trialSessions = new Set([...manifests.values()].flatMap((manifest) => [
+      manifest.execution.rootSessionId,
+      manifest.execution.coordinatorSessionId,
+      manifest.sessions.parent.sessionId,
+      ...(manifest.condition === 'treatment' ? [manifest.sessions.specialist.sessionId] : [])
+    ]));
+    if (sessionsByBlock.some((sessionId) => trialSessions.has(sessionId))) {
+      throw new Error('Judge sessions must be disjoint from all trial sessions.');
+    }
   }
 }
 
@@ -156,11 +167,15 @@ function buildRecords(scope) {
   return scheduled.flatMap((scheduledItem) => {
     const manifest = selectedRuns.get(scheduledItem.scheduleId);
     if (!manifest) return [];
-    if (scope === 'perProtocol' && manifest.conditionCompliance && !manifest.conditionCompliance.compliant) return [];
+    const telemetryRecord = telemetry.get(manifest.runId);
+    const prompt = prompts.find((item) => item.id === manifest.promptId);
+    const compliance = evaluateConditionCompliance(manifest, telemetryRecord, prompt);
+    if (scope === 'perProtocol' && !compliance.compliant) return [];
     return [{
       ...scheduledItem,
       manifest,
-      telemetry: telemetry.get(manifest.runId),
+      telemetry: telemetryRecord,
+      compliance,
       deterministic: deterministic.get(manifest.runId),
       judgment: judgments.get(scheduledItem.scheduleId)
     }];
@@ -365,6 +380,7 @@ function analyzeScope(records) {
       ]))];
     }));
     const tools = conditionRecords.flatMap((record) => record.telemetry.tools);
+    const exposedToolNames = [...new Set(conditionRecords.flatMap((record) => record.telemetry.exposedTools))].sort();
     const toolNames = [...new Set(tools.map((tool) => tool.name))].sort();
     const toolEvents = Object.fromEntries(toolNames.map((name) => {
       const matching = tools.filter((tool) => tool.name === name);
@@ -392,6 +408,10 @@ function analyzeScope(records) {
       models,
       aggregateToolMetrics: Object.fromEntries(['exposedToolCount', 'toolCallCount', 'toolResultCount']
         .map((name) => [name, availabilitySummary(conditionRecords.map((record) => record.telemetry.metrics[name]))])),
+      exposedTools: Object.fromEntries(exposedToolNames.map((name) => [
+        name,
+        conditionRecords.filter((record) => record.telemetry.exposedTools.includes(name)).length
+      ])),
       toolEvents,
       compaction: {
         events: compaction.length,
@@ -429,6 +449,16 @@ function analyzeScope(records) {
   return {
     observationsIncluded: records.length,
     completeAssignedPairs: pairs.filter((pair) => pair.control && pair.treatment).length,
+    validatedConditionCompliance: {
+      compliant: records.filter((record) => record.compliance.compliant).length,
+      noncompliant: records.filter((record) => !record.compliance.compliant).length,
+      reasons: Object.fromEntries([...new Set(records.flatMap((record) => record.compliance.reasons))]
+        .sort()
+        .map((reason) => [
+          reason,
+          records.filter((record) => record.compliance.reasons.includes(reason)).length
+        ]))
+    },
     secondaryTelemetry: {
       control: secondaryByCondition('control'),
       treatment: secondaryByCondition('treatment')

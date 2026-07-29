@@ -120,12 +120,40 @@ function Invoke-BoundedProcess {
         [Parameter(Mandatory)][ValidateRange(1, [int]::MaxValue)][int]$TimeoutMilliseconds
     )
 
+    if (-not $IsWindows) {
+        throw [System.PlatformNotSupportedException]::new(
+            'The normative acceptance runner requires Windows job-object process-tree isolation.'
+        )
+    }
+
+    $gateDirectory = Join-Path (Split-Path -Parent $PSScriptRoot) '.scratch/process-gates'
+    New-Item -ItemType Directory -Path $gateDirectory -Force | Out-Null
+    $gatePath = Join-Path $gateDirectory "$([guid]::NewGuid()).gate"
+    $payload = [pscustomobject]@{
+        file = $FileName
+        arguments = @($ArgumentList)
+    } | ConvertTo-Json -Depth 4 -Compress
+    $payloadBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payload))
+    $wrapper = @'
+$payloadJson = [System.Text.Encoding]::UTF8.GetString(
+    [Convert]::FromBase64String($env:BENCHMARK_PROCESS_PAYLOAD)
+)
+$payload = $payloadJson | ConvertFrom-Json
+while (-not (Test-Path -LiteralPath $env:BENCHMARK_PROCESS_GATE)) {
+    Start-Sleep -Milliseconds 10
+}
+& ([string]$payload.file) @($payload.arguments)
+exit $LASTEXITCODE
+'@
+
     $info = [System.Diagnostics.ProcessStartInfo]::new()
-    $info.FileName = $FileName
+    $info.FileName = (Get-Command pwsh).Source
     $info.UseShellExecute = $false
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
-    foreach ($argument in $ArgumentList) {
+    $info.Environment['BENCHMARK_PROCESS_GATE'] = $gatePath
+    $info.Environment['BENCHMARK_PROCESS_PAYLOAD'] = $payloadBase64
+    foreach ($argument in @('-NoProfile', '-NonInteractive', '-Command', $wrapper)) {
         $info.ArgumentList.Add($argument)
     }
 
@@ -133,15 +161,12 @@ function Invoke-BoundedProcess {
     $process = $null
     $job = $null
     try {
-        if ($IsWindows) {
-            $job = [BenchmarkProcessJob]::new()
-        }
+        $job = [BenchmarkProcessJob]::new()
         $process = [System.Diagnostics.Process]::Start($info)
-        if ($null -ne $job) {
-            $job.Assign($process)
-        }
+        $job.Assign($process)
         $stdoutTask = $process.StandardOutput.ReadToEndAsync()
         $stderrTask = $process.StandardError.ReadToEndAsync()
+        [System.IO.File]::WriteAllText($gatePath, '')
         $remaining = [Math]::Max(0, $TimeoutMilliseconds - [int]$stopwatch.ElapsedMilliseconds)
         $rootExited = $remaining -gt 0 -and $process.WaitForExit($remaining)
 
@@ -167,10 +192,15 @@ function Invoke-BoundedProcess {
         }
     }
     finally {
+        Remove-Item -LiteralPath $gatePath -Force -ErrorAction SilentlyContinue
         if ($null -ne $job) {
             $job.Dispose()
         }
         if ($null -ne $process) {
+            if (-not $process.HasExited) {
+                $process.Kill($true)
+                $process.WaitForExit()
+            }
             $process.Dispose()
         }
     }

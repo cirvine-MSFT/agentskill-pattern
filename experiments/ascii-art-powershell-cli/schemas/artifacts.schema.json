@@ -4,13 +4,14 @@
   "title": "Observation artifact manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["protocolId", "runId", "scheduleId", "sessionId", "terminalCommitSha", "bundleSha256", "files"],
+  "required": ["protocolId", "runId", "scheduleId", "sessionId", "terminalCommitSha", "bundlePath", "bundleSha256", "files"],
   "properties": {
     "protocolId": { "const": "ascii-art-powershell-cli-v1" },
     "runId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A[1-2]$" },
     "scheduleId": { "type": "string" },
     "sessionId": { "type": "string", "minLength": 1 },
     "terminalCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "bundlePath": { "type": "string", "minLength": 1 },
     "bundleSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "files": {
       "type": "array",
@@ -23,7 +24,7 @@
           "path": { "type": "string", "minLength": 1 },
           "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
           "bytes": { "type": "integer", "minimum": 0 },
-          "role": { "enum": ["source", "fixture_test", "banner", "diff", "log"] }
+          "role": { "enum": ["source", "fixture_test", "banner", "diff"] }
         }
       }
     }

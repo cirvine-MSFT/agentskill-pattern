@@ -14,8 +14,24 @@
     "newWorkspace": true,
     "verifyFixtureLockBeforePrompt": true
   },
+  "platform": {
+    "operatingSystem": "Windows_NT",
+    "processIsolation": "kill-on-close-job-object"
+  },
+  "conditionCompliance": {
+    "source": "authenticated_raw_events",
+    "requiredEvidence": [
+      "manifest condition-evidence event ID sets",
+      "delegation call/result event IDs",
+      "tool call/result event IDs",
+      "specialist file-change event IDs"
+    ],
+    "selfAssertedComplianceAccepted": false,
+    "unavailableEvidencePolicy": "exclude_as_telemetry_collection_failure"
+  },
   "collectionKeys": [
     "runId",
+    "rootSessionId",
     "coordinatorSessionId",
     "parentSessionId",
     "specialistSessionId",

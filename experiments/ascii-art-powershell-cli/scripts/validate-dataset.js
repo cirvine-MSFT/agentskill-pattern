@@ -4,15 +4,20 @@
 const fs = require('fs');
 const path = require('path');
 const {
+  canonicalJson,
   conditionInstructions,
   parentModel,
   parseArguments,
   readJson,
+  resolveContainedPath,
   root,
   sha256File,
+  sha256RawFile,
   specialistModel,
   walkFiles
 } = require('./lib');
+const { authenticateArtifactBundle, validateBlindContent } = require('./artifact-bundles');
+const { validateTelemetryConsistency } = require('./telemetry-integrity');
 const { validateSchema } = require('./validate-schema');
 
 const args = parseArguments(process.argv.slice(2));
@@ -22,6 +27,8 @@ const prompts = readJson(path.join(root, 'prompts.json'));
 const schedule = readJson(path.join(root, 'design', 'randomization.json'));
 const assignments = readJson(path.join(root, 'design', 'judge-assignments.json'));
 const protocol = fs.readFileSync(path.join(root, 'protocol.md'), 'utf8');
+const rawRoot = path.join(dataRoot, 'raw');
+const artifactRoot = path.join(dataRoot, 'artifacts');
 
 function check(condition, message) {
   if (!condition) {
@@ -89,7 +96,7 @@ assignments.blocks.forEach((block) => {
 });
 
 const schemas = {};
-for (const schemaName of ['run-manifest', 'raw-telemetry', 'artifacts', 'blind-bundle', 'deterministic-results', 'judgment']) {
+for (const schemaName of ['run-manifest', 'raw-telemetry', 'artifacts', 'artifact-bundle', 'blind-bundle', 'blind-content', 'deterministic-results', 'judgment']) {
   const schema = readJson(path.join(root, 'schemas', `${schemaName}.schema.json`));
   schemas[schemaName] = schema;
   check(schema.$schema === 'https://json-schema.org/draft/2020-12/schema', `${schemaName} must use JSON Schema 2020-12`);
@@ -118,6 +125,46 @@ function validateRecords(records, schemaName) {
   });
 }
 
+function authenticateRawEvents(telemetryRecord) {
+  const sources = new Map();
+  for (const source of telemetryRecord.rawSources) {
+    try {
+      const sourcePath = resolveContainedPath(rawRoot, source.path, `${telemetryRecord.runId} raw source path`);
+      check(fs.existsSync(sourcePath), `${telemetryRecord.runId} raw source bytes must exist`);
+      if (!fs.existsSync(sourcePath)) continue;
+      check(sha256RawFile(sourcePath) === source.sha256, `${telemetryRecord.runId} raw source hash must authenticate exact bytes`);
+      const payload = readJson(sourcePath);
+      check(
+        payload && payload.sourceId === source.sourceId && Array.isArray(payload.events) &&
+        Object.keys(payload).sort().join(',') === 'events,sourceId',
+        `${telemetryRecord.runId} raw source must contain only its sourceId and events`
+      );
+      sources.set(source.sourceId, payload.events || []);
+    } catch (error) {
+      errors.push(error.message);
+    }
+  }
+  check(sources.size === telemetryRecord.rawSources.length, `${telemetryRecord.runId} raw source IDs must be unique`);
+  for (const [sourceId, sourceEvents] of sources) {
+    const normalizedEvents = telemetryRecord.events.filter((event) => event.rawSourceId === sourceId);
+    check(
+      canonicalJson(normalizedEvents) === canonicalJson(sourceEvents),
+      `${telemetryRecord.runId} normalized events must include every authenticated raw-source event exactly once`
+    );
+  }
+  telemetryRecord.events.forEach((event) => {
+    const sourceEvents = sources.get(event.rawSourceId);
+    const authenticated = sourceEvents && sourceEvents.find((candidate) => candidate.eventId === event.eventId);
+    check(Boolean(authenticated), `${telemetryRecord.runId} raw event ${event.eventId} must exist in its authenticated raw source`);
+    if (authenticated) {
+      check(
+        canonicalJson(authenticated) === canonicalJson(event),
+        `${telemetryRecord.runId} raw event ${event.eventId} must exactly match authenticated source bytes`
+      );
+    }
+  });
+}
+
 const rawJson = walkFiles(path.join(dataRoot, 'raw')).filter((file) => file.endsWith('.json'));
 const rawObjects = rawJson.map(readJson);
 const manifests = rawObjects.filter((item) => item.protocolId && item.condition && item.sessions);
@@ -135,9 +182,32 @@ if (rawJson.length > 0) {
   check(new Set(deterministic.map((item) => item.runId)).size === deterministic.length, 'deterministic result run IDs must be unique');
   check(manifests.every((item) => item.runId === `${item.scheduleId}-A${item.execution.attempt}`), 'run IDs must encode schedule ID and attempt');
   check(manifests.every((item) => telemetry.some((record) => record.runId === item.runId) && deterministic.some((record) => record.runId === item.runId)), 'every run attempt must have matching telemetry and deterministic records');
-  check(new Set(manifests.map((item) => item.sessions.parent.sessionId)).size === manifests.length, 'parent session IDs must be unique across attempts');
-  const specialistIds = manifests.filter((item) => item.condition === 'treatment' && item.sessions.specialist.sessionId).map((item) => item.sessions.specialist.sessionId);
+  const parentIds = manifests.map((item) => item.sessions.parent.sessionId);
+  check(new Set(parentIds).size === manifests.length, 'parent session IDs must be unique across attempts');
+  const specialistIds = manifests.filter((item) => (
+    item.condition === 'treatment' && item.sessions.specialist.sessionId
+  )).map((item) => item.sessions.specialist.sessionId);
   check(new Set(specialistIds).size === specialistIds.length, 'specialist session IDs must be unique across treatment attempts');
+  const coordinatorIds = manifests.map((item) => item.execution.coordinatorSessionId);
+  const rootIds = manifests.map((item) => item.execution.rootSessionId);
+  check(new Set(rootIds).size === 1, 'all attempts must record exactly one root experiment session ID');
+  check(new Set(coordinatorIds).size === 10, 'all attempts must use exactly 10 case coordinator session IDs');
+  prompts.forEach((prompt) => {
+    check(
+      new Set(manifests
+        .filter((manifest) => manifest.promptId === prompt.id)
+        .map((manifest) => manifest.execution.coordinatorSessionId)).size === 1,
+      `${prompt.id} attempts must use one case coordinator session ID`
+    );
+  });
+  check(rootIds.every((id) => !coordinatorIds.includes(id)), 'root and case coordinator session ID sets must be disjoint');
+  check(rootIds.every((id) => !parentIds.includes(id)), 'root and parent session ID sets must be disjoint');
+  check(rootIds.every((id) => !specialistIds.includes(id)), 'root and specialist session ID sets must be disjoint');
+  check(parentIds.every((id) => !specialistIds.includes(id)), 'parent and specialist session ID sets must be mutually disjoint');
+  check(parentIds.every((id) => !coordinatorIds.includes(id)), 'parent and coordinator session ID sets must be disjoint');
+  check(specialistIds.every((id) => !coordinatorIds.includes(id)), 'specialist and coordinator session ID sets must be disjoint');
+  const allEventIds = telemetry.flatMap((record) => record.events.map((event) => event.eventId));
+  check(new Set(allEventIds).size === allEventIds.length, 'raw event IDs must be globally unique across attempts');
   check(new Set(manifests.map((item) => item.refs.benchmarkCommitSha)).size === 1, 'all attempts must use one benchmark commit SHA');
   check(manifests.every((item) => item.refs.promptsSha256 === sha256File(path.join(root, 'prompts.json'))), 'all attempts must use the registered prompt hash');
   check(manifests.every((item) => item.refs.fixtureLockSha256 === sha256File(path.join(root, 'fixture', 'fixture-lock.json'))), 'all attempts must use the registered fixture lock hash');
@@ -145,6 +215,10 @@ if (rawJson.length > 0) {
     const scheduledItem = observations.find((item) => item.scheduleId === manifest.scheduleId);
     const telemetryRecord = telemetry.find((item) => item.runId === manifest.runId);
     const deterministicRecord = deterministic.find((item) => item.runId === manifest.runId);
+    check(
+      manifest.exclusion.excluded === (manifest.exclusion.reason !== null),
+      `${manifest.runId} exclusion flag must be true iff an allowed non-null reason is recorded`
+    );
     check(Boolean(scheduledItem), `${manifest.runId} must reference a scheduled observation`);
     if (scheduledItem) {
       check(manifest.promptId === scheduledItem.promptId && manifest.repetition === scheduledItem.repetition && manifest.condition === scheduledItem.condition, `${manifest.runId} must match its scheduled prompt, repetition, and condition`);
@@ -153,8 +227,8 @@ if (rawJson.length > 0) {
     }
     const parentModelMismatch = manifest.sessions.parent.requestedModel !== parentModel ||
       manifest.sessions.parent.observedModel !== parentModel;
-    const specialistModelMismatch = manifest.condition === 'treatment' && (
-      manifest.sessions.specialist.status === 'not_applicable' ||
+    const specialistModelMismatch = manifest.condition === 'treatment' &&
+      Boolean(manifest.sessions.specialist.sessionId) && (
       manifest.sessions.specialist.requestedModel !== specialistModel ||
       manifest.sessions.specialist.observedModel !== specialistModel
     );
@@ -168,6 +242,7 @@ if (rawJson.length > 0) {
       `${manifest.runId} must not claim wrong_model exclusion when all requested/observed models are preregistered`
     );
     if (telemetryRecord) {
+      authenticateRawEvents(telemetryRecord);
       check(telemetryRecord.scheduleId === manifest.scheduleId, `${manifest.runId} telemetry schedule ID must match`);
       check(telemetryRecord.routing.parent.sessionId === manifest.sessions.parent.sessionId, `${manifest.runId} parent routing session must match manifest`);
       check(telemetryRecord.routing.parent.requestedModel === manifest.sessions.parent.requestedModel, `${manifest.runId} parent routing requested model must match manifest`);
@@ -189,25 +264,32 @@ if (rawJson.length > 0) {
         );
       }
       if (manifest.condition === 'treatment') {
-        check(Boolean(manifest.sessions.specialist.sessionId), `${manifest.runId} treatment manifest must identify a specialist session`);
-        check(telemetryRecord.routing.specialist.sessionId === manifest.sessions.specialist.sessionId, `${manifest.runId} specialist routing session must match manifest`);
-        check(telemetryRecord.routing.specialist.requestedModel === manifest.sessions.specialist.requestedModel && telemetryRecord.routing.specialist.observedModel === manifest.sessions.specialist.observedModel, `${manifest.runId} specialist routing model must match manifest`);
-        check(specialistSplits.length === 1, `${manifest.runId} treatment telemetry must contain exactly one specialist model split`);
-        if (specialistSplits.length === 1) {
-          const specialistSplit = specialistSplits[0];
-          check(
-            specialistSplit.sessionId === manifest.sessions.specialist.sessionId &&
-            specialistSplit.requestedModel === manifest.sessions.specialist.requestedModel &&
-            specialistSplit.observedModel === manifest.sessions.specialist.observedModel,
-            `${manifest.runId} specialist model split must match manifest provenance`
-          );
+        if (manifest.sessions.specialist.sessionId) {
+          check(telemetryRecord.routing.specialist.sessionId === manifest.sessions.specialist.sessionId, `${manifest.runId} specialist routing session must match manifest`);
+          check(telemetryRecord.routing.specialist.requestedModel === manifest.sessions.specialist.requestedModel && telemetryRecord.routing.specialist.observedModel === manifest.sessions.specialist.observedModel, `${manifest.runId} specialist routing model must match manifest`);
+          check(specialistSplits.length === 1, `${manifest.runId} treatment telemetry must contain exactly one specialist model split when a specialist session exists`);
+          if (specialistSplits.length === 1) {
+            const specialistSplit = specialistSplits[0];
+            check(
+              specialistSplit.sessionId === manifest.sessions.specialist.sessionId &&
+              specialistSplit.requestedModel === manifest.sessions.specialist.requestedModel &&
+              specialistSplit.observedModel === manifest.sessions.specialist.observedModel,
+              `${manifest.runId} specialist model split must match manifest provenance`
+            );
+          }
+        } else {
+          check(manifest.sessions.specialist.status === 'unavailable', `${manifest.runId} treatment without a specialist session must mark it unavailable`);
+          check(telemetryRecord.routing.specialist.status === 'unavailable', `${manifest.runId} treatment routing without a specialist session must be unavailable`);
+          check(specialistSplits.length === 0, `${manifest.runId} treatment without a specialist session must not contain a specialist model split`);
         }
-        check(telemetryRecord.routing.delegationEvidence.status === 'available', `${manifest.runId} treatment delegation evidence must be available`);
       } else {
         check(manifest.sessions.specialist.status === 'not_applicable', `${manifest.runId} control manifest specialist must be not_applicable`);
         check(telemetryRecord.routing.specialist.status === 'not_applicable', `${manifest.runId} control routing specialist must be not_applicable`);
         check(specialistSplits.length === 0, `${manifest.runId} control telemetry must not contain a specialist model split`);
-        check(telemetryRecord.routing.delegationEvidence.status === 'not_applicable', `${manifest.runId} control delegation evidence must be not_applicable`);
+        check(
+          ['not_applicable', 'unavailable'].includes(telemetryRecord.routing.delegationEvidence.status),
+          `${manifest.runId} control delegation evidence must be not_applicable or excluded-unavailable`
+        );
       }
       telemetryRecord.tools.forEach((tool) => {
         check(allowedTelemetrySessionIds.has(tool.sessionId), `${manifest.runId} tool event session must belong to the manifest parent or treatment specialist`);
@@ -224,6 +306,9 @@ if (rawJson.length > 0) {
           `${manifest.runId} available compaction event count must exactly match source event records`
         );
       }
+      const prompt = prompts.find((item) => item.id === manifest.promptId);
+      const integrity = validateTelemetryConsistency(manifest, telemetryRecord, prompt);
+      integrity.errors.forEach((error) => errors.push(`${manifest.runId} ${error}`));
     }
     if (deterministicRecord) {
       check(deterministicRecord.scheduleId === manifest.scheduleId && deterministicRecord.promptId === manifest.promptId, `${manifest.runId} deterministic provenance must match manifest`);
@@ -284,6 +369,7 @@ if (rawJson.length > 0) {
 const artifactJson = walkFiles(path.join(dataRoot, 'artifacts')).filter((file) => file.endsWith('.json'));
 const artifactManifests = artifactJson.map(readJson).filter((item) => item.protocolId && item.bundleSha256 && item.files);
 const blindBundles = artifactJson.map(readJson).filter((item) => item.protocolId && item.blindId && item.blindBundleSha256);
+const authenticatedArtifacts = new Map();
 if (artifactJson.length > 0) {
   validateRecords(artifactManifests, 'artifacts');
   check(artifactManifests.length >= 60 && artifactManifests.length <= 120, `non-empty artifact dataset must contain 60-120 manifests, found ${artifactManifests.length}`);
@@ -297,6 +383,18 @@ if (artifactJson.length > 0) {
       check(artifact.sessionId === manifest.sessions.parent.sessionId, `${artifact.runId} artifact parent session must match manifest`);
       check(artifact.terminalCommitSha === manifest.refs.terminalCommitSha, `${artifact.runId} artifact commit must match manifest`);
       check(artifact.bundleSha256 === manifest.refs.artifactBundleSha256, `${artifact.runId} artifact bundle hash must match manifest`);
+      const deterministicRecord = deterministic.find((item) => item.runId === artifact.runId);
+      const prompt = prompts.find((item) => item.id === manifest.promptId);
+      if (deterministicRecord && prompt) {
+        try {
+          authenticatedArtifacts.set(
+            artifact.runId,
+            authenticateArtifactBundle(artifactRoot, artifact, manifest, prompt, deterministicRecord)
+          );
+        } catch (error) {
+          errors.push(error.message);
+        }
+      }
     }
   });
 }
@@ -326,6 +424,23 @@ if (blindBundles.length > 0) {
     check(Boolean(artifact), `${binding.blindId} must bind to an existing artifact manifest`);
     if (artifact) {
       check(binding.sourceArtifactBundleSha256 === artifact.bundleSha256, `${binding.blindId} source artifact hash must match artifact manifest`);
+    }
+    const authenticated = authenticatedArtifacts.get(binding.runId);
+    if (authenticated) {
+      check(
+        binding.sourceArtifactBundleSha256 === authenticated.actualHash,
+        `${binding.blindId} source artifact hash must authenticate exact selected artifact bytes`
+      );
+      try {
+        const blindPath = resolveContainedPath(artifactRoot, binding.blindBundlePath, `${binding.blindId} blind bundle path`);
+        check(fs.existsSync(blindPath), `${binding.blindId} generated blind bundle bytes must exist`);
+        if (fs.existsSync(blindPath)) {
+          const actualBlindHash = validateBlindContent(binding.blindId, authenticated.source, blindPath);
+          check(actualBlindHash === binding.blindBundleSha256, `${binding.blindId} blind bundle hash must authenticate generated bytes`);
+        }
+      } catch (error) {
+        errors.push(error.message);
+      }
     }
   });
 }
@@ -363,6 +478,18 @@ if (judgmentJson.length > 0) {
     return sessionIds.size === 1 ? [...sessionIds][0] : null;
   });
   check(new Set(sessionsByBlock.filter(Boolean)).size === 6, 'judgments must use exactly six distinct judge session IDs, one per assigned block');
+  const trialSessionIds = new Set(manifests.flatMap((manifest) => [
+    manifest.execution.rootSessionId,
+    manifest.execution.coordinatorSessionId,
+    manifest.sessions.parent.sessionId,
+    ...(manifest.condition === 'treatment' && manifest.sessions.specialist.sessionId
+      ? [manifest.sessions.specialist.sessionId]
+      : [])
+  ]));
+  check(
+    sessionsByBlock.filter(Boolean).every((sessionId) => !trialSessionIds.has(sessionId)),
+    'judge session IDs must be disjoint from all coordinator, parent, and specialist trial sessions'
+  );
 }
 
 if (errors.length > 0) {

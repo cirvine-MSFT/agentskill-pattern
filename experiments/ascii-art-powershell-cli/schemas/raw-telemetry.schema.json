@@ -4,7 +4,7 @@
   "title": "Raw benchmark telemetry",
   "type": "object",
   "additionalProperties": false,
-  "required": ["protocolId", "runId", "scheduleId", "collectedAt", "metrics", "models", "tools", "compaction", "routing", "rawSources"],
+  "required": ["protocolId", "runId", "scheduleId", "collectedAt", "metrics", "models", "exposedTools", "tools", "compaction", "events", "routing", "rawSources"],
   "properties": {
     "protocolId": { "const": "ascii-art-powershell-cli-v1" },
     "runId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A[1-2]$" },
@@ -76,23 +76,35 @@
         }
       }
     },
+    "exposedTools": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
     "tools": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["sessionId", "sequence", "name", "callId", "startedAt", "completedAt", "success", "resultBytes"],
+        "required": ["sessionId", "sequence", "name", "callId", "callEventId", "resultEventId", "targetPath", "startedAt", "completedAt", "success", "resultBytes"],
         "properties": {
           "sessionId": { "type": "string" },
           "sequence": { "type": "integer", "minimum": 1 },
           "name": { "type": "string" },
           "callId": { "type": "string" },
+          "callEventId": { "type": "string", "minLength": 1 },
+          "resultEventId": { "type": ["string", "null"] },
+          "targetPath": { "type": ["string", "null"] },
           "startedAt": { "type": ["string", "null"], "format": "date-time" },
           "completedAt": { "type": ["string", "null"], "format": "date-time" },
           "success": { "type": ["boolean", "null"] },
           "resultBytes": { "$ref": "#/$defs/metric" }
         }
       }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/rawEvent" }
     },
     "compaction": {
       "type": "array",
@@ -126,6 +138,15 @@
                 "status": { "const": "not_applicable" },
                 "reason": { "const": "control_condition" }
               }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "reason"],
+              "properties": {
+                "status": { "const": "unavailable" },
+                "reason": { "const": "specialist_session_not_created" }
+              }
             }
           ]
         },
@@ -137,10 +158,10 @@
               "required": ["status", "callEventId", "resultEventId", "requestedAt", "returnedAt", "unavailableReason"],
               "properties": {
                 "status": { "const": "available" },
-                "callEventId": { "type": "string", "minLength": 1 },
-                "resultEventId": { "type": "string", "minLength": 1 },
-                "requestedAt": { "type": "string", "format": "date-time" },
-                "returnedAt": { "type": "string", "format": "date-time" },
+                "callEventId": { "type": ["string", "null"], "minLength": 1 },
+                "resultEventId": { "type": ["string", "null"], "minLength": 1 },
+                "requestedAt": { "type": ["string", "null"], "format": "date-time" },
+                "returnedAt": { "type": ["string", "null"], "format": "date-time" },
                 "unavailableReason": { "type": "null" }
               }
             },
@@ -180,8 +201,9 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "sha256", "collector", "collectedBySessionId"],
+        "required": ["sourceId", "path", "sha256", "collector", "collectedBySessionId"],
         "properties": {
+          "sourceId": { "type": "string", "minLength": 1 },
           "path": { "type": "string" },
           "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
           "collector": { "type": "string" },
@@ -199,7 +221,7 @@
           "required": ["status", "value", "unit", "source", "unavailableReason"],
           "properties": {
             "status": { "const": "available" },
-            "value": { "type": "number" },
+            "value": { "type": "number", "minimum": 0 },
             "unit": { "type": "string", "minLength": 1 },
             "source": { "type": "string", "minLength": 1 },
             "unavailableReason": { "type": "null" }
@@ -240,6 +262,75 @@
         "requestedModel": { "type": "string" },
         "observedModel": { "type": "string" },
         "sourceEventIds": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["aiCredits", "nanoAiu", "inputTokens", "peakInputTokens", "outputTokens", "cachedTokens"],
+      "properties": {
+        "aiCredits": { "type": ["number", "null"], "minimum": 0 },
+        "nanoAiu": { "type": ["number", "null"], "minimum": 0 },
+        "inputTokens": { "type": ["number", "null"], "minimum": 0 },
+        "peakInputTokens": { "type": ["number", "null"], "minimum": 0 },
+        "outputTokens": { "type": ["number", "null"], "minimum": 0 },
+        "cachedTokens": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "rawEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventId",
+        "sessionId",
+        "sequence",
+        "type",
+        "timestamp",
+        "callId",
+        "toolName",
+        "success",
+        "targetSessionId",
+        "requestedModel",
+        "scope",
+        "path",
+        "operation",
+        "resultBytes",
+        "usage",
+        "rawSourceId"
+      ],
+      "properties": {
+        "eventId": { "type": "string", "minLength": 1 },
+        "sessionId": { "type": "string", "minLength": 1 },
+        "sequence": { "type": "integer", "minimum": 1 },
+        "type": {
+          "enum": [
+            "session_start",
+            "usage",
+            "tool_call",
+            "tool_result",
+            "delegation_call",
+            "delegation_result",
+            "file_change",
+            "compaction"
+          ]
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "callId": { "type": ["string", "null"] },
+        "toolName": { "type": ["string", "null"] },
+        "success": { "type": ["boolean", "null"] },
+        "targetSessionId": { "type": ["string", "null"] },
+        "requestedModel": { "type": ["string", "null"] },
+        "scope": { "type": ["string", "null"] },
+        "path": { "type": ["string", "null"] },
+        "operation": { "type": ["string", "null"] },
+        "resultBytes": { "type": ["number", "null"], "minimum": 0 },
+        "usage": {
+          "oneOf": [
+            { "$ref": "#/$defs/usage" },
+            { "type": "null" }
+          ]
+        },
+        "rawSourceId": { "type": "string", "minLength": 1 }
       }
     }
   }

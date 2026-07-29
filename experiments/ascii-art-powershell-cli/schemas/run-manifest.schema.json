@@ -12,6 +12,7 @@
     "repetition",
     "condition",
     "conditionInstruction",
+    "conditionEvidence",
     "execution",
     "environment",
     "sessions",
@@ -19,7 +20,6 @@
     "workspace",
     "timestamps",
     "completion",
-    "conditionCompliance",
     "exclusion"
   ],
   "properties": {
@@ -35,14 +35,16 @@
         "Complete the implementation and testing yourself. Delegate only creation of the required banner asset to one fresh nested session using model `claude-haiku-4.5`; instruct it to write that one asset directly into the workspace. Do not delegate code, tests, inspection, integration, or any other work. Wait for the nested session and then inspect/integrate its asset."
       ]
     },
+    "conditionEvidence": { "$ref": "#/$defs/conditionEvidence" },
     "execution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["block", "position", "attempt", "coordinatorSessionId"],
+      "required": ["block", "position", "attempt", "rootSessionId", "coordinatorSessionId"],
       "properties": {
         "block": { "type": "integer", "minimum": 1, "maximum": 6 },
         "position": { "type": "integer", "minimum": 1, "maximum": 10 },
         "attempt": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "rootSessionId": { "type": "string", "minLength": 1 },
         "coordinatorSessionId": { "type": "string", "minLength": 1 }
       }
     },
@@ -53,7 +55,7 @@
       "properties": {
         "copilotCliVersion": { "type": "string", "minLength": 1 },
         "hostImage": { "type": "string", "minLength": 1 },
-        "operatingSystem": { "type": "string", "minLength": 1 },
+        "operatingSystem": { "const": "Windows_NT" },
         "powershellVersion": { "type": "string", "minLength": 1 },
         "nodeVersion": { "type": "string", "minLength": 1 }
       }
@@ -74,6 +76,15 @@
               "properties": {
                 "status": { "const": "not_applicable" },
                 "reason": { "const": "control_condition" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "reason"],
+              "properties": {
+                "status": { "const": "unavailable" },
+                "reason": { "const": "specialist_session_not_created" }
               }
             }
           ]
@@ -120,40 +131,101 @@
       }
     },
     "completion": { "enum": ["completed", "failed", "timed_out", "interrupted"] },
-    "conditionCompliance": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["compliant", "evidence"],
-      "properties": {
-        "compliant": { "type": "boolean" },
-        "evidence": { "type": "array", "items": { "type": "string" } }
-      }
-    },
     "exclusion": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["excluded", "reason", "retryOf", "retryId"],
-      "properties": {
-        "excluded": { "type": "boolean" },
-        "reason": {
-          "type": ["string", "null"],
-          "enum": [
-            null,
-            "session_creation_failure",
-            "hash_mismatch",
-            "wrong_model",
-            "non_fresh_session",
-            "telemetry_collection_failure",
-            "external_interruption",
-            "required_tool_unavailable"
-          ]
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["excluded", "reason", "retryOf", "retryId"],
+          "properties": {
+            "excluded": { "const": false },
+            "reason": { "type": "null" },
+            "retryOf": { "type": ["string", "null"] },
+            "retryId": { "type": ["string", "null"] }
+          }
         },
-        "retryOf": { "type": ["string", "null"] },
-        "retryId": { "type": ["string", "null"] }
-      }
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["excluded", "reason", "retryOf", "retryId"],
+          "properties": {
+            "excluded": { "const": true },
+            "reason": {
+              "enum": [
+                "session_creation_failure",
+                "hash_mismatch",
+                "wrong_model",
+                "non_fresh_session",
+                "telemetry_collection_failure",
+                "external_interruption",
+                "required_tool_unavailable"
+              ]
+            },
+            "retryOf": { "type": ["string", "null"] },
+            "retryId": { "type": ["string", "null"] }
+          }
+        }
+      ]
     }
   },
   "$defs": {
+    "conditionEvidence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "delegationCallEventIds",
+            "delegationResultEventIds",
+            "specialistToolCallEventIds",
+            "specialistToolResultEventIds",
+            "specialistFileChangeEventIds",
+            "unavailableReason"
+          ],
+          "properties": {
+            "status": { "const": "available" },
+            "delegationCallEventIds": { "$ref": "#/$defs/eventIds" },
+            "delegationResultEventIds": { "$ref": "#/$defs/eventIds" },
+            "specialistToolCallEventIds": { "$ref": "#/$defs/eventIds" },
+            "specialistToolResultEventIds": { "$ref": "#/$defs/eventIds" },
+            "specialistFileChangeEventIds": { "$ref": "#/$defs/eventIds" },
+            "unavailableReason": { "type": "null" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "delegationCallEventIds",
+            "delegationResultEventIds",
+            "specialistToolCallEventIds",
+            "specialistToolResultEventIds",
+            "specialistFileChangeEventIds",
+            "unavailableReason"
+          ],
+          "properties": {
+            "status": { "const": "unavailable" },
+            "delegationCallEventIds": { "$ref": "#/$defs/emptyEventIds" },
+            "delegationResultEventIds": { "$ref": "#/$defs/emptyEventIds" },
+            "specialistToolCallEventIds": { "$ref": "#/$defs/emptyEventIds" },
+            "specialistToolResultEventIds": { "$ref": "#/$defs/emptyEventIds" },
+            "specialistFileChangeEventIds": { "$ref": "#/$defs/emptyEventIds" },
+            "unavailableReason": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "eventIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "emptyEventIds": {
+      "type": "array",
+      "maxItems": 0,
+      "items": { "type": "string", "minLength": 1 }
+    },
     "sessionRef": {
       "type": "object",
       "additionalProperties": false,

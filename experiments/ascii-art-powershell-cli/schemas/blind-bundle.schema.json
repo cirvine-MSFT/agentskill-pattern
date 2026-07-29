@@ -11,6 +11,7 @@
     "scheduleId",
     "runId",
     "sourceArtifactBundleSha256",
+    "blindBundlePath",
     "blindBundleSha256"
   ],
   "properties": {
@@ -20,6 +21,7 @@
     "scheduleId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)$" },
     "runId": { "type": "string", "pattern": "^P(0[1-9]|10)-R[1-3]-(control|treatment)-A[1-2]$" },
     "sourceArtifactBundleSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "blindBundlePath": { "type": "string", "minLength": 1 },
     "blindBundleSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
   }
 }

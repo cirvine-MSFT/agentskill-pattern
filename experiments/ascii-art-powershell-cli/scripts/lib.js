@@ -20,7 +20,11 @@ function readJson(file) {
 
 function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(file, canonicalJson(value), 'utf8');
+}
+
+function canonicalJson(value) {
+  return `${JSON.stringify(value, null, 2)}\n`;
 }
 
 function mulberry32(seed) {
@@ -53,7 +57,24 @@ function sha256File(file) {
   if (!textExtensions.has(path.extname(file).toLowerCase()) && path.basename(file) !== '.gitattributes') {
     return sha256(data);
   }
+
   return sha256(Buffer.from(data.toString('utf8').replace(/\r\n/g, '\n'), 'utf8'));
+}
+
+function sha256RawFile(file) {
+  return sha256(fs.readFileSync(file));
+}
+
+function resolveContainedPath(directory, relativePath, label = 'path') {
+  if (typeof relativePath !== 'string' || relativePath.length === 0 || path.isAbsolute(relativePath)) {
+    throw new Error(`${label} must be a nonempty relative path.`);
+  }
+  const base = path.resolve(directory);
+  const resolved = path.resolve(base, relativePath);
+  if (resolved === base || !resolved.startsWith(`${base}${path.sep}`)) {
+    throw new Error(`${label} escapes its authenticated root.`);
+  }
+  return resolved;
 }
 
 function walkFiles(directory) {
@@ -101,6 +122,7 @@ function compareOrWrite(file, value, check) {
 
 module.exports = {
   compareOrWrite,
+  canonicalJson,
   conditionInstructions,
   judgeModel,
   mulberry32,
@@ -109,8 +131,10 @@ module.exports = {
   protocolId,
   readJson,
   root,
+  resolveContainedPath,
   sha256,
   sha256File,
+  sha256RawFile,
   shuffle,
   specialistModel,
   walkFiles,

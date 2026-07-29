@@ -26,6 +26,15 @@ function Invoke-Case {
 }
 
 try {
+    $missingCliWorkspace = Join-Path $temporaryRoot 'missing-cli'
+    New-Item -ItemType Directory -Path $missingCliWorkspace -Force | Out-Null
+    $missingCli = Invoke-Case $missingCliWorkspace
+    $cliAssertion = @($missingCli.Result.assertions | Where-Object id -eq 'cli-present')
+    if ($missingCli.ExitCode -eq 0 -or $missingCli.Result.status -ne 'fail' -or
+        $cliAssertion.Count -ne 1 -or $cliAssertion[0].status -ne 'fail') {
+        throw 'Missing candidate CLI was misclassified as unavailable instead of implementation failure.'
+    }
+
     $tokenOnlyWorkspace = Join-Path $temporaryRoot 'token-only'
     New-Item -ItemType Directory -Path (Join-Path $tokenOnlyWorkspace 'src') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $tokenOnlyWorkspace 'assets') -Force | Out-Null
@@ -44,8 +53,19 @@ if ($isJson) {
     @(1..$count | ForEach-Object { [pscustomobject]@{ id = $_; title = "match $_" } }) | ConvertTo-Json
 }
 elseif ($query -eq 'absent') {
-    if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'render-exact')) {
-        [System.IO.File]::ReadAllText((Join-Path (Split-Path -Parent $PSScriptRoot) 'assets/search.txt')).TrimEnd("`r", "`n")
+    $root = Split-Path -Parent $PSScriptRoot
+    $banner = [System.IO.File]::ReadAllText((Join-Path $root 'assets/search.txt')).TrimEnd("`r", "`n")
+    if (Test-Path -LiteralPath (Join-Path $root 'result-before-banner')) {
+        'No matches'
+        $banner
+    }
+    elseif (Test-Path -LiteralPath (Join-Path $root 'duplicate-banner')) {
+        $banner
+        $banner
+        'No matches'
+    }
+    elseif (Test-Path -LiteralPath (Join-Path $root 'render-exact')) {
+        $banner
         'No matches'
     }
     else {
@@ -74,6 +94,18 @@ else {
     if ($exact.ExitCode -ne 0 -or $exact.Result.status -ne 'pass') {
         throw "Exact banner asset output unexpectedly failed acceptance: $($exact.Result | ConvertTo-Json -Depth 8 -Compress)"
     }
+    New-Item -ItemType File -Path (Join-Path $exactWorkspace 'result-before-banner') | Out-Null
+    $resultBeforeBanner = Invoke-Case $exactWorkspace
+    if ($resultBeforeBanner.ExitCode -eq 0 -or $resultBeforeBanner.Result.status -ne 'fail') {
+        throw 'Result text before the banner unexpectedly passed acceptance.'
+    }
+    Remove-Item -LiteralPath (Join-Path $exactWorkspace 'result-before-banner')
+    New-Item -ItemType File -Path (Join-Path $exactWorkspace 'duplicate-banner') | Out-Null
+    $duplicateBanner = Invoke-Case $exactWorkspace
+    if ($duplicateBanner.ExitCode -eq 0 -or $duplicateBanner.Result.status -ne 'fail') {
+        throw 'Duplicate banner output unexpectedly passed acceptance.'
+    }
+    Remove-Item -LiteralPath (Join-Path $exactWorkspace 'duplicate-banner')
     New-Item -ItemType File -Path (Join-Path $exactWorkspace 'malformed-json') | Out-Null
     $malformed = Invoke-Case $exactWorkspace
     if ($malformed.ExitCode -eq 0 -or $malformed.Result.status -ne 'fail') {
@@ -196,9 +228,9 @@ $child = [System.Diagnostics.Process]::Start($info)
     $detached = Invoke-BoundedProcess `
         -FileName (Get-Command pwsh).Source `
         -ArgumentList @('-NoProfile', '-File', $detachedParent) `
-        -TimeoutMilliseconds 2000
+        -TimeoutMilliseconds 5000
     $stopwatch.Stop()
-    if ($detached.TimedOut -or $stopwatch.ElapsedMilliseconds -ge 5000) {
+    if ($detached.TimedOut -or $stopwatch.ElapsedMilliseconds -ge 8000) {
         throw "Detached child retained pipes past the bounded invocation ($($stopwatch.ElapsedMilliseconds) ms)."
     }
     $detachedChildPid = [int][System.IO.File]::ReadAllText((Join-Path $temporaryRoot 'detached-child.pid'))
@@ -206,7 +238,17 @@ $child = [System.Diagnostics.Process]::Start($info)
         throw 'Completed CLI process left a detached child process running.'
     }
 
-    'PASS: acceptance classifies candidate failures, validates exact banners/typed P05 arrays, and bounds process trees'
+    1..25 | ForEach-Object {
+        $fastExit = Invoke-BoundedProcess `
+            -FileName (Get-Command pwsh).Source `
+            -ArgumentList @('-NoProfile', '-Command', 'exit 0') `
+            -TimeoutMilliseconds 5000
+        if ($fastExit.TimedOut -or $fastExit.ExitCode -ne 0) {
+            throw "Fast process exit iteration $_ raced Windows job assignment."
+        }
+    }
+
+    'PASS: acceptance classifies missing/invalid candidates, enforces one leading banner, validates typed P05 arrays, and bounds Windows process trees'
 }
 finally {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue

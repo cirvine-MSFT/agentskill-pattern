@@ -11,7 +11,7 @@ The task text in `prompts.json` is byte-identical across conditions. Condition i
 
 ## Quick start
 
-Requires PowerShell 7+ and Node.js 20+. Measured sessions need no package installation or network setup.
+Requires Windows_NT, PowerShell 7+, and Node.js 20+. Windows job objects are the normative process-tree isolation mechanism. Measured sessions need no package installation or network setup.
 
 ```powershell
 pwsh -NoProfile -File .\experiments\ascii-art-powershell-cli\scripts\preflight.ps1
@@ -45,13 +45,12 @@ node .\experiments\ascii-art-powershell-cli\scripts\summarize.js `
 An intentional no-result foundation smoke test may add `--allow-incomplete`; its summary is labeled
 `empty_foundation_dry_run`, and every outcome with incomplete prompt clusters withholds its interval.
 
-Before judging, materialize the blinded bundle files and bind them to the selected runs and source artifact hashes:
+Before judging, generate blinded bundles directly from exact-byte-authenticated selected source artifacts and bind them to selected runs:
 
 ```powershell
 node .\experiments\ascii-art-powershell-cli\scripts\bind-blind-bundles.js `
   --runs .\experiments\ascii-art-powershell-cli\raw `
   --artifacts .\experiments\ascii-art-powershell-cli\artifacts `
-  --blind-bundles C:\path\to\blind-bundles `
   --out .\experiments\ascii-art-powershell-cli\artifacts
 ```
 

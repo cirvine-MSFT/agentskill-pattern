@@ -47,9 +47,21 @@ function Test-BannerRendered {
     if (-not (Test-Path -LiteralPath $bannerPath)) {
         return $false
     }
-    $banner = [System.IO.File]::ReadAllText($bannerPath).Replace("`r`n", "`n").TrimEnd("`n")
-    $stdout = $Result.StdOut.Replace("`r`n", "`n")
-    return $Result.ExitCode -eq 0 -and $banner.Length -gt 0 -and $stdout.Contains($banner)
+    $banner = [System.IO.File]::ReadAllText($bannerPath).Replace("`r`n", "`n").Replace("`r", "`n").TrimEnd("`n")
+    $stdout = $Result.StdOut.Replace("`r`n", "`n").Replace("`r", "`n")
+    if ($Result.ExitCode -ne 0 -or $banner.Length -eq 0) {
+        return $false
+    }
+    $firstIndex = $stdout.IndexOf($banner, [System.StringComparison]::Ordinal)
+    if ($firstIndex -ne 0) {
+        return $false
+    }
+    $secondIndex = $stdout.IndexOf(
+        $banner,
+        $firstIndex + 1,
+        [System.StringComparison]::Ordinal
+    )
+    return $secondIndex -eq -1
 }
 
 function Test-ExactIntegerArray {
@@ -113,11 +125,12 @@ $seedTasks = @(
 
 $acceptanceStarted = $false
 try {
+    $acceptanceStarted = $true
     if (-not (Test-Path -LiteralPath $cli)) {
-        throw "CLI not found: $cli"
+        Add-Assertion 'cli-present' $false "Candidate CLI not found: $cli"
+        throw [System.IO.FileNotFoundException]::new("Candidate CLI not found: $cli", $cli)
     }
     New-Item -ItemType Directory -Path $temporaryRoot -Force | Out-Null
-    $acceptanceStarted = $true
 
     switch ($CaseId) {
         'P01' {
@@ -313,7 +326,9 @@ try {
     }
 }
 catch {
-    $status = if ($acceptanceStarted -or $_.Exception -is [System.TimeoutException]) { 'fail' } else { 'unavailable' }
+    $status = if ($acceptanceStarted -or
+        $_.Exception -is [System.TimeoutException] -or
+        $_.Exception -is [System.IO.FileNotFoundException]) { 'fail' } else { 'unavailable' }
     if ($status -eq 'fail' -and $_.Exception -isnot [System.TimeoutException]) {
         Add-Assertion 'acceptance-exception' $false $_.Exception.Message
     }

@@ -76,7 +76,7 @@ const output = {
   algorithm: seedConfig.algorithm,
   judgeUsageExcludedFromEfficiency: true,
   runtimeBindingSchema: 'schemas/blind-bundle.schema.json',
-  runtimeBindingKeys: ['blindId', 'judgeBlock', 'scheduleId', 'runId', 'sourceArtifactBundleSha256', 'blindBundleSha256'],
+  runtimeBindingKeys: ['blindId', 'judgeBlock', 'scheduleId', 'runId', 'sourceArtifactBundleSha256', 'blindBundlePath', 'blindBundleSha256'],
   blocks
 };
 
