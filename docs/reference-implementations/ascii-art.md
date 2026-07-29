@@ -1,11 +1,12 @@
 # Reference implementation: `ascii-art` (GitHub Copilot)
 
-**Status: planned / contractual design.** No part of this reference implementation has
-merged yet. `.github/skills/ascii-art/SKILL.md` and `.github/agents/ascii-art.agent.md`
-do not exist in this repository as of this writing. This document describes the
-contract those files are expected to satisfy once implemented, so that the
-[pattern description](../agent-skill-pattern.md) has a concrete, checkable target. Do
-not treat any path below as merged until it is actually present in the repository tree.
+**Status: implemented; benchmark treatment not yet frozen.** The live
+[`SKILL.md`](../../.github/skills/ascii-art/SKILL.md) router and
+[`ascii-art.agent.md`](../../.github/agents/ascii-art.agent.md) specialist provide the
+concrete, checkable target for the [pattern description](../agent-skill-pattern.md).
+An isolated GitHub Copilot CLI smoke loaded the Skill, delegated to the custom agent,
+wrote only the owned target, passed path/dimension/character/whitespace checks, and
+returned terse status. This is not a measured benchmark result.
 
 This is the reference implementation for the
 [Agent Skill Pattern](../agent-skill-pattern.md), targeting GitHub Copilot as the
@@ -23,35 +24,42 @@ the parent's full conversation or repository context to complete correctly.
 | --- | --- |
 | **Harness** | GitHub Copilot (CLI/session runtime) |
 | **Parent model** | GPT-5.6 Sol |
-| **Skill (router)** | `.github/skills/ascii-art/SKILL.md` |
-| **Subagent (custom agent)** | `.github/agents/ascii-art.agent.md`, backed by Claude Haiku 4.5 |
-| **Subagent tools** | Read and edit tools only |
+| **Skill (router)** | [`.github/skills/ascii-art/SKILL.md`](../../.github/skills/ascii-art/SKILL.md) |
+| **Subagent (custom agent)** | [`.github/agents/ascii-art.agent.md`](../../.github/agents/ascii-art.agent.md), backed by `claude-haiku-4.5` (Claude Haiku 4.5) |
+| **Subagent tools** | `read` and `edit` aliases only |
 | **Subagent tools explicitly excluded** | `agent` (delegation), search, shell/bash, web fetch/search |
 
 ### Skill as router
 
-`.github/skills/ascii-art/SKILL.md` is expected to carry the minimal frontmatter the
+[`.github/skills/ascii-art/SKILL.md`](../../.github/skills/ascii-art/SKILL.md) carries
+the minimal frontmatter the
 [Agent Skills format](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)
 defines — a `name` and a `description` precise enough for the parent to recognize
 "generate/update an ASCII-art banner asset" as the trigger condition — with a body whose
-entire content is a routing instruction: recognize the bounded request, then delegate to
-the `ascii-art` custom agent rather than generating the banner inline. Consistent with
+entire content is a routing instruction: recognize the bounded request, then invoke the
+`ascii-art` custom agent with all required constraints rather than generating the banner
+inline. If that agent is unavailable, the router requires an explicit delegation failure
+instead of silent parent fallback. Consistent with
 [the pattern's discovery/routing role](../agent-skill-pattern.md#skill), the Skill body
 does not itself contain ASCII-art generation instructions or examples; that knowledge
 belongs to the subagent, not the router.
 
 ### Subagent as specialist
 
-`.github/agents/ascii-art.agent.md` is expected to define a
+[`.github/agents/ascii-art.agent.md`](../../.github/agents/ascii-art.agent.md) defines a
 [repository-level custom agent](https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli/invoke-custom-agents)
 scoped as follows:
 
-- **Model:** Claude Haiku 4.5 — a cheaper, smaller model than the GPT-5.6 Sol parent,
+- **Model:** `claude-haiku-4.5` (Claude Haiku 4.5) — a cheaper, smaller model than the GPT-5.6 Sol parent,
   appropriate for a narrow, well-specified generation task. See
   [`docs/agent-skill-pattern.md`](../agent-skill-pattern.md#model-selection) for the
   measured cost differential this choice is based on.
-- **Tools:** read and edit tools only. No `agent` (delegation), search, shell/bash, or
-  web fetch/search tools are exposed to this subagent.
+- **Tools:** exactly the `read` and `edit` aliases. No `agent` (delegation), search,
+  shell/execute, or web tools are exposed to this subagent. This primarily minimizes
+  tool-schema context, competing tool choices, and irrelevant tool results within the
+  isolated subagent; least privilege is a secondary benefit.
+- **Invocation:** `target: github-copilot` and `user-invocable: false` keep the agent
+  programmatic rather than manually selectable.
 - **Prompt:** instructs the agent to generate the requested ASCII-art banner and write
   it directly to the target file path using its edit tool, then return a terse status
   (file path plus a one-line confirmation) — not the banner content itself — back to the
@@ -81,10 +89,13 @@ This reference implementation applies both layers of protection described in
 
 ## Benchmark
 
-A benchmark comparing this reference implementation against parent-only banner
-generation is planned at `experiments/ascii-art-powershell-cli`, expected to merge as a
-separate pull request. **No benchmark results exist yet.** See the
+A benchmark foundation for comparing this reference implementation against parent-only
+banner generation is available at
+[`experiments/ascii-art-powershell-cli`](../../experiments/ascii-art-powershell-cli).
+Its immutable control is tag `experiment-control-v1` at
+`6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; the treatment has not yet been frozen.
+**No benchmark results exist yet.** See the
 [repository README](../../README.md#benchmark) and
 [observability and measurement](../agent-skill-pattern.md#observability-and-measurement)
-for how measured results will be distinguished from inferred claims once that experiment
-merges.
+for how measured results will be distinguished from inferred claims when the benchmark
+executes.

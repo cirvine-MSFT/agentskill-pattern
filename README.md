@@ -68,17 +68,20 @@ descriptions of both diagrams.
 
 ## Reference implementation
 
-[`docs/reference-implementations/ascii-art.md`](docs/reference-implementations/ascii-art.md)
-describes the planned GitHub Copilot reference implementation: a GPT-5.6 Sol parent, a
-`SKILL.md` router, and a Claude Haiku 4.5 custom subagent restricted to read/edit tools
-that writes a banner asset directly and returns terse status.
+The live GitHub Copilot reference implementation consists of the
+[`ascii-art` routing Skill](.github/skills/ascii-art/SKILL.md) and
+[`ascii-art` custom agent](.github/agents/ascii-art.agent.md). The
+[implementation notes](docs/reference-implementations/ascii-art.md) describe how the
+minimal router delegates bounded asset work to Claude Haiku 4.5 with only `read` and
+`edit`, direct artifact writes, and terse status returns.
 
 ## Benchmark
 
-A benchmark comparing this pattern against parent-only execution is planned at
-`experiments/ascii-art-powershell-cli` in a companion pull request, expected to merge
-separately from this documentation. **No benchmark results exist yet** — this README
-will be updated with a link once that experiment merges and produces measured data.
+The benchmark foundation is available at
+[`experiments/ascii-art-powershell-cli`](experiments/ascii-art-powershell-cli). Its
+immutable control is tag `experiment-control-v1` at
+`6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`. The treatment has not yet been frozen, and
+**no benchmark results exist yet**.
 
 ## Research and prior art
 
@@ -98,11 +101,9 @@ search methodology.
 
 ## Status
 
-This repository currently documents the pattern and its reference implementation
-design. The GitHub Copilot reference implementation (`.github/skills/ascii-art/SKILL.md`
-and `.github/agents/ascii-art.agent.md`) and the benchmark experiment have **not yet
-merged** as of this writing — nothing in this repository should be read as reporting
-measured results until those companion pull requests land.
+This repository contains the pattern documentation, benchmark foundation, and live
+GitHub Copilot reference implementation. An isolated CLI routing smoke has passed, but
+the benchmark treatment is not yet frozen and no measured benchmark results exist.
 
 ## License
 
