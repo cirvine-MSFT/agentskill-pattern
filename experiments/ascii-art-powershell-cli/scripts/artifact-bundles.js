@@ -30,29 +30,59 @@ const conditionRevealingMarkers = [
   /\bcreate_banner_only\b/i
 ];
 
-function assertNoProhibitedMetadata(serialized, forbiddenValues, label) {
-  const invariantCaseFold = (value) => value.normalize('NFKC').toLowerCase();
-  const normalizedSerialized = invariantCaseFold(serialized);
-  const containsForbidden = (value) => {
-    return typeof value === 'string' &&
-      value.length > 0 &&
-      normalizedSerialized.includes(invariantCaseFold(value));
+function normalizeForLeakDetection(value) {
+  return value.normalize('NFKC').toLowerCase();
+}
+
+function findStringLeaf(value, predicate) {
+  const visited = new WeakSet();
+  const visit = (item, itemPath) => {
+    if (typeof item === 'string') return predicate(item) ? itemPath : null;
+    if (item === null || typeof item !== 'object') return null;
+    if (visited.has(item)) return null;
+    visited.add(item);
+
+    const keys = Object.keys(item).sort();
+    for (let index = 0; index < keys.length; index += 1) {
+      const key = keys[index];
+      const keyPath = `${itemPath}[property:${index}].key`;
+      if (predicate(key)) return keyPath;
+      const valuePath = Array.isArray(item) && /^(?:0|[1-9]\d*)$/.test(key)
+        ? `${itemPath}[${key}]`
+        : `${itemPath}[property:${index}].value`;
+      const match = visit(item[key], valuePath);
+      if (match) return match;
+    }
+    return null;
   };
-  if (prohibitedMetadataAssignment.test(serialized) ||
-      forbiddenValues.some(containsForbidden)) {
-    throw new Error(`${label} contains condition/model/session/run metadata leakage, including routing metadata.`);
+  return visit(value, '$');
+}
+
+function assertNoProhibitedMetadata(value, forbiddenValues, label) {
+  const normalizedForbidden = forbiddenValues
+    .filter((item) => typeof item === 'string' && item.length > 0)
+    .map(normalizeForLeakDetection);
+  const leakPath = findStringLeaf(value, (text) => {
+    const normalized = normalizeForLeakDetection(text);
+    return prohibitedMetadataAssignment.test(text) ||
+      normalizedForbidden.some((forbidden) => normalized.includes(forbidden));
+  });
+  if (leakPath) {
+    throw new Error(
+      `${label} contains condition/model/session/run metadata leakage, including routing metadata, at ${leakPath}.`
+    );
   }
 }
 
 function assertNoConditionRevealingProvenance(value, label) {
-  const textValues = (item) => {
-    if (typeof item === 'string') return [item];
-    if (Array.isArray(item)) return item.flatMap(textValues);
-    if (item && typeof item === 'object') return Object.values(item).flatMap(textValues);
-    return [];
-  };
-  if (textValues(value).some((text) => conditionRevealingMarkers.some((marker) => marker.test(text)))) {
-    throw new Error(`${label} contains a prohibited high-confidence condition-revealing provenance marker.`);
+  const leakPath = findStringLeaf(
+    value,
+    (text) => conditionRevealingMarkers.some((marker) => marker.test(text))
+  );
+  if (leakPath) {
+    throw new Error(
+      `${label} contains a prohibited high-confidence condition-revealing provenance marker at ${leakPath}.`
+    );
   }
 }
 
@@ -123,7 +153,6 @@ function authenticateArtifactBundle(artifactRoot, artifact, manifest, prompt, de
       throw new Error(`${artifact.runId} source artifact ${file.role} path is not metadata-safe.`);
     }
   });
-  const serialized = canonicalJson(source);
   const forbiddenValues = [
     manifest.conditionInstruction,
     manifest.runId,
@@ -143,11 +172,8 @@ function authenticateArtifactBundle(artifactRoot, artifact, manifest, prompt, de
     manifest.timestamps.completedAt,
     'create_banner_only'
   ];
-  assertNoProhibitedMetadata(serialized, forbiddenValues, `${artifact.runId} source artifact`);
-  assertNoConditionRevealingProvenance({
-    deterministic: source.deterministic,
-    files: source.files
-  }, `${artifact.runId} source artifact candidate content`);
+  assertNoProhibitedMetadata(source, forbiddenValues, `${artifact.runId} source artifact`);
+  assertNoConditionRevealingProvenance(source, `${artifact.runId} source artifact candidate content`);
 
   const expectedFiles = source.files.map((file) => {
     const bytes = Buffer.from(file.content, 'utf8');
@@ -182,14 +208,11 @@ function validateBlindContent(blindId, source, blindPath) {
     throw new Error(`${blindId} blind bundle violates its metadata-safe schema: ${schemaErrors.join('; ')}`);
   }
   assertNoProhibitedMetadata(
-    canonicalJson(value),
+    value,
     [parentModel, specialistModel, 'create_banner_only'],
     `${blindId} blind bundle`
   );
-  assertNoConditionRevealingProvenance({
-    deterministic: value.deterministic,
-    files: value.files
-  }, `${blindId} blind bundle candidate content`);
+  assertNoConditionRevealingProvenance(value, `${blindId} blind bundle candidate content`);
   const expectedBytes = canonicalJson(buildBlindContent(blindId, source));
   const actualBytes = fs.readFileSync(blindPath, 'utf8');
   if (actualBytes !== expectedBytes) {
