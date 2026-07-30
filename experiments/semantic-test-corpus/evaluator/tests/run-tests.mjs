@@ -20,7 +20,7 @@ import { createSchedule } from "../../scripts/randomize.mjs";
 import { evaluateIsolationEvidence } from "../../scripts/verify-isolation-evidence.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
-import { analyzeBaselineComparisons } from "../statistics.mjs";
+import { analyzeBaselineComparisons, analyzeStatisticsInput } from "../statistics.mjs";
 import { validateJsonSchema } from "../../validators/json-schema.mjs";
 import { validateStaging } from "../../validators/staging.mjs";
 
@@ -745,6 +745,20 @@ test("signed run evidence enforces the common delegated mechanism", () => {
   assert.equal(premature.status, "noncompliant");
   assert(premature.violations.some((violation) => violation.includes("before completion/unblinding")));
 
+  const boundaryEqualPayload = structuredClone(compliantPayload);
+  boundaryEqualPayload.events.find((event) => event.type === "outcome.accessed").timestamp = "2026-07-29T00:04:20Z";
+  const boundaryEqualSigned = signedExport(boundaryEqualPayload);
+  const boundaryEqual = evaluateIsolationEvidence(
+    authenticateExport(
+      boundaryEqualSigned.bytes,
+      boundaryEqualSigned.signature,
+      boundaryEqualSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(boundaryEqual.status, "noncompliant");
+  assert(boundaryEqual.violations.some((violation) => violation.includes("before completion/unblinding")));
+
   const uncorrelatedOutcomePayload = structuredClone(compliantPayload);
   uncorrelatedOutcomePayload.events.find((event) => event.type === "outcome.accessed").role = "worker";
   const uncorrelatedOutcomeSigned = signedExport(uncorrelatedOutcomePayload);
@@ -951,6 +965,8 @@ test("isolation compliance is derived from signed policy and access logs", () =>
       armId,
       role: "parent",
       actor: "parent",
+      actorSessionId: `${runId}-parent`,
+      callId: "network-attempt",
       endpoint: "https://example.test",
       decision: "deny"
     }
@@ -963,6 +979,7 @@ test("isolation compliance is derived from signed policy and access logs", () =>
     capturedAt: "2026-07-29T00:05:00Z",
     events
   };
+  const compliantPayload = structuredClone(payload);
   const signed = signedExport(payload);
   const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
   const compliant = evaluateIsolationEvidence(authenticated, {
@@ -976,6 +993,23 @@ test("isolation compliance is derived from signed policy and access logs", () =>
     { schemaDir: resolve(root, "schemas") }
   ), []);
 
+  const allowedTargetPayload = structuredClone(compliantPayload);
+  const allowedTargetNetwork = allowedTargetPayload.events.find((event) => event.type === "network.access");
+  delete allowedTargetNetwork.decision;
+  delete allowedTargetNetwork.endpoint;
+  allowedTargetNetwork.allowed = false;
+  allowedTargetNetwork.target = "https://example.test";
+  const allowedTargetSigned = signedExport(allowedTargetPayload);
+  const allowedTarget = evaluateIsolationEvidence(
+    authenticateExport(
+      allowedTargetSigned.bytes,
+      allowedTargetSigned.signature,
+      allowedTargetSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(allowedTarget.status, "compliant");
+
   payload.events.find((event) => event.eventId === "file").path = resolve(evaluatorRoot, "oracle", "index.mjs");
   payload.events.find((event) => event.eventId === "network").decision = "allow";
   const violatingSigned = signedExport(payload);
@@ -986,6 +1020,34 @@ test("isolation compliance is derived from signed policy and access logs", () =>
   assert.equal(noncompliant.status, "noncompliant");
   assert(noncompliant.violations.some((violation) => violation.includes("evaluator access")));
   assert(noncompliant.violations.some((violation) => violation.includes("network access was not denied")));
+
+  const unscopedNetworkPayload = structuredClone(compliantPayload);
+  const unscopedNetwork = unscopedNetworkPayload.events.find((event) => event.type === "network.access");
+  delete unscopedNetwork.runId;
+  delete unscopedNetwork.actorSessionId;
+  const unscopedNetworkSigned = signedExport(unscopedNetworkPayload);
+  assert.throws(() => authenticateExport(
+    unscopedNetworkSigned.bytes,
+    unscopedNetworkSigned.signature,
+    unscopedNetworkSigned.publicKey
+  ), /schema validation/);
+
+  const mismappedNetworkPayload = structuredClone(compliantPayload);
+  const mismappedNetwork = mismappedNetworkPayload.events.find((event) => event.type === "network.access");
+  mismappedNetwork.runId = "B02-A1";
+  mismappedNetwork.blockId = "B02";
+  const mismappedNetworkSigned = signedExport(mismappedNetworkPayload);
+  const mismappedNetworkResult = evaluateIsolationEvidence(
+    authenticateExport(
+      mismappedNetworkSigned.bytes,
+      mismappedNetworkSigned.signature,
+      mismappedNetworkSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(mismappedNetworkResult.status, "noncompliant");
+  assert(mismappedNetworkResult.violations.some((violation) =>
+    violation.includes("run mapping differs from the frozen schedule")));
 });
 
 test("noninferiority and equality use separate multiplicity-adjusted families", () => {
@@ -1111,6 +1173,41 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   assert.throws(() => analyzeBaselineComparisons(observations, {
     bindingAvailability: mismatchAvailability
   }), /model mismatch/);
+
+  const bindings = bindingAvailabilityFor(observations);
+  assert.throws(() => analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindings,
+    alpha: 1
+  }), /options are frozen/);
+  assert.throws(() => analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindings,
+    endpoints: { promotionRate: 0, semanticPathCoverage: 0, mutantKillRate: 0 }
+  }), /options are frozen/);
+  assert.throws(() => analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindings,
+    bootstrapSeed: 1
+  }), /options are frozen/);
+  assert.throws(() => analyzeStatisticsInput({
+    observations,
+    bindingAvailability: bindings,
+    options: { alpha: 1, margin: 0, bootstrapSeed: 1 }
+  }), /overrides are forbidden/);
+  assert.throws(() => analyzeStatisticsInput({
+    observations,
+    bindingAvailability: bindings,
+    alpha: 1
+  }), /overrides are forbidden/);
+  assert.throws(() => analyzeStatisticsInput({
+    observations,
+    bindingAvailability: bindings,
+    margins: { promotionRate: 0 }
+  }), /overrides are forbidden/);
+  assert.throws(() => analyzeStatisticsInput({
+    observations,
+    bindingAvailability: bindings,
+    bootstrapSeed: 1,
+    bootstrapResamples: 1
+  }), /overrides are forbidden/);
 });
 
 test("factorial summaries and missingness sensitivity match known synthetic values", () => {
@@ -1132,7 +1229,7 @@ test("factorial summaries and missingness sensitivity match known synthetic valu
   assert.match(promotion.multiplicityWarning, /unadjusted and descriptive/);
   close(promotion.contrasts.modelTier.estimate, 0.225);
   close(promotion.contrasts.delegation.estimate, 0.075);
-  close(promotion.contrasts.interaction.estimate, 0.025);
+  close(promotion.contrasts.interaction.estimate, 0.05);
   close(promotion.contrasts.delegationAtFrontier.estimate, 0.1);
   close(promotion.contrasts.delegationAtCheap.estimate, 0.05);
   close(promotion.contrasts.tierInline.estimate, 0.2);

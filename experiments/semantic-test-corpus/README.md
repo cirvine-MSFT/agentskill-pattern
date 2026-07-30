@@ -103,6 +103,8 @@ and conditional simple-effect contrasts with the registered bootstrap, plus
 0/1 and worst/best missing-outcome sensitivity bounds. With zero complete
 blocks, paired comparisons and factorial results are null while deterministic
 arm availability and descriptive summaries remain.
+The CLI rejects `input.options` and all top-level analysis overrides; alpha
+0.05, the three registered margins, 10,000 draws, and seed 20260729 are frozen.
 
 After the run, derive isolation compliance from that signed export:
 
@@ -122,6 +124,9 @@ node .\scripts\verify-isolation-evidence.mjs `
 Isolation verification also requires signed completion and unblinding
 boundaries. Any authenticated `outcome.accessed` event before either boundary
 fails compliance.
+Every network event from an authenticated run session must carry its run/arm/
+role, actor session, call ID, endpoint, and allow/deny decision; unscoped or
+mismapped signed events fail closed.
 
 ## Layout
 

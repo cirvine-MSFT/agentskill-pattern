@@ -41,6 +41,16 @@
           {
             "if": {"properties": {"type": {"const": "fs.access"}}},
             "then": {"required": ["runId", "blockId", "armId", "role", "actor", "callId", "path", "operation", "decision"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "network.access"}}},
+            "then": {
+              "required": ["runId", "blockId", "armId", "role", "actorSessionId", "callId"],
+              "allOf": [
+                {"anyOf": [{"required": ["endpoint"]}, {"required": ["target"]}]},
+                {"anyOf": [{"required": ["decision"]}, {"required": ["allowed"]}]}
+              ]
+            }
           }
         ],
         "properties": {
@@ -65,6 +75,7 @@
           "toolName": {"type": "string"},
           "callId": {"type": "string", "minLength": 1},
           "actor": {"type": "string", "enum": ["parent", "worker"]},
+          "actorSessionId": {"type": "string", "minLength": 1},
           "candidateRoot": {"type": "string"},
           "deniedRoots": {"type": "array", "items": {"type": "string"}},
           "filesystemMode": {"type": "string"},
@@ -72,7 +83,9 @@
           "path": {"type": "string"},
           "operation": {"type": "string", "enum": ["read", "write"]},
           "decision": {"type": "string", "enum": ["allow", "deny"]},
-          "endpoint": {"type": "string"},
+          "allowed": {"type": "boolean"},
+          "endpoint": {"type": "string", "minLength": 1},
+          "target": {"type": "string", "minLength": 1},
           "filesystemComplete": {"type": "boolean"},
           "networkComplete": {"type": "boolean"}
         }

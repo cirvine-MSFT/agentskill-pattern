@@ -3,6 +3,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const FROZEN_ALPHA = 0.05;
+const FROZEN_BOOTSTRAP_RESAMPLES = 10000;
+const FROZEN_BOOTSTRAP_SEED = 20260729;
 const DEFAULT_ENDPOINTS = Object.freeze({
   promotionRate: -0.05,
   semanticPathCoverage: -0.03,
@@ -161,8 +164,8 @@ function contrastValues(byBlockArm, completeBlocks, endpoint) {
       - ((cheapInline + cheapDelegated) / 2));
     values.delegation.push(((frontierDelegated + cheapDelegated) / 2)
       - ((frontierInline + cheapInline) / 2));
-    values.interaction.push(((frontierDelegated - frontierInline)
-      - (cheapDelegated - cheapInline)) / 2);
+    values.interaction.push((frontierDelegated - frontierInline)
+      - (cheapDelegated - cheapInline));
     values.delegationAtFrontier.push(frontierDelegated - frontierInline);
     values.delegationAtCheap.push(cheapDelegated - cheapInline);
     values.tierInline.push(frontierInline - cheapInline);
@@ -256,13 +259,16 @@ function sensitivityAnalysis(byBlockArm, endpointEntries) {
   return { arms, baselineComparisons };
 }
 
-export function analyzeBaselineComparisons(observations, {
-  alpha = 0.05,
-  endpoints = DEFAULT_ENDPOINTS,
-  bootstrapResamples = 10000,
-  bootstrapSeed = 20260729,
-  bindingAvailability
-} = {}) {
+export function analyzeBaselineComparisons(observations, options = {}) {
+  const overrideKeys = Object.keys(options).filter((key) => key !== "bindingAvailability");
+  if (overrideKeys.length > 0) {
+    throw new Error(`preregistered analysis options are frozen; cannot override ${overrideKeys.join(", ")}`);
+  }
+  const alpha = FROZEN_ALPHA;
+  const endpoints = DEFAULT_ENDPOINTS;
+  const bootstrapResamples = FROZEN_BOOTSTRAP_RESAMPLES;
+  const bootstrapSeed = FROZEN_BOOTSTRAP_SEED;
+  const { bindingAvailability } = options;
   if (!Array.isArray(observations)) throw new Error("observations must be an array");
   const bindingRuns = validateBindings(bindingAvailability);
   assertProbability(alpha, "alpha");
@@ -479,6 +485,20 @@ export function analyzeBaselineComparisons(observations, {
 
 export { DEFAULT_ENDPOINTS };
 
+export function analyzeStatisticsInput(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("analysis input must be an object");
+  }
+  const unexpectedKeys = Object.keys(input).filter((key) =>
+    key !== "observations" && key !== "bindingAvailability");
+  if (unexpectedKeys.length > 0) {
+    throw new Error(`analysis overrides are forbidden (${unexpectedKeys.join(", ")}); preregistered alpha, margins, bootstrap seed, and draws are frozen`);
+  }
+  return analyzeBaselineComparisons(input.observations, {
+    bindingAvailability: input.bindingAvailability
+  });
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const inputIndex = process.argv.indexOf("--in");
   const outputIndex = process.argv.indexOf("--out");
@@ -486,10 +506,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     throw new Error("Usage: node evaluator/statistics.mjs --in <blinded-run-metrics.json> --out <analysis.json>");
   }
   const input = JSON.parse(readFileSync(resolve(process.argv[inputIndex + 1]), "utf8"));
-  const result = analyzeBaselineComparisons(input.observations, {
-    ...input.options,
-    bindingAvailability: input.bindingAvailability
-  });
+  const result = analyzeStatisticsInput(input);
   const target = resolve(process.argv[outputIndex + 1]);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, `${JSON.stringify(result, null, 2)}\n`);

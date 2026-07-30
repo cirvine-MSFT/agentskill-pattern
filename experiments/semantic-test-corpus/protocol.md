@@ -214,6 +214,11 @@ an authenticated run session/role and occur after both timestamps. Premature or
 uncorrelated access is a compliance failure; post-boundary evaluator access is
 retained in the audit.
 
+Every signed `network.access` event associated with an authenticated run session
+must identify the run, block, arm, role, actor session, call ID, endpoint, and
+allow/deny decision. The verifier scans by authenticated session as well as run
+ID so a missing or mismapped run ID cannot hide a network event.
+
 `evaluator/acceptance/held-out-rules.json` and
 `evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29
 against the frozen base commit. Materialization and signed access evidence prove
@@ -315,8 +320,8 @@ Analyze the 12 run-level observations per available arm.
    tier, delegation, and interaction contrasts. Report contrast estimates and
    95% block-bootstrap intervals using 10,000 resamples and seed `20260729`.
    The tier and delegation main effects are differences of their two marginal
-   means. Interaction is half the difference between frontier and cheap
-   delegation effects. Also report the four conditional simple effects:
+   means. Interaction is the difference between frontier and cheap delegation
+   effects. Also report the four conditional simple effects:
    delegation at frontier/cheap and tier within inline/delegated runs.
 3. For each of four AI arms and each of three primary endpoints, use the paired
    within-block difference `AI - baseline` for the one-sided noninferiority null
@@ -338,6 +343,9 @@ Analyze the 12 run-level observations per available arm.
 7. Treat usage, tools, latency, compliance, diagnostic coverage, redundancy, and
    diversity as secondary/descriptive. Do not convert them into an unregistered
    composite score.
+8. The analysis executable accepts no caller options. Alpha 0.05, all three
+   margins, 10,000 bootstrap draws, and seed 20260729 are frozen protocol
+   constants; supplied option or top-level override fields are errors.
 
 ## Missingness, retries, and exclusions
 

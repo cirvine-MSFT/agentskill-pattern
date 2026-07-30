@@ -96,7 +96,20 @@ export function evaluateIsolationEvidence(authenticated, {
     "outcomes.unblinded",
     "outcome.accessed"
   ]);
-  const evidenceEvents = runEvents.filter((event) => relevantTypes.has(event.type));
+  const scopedNetworkEvents = payload.events.filter((event) =>
+    event.type === "network.access"
+    && (event.runId === runId || sessionRoles.has(event.sessionId)));
+  const scopedOutcomeEvents = payload.events.filter((event) =>
+    event.type === "outcome.accessed"
+    && (event.runId === runId || sessionRoles.has(event.sessionId)));
+  const evidenceEvents = [
+    ...runEvents.filter((event) =>
+      relevantTypes.has(event.type)
+      && event.type !== "network.access"
+      && event.type !== "outcome.accessed"),
+    ...scopedNetworkEvents,
+    ...scopedOutcomeEvents
+  ];
   for (const event of evidenceEvents) {
     const authenticatedRole = sessionRoles.get(event.sessionId);
     if (!authenticatedRole) {
@@ -109,8 +122,11 @@ export function evaluateIsolationEvidence(authenticated, {
     if (event.actor !== undefined && event.actor !== authenticatedRole) {
       violations.push(`event ${event.eventId} actor does not match its authenticated session`);
     }
-    if (event.armId !== armId || event.blockId !== planned?.blockId) {
+    if (event.runId !== runId || event.armId !== armId || event.blockId !== planned?.blockId) {
       violations.push(`event ${event.eventId} run mapping differs from the frozen schedule`);
+    }
+    if (event.type === "network.access" && event.actorSessionId !== event.sessionId) {
+      violations.push(`network access ${event.eventId} actorSessionId does not match its authenticated session`);
     }
   }
 
@@ -145,7 +161,7 @@ export function evaluateIsolationEvidence(authenticated, {
     if (!role || event.role !== role) {
       violations.push(`outcome access ${event.eventId} lacks an authenticated session/role`);
     }
-    if (!Number.isFinite(outcomeBoundary) || Date.parse(event.timestamp) < outcomeBoundary) {
+    if (!Number.isFinite(outcomeBoundary) || Date.parse(event.timestamp) <= outcomeBoundary) {
       violations.push(`outcome access ${event.eventId} occurred before completion/unblinding`);
     }
   }
@@ -223,7 +239,12 @@ export function evaluateIsolationEvidence(authenticated, {
     if (within(evaluator, path)) violations.push(`${access.actor ?? "unknown"} attempted evaluator access`);
   }
   for (const event of networkEvents) {
-    if (event.decision !== "deny") violations.push(`${event.actor ?? "unknown"} network access was not denied`);
+    if (event.decision !== undefined && event.allowed !== undefined
+      && (event.decision === "allow") !== event.allowed) {
+      violations.push(`${event.role ?? "unknown"} network decision fields conflict`);
+    }
+    const denied = event.decision === "deny" || event.allowed === false;
+    if (!denied) violations.push(`${event.role ?? "unknown"} network access was not denied`);
   }
 
   if (arm) {
