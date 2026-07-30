@@ -126,7 +126,8 @@ boundaries. Any authenticated `outcome.accessed` event before either boundary
 fails compliance.
 Every network event from an authenticated run session must carry its run/arm/
 role, actor session, call ID, endpoint, and allow/deny decision; unscoped or
-mismapped signed events fail closed.
+mismapped signed events fail closed. Scoping checks both `sessionId` and
+`actorSessionId`, so altering the former cannot hide an authenticated actor.
 
 ## Layout
 

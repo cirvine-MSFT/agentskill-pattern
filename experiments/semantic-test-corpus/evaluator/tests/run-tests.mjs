@@ -1048,6 +1048,44 @@ test("isolation compliance is derived from signed policy and access logs", () =>
   assert.equal(mismappedNetworkResult.status, "noncompliant");
   assert(mismappedNetworkResult.violations.some((violation) =>
     violation.includes("run mapping differs from the frozen schedule")));
+
+  const disguisedRunPayload = structuredClone(compliantPayload);
+  const disguisedNetwork = disguisedRunPayload.events.find((event) => event.type === "network.access");
+  disguisedNetwork.sessionId = "altered-session";
+  disguisedNetwork.runId = "B02-A1";
+  disguisedNetwork.blockId = "B02";
+  const disguisedRunSigned = signedExport(disguisedRunPayload);
+  const disguisedRun = evaluateIsolationEvidence(
+    authenticateExport(
+      disguisedRunSigned.bytes,
+      disguisedRunSigned.signature,
+      disguisedRunSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(disguisedRun.status, "noncompliant");
+  assert(disguisedRun.violations.some((violation) =>
+    violation.includes("actor/session/role identity mismatch")));
+  assert(disguisedRun.violations.some((violation) =>
+    violation.includes("run mapping differs from the frozen schedule")));
+
+  const unrelatedNetworkPayload = structuredClone(compliantPayload);
+  const unrelatedNetwork = unrelatedNetworkPayload.events.find((event) => event.type === "network.access");
+  unrelatedNetwork.sessionId = "unrelated-session";
+  unrelatedNetwork.actorSessionId = "unrelated-session";
+  unrelatedNetwork.runId = "B02-A1";
+  unrelatedNetwork.blockId = "B02";
+  const unrelatedNetworkSigned = signedExport(unrelatedNetworkPayload);
+  const unrelatedNetworkResult = evaluateIsolationEvidence(
+    authenticateExport(
+      unrelatedNetworkSigned.bytes,
+      unrelatedNetworkSigned.signature,
+      unrelatedNetworkSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(unrelatedNetworkResult.status, "compliant",
+    "an unrelated run/session network event must be left to that run's audit");
 });
 
 test("noninferiority and equality use separate multiplicity-adjusted families", () => {

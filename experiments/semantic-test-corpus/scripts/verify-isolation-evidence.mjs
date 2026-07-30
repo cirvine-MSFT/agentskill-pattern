@@ -98,7 +98,9 @@ export function evaluateIsolationEvidence(authenticated, {
   ]);
   const scopedNetworkEvents = payload.events.filter((event) =>
     event.type === "network.access"
-    && (event.runId === runId || sessionRoles.has(event.sessionId)));
+    && (event.runId === runId
+      || sessionRoles.has(event.sessionId)
+      || sessionRoles.has(event.actorSessionId)));
   const scopedOutcomeEvents = payload.events.filter((event) =>
     event.type === "outcome.accessed"
     && (event.runId === runId || sessionRoles.has(event.sessionId)));
@@ -114,9 +116,7 @@ export function evaluateIsolationEvidence(authenticated, {
     const authenticatedRole = sessionRoles.get(event.sessionId);
     if (!authenticatedRole) {
       violations.push(`event ${event.eventId} uses a session outside the authenticated run roles`);
-      continue;
-    }
-    if (event.role !== undefined && event.role !== authenticatedRole) {
+    } else if (event.role !== undefined && event.role !== authenticatedRole) {
       violations.push(`event ${event.eventId} role does not match its authenticated session`);
     }
     if (event.actor !== undefined && event.actor !== authenticatedRole) {
@@ -125,8 +125,14 @@ export function evaluateIsolationEvidence(authenticated, {
     if (event.runId !== runId || event.armId !== armId || event.blockId !== planned?.blockId) {
       violations.push(`event ${event.eventId} run mapping differs from the frozen schedule`);
     }
-    if (event.type === "network.access" && event.actorSessionId !== event.sessionId) {
-      violations.push(`network access ${event.eventId} actorSessionId does not match its authenticated session`);
+    if (event.type === "network.access") {
+      const actorRole = sessionRoles.get(event.actorSessionId);
+      if (!actorRole) {
+        violations.push(`network access ${event.eventId} actorSessionId is outside the authenticated run roles`);
+      }
+      if (event.actorSessionId !== event.sessionId || actorRole !== event.role) {
+        violations.push(`network access ${event.eventId} actor/session/role identity mismatch`);
+      }
     }
   }
 
