@@ -1,26 +1,42 @@
-# Case study: `ascii-art` as a "task too small" counterexample
+# Case study: `ascii-art` as an overhead-dominated small-task hypothesis (counterexample candidate)
 
-**Status: descriptive counterexample drawn from the completed, structurally incomplete
-`ascii-art-powershell-cli` benchmark.** This case study does not add new evidence; it
-re-reads the [final benchmark report](../../experiments/ascii-art-powershell-cli/report.md)
-through one lens — *is the delegated task large enough for the Agent Skill Pattern's fixed
-per-delegation overhead to pay for itself?* — and answers no, for this specific asset,
-model pair, and harness. It touches only this file and, where a link/status note is
-essential, the [reference implementation notes](../reference-implementations/ascii-art.md).
-It does not modify the README, the report, `raw/`, `results/`, `judgments/`, `docs/research/`,
-any Skill/agent definition, or `experiments/`.
+**Status: hypothesis candidate drawn from the completed, structurally incomplete
+`ascii-art-powershell-cli` benchmark — not a causally isolated finding.** This case study
+does not add new evidence; it re-reads the
+[final benchmark report](../../experiments/ascii-art-powershell-cli/report.md) through one
+lens — *is the delegated task small enough that fixed per-delegation overhead could
+plausibly dominate it?* — and finds the data **consistent with, but not proof of,** that
+hypothesis. It touches only this file and, where a link/status note is essential, the
+[reference implementation notes](../reference-implementations/ascii-art.md). It does not
+modify the README, the report, `raw/`, `results/`, `judgments/`, `docs/research/`, any
+Skill/agent definition, or `experiments/`.
 
-## The core finding: fixed overhead dominated a tiny asset
+**Why this is a hypothesis, not a proof.** The benchmark's single treatment-vs-control
+contrast changes two things at once: it both delegates the work (Skill → subagent) *and*
+switches the model doing the generation, from the parent's `gpt-5.6-sol` to the specialist
+`claude-haiku-4.5`. A single confounded contrast like this cannot separate "cost of
+delegation/orchestration overhead" from "cost/quality of a different, smaller model" — nor
+does it vary task size at all, so it cannot directly test whether a *larger* delegated
+asset would behave differently. It also carries asymmetric, non-random missingness (see
+[below](#missingness-and-inference-caveat)), which is itself a further confound on top of
+the design's inherent one. Every causal-sounding sentence below should be read with that
+ceiling in mind; where isolation would require a different design, this document says so
+and links the design that could provide it.
+
+## Hypothesis: fixed overhead may have dominated a tiny asset
 
 The delegated task — writing one small, fixed-format ASCII-art banner file — is close to
 the smallest unit of "bounded work" this pattern targets. Every delegation still pays a
 largely *fixed* cost regardless of asset size: a Skill-routing decision, a subagent
 invocation, an isolated context with its own tool schemas, a round trip of tool
 calls/results, a specialist completion, and a compact return the parent must parse and act
-on. For a banner-sized artifact, that fixed cost is not amortized by a correspondingly
-larger unit of avoided parent work — so total consumption went up, not down. This is a
-**task-too-small** failure of the pattern's premise, distinct from a claim that the pattern
-is broadly ineffective.
+on. The data below are consistent with that fixed cost not being amortized by a
+correspondingly larger unit of avoided parent work for an asset this small — but because
+delegation and model tier changed together in the same contrast, the same data are equally
+consistent with the regression being driven partly or wholly by the model-tier change
+itself, independent of task size. This is presented as a **task-too-small hypothesis /
+counterexample candidate**, not a demonstrated causal failure of the pattern, and
+certainly not a claim that the pattern is broadly ineffective.
 
 ## What the merged report measured (20 complete ITT pairs)
 
@@ -45,29 +61,45 @@ attached to them, consistent with the report's own withholding of inference.
 Neither preregistered efficiency marker (≥10% lower total nano-AIU, ≥15% lower parent
 cumulative input) was reached; both moved in the opposite direction.
 
-### Parent cumulative input rose far more than parent peak input
+### Directly measured: parent completions rose by a mean of 9.00
 
-Parent **cumulative** input tokens rose 53.9% while parent **peak** (single-turn) input
-tokens rose only 3.4%. A single much larger prompt would be expected to move both figures
-together; instead, almost all of the cumulative increase sits outside the peak. That
-pattern is consistent with — though not a direct turn-count measurement in the report,
-which does not export a per-turn token trace — **more parent turns and more replayed
-context** (routing, delegation, tool-result plumbing, and post-return integration
-verification each adding their own turn) rather than one larger single request. Read this
-as the most defensible interpretation available from the published aggregates, not as a
-separately verified causal mechanism.
+The report's "Parent AI credits" outcome is not an abstract billing abstraction here — in
+this benchmark's own raw telemetry, `aiCredits` is recorded as unit `premium_requests` from
+source `local_assistant_usage_events_exact_completion_rows`. Checked directly against all
+20 selected treatment runs' per-event telemetry, every individual parent (`gpt-5.6-sol`)
+completion event carries `aiCredits: 1`, while every specialist (`claude-haiku-4.5`)
+completion event carries `aiCredits: 0.33` (excluded runs, including at least one confirmed
+`wrong_model` attempt, show other split weights and are correctly excluded from the
+selected set). At a fixed 1-credit-per-completion weight for the parent's model across all
+20 selected treatments, **"Parent AI credits" is a direct completion count for the parent
+role**, not an inferred proxy. So the report's paired means — **16.40 parent completions in
+control vs. 25.40 in treatment, a measured +9.00 completions** — is published
+completion-level telemetry, not an estimate.
+
+What is *not* isolated by this design is **why** those 9 additional parent completions
+occurred — additional routing turns, delegation/tool-result plumbing turns, post-return
+integration-verification turns, retries, or some mix are all consistent candidate
+mechanisms, and this single confounded run cannot distinguish them. Parent **cumulative**
+input tokens also rose 53.9% while parent **peak** (single-turn) input tokens rose only
+3.4%; a single much larger prompt would be expected to move both figures together, so this
+divergence is corroborating context for "more completions, each replaying accumulated
+context" rather than "one bigger request" — consistent with, not independent proof of, the
+completion-count finding above. Isolating the specific mechanism (and separating it from
+the simultaneous model-tier change) would need the kind of factorial design described in
+[Related material](#related-material) below, not a re-read of this report.
 
 ### The extra cost was concentrated in the parent, not the specialist
 
 - Exposed tool count rose 63.6% and tool call/result count rose 50.6% — the Skill,
   delegation plumbing, and specialist tool schema all add to what the runtime tracks,
   even though the specialist's own allowlist is narrow (`read`/`edit` only).
-- Of the **+11.43** mean paired total-AI-credit increase, **+9.00 credits landed on the
-  parent** and the specialist's own mean cost across 20 selected treatments was only
-  **2.4255 AI credits** (5.629B nano-AIU, 46,175.9 cumulative input tokens, 29.12s of
-  specialist/parent-wait latency). The parent, not the cheaper specialist, is where most
-  of the extra spend went — the opposite of what a cost-tiering benefit would predict for
-  a task this small.
+- Of the **+11.43** mean paired total-AI-credit increase, **+9.00 credits (= +9.00
+  completions, per above) landed on the parent** and the specialist's own mean cost across
+  20 selected treatments was only **2.4255 AI credits** (5.629B nano-AIU, 46,175.9
+  cumulative input tokens, 29.12s of specialist/parent-wait latency). The parent, not the
+  cheaper specialist, is where most of the extra spend went. Whether this reflects
+  delegation overhead, the model-tier change, or both cannot be separated in this design —
+  see the confound noted at the top of this document.
 
 ### Wall latency improved; parent active latency did not
 
@@ -94,12 +126,16 @@ dimensions:
 | Cleanliness | -0.30 |
 
 Recognizability and composition — the two dimensions most tied to *what the banner
-actually looks like* — dropped roughly 4-6x further than the other four dimensions. This
-suggests the quality cost of delegating this particular generative task to the smaller
-specialist model was concentrated in visual/aesthetic judgment rather than mechanical
-correctness, though the report's per-protocol sensitivity (18 pairs, noncompliant runs
-removed) shows the same direction, so it is not an artifact of the two excluded
-noncompliant runs alone.
+actually looks like* — dropped roughly 4-6x further than the other four dimensions, and
+the same direction holds under the per-protocol sensitivity (18 pairs, noncompliant runs
+removed), so it is not solely an artifact of the two excluded noncompliant runs. **Why**
+the drop concentrates there is a hypothesis, not an isolated finding: candidate
+explanations include the specialist model's own generative capability on visual/aesthetic
+judgment, something about the delegation/isolation mechanism itself (for example, less
+shared context to keep the banner cohesive with its surroundings), or the asymmetric
+missingness biasing which treatment runs were even selected. This single confounded,
+missingness-affected design cannot distinguish among those explanations; attributing the
+quality drop specifically to "the smaller model" would overstate what this run can show.
 
 ## Missingness and inference caveat
 
@@ -141,14 +177,19 @@ evidence:
 
 ## Scope: implementation- and task-specific, not a general verdict
 
-This finding is bounded to one Windows PowerShell fixture, one parent model
+This hypothesis is bounded to one Windows PowerShell fixture, one parent model
 (`gpt-5.6-sol`), one specialist model (`claude-haiku-4.5`), one harness (GitHub Copilot
 CLI), and one visibly separable but very small generative task (an ASCII-art banner). It
 does **not** establish that the Agent Skill Pattern fails in general, that cost-tiered
 delegation never pays off, or that this result generalizes to larger or differently-shaped
-bounded tasks. It shows that *for a task this small*, fixed per-delegation overhead
-plausibly exceeded the savings the pattern is meant to produce, and that this deserves
-checking before delegating, not after.
+bounded tasks. Two further limits sharpen that boundary: the benchmark's single contrast
+changes delegation and model tier **simultaneously**, so it cannot attribute the regression
+to task size, fixed overhead, or model tier individually or in isolation; and the
+asymmetric, non-random missingness (above) means even the descriptive point estimates rest
+on a smaller, differently-composed sample than preregistered. What this run is consistent
+with is that *for a task this small*, fixed per-delegation overhead plausibly contributed
+to the observed regression — worth checking for before delegating a similarly small task —
+not a demonstrated, isolated, generalizable cause.
 
 ## Practical task-size screening checklist
 
@@ -164,18 +205,28 @@ joint screen.
    its content beyond invocation and a terse status check — if the parent must re-verify,
    re-read, or reason extensively about the result, that reasoning shows up as the
    cumulative-input growth this case study measured.
-3. **Direct staging write.** The specialist must write directly to the real shared target
-   (or an agreed staging path the parent trusts without inspection), not to a private
-   location the parent then has to copy from — see the `P06` deviation above.
+3. **Isolated staging plus a deterministic validator gating promotion.** The specialist
+   should write to an isolated staging location (or a staging path within the shared
+   target's directory) rather than the live shared target directly, and a deterministic
+   validator — a script or fixed rule-check, not the parent's model judgment and not blind
+   trust in the specialist's status message — must pass before the artifact is promoted
+   into the shared target. Never treat a compact "success" status alone as sufficient to
+   accept a write to a shared target; see the `P06` copy deviation above for what an
+   ungated, ad hoc version of this step looks like when it isn't specified up front.
 4. **Deterministic validation available.** Prefer tasks whose output can be checked by a
    cheap, deterministic validator (length/character/format rules) rather than requiring
    the parent or a judge to assess subjective quality, since subjective dimensions
    (recognizability, composition) were where this case study's quality loss concentrated.
+   This is the same validator that gates promotion in item 3, not a separate check.
 5. **Compact return.** The specialist's return to the parent should be a small, fixed-shape
    status, not artifact content, error dumps, or exploratory reasoning.
-6. **Parent does not reread the artifact.** After a successful terse status, the parent
-   should trust the result rather than opening and re-reading the full artifact — rereading
-   reintroduces the token cost the delegation was meant to avoid.
+6. **Parent does not reread the artifact into its own context, but the validator still
+   runs.** After a successful terse status, the parent should not spend model-context
+   tokens re-reading and reasoning over the full artifact — that would reintroduce the
+   token cost delegation was meant to avoid — but this is not the same as skipping
+   verification: the deterministic validator from items 3-4 (a script, not a model) still
+   runs and gates promotion. "The parent doesn't reread it" and "nothing checks it" are
+   different claims; only the first is recommended here.
 7. **Overhead estimate or preflight before committing.** Before wiring the Skill, estimate
    (or run a small preflight on) the fixed per-delegation cost — routing turn(s), tool
    schema exposure, specialist completion, return parsing — and compare it against the
@@ -192,7 +243,13 @@ joint screen.
 - [`docs/agent-skill-pattern.md` — When not to use this pattern](../agent-skill-pattern.md#when-not-to-use-this-pattern)
   and [Observability and measurement](../agent-skill-pattern.md#observability-and-measurement) —
   the pattern-level guidance this case study's checklist extends.
-- [Semantic acceptance-test corpus generation research](../research/semantic-corpus-generation.md) —
-  a separate, newer candidate reference evaluating where a bounded AI subagent task fits
-  (or doesn't) inside a deterministic pipeline; relevant background for judging task size
-  and boundedness before wiring a new Skill/subagent pair.
+- [Semantic acceptance-test corpus generation research — §8 evaluation design](../research/semantic-corpus-generation.md#8-evaluation-design-recommendation) —
+  a separate, newer candidate reference that specifies a **full 2×2 factorial design**
+  crossing delegation (inline vs. subagent-delegated) with model tier (parent vs.
+  cheap/small model), plus a deterministic-baseline control arm. That design — not this
+  single confounded contrast — is the kind of instrument needed to separate "cost of
+  delegation/orchestration" from "cost of a different model tier," including reporting
+  the delegation effect *conditional on* model tier and testing for an interaction between
+  them. It does not itself vary task size, so isolating the task-size hypothesis specifically
+  would need a further extension of that template (an added task-size factor), not a re-read
+  of the ascii-art report.
