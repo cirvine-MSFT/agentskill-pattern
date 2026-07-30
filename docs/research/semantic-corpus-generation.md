@@ -10,9 +10,11 @@ pipeline. It does not modify [`prior-art.md`](./prior-art.md), [`evidence.csv`](
 [`search-log.md`](./search-log.md), the README, any Skill/agent definition, `experiments/`, or any
 report. Every substantive external claim below is backed by a row in `semantic-corpus-evidence.csv`
 and was verified by fetching the primary source directly (arXiv API, vendor docs, NIST, GitHub
-project READMEs, or the author's own institutional copy); two rows (QuickCheck and Csmith) confirm
-publication metadata directly against the ACM DOI but draw their quoted abstract text from a
-secondary academic mirror because ACM paywalls the abstract itself — flagged accordingly in the CSV.
+project READMEs, or the author's own institutional copy); four rows draw their quoted text from a
+secondary source rather than a directly rendered primary document — QuickCheck and Csmith (ACM
+paywalls the abstract itself), KLEE (the fetched PDF rendered as raw/garbled byte-stream), and the
+ISTQB black-box test-technique definitions (the glossary is a client-side-rendered page this
+session's fetch tool could not render) — each flagged accordingly in the CSV with its own caveat.
 
 ## 1. The concern this reference exists to settle
 
@@ -265,6 +267,18 @@ individual element already exists as documented, independently citable prior art
   recommends using one of these (or an equivalent) as-is.
 - **Combinatorial/covering-array test design** is exactly NIST's and Microsoft PICT's documented
   technique (rows 9–10) — again, use as-is, not reinvent.
+- **Decision table testing, equivalence partitioning, and boundary value analysis** are exactly
+  ISTQB's own standardized black-box test-design vocabulary (row 25); this reference does not invent
+  a new rule-driven or partition-driven generation technique, it recommends applying these
+  decades-old, certification-body-documented techniques directly to the mapping-rule specification.
+- **Constraint/SMT-based symbolic execution used to crosscheck two nominally-equivalent
+  implementations** is exactly KLEE's own documented result on BusyBox/coreutils (row 24) — the
+  closest single prior-art match found for deterministically crosschecking a v1-derived and
+  v2-derived implementation against each other, independent of any AI step.
+- **Contamination-auditing methodology as distinct from similarity/edit-distance scoring** is exactly
+  Golchin & Surdeanu's documented contribution (row 26) — this reference does not invent a leakage
+  test, it recommends applying that documented technique (or the private/post-cutoff held-out
+  material fallback it motivates) instead of conflating leakage with redundancy scoring.
 - **The pattern of an LLM proposing candidate inputs while a deterministic process drives and
   validates search** is CodaMosa's own documented contribution (row 18) — the closest single
   structural match found in this research for "AI proposes, script decides." This reference's
@@ -285,6 +299,13 @@ individual element already exists as documented, independently citable prior art
   and [`agent-skill-pattern.md`](../agent-skill-pattern.md). This document adds a **new candidate task
   shape** (semantic corpus/scenario design for a deterministic migration) to evaluate against that
   existing pattern definition — it does not revisit or modify the pattern definition itself.
+- **Path/directory isolation via a separate worktree, repository, or a capability-scoped tool** is not
+  a novel access-control idea this reference invents — it is standard sandboxing practice, and is the
+  necessary correction once GitHub's own documentation (row 23) is read carefully: a custom agent's
+  `tools` allowlist is scoped by tool name, not by file path, so this reference's isolation
+  architecture (§6) names an actual boundary (a location the tools cannot reach) rather than reusing
+  this repository's existing recursive-delegation tool-omission argument for a claim it was never
+  meant to support.
 
 **What this reference specifically does not find prior art for:** a named, evaluated composition of
 (a) AI-proposed domain-semantic scenario design, (b) deterministic schema/combinatorial validation of
@@ -518,5 +539,9 @@ from execution traces rather than the AI's own labels. The AI is never suited to
 the expected-output oracle, which must remain a deterministic script with its own independently
 validated trust chain (§7), isolated from the AI subagent by a real access boundary rather than by
 tool-name omission (§6), with mutation testing measuring the resulting corpus's effectiveness against
-that independently-validated oracle — not the oracle's own correctness.
+that independently-validated oracle — not the oracle's own correctness. **If the deterministic
+baseline alone matches or exceeds every AI arm's hidden-mutant kill rate and semantic coverage at the
+same corpus size (§8), this reference's recommendation is to reject the AI-subagent step entirely and
+ship the deterministic-baseline corpus** — adding an AI step is a cost this pattern must earn with
+measured evidence, not a default this reference endorses regardless of outcome.
 
