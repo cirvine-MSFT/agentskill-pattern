@@ -91,7 +91,10 @@ export function evaluateIsolationEvidence(authenticated, {
     "network.access",
     "tool.called",
     "delegation.invoked",
-    "delegation.completed"
+    "delegation.completed",
+    "run.completed",
+    "outcomes.unblinded",
+    "outcome.accessed"
   ]);
   const evidenceEvents = runEvents.filter((event) => relevantTypes.has(event.type));
   for (const event of evidenceEvents) {
@@ -117,6 +120,35 @@ export function evaluateIsolationEvidence(authenticated, {
   const networkEvents = evidenceEvents.filter((event) => event.type === "network.access");
   const toolEvents = evidenceEvents.filter((event) => event.type === "tool.called");
   const delegationEvents = evidenceEvents.filter((event) => event.type.startsWith("delegation."));
+  const completionEvents = evidenceEvents.filter((event) => event.type === "run.completed");
+  const unblindingEvents = evidenceEvents.filter((event) => event.type === "outcomes.unblinded");
+  const outcomeEvents = evidenceEvents.filter((event) => event.type === "outcome.accessed");
+
+  if (completionEvents.length !== 1
+    || completionEvents[0]?.sessionId !== roleSessions.parent
+    || completionEvents[0]?.role !== "parent") {
+    violations.push("run requires one signed completion boundary from the authenticated parent");
+  }
+  if (unblindingEvents.length !== 1
+    || unblindingEvents[0]?.sessionId !== roleSessions.parent
+    || unblindingEvents[0]?.role !== "parent") {
+    violations.push("run requires one signed unblinding boundary from the authenticated parent");
+  }
+  const completedAt = Date.parse(completionEvents[0]?.timestamp);
+  const unblindedAt = Date.parse(unblindingEvents[0]?.timestamp);
+  if (Number.isFinite(completedAt) && Number.isFinite(unblindedAt) && unblindedAt < completedAt) {
+    violations.push("unblinding boundary predates run completion");
+  }
+  const outcomeBoundary = Math.max(completedAt, unblindedAt);
+  for (const event of outcomeEvents) {
+    const role = sessionRoles.get(event.sessionId);
+    if (!role || event.role !== role) {
+      violations.push(`outcome access ${event.eventId} lacks an authenticated session/role`);
+    }
+    if (!Number.isFinite(outcomeBoundary) || Date.parse(event.timestamp) < outcomeBoundary) {
+      violations.push(`outcome access ${event.eventId} occurred before completion/unblinding`);
+    }
+  }
 
   for (const [role, sessionId] of Object.entries(roleSessions)) {
     const policies = policyEvents.filter((event) => event.sessionId === sessionId);
@@ -279,7 +311,10 @@ export function evaluateIsolationEvidence(authenticated, {
       correlatedFileCalls,
       networkAccessEvents: networkEvents.length,
       toolCallEvents: toolEvents.length,
-      delegationEvents: delegationEvents.length
+      delegationEvents: delegationEvents.length,
+      completionEvents: completionEvents.length,
+      unblindingEvents: unblindingEvents.length,
+      outcomeAccessEvents: outcomeEvents.length
     },
     violations
   };

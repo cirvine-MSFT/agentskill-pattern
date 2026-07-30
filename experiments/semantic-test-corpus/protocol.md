@@ -208,6 +208,12 @@ with the same call ID, actor/session, path, operation, and allowed decision.
 Orphan tool calls or filesystem events—including a staging write with no
 filesystem event—fail closed.
 
+Each run also records signed `run.completed` and `outcomes.unblinded` events
+from the authenticated parent. Any signed `outcome.accessed` event must identify
+an authenticated run session/role and occur after both timestamps. Premature or
+uncorrelated access is a compliance failure; post-boundary evaluator access is
+retained in the audit.
+
 `evaluator/acceptance/held-out-rules.json` and
 `evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29
 against the frozen base commit. Materialization and signed access evidence prove
@@ -308,6 +314,10 @@ Analyze the 12 run-level observations per available arm.
 2. For arms 1-4, code tier and delegation as -1/+1. Estimate paired block-level
    tier, delegation, and interaction contrasts. Report contrast estimates and
    95% block-bootstrap intervals using 10,000 resamples and seed `20260729`.
+   The tier and delegation main effects are differences of their two marginal
+   means. Interaction is half the difference between frontier and cheap
+   delegation effects. Also report the four conditional simple effects:
+   delegation at frontier/cheap and tier within inline/delegated runs.
 3. For each of four AI arms and each of three primary endpoints, use the paired
    within-block difference `AI - baseline` for the one-sided noninferiority null
    `H0: difference <= margin` against `H1: difference > margin`. Compute the
@@ -341,8 +351,13 @@ Analyze the 12 run-level observations per available arm.
 - A malformed/short/late staging file remains the measured outcome with its
   observed structural validity and promotion rate.
 - Primary complete-block analysis includes only blocks with all available arms.
-  Also report all-arm descriptive data and sensitivity bounds that assign
-  missing quality outcomes first 0 and then 1. Do not impute intermediate values.
+  Also report all-arm descriptive data and sensitivity bounds that assign each
+  missing arm outcome first 0 and then 1, plus worst/best paired AI-minus-
+  baseline bounds. Do not impute intermediate values.
+- If zero complete blocks remain, do not execute sign-flip or paired-factorial
+  routines. Emit deterministic per-arm availability/summaries and sensitivity
+  bounds, set paired comparisons/factorial results to null, and give an explicit
+  unavailable reason.
 - If more than two blocks are incomplete, withhold confirmatory language and
   report the benchmark as descriptive. `evaluator/statistics.mjs` then emits
   `confirmatoryAvailable: false`, an explicit reason, and `noninferior: null` for

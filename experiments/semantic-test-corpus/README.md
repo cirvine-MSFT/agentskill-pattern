@@ -86,7 +86,7 @@ node .\scripts\preflight-models.mjs `
 Exit code 2 means at least one measured run/role is unavailable. Do not substitute
 a model or run a silent partial factorial.
 
-After blinded run metrics are frozen, execute the registered baseline tests:
+After blinded run metrics are frozen, execute the registered primary analyses:
 
 ```powershell
 node .\evaluator\statistics.mjs `
@@ -98,6 +98,11 @@ The evaluator runs 12 one-sided noninferiority hypotheses with one Holm
 adjustment and 12 two-sided equality hypotheses with a separate Holm adjustment.
 Only common complete blocks enter the paired tests. More than two incomplete
 blocks forces `confirmatoryAvailable: false` and null noninferiority decisions.
+The same output includes per-arm summaries, paired tier/delegation/interaction
+and conditional simple-effect contrasts with the registered bootstrap, plus
+0/1 and worst/best missing-outcome sensitivity bounds. With zero complete
+blocks, paired comparisons and factorial results are null while deterministic
+arm availability and descriptive summaries remain.
 
 After the run, derive isolation compliance from that signed export:
 
@@ -113,6 +118,10 @@ node .\scripts\verify-isolation-evidence.mjs `
   --staging-path C:\benchmark-runs\B01-A1\staging\B01-A1.json `
   --out .\raw\B01-A1-isolation.json
 ```
+
+Isolation verification also requires signed completion and unblinding
+boundaries. Any authenticated `outcome.accessed` event before either boundary
+fails compliance.
 
 ## Layout
 

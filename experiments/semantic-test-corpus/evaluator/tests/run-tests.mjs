@@ -184,7 +184,7 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
   const modelId = [1, 2].includes(armId) ? "gpt-5.6-sol" : "claude-haiku-4.5";
   const parentSessionId = `${runId}-parent`;
   const roles = delegated ? ["parent", "worker"] : ["parent"];
-  return roles.flatMap((role) => {
+  const events = roles.flatMap((role) => {
     const sessionId = role === "parent" ? parentSessionId : `${runId}-worker`;
     return [
       {
@@ -238,6 +238,39 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
       }
     ];
   });
+  events.push(
+    {
+      eventId: `${runId}-completed`,
+      type: "run.completed",
+      timestamp: "2026-07-29T00:04:10Z",
+      sessionId: parentSessionId,
+      runId,
+      blockId,
+      armId,
+      role: "parent"
+    },
+    {
+      eventId: `${runId}-unblinded`,
+      type: "outcomes.unblinded",
+      timestamp: "2026-07-29T00:04:20Z",
+      sessionId: parentSessionId,
+      runId,
+      blockId,
+      armId,
+      role: "parent"
+    },
+    {
+      eventId: `${runId}-outcome-access`,
+      type: "outcome.accessed",
+      timestamp: "2026-07-29T00:04:30Z",
+      sessionId: parentSessionId,
+      runId,
+      blockId,
+      armId,
+      role: "parent"
+    }
+  );
+  return events;
 }
 
 test("Node 20 or newer is active", () => {
@@ -603,6 +636,7 @@ test("signed run evidence enforces the common delegated mechanism", () => {
   );
   assert.equal(compliant.status, "compliant");
   assert.equal(compliant.checks.correlatedFileCalls, 1);
+  assert.equal(compliant.checks.outcomeAccessEvents, 1);
 
   events.find((event) => event.eventId === "delegation-invoked").skillSha256 = "0".repeat(64);
   const wrongSkillSigned = signedExport(payload);
@@ -700,6 +734,31 @@ test("signed run evidence enforces the common delegated mechanism", () => {
   );
   assert.equal(spoofedActor.status, "noncompliant");
   assert(spoofedActor.violations.some((violation) => violation.includes("authenticated actor")));
+
+  const prematurePayload = structuredClone(compliantPayload);
+  prematurePayload.events.find((event) => event.type === "outcome.accessed").timestamp = "2026-07-29T00:04:15Z";
+  const prematureSigned = signedExport(prematurePayload);
+  const premature = evaluateIsolationEvidence(
+    authenticateExport(prematureSigned.bytes, prematureSigned.signature, prematureSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(premature.status, "noncompliant");
+  assert(premature.violations.some((violation) => violation.includes("before completion/unblinding")));
+
+  const uncorrelatedOutcomePayload = structuredClone(compliantPayload);
+  uncorrelatedOutcomePayload.events.find((event) => event.type === "outcome.accessed").role = "worker";
+  const uncorrelatedOutcomeSigned = signedExport(uncorrelatedOutcomePayload);
+  const uncorrelatedOutcome = evaluateIsolationEvidence(
+    authenticateExport(
+      uncorrelatedOutcomeSigned.bytes,
+      uncorrelatedOutcomeSigned.signature,
+      uncorrelatedOutcomeSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(uncorrelatedOutcome.status, "noncompliant");
+  assert(uncorrelatedOutcome.violations.some((violation) =>
+    violation.includes("lacks an authenticated session/role")));
 });
 
 test("model preflight accepts only authenticated fresh atomic platform evidence", () => {
@@ -1027,7 +1086,10 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   assert(descriptive.comparisons.every((comparison) =>
     comparison.noninferiority.decisionAvailable === false
       && comparison.noninferiority.noninferior === null
-      && comparison.noninferiority.unavailableReason));
+      && comparison.noninferiority.unavailableReason
+      && comparison.equality.decisionAvailable === false
+      && comparison.equality.rejectEquality === null
+      && comparison.equality.unavailableReason));
 
   const rejectedBindings = analyzeBaselineComparisons(observations, {
     bindingAvailability: bindingAvailabilityFor(observations, ["B01-A1", "B02-A2", "B03-A3"])
@@ -1036,7 +1098,7 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
     ["B04", "B05", "B06", "B07", "B08", "B09", "B10", "B11", "B12"]);
   assert.equal(rejectedBindings.analysisEligibility.confirmatoryAvailable, false);
   assert(rejectedBindings.analysisEligibility.incompleteBlocks.every((block) =>
-    block.reasons.some((reason) => reason.includes("authenticated run binding"))));
+    block.reasons.some((reason) => reason.includes("schedule/evidence binding"))));
 
   const reusedAvailability = bindingAvailabilityFor(observations);
   reusedAvailability.runs[1].roles[0].sessionId = reusedAvailability.runs[0].roles[0].sessionId;
@@ -1049,6 +1111,78 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   assert.throws(() => analyzeBaselineComparisons(observations, {
     bindingAvailability: mismatchAvailability
   }), /model mismatch/);
+});
+
+test("factorial summaries and missingness sensitivity match known synthetic values", () => {
+  const armValues = new Map([[0, 0.5], [1, 0.6], [2, 0.7], [3, 0.4], [4, 0.45]]);
+  const observations = frozenSchedule.runs.map((run) => ({
+    runId: run.runId,
+    blockId: run.blockId,
+    armId: run.armId,
+    promotionRate: armValues.get(run.armId),
+    semanticPathCoverage: armValues.get(run.armId),
+    mutantKillRate: armValues.get(run.armId)
+  }));
+  const result = analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindingAvailabilityFor(observations)
+  });
+  const close = (actual, expected) => assert(Math.abs(actual - expected) < 1e-12,
+    `${actual} != ${expected}`);
+  const promotion = result.factorial.find((endpoint) => endpoint.endpoint === "promotionRate");
+  assert.match(promotion.multiplicityWarning, /unadjusted and descriptive/);
+  close(promotion.contrasts.modelTier.estimate, 0.225);
+  close(promotion.contrasts.delegation.estimate, 0.075);
+  close(promotion.contrasts.interaction.estimate, 0.025);
+  close(promotion.contrasts.delegationAtFrontier.estimate, 0.1);
+  close(promotion.contrasts.delegationAtCheap.estimate, 0.05);
+  close(promotion.contrasts.tierInline.estimate, 0.2);
+  close(promotion.contrasts.tierDelegated.estimate, 0.25);
+  promotion.contrasts.modelTier.confidenceInterval.forEach((bound) => close(bound, 0.225));
+  const frontierSummary = result.descriptive.armSummaries.find((arm) => arm.armId === 1);
+  assert.equal(frontierSummary.endpoints.promotionRate.n, 12);
+  close(frontierSummary.endpoints.promotionRate.mean, 0.6);
+  close(frontierSummary.endpoints.promotionRate.median, 0.6);
+  close(frontierSummary.endpoints.promotionRate.standardDeviation, 0);
+
+  const missing = observations.filter((observation) =>
+    !(observation.blockId === "B12" && observation.armId === 4));
+  const missingResult = analyzeBaselineComparisons(missing, {
+    bindingAvailability: bindingAvailabilityFor(missing)
+  });
+  assert.equal(missingResult.analysisEligibility.completeBlocks.length, 11);
+  assert.equal(missingResult.analysisEligibility.confirmatoryAvailable, true);
+  const armFourSensitivity = missingResult.descriptive.sensitivity.arms
+    .find((arm) => arm.armId === 4).endpoints.promotionRate;
+  assert.equal(armFourSensitivity.missing, 1);
+  close(armFourSensitivity.missingAssignedZero, (11 * 0.45) / 12);
+  close(armFourSensitivity.missingAssignedOne, ((11 * 0.45) + 1) / 12);
+  const comparisonBounds = missingResult.descriptive.sensitivity.baselineComparisons
+    .find((comparison) => comparison.armId === 4 && comparison.endpoint === "promotionRate");
+  close(comparisonBounds.worstMeanDifference, ((11 * -0.05) - 0.5) / 12);
+  close(comparisonBounds.bestMeanDifference, ((11 * -0.05) + 0.5) / 12);
+
+  const baselineOnly = observations.filter((observation) => observation.armId === 0);
+  const zeroComplete = analyzeBaselineComparisons(baselineOnly, {
+    bindingAvailability: bindingAvailabilityFor(baselineOnly)
+  });
+  assert.equal(zeroComplete.analysisEligibility.completeBlocks.length, 0);
+  assert.equal(zeroComplete.analysisEligibility.confirmatoryAvailable, false);
+  assert.match(zeroComplete.analysisEligibility.unavailableReason, /no complete blocks/);
+  assert.equal(zeroComplete.comparisons, null);
+  assert.equal(zeroComplete.factorial, null);
+  assert.equal(zeroComplete.families.noninferiority.evaluated, 0);
+  assert.equal(zeroComplete.descriptive.armSummaries.find((arm) => arm.armId === 0)
+    .endpoints.promotionRate.n, 12);
+  assert.equal(zeroComplete.descriptive.armSummaries.find((arm) => arm.armId === 1)
+    .endpoints.promotionRate.n, 0);
+  assert.equal(zeroComplete.descriptive.armSummaries.find((arm) => arm.armId === 1)
+    .endpoints.promotionRate.blockValues.length, 12);
+  assert(zeroComplete.descriptive.armSummaries.find((arm) => arm.armId === 1)
+    .endpoints.promotionRate.blockValues.every((block) => block.value === null));
+  assert.equal(zeroComplete.descriptive.armAvailability.find((arm) => arm.armId === 0)
+    .eligibleOutcomes, 12);
+  assert.equal(zeroComplete.descriptive.armAvailability.find((arm) => arm.armId === 1)
+    .eligibleOutcomes, 0);
 });
 
 test("migration CLI emits the instrumented candidate result", () => {
