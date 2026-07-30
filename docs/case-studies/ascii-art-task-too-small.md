@@ -197,14 +197,19 @@ Use this checklist *before* wiring a new Skill/subagent pair, to reduce the odds
 repeating this counterexample. None of these are individually sufficient; treat them as a
 joint screen.
 
-1. **Substantial bounded output.** The artifact being generated should be large or complex
-   enough that a cheaper model's generation cost, plus the fixed delegation overhead, is
-   still less than the parent-inline cost. A single small fixed-format file (this case
-   study's banner) is close to the floor where this stops being true.
-2. **Low parent coupling.** The task should need little-to-no parent-side reasoning about
-   its content beyond invocation and a terse status check — if the parent must re-verify,
-   re-read, or reason extensively about the result, that reasoning shows up as the
-   cumulative-input growth this case study measured.
+1. **Substantial bounded output (screening hypothesis, not a demonstrated threshold).**
+   This run's banner sat near a plausible floor where a cheaper model's generation cost,
+   plus fixed delegation overhead, could exceed the parent-inline cost — but this case
+   study did not vary task size, so it cannot say where that floor actually is or confirm
+   size alone (as opposed to model tier, which changed simultaneously) drove the
+   regression. Treat "is this artifact substantial enough to delegate" as a question worth
+   asking, not a rule this benchmark validated.
+2. **Low parent coupling (screening hypothesis, not a demonstrated causal link).** Prefer
+   tasks that need little parent-side reasoning about their content beyond invocation and a
+   terse status check. In this run, higher cumulative-input growth co-occurred with
+   parent re-verification of the specialist's output, but task/coupling level was not
+   varied and model tier and delegation were confounded, so this is an observation
+   motivating a check, not a proven cause of the regression.
 3. **Isolated staging plus a deterministic validator gating promotion.** The specialist
    should write to an isolated staging location (or a staging path within the shared
    target's directory) rather than the live shared target directly, and a deterministic
