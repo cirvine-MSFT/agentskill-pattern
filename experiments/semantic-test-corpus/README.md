@@ -71,17 +71,19 @@ Materialize a candidate repository outside this checkout:
 node .\scripts\materialize-candidate.mjs --out C:\benchmark-runs\B01-A1
 ```
 
-Before any AI outcome, verify the raw signed platform export:
+For every measured AI run, bind its run record to the exact raw signed platform
+export and verify all required parent/worker sessions:
 
 ```powershell
 node .\scripts\preflight-models.mjs `
   --payload .\raw\platform-export.json `
   --signature .\raw\platform-export.sig `
   --public-key C:\trusted\copilot-platform-ed25519.pem `
+  --runs .\raw\run-records.json `
   --out .\raw\availability.json
 ```
 
-Exit code 2 means at least one factorial cell is unavailable. Do not substitute
+Exit code 2 means at least one measured run/role is unavailable. Do not substitute
 a model or run a silent partial factorial.
 
 After blinded run metrics are frozen, execute the registered baseline tests:
@@ -94,6 +96,8 @@ node .\evaluator\statistics.mjs `
 
 The evaluator runs 12 one-sided noninferiority hypotheses with one Holm
 adjustment and 12 two-sided equality hypotheses with a separate Holm adjustment.
+Only common complete blocks enter the paired tests. More than two incomplete
+blocks forces `confirmatoryAvailable: false` and null noninferiority decisions.
 
 After the run, derive isolation compliance from that signed export:
 
@@ -102,9 +106,11 @@ node .\scripts\verify-isolation-evidence.mjs `
   --payload .\raw\platform-export.json `
   --signature .\raw\platform-export.sig `
   --public-key C:\trusted\copilot-platform-ed25519.pem `
+  --arm-id 1 `
+  --run-id B01-A1 `
   --candidate-root C:\benchmark-runs\B01-A1 `
   --evaluator-root (Join-Path $PWD evaluator) `
-  --session-ids <signed-session-id> `
+  --staging-path C:\benchmark-runs\B01-A1\staging\B01-A1.json `
   --out .\raw\B01-A1-isolation.json
 ```
 

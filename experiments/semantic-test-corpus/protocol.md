@@ -94,23 +94,28 @@ tool surface. Arms 2 and 4 use the same byte-identical
 return shape, and tool surface; only the bound parent/worker model IDs differ.
 Inline arms execute the same task contract directly.
 
-### Atomic model-binding preflight
+### Authenticated per-run model binding
 
-Before opening any outcome:
+For every measured AI run, before generation starts:
 
-1. Create fresh no-outcome probe sessions using the exact requested bindings.
+1. Create a fresh parent session and, for delegated arms, a fresh worker session
+   using the exact requested bindings.
 2. Obtain the platform's raw JSON event export, detached Ed25519 signature, and
    trusted platform public key under `design/platform-evidence-contract.json`.
-3. Run `scripts/preflight-models.mjs` with all three files and freeze its output.
-4. Preserve the emitted payload, signature, and public-key SHA-256 values.
+3. Record signed `run.started`, `session.created`, and atomic `model.bound` events
+   carrying the frozen run ID, block ID, arm ID, role, and unique session ID.
+4. Bind each run record to the exact export/payload/signature/key hashes and
+   signed event/session IDs, then run `scripts/preflight-models.mjs`.
 
-A cell is available only when signature verification succeeds; all event,
-capture, and export timestamps are valid; signed creation events contain unique
-session IDs; signed atomic binding events match the requested parent/worker
-models; worker parentage is correct; and no signed outcome-access event predates
-the capture boundary. Caller-provided verification/freshness strings are not
-inputs. Missing, reused, unsigned, fabricated, non-atomic, late, or model-mismatched
-evidence makes the cell unavailable. If any AI cell is unavailable, do not
+A run is available only when signature verification succeeds; its run record
+binds the exact raw evidence hashes and event IDs; every required role has a
+unique session created within ten minutes before that run; the signed atomic
+binding matches the requested model; `run.started` uses the authenticated parent;
+and delegated worker parentage is correct. The verifier evaluates all 48 AI runs
+and 72 parent/worker role sessions, not one representative probe per arm.
+Caller-provided verification/freshness strings are not inputs. Missing, reused,
+unsigned, fabricated, non-atomic, late, or model-mismatched evidence makes that
+run unavailable. If any AI run is unavailable, do not
 substitute a model, run only a marginal, or call the result a partial factorial.
 The factorial analysis is withheld; arm 0 may be reported descriptively.
 
@@ -165,6 +170,14 @@ context. It validates/promotes by command and records compact stdout. This keeps
 the larger parent migration task meaningful without turning parent context into
 an unmeasured corpus-review treatment.
 
+Signed role mappings are derived from each run's `session.created` and
+`model.bound` events. In delegated arms, only the authenticated worker may write
+the exact staging file; worker writes anywhere else fail compliance. The parent
+may only invoke delegation, call compact validation/promotion tools, and receive
+the frozen compact return fields. Any parent staging read/write, missing worker
+staging write, or parent-does-all trace fails compliance. Inline arms have no
+worker and require the authenticated parent to write staging directly.
+
 For both arms 2 and 4, invoke the single materialized
 `task/delegated-worker-skill.md` artifact using the same Skill name. The
 coordinator rejects any run whose signed tool/session evidence shows a different
@@ -189,6 +202,11 @@ export and derives compliance from policy, file-access, network-access, and
 audit-completion events. Caller booleans are not accepted. An incomplete audit,
 outside-root/evaluator attempt, allowed network request, policy mismatch, or
 unexpected session is noncompliant.
+Every signed `file.read` or `file.write` tool call must carry a unique call ID,
+path, and authenticated actor and have exactly one matching `fs.access` event
+with the same call ID, actor/session, path, operation, and allowed decision.
+Orphan tool calls or filesystem events—including a staging write with no
+filesystem event—fail closed.
 
 `evaluator/acceptance/held-out-rules.json` and
 `evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29
@@ -326,7 +344,9 @@ Analyze the 12 run-level observations per available arm.
   Also report all-arm descriptive data and sensitivity bounds that assign
   missing quality outcomes first 0 and then 1. Do not impute intermediate values.
 - If more than two blocks are incomplete, withhold confirmatory language and
-  report the benchmark as descriptive.
+  report the benchmark as descriptive. `evaluator/statistics.mjs` then emits
+  `confirmatoryAvailable: false`, an explicit reason, and `noninferior: null` for
+  every comparison regardless of raw or Holm-adjusted p-values.
 
 ## Blinding and judging
 
@@ -345,10 +365,12 @@ deterministic endpoints.
 
 1. Run `npm test` and `npm run reproduce`.
 2. Generate/freeze `design/schedule.json`.
-3. Verify the signed platform model-binding export and freeze availability.
-4. Materialize external allowlisted candidate repositories, apply filesystem/
-   network policy, and create fresh sessions in schedule order.
-5. Generate inputs directly to staging; collect signed raw telemetry/access logs.
+3. Materialize external allowlisted candidate repositories and apply filesystem/
+   network policy.
+4. In schedule order, create each run's fresh role sessions and verify/freeze its
+   signed run/model binding before generation.
+5. Generate inputs directly to staging; collect call-correlated signed raw
+   telemetry/access logs.
 6. Verify the signed isolation audit, then validate each staging slot without
    opening corpus content in parent context.
 7. Promote valid cases through the evaluator oracle and freeze hashes.

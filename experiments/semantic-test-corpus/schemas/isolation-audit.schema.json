@@ -2,15 +2,40 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "isolation-audit.schema.json",
   "type": "object",
-  "required": ["exportId", "evidence", "candidateRoot", "sessionIds", "status", "checks", "violations"],
+  "required": ["exportId", "runId", "armId", "evidence", "candidateRoot", "stagingPath", "roleSessions", "status", "checks", "violations"],
   "additionalProperties": false,
   "properties": {
     "exportId": {"type": "string"},
+    "runId": {"type": "string"},
+    "armId": {"type": "integer", "minimum": 1, "maximum": 4},
     "evidence": {"type": "object"},
     "candidateRoot": {"type": "string"},
-    "sessionIds": {"type": "array", "items": {"type": "string"}},
+    "stagingPath": {"type": "string"},
+    "roleSessions": {
+      "type": "object",
+      "required": ["parent"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": {"type": "string"},
+        "worker": {"type": "string"}
+      }
+    },
     "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
-    "checks": {"type": "object"},
+    "checks": {
+      "type": "object",
+      "required": ["policyEvents", "auditEvents", "fileToolCalls", "fileAccessEvents", "correlatedFileCalls", "networkAccessEvents", "toolCallEvents", "delegationEvents"],
+      "additionalProperties": false,
+      "properties": {
+        "policyEvents": {"type": "integer", "minimum": 0},
+        "auditEvents": {"type": "integer", "minimum": 0},
+        "fileToolCalls": {"type": "integer", "minimum": 0},
+        "fileAccessEvents": {"type": "integer", "minimum": 0},
+        "correlatedFileCalls": {"type": "integer", "minimum": 0},
+        "networkAccessEvents": {"type": "integer", "minimum": 0},
+        "toolCallEvents": {"type": "integer", "minimum": 0},
+        "delegationEvents": {"type": "integer", "minimum": 0}
+      }
+    },
     "violations": {"type": "array", "items": {"type": "string"}}
   }
 }

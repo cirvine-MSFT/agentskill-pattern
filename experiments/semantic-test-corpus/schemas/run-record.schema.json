@@ -2,8 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "run-record.schema.json",
   "type": "object",
-  "required": ["runId", "blockId", "armId", "availability", "phase", "timing", "usage", "tools", "compliance"],
+  "required": ["runId", "blockId", "armId", "availability", "phase", "modelEvidence", "timing", "usage", "tools", "compliance"],
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"armId": {"const": 0}}},
+      "then": {"properties": {"modelEvidence": {"type": "null"}}},
+      "else": {"properties": {"modelEvidence": {"type": "object"}}}
+    }
+  ],
   "properties": {
     "runId": {"type": "string"},
     "blockId": {"type": "string"},
@@ -13,6 +20,38 @@
     "sessionIds": {"type": "array", "items": {"type": "string"}},
     "retryOf": {"type": "string"},
     "exclusionReason": {"type": "string"},
+    "modelEvidence": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["exportId", "payloadSha256", "signatureSha256", "publicKeySha256", "roles"],
+          "additionalProperties": false,
+          "properties": {
+            "exportId": {"type": "string"},
+            "payloadSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "signatureSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "publicKeySha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "roles": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "required": ["role", "sessionId", "sessionCreatedEventId", "modelBoundEventId"],
+                "additionalProperties": false,
+                "properties": {
+                  "role": {"type": "string", "enum": ["parent", "worker"]},
+                  "sessionId": {"type": "string"},
+                  "sessionCreatedEventId": {"type": "string"},
+                  "modelBoundEventId": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "staging": {
       "type": "object",
       "properties": {

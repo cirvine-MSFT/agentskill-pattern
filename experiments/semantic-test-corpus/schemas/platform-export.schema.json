@@ -16,14 +16,43 @@
         "type": "object",
         "required": ["eventId", "type", "timestamp", "sessionId"],
         "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {"properties": {"type": {"enum": ["run.started", "session.created", "model.bound"]}}},
+            "then": {"required": ["runId", "blockId", "armId", "role"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "model.bound"}}},
+            "then": {"required": ["modelId", "atomic"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "tool.called"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "actor", "toolName"]}
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {"const": "tool.called"},
+                "toolName": {"enum": ["file.read", "file.write"]}
+              }
+            },
+            "then": {"required": ["callId", "path"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "fs.access"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "actor", "callId", "path", "operation", "decision"]}
+          }
+        ],
         "properties": {
           "eventId": {"type": "string", "minLength": 1},
           "type": {
             "type": "string",
-            "enum": ["session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "delegation.invoked", "delegation.completed", "audit.completed"]
+            "enum": ["run.started", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "delegation.invoked", "delegation.completed", "audit.completed"]
           },
           "timestamp": {"type": "string", "minLength": 1},
           "sessionId": {"type": "string", "minLength": 1},
+          "runId": {"type": "string"},
+          "blockId": {"type": "string"},
           "armId": {"type": "integer", "minimum": 1, "maximum": 4},
           "role": {"type": "string", "enum": ["parent", "worker"]},
           "parentSessionId": {"type": "string"},
@@ -34,12 +63,14 @@
           "skillSha256": {"type": "string"},
           "returnFields": {"type": "array", "items": {"type": "string"}},
           "toolName": {"type": "string"},
+          "callId": {"type": "string", "minLength": 1},
+          "actor": {"type": "string", "enum": ["parent", "worker"]},
           "candidateRoot": {"type": "string"},
           "deniedRoots": {"type": "array", "items": {"type": "string"}},
           "filesystemMode": {"type": "string"},
           "networkMode": {"type": "string"},
           "path": {"type": "string"},
-          "operation": {"type": "string"},
+          "operation": {"type": "string", "enum": ["read", "write"]},
           "decision": {"type": "string", "enum": ["allow", "deny"]},
           "endpoint": {"type": "string"},
           "filesystemComplete": {"type": "boolean"},

@@ -25,6 +25,27 @@ export function validateJsonSchema(value, schema, options = {}) {
       return;
     }
 
+    for (const schemaPart of currentSchema.allOf ?? []) {
+      visit(current, schemaPart, path, currentSchemaDir);
+    }
+    if (currentSchema.anyOf) {
+      const matched = currentSchema.anyOf.some((schemaPart) =>
+        validateJsonSchema(current, schemaPart, { schemaDir: currentSchemaDir }).length === 0);
+      if (!matched) {
+        errors.push({ path, keyword: "anyOf", message: "must match at least one allowed schema" });
+        return;
+      }
+    }
+    if (currentSchema.if) {
+      const conditionMatched = validateJsonSchema(
+        current,
+        currentSchema.if,
+        { schemaDir: currentSchemaDir }
+      ).length === 0;
+      const branch = conditionMatched ? currentSchema.then : currentSchema.else;
+      if (branch) visit(current, branch, path, currentSchemaDir);
+    }
+
     if ("const" in currentSchema && current !== currentSchema.const) {
       errors.push({ path, keyword: "const", message: `must equal ${JSON.stringify(currentSchema.const)}` });
       return;

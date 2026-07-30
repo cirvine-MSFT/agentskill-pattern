@@ -1,5 +1,5 @@
 {
-  "preregistrationVersion": "1.1.0",
+  "preregistrationVersion": "1.2.0",
   "fixedModels": {
     "frontier": "gpt-5.6-sol",
     "cheap": "claude-haiku-4.5"
@@ -23,6 +23,7 @@
     "workspaceOwnership": "worker-direct-staging",
     "returnFields": ["stagingPath", "payloadSha256", "submittedCases", "promotableCases", "errorCount"],
     "parentCorpusReadAllowed": false,
+    "parentToolSurface": ["staging.validate", "staging.promote"],
     "toolSurface": ["file.read", "file.write", "staging.validate"]
   },
   "arms": [

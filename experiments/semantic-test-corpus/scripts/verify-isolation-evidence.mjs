@@ -7,6 +7,7 @@ import { readAuthenticatedExport } from "./authenticated-export.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const armContract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
+const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
 const delegatedSkillSha256 = createHash("sha256")
   .update(readFileSync(resolve(root, "design", "delegated-worker-skill.md")))
   .digest("hex");
@@ -27,125 +28,255 @@ function samePath(left, right) {
     : resolve(left) === resolve(right);
 }
 
-export function evaluateIsolationEvidence(authenticated, { armId, candidateRoot, evaluatorRoot, sessionIds }) {
+function expectedRoles(arm) {
+  return arm.delegated ? ["parent", "worker"] : ["parent"];
+}
+
+export function evaluateIsolationEvidence(authenticated, {
+  armId,
+  runId,
+  candidateRoot,
+  evaluatorRoot,
+  stagingPath
+}) {
   const { payload, authentication } = authenticated;
+  const arm = armContract.arms.find((item) => item.id === armId);
+  const planned = schedule.runs.find((run) => run.runId === runId);
   const candidate = resolve(candidateRoot);
   const evaluator = resolve(evaluatorRoot);
-  const expectedSessions = new Set(sessionIds);
+  const staging = resolve(stagingPath);
   const violations = [];
-  const policyEvents = [];
-  const auditEvents = [];
-  const fileEvents = [];
-  const networkEvents = [];
-  const toolEvents = [];
-  const delegationEvents = [];
+  if (!arm || armId === 0) {
+    violations.push(`arm ${armId} is not a measured AI arm`);
+  }
+  if (!planned || planned.armId !== armId) violations.push("run/arm differs from the frozen schedule");
+  if (!within(candidate, staging)) violations.push("staging path is outside the candidate root");
 
-  for (const event of payload.events) {
-    if (!["sandbox.policy.applied", "audit.completed", "fs.access", "network.access", "tool.called", "delegation.invoked", "delegation.completed"].includes(event.type)) continue;
-    if (!expectedSessions.has(event.sessionId)) {
-      violations.push(`isolation event ${event.eventId} uses unexpected session ${event.sessionId}`);
+  const runEvents = payload.events.filter((event) => event.runId === runId);
+  const requiredRoles = arm ? expectedRoles(arm) : [];
+  for (const event of runEvents.filter((item) =>
+    item.type === "session.created" || item.type === "model.bound")) {
+    if (!requiredRoles.includes(event.role)) {
+      violations.push(`signed run evidence contains unexpected role ${event.role ?? "<missing>"}`);
+    }
+  }
+  const roleSessions = {};
+  for (const role of requiredRoles) {
+    const created = runEvents.filter((event) => event.type === "session.created" && event.role === role);
+    const bound = runEvents.filter((event) => event.type === "model.bound" && event.role === role);
+    if (created.length !== 1) violations.push(`${role} requires exactly one signed session.created event`);
+    if (bound.length !== 1) violations.push(`${role} requires exactly one signed model.bound event`);
+    if (created.length !== 1 || bound.length !== 1) continue;
+    if (created[0].sessionId !== bound[0].sessionId) {
+      violations.push(`${role} session/model events do not identify the same session`);
+    }
+    if (created[0].armId !== armId || bound[0].armId !== armId) {
+      violations.push(`${role} signed role mapping has the wrong arm`);
+    }
+    if (created[0].blockId !== planned?.blockId || bound[0].blockId !== planned?.blockId) {
+      violations.push(`${role} signed role mapping has the wrong block`);
+    }
+    roleSessions[role] = created[0].sessionId;
+  }
+  if (arm?.delegated && runEvents.find((event) =>
+    event.type === "session.created" && event.role === "worker")?.parentSessionId !== roleSessions.parent) {
+    violations.push("worker signed parentSessionId does not match the authenticated parent");
+  }
+  const sessionRoles = new Map(Object.entries(roleSessions).map(([role, sessionId]) => [sessionId, role]));
+
+  const relevantTypes = new Set([
+    "sandbox.policy.applied",
+    "audit.completed",
+    "fs.access",
+    "network.access",
+    "tool.called",
+    "delegation.invoked",
+    "delegation.completed"
+  ]);
+  const evidenceEvents = runEvents.filter((event) => relevantTypes.has(event.type));
+  for (const event of evidenceEvents) {
+    const authenticatedRole = sessionRoles.get(event.sessionId);
+    if (!authenticatedRole) {
+      violations.push(`event ${event.eventId} uses a session outside the authenticated run roles`);
       continue;
     }
-    if (event.type === "sandbox.policy.applied") policyEvents.push(event);
-    if (event.type === "audit.completed") auditEvents.push(event);
-    if (event.type === "fs.access") fileEvents.push(event);
-    if (event.type === "network.access") networkEvents.push(event);
-    if (event.type === "tool.called") toolEvents.push(event);
-    if (event.type.startsWith("delegation.")) delegationEvents.push(event);
+    if (event.role !== undefined && event.role !== authenticatedRole) {
+      violations.push(`event ${event.eventId} role does not match its authenticated session`);
+    }
+    if (event.actor !== undefined && event.actor !== authenticatedRole) {
+      violations.push(`event ${event.eventId} actor does not match its authenticated session`);
+    }
+    if (event.armId !== armId || event.blockId !== planned?.blockId) {
+      violations.push(`event ${event.eventId} run mapping differs from the frozen schedule`);
+    }
   }
 
-  for (const sessionId of expectedSessions) {
+  const policyEvents = evidenceEvents.filter((event) => event.type === "sandbox.policy.applied");
+  const auditEvents = evidenceEvents.filter((event) => event.type === "audit.completed");
+  const fileEvents = evidenceEvents.filter((event) => event.type === "fs.access");
+  const networkEvents = evidenceEvents.filter((event) => event.type === "network.access");
+  const toolEvents = evidenceEvents.filter((event) => event.type === "tool.called");
+  const delegationEvents = evidenceEvents.filter((event) => event.type.startsWith("delegation."));
+
+  for (const [role, sessionId] of Object.entries(roleSessions)) {
     const policies = policyEvents.filter((event) => event.sessionId === sessionId);
     const audits = auditEvents.filter((event) => event.sessionId === sessionId);
     if (policies.length !== 1) {
-      violations.push(`${sessionId} requires exactly one signed sandbox.policy.applied event`);
+      violations.push(`${role} requires exactly one signed sandbox.policy.applied event`);
       continue;
     }
     const policy = policies[0];
-    const sessionAccesses = [...fileEvents, ...networkEvents].filter((event) => event.sessionId === sessionId);
-    if (!samePath(policy.candidateRoot ?? "", candidate)) violations.push(`${sessionId} candidate root policy mismatch`);
-    if (policy.filesystemMode !== "candidate-root-only") violations.push(`${sessionId} filesystem policy is not candidate-root-only`);
-    if (policy.networkMode !== "deny") violations.push(`${sessionId} network policy is not deny`);
+    if (!samePath(policy.candidateRoot ?? "", candidate)) violations.push(`${role} candidate root policy mismatch`);
+    if (policy.filesystemMode !== "candidate-root-only") violations.push(`${role} filesystem policy is not candidate-root-only`);
+    if (policy.networkMode !== "deny") violations.push(`${role} network policy is not deny`);
     if (!(policy.deniedRoots ?? []).some((path) => samePath(path, evaluator))) {
-      violations.push(`${sessionId} evaluator root is not explicitly denied`);
+      violations.push(`${role} evaluator root is not explicitly denied`);
     }
     if (audits.length !== 1) {
-      violations.push(`${sessionId} requires exactly one signed audit.completed event`);
-    } else {
-      if (audits[0].filesystemComplete !== true) violations.push(`${sessionId} filesystem audit is incomplete`);
-      if (audits[0].networkComplete !== true) violations.push(`${sessionId} network audit is incomplete`);
-      if (Date.parse(audits[0].timestamp) < Date.parse(policy.timestamp)) {
-        violations.push(`${sessionId} audit completion predates policy application`);
-      }
-      for (const access of sessionAccesses) {
-        if (Date.parse(access.timestamp) < Date.parse(policy.timestamp)) {
-          violations.push(`${sessionId} access ${access.eventId} predates policy application`);
-        }
-        if (Date.parse(access.timestamp) > Date.parse(audits[0].timestamp)) {
-          violations.push(`${sessionId} access ${access.eventId} occurs after audit completion`);
-        }
+      violations.push(`${role} requires exactly one signed audit.completed event`);
+      continue;
+    }
+    const audit = audits[0];
+    if (audit.filesystemComplete !== true) violations.push(`${role} filesystem audit is incomplete`);
+    if (audit.networkComplete !== true) violations.push(`${role} network audit is incomplete`);
+    if (Date.parse(audit.timestamp) < Date.parse(policy.timestamp)) {
+      violations.push(`${role} audit completion predates policy application`);
+    }
+    for (const event of [...fileEvents, ...networkEvents].filter((item) => item.sessionId === sessionId)) {
+      if (Date.parse(event.timestamp) < Date.parse(policy.timestamp)
+        || Date.parse(event.timestamp) > Date.parse(audit.timestamp)) {
+        violations.push(`${role} access ${event.eventId} is outside the authenticated audit window`);
       }
     }
   }
 
-  for (const event of fileEvents) {
-    const path = resolve(event.path ?? "");
-    if (!within(candidate, path)) violations.push(`${event.sessionId} attempted filesystem access outside candidate root`);
-    if (within(evaluator, path)) violations.push(`${event.sessionId} attempted evaluator access`);
-    if (event.decision !== "allow" && within(candidate, path)) {
-      violations.push(`${event.sessionId} candidate-root access was not allowed`);
+  const fileToolEvents = toolEvents.filter((event) =>
+    event.toolName === "file.read" || event.toolName === "file.write");
+  const seenCallIds = new Set();
+  let correlatedFileCalls = 0;
+  for (const tool of fileToolEvents) {
+    const role = sessionRoles.get(tool.sessionId);
+    if (tool.actor !== role) {
+      violations.push(`file tool call ${tool.callId ?? "<missing>"} lacks its authenticated actor`);
     }
+    if (!tool.callId || seenCallIds.has(tool.callId)) {
+      violations.push(`${role ?? "unknown"} file tool call requires a unique callId`);
+    }
+    seenCallIds.add(tool.callId);
+    if (!tool.path) violations.push(`${role ?? "unknown"} file tool call ${tool.callId ?? "<missing>"} requires a path`);
+    const accesses = fileEvents.filter((event) => event.callId === tool.callId);
+    if (accesses.length !== 1) {
+      violations.push(`${role ?? "unknown"} file tool call ${tool.callId ?? "<missing>"} requires exactly one fs.access event`);
+      continue;
+    }
+    const access = accesses[0];
+    const expectedOperation = tool.toolName === "file.write" ? "write" : "read";
+    if (access.sessionId !== tool.sessionId
+      || access.actor !== role
+      || tool.actor !== role
+      || access.operation !== expectedOperation
+      || !samePath(access.path ?? "", tool.path ?? "")
+      || access.decision !== "allow") {
+      violations.push(`file tool call ${tool.callId} does not match its fs.access event`);
+    } else {
+      correlatedFileCalls += 1;
+    }
+  }
+  for (const access of fileEvents) {
+    if (!access.callId || !fileToolEvents.some((tool) => tool.callId === access.callId)) {
+      violations.push(`fs.access ${access.eventId} has no corresponding file tool call`);
+    }
+    const path = resolve(access.path ?? "");
+    if (!within(candidate, path)) violations.push(`${access.actor ?? "unknown"} attempted filesystem access outside candidate root`);
+    if (within(evaluator, path)) violations.push(`${access.actor ?? "unknown"} attempted evaluator access`);
   }
   for (const event of networkEvents) {
-    if (event.decision !== "deny") violations.push(`${event.sessionId} network access was not denied`);
+    if (event.decision !== "deny") violations.push(`${event.actor ?? "unknown"} network access was not denied`);
   }
 
-  const permittedTools = new Set(armContract.commonContract.toolSurface);
-  for (const event of toolEvents) {
-    if (!permittedTools.has(event.toolName)) violations.push(`${event.sessionId} used forbidden tool ${event.toolName}`);
+  if (arm) {
+    const workerTools = new Set(armContract.commonContract.toolSurface);
+    const parentTools = new Set(arm.delegated
+      ? armContract.delegationContract.parentToolSurface
+      : armContract.commonContract.toolSurface);
+    for (const event of toolEvents) {
+      const role = sessionRoles.get(event.sessionId);
+      const allowed = role === "worker" ? workerTools : parentTools;
+      if (!allowed.has(event.toolName)) violations.push(`${role ?? "unknown"} used forbidden tool ${event.toolName}`);
+    }
+
+    const writes = fileToolEvents.filter((event) => event.toolName === "file.write");
+    const stagingWrites = writes.filter((event) => samePath(event.path ?? "", staging));
+    if (arm.delegated) {
+      if (stagingWrites.some((event) => sessionRoles.get(event.sessionId) !== "worker")) {
+        violations.push("delegated staging writes must be worker-only");
+      }
+      if (!stagingWrites.some((event) => sessionRoles.get(event.sessionId) === "worker")) {
+        violations.push("delegated worker did not write the staging corpus");
+      }
+      for (const event of writes.filter((item) => sessionRoles.get(item.sessionId) === "worker")) {
+        if (!samePath(event.path ?? "", staging)) violations.push("delegated worker wrote outside the staging file");
+      }
+      for (const event of fileToolEvents.filter((item) => sessionRoles.get(item.sessionId) === "parent")) {
+        if (samePath(event.path ?? "", staging)) {
+          violations.push("delegated parent accessed staging corpus contents");
+        }
+      }
+    } else {
+      if (roleSessions.worker) violations.push("inline arm has an authenticated worker role");
+      if (!stagingWrites.some((event) => sessionRoles.get(event.sessionId) === "parent")) {
+        violations.push("inline parent did not write the staging corpus");
+      }
+    }
   }
 
-  const arm = armContract.arms.find((item) => item.id === armId);
-  if (!arm) {
-    violations.push(`arm ${armId} is not declared`);
-  } else if (!arm.delegated) {
-    if (delegationEvents.length > 0) violations.push(`inline arm ${armId} emitted delegation events`);
-  } else {
+  if (arm?.delegated) {
     const invocations = delegationEvents.filter((event) => event.type === "delegation.invoked");
     const completions = delegationEvents.filter((event) => event.type === "delegation.completed");
-    if (invocations.length !== 1) violations.push(`delegated arm ${armId} requires one delegation.invoked event`);
-    if (completions.length !== 1) violations.push(`delegated arm ${armId} requires one delegation.completed event`);
+    if (invocations.length !== 1) violations.push("delegated arm requires one delegation.invoked event");
+    if (completions.length !== 1) violations.push("delegated arm requires one delegation.completed event");
     if (invocations.length === 1) {
       const invocation = invocations[0];
+      if (invocation.sessionId !== roleSessions.parent
+        || invocation.workerSessionId !== roleSessions.worker) {
+        violations.push("delegation invocation does not bind the authenticated parent and worker");
+      }
       if (invocation.skillName !== armContract.delegationContract.invocation) {
-        violations.push(`delegated arm ${armId} used the wrong Skill invocation`);
+        violations.push("delegated arm used the wrong Skill invocation");
       }
       if (invocation.skillSha256 !== delegatedSkillSha256) {
-        violations.push(`delegated arm ${armId} used a noncanonical Skill artifact`);
-      }
-      if (!expectedSessions.has(invocation.workerSessionId)) {
-        violations.push(`delegated arm ${armId} referenced an unexpected worker session`);
+        violations.push("delegated arm used a noncanonical Skill artifact");
       }
     }
     if (completions.length === 1) {
+      if (completions[0].sessionId !== roleSessions.parent) {
+        violations.push("delegation completion was not received by the authenticated parent");
+      }
       const actualFields = [...(completions[0].returnFields ?? [])].sort();
       const expectedFields = [...armContract.delegationContract.returnFields].sort();
       if (JSON.stringify(actualFields) !== JSON.stringify(expectedFields)) {
-        violations.push(`delegated arm ${armId} returned a noncanonical field set`);
+        violations.push("delegated arm returned a noncanonical field set");
       }
     }
+  } else if (delegationEvents.length > 0) {
+    violations.push("inline arm emitted delegation events");
   }
 
   return {
     exportId: payload.exportId,
+    runId,
+    armId,
     evidence: authentication,
     candidateRoot: candidate,
-    sessionIds: [...expectedSessions].sort(),
+    stagingPath: staging,
+    roleSessions,
     status: violations.length === 0 ? "compliant" : "noncompliant",
     checks: {
       policyEvents: policyEvents.length,
       auditEvents: auditEvents.length,
+      fileToolCalls: fileToolEvents.length,
       fileAccessEvents: fileEvents.length,
+      correlatedFileCalls,
       networkAccessEvents: networkEvents.length,
       toolCallEvents: toolEvents.length,
       delegationEvents: delegationEvents.length
@@ -156,9 +287,12 @@ export function evaluateIsolationEvidence(authenticated, { armId, candidateRoot,
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
-  const required = ["--payload", "--signature", "--public-key", "--arm-id", "--candidate-root", "--evaluator-root", "--session-ids", "--out"];
+  const required = [
+    "--payload", "--signature", "--public-key", "--arm-id", "--run-id",
+    "--candidate-root", "--evaluator-root", "--staging-path", "--out"
+  ];
   if (required.some((name) => !argument(args, name))) {
-    throw new Error("Usage: node scripts/verify-isolation-evidence.mjs --payload <export.json> --signature <export.sig> --public-key <platform.pem> --arm-id <1-4> --candidate-root <path> --evaluator-root <path> --session-ids <comma-list> --out <audit.json>");
+    throw new Error("Usage: node scripts/verify-isolation-evidence.mjs --payload <export.json> --signature <export.sig> --public-key <platform.pem> --arm-id <1-4> --run-id <run> --candidate-root <path> --evaluator-root <path> --staging-path <path> --out <audit.json>");
   }
   const authenticated = readAuthenticatedExport({
     payloadPath: argument(args, "--payload"),
@@ -167,9 +301,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   });
   const result = evaluateIsolationEvidence(authenticated, {
     armId: Number(argument(args, "--arm-id")),
+    runId: argument(args, "--run-id"),
     candidateRoot: argument(args, "--candidate-root"),
     evaluatorRoot: argument(args, "--evaluator-root"),
-    sessionIds: argument(args, "--session-ids").split(",").filter(Boolean)
+    stagingPath: argument(args, "--staging-path")
   });
   const target = resolve(argument(args, "--out"));
   mkdirSync(dirname(target), { recursive: true });

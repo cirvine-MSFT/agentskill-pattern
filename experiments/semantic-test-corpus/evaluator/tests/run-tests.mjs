@@ -28,6 +28,7 @@ const evaluatorRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = resolve(evaluatorRoot, "..");
 const readRootJson = (...parts) => JSON.parse(readFileSync(resolve(root, ...parts), "utf8"));
 const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluatorRoot, ...parts), "utf8"));
+const frozenSchedule = readRootJson("design", "schedule.json");
 const tests = [];
 
 function test(name, action) {
@@ -67,13 +68,15 @@ function signedExport(payload) {
 
 function modelEvidencePayload() {
   const events = [];
-  const addSession = (armId, role, sessionId, modelId, parentSessionId) => {
+  const addSession = (run, role, sessionId, modelId, parentSessionId) => {
     events.push({
       eventId: `${sessionId}-created`,
       type: "session.created",
       timestamp: "2026-07-29T00:01:00Z",
       sessionId,
-      armId,
+      runId: run.runId,
+      blockId: run.blockId,
+      armId: run.armId,
       role,
       ...(parentSessionId ? { parentSessionId } : {})
     });
@@ -82,18 +85,32 @@ function modelEvidencePayload() {
       type: "model.bound",
       timestamp: "2026-07-29T00:02:00Z",
       sessionId,
-      armId,
+      runId: run.runId,
+      blockId: run.blockId,
+      armId: run.armId,
       role,
       modelId,
       atomic: true
     });
   };
-  addSession(1, "parent", "a1-parent", "gpt-5.6-sol");
-  addSession(2, "parent", "a2-parent", "gpt-5.6-sol");
-  addSession(2, "worker", "a2-worker", "gpt-5.6-sol", "a2-parent");
-  addSession(3, "parent", "a3-parent", "claude-haiku-4.5");
-  addSession(4, "parent", "a4-parent", "claude-haiku-4.5");
-  addSession(4, "worker", "a4-worker", "claude-haiku-4.5", "a4-parent");
+  for (const run of frozenSchedule.runs.filter((item) => item.armId !== 0)) {
+    const modelId = [1, 2].includes(run.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5";
+    const parentSessionId = `${run.runId}-parent`;
+    events.push({
+      eventId: `${run.runId}-started`,
+      type: "run.started",
+      timestamp: "2026-07-29T00:03:00Z",
+      sessionId: parentSessionId,
+      runId: run.runId,
+      blockId: run.blockId,
+      armId: run.armId,
+      role: "parent"
+    });
+    addSession(run, "parent", parentSessionId, modelId);
+    if ([2, 4].includes(run.armId)) {
+      addSession(run, "worker", `${run.runId}-worker`, modelId, parentSessionId);
+    }
+  }
   return {
     formatVersion: 1,
     provider: "github-copilot-platform",
@@ -102,6 +119,125 @@ function modelEvidencePayload() {
     capturedAt: "2026-07-29T00:05:00Z",
     events
   };
+}
+
+function modelRunRecords(authenticated) {
+  return frozenSchedule.runs.filter((run) => run.armId !== 0).map((run) => {
+    const roles = (run.armId === 2 || run.armId === 4 ? ["parent", "worker"] : ["parent"])
+      .map((role) => {
+        const created = authenticated.payload.events.find((event) =>
+          event.runId === run.runId && event.role === role && event.type === "session.created");
+        const bound = authenticated.payload.events.find((event) =>
+          event.runId === run.runId && event.role === role && event.type === "model.bound");
+        return {
+          role,
+          sessionId: created?.sessionId ?? "missing",
+          sessionCreatedEventId: created?.eventId ?? "missing",
+          modelBoundEventId: bound?.eventId ?? "missing"
+        };
+      });
+    return {
+      runId: run.runId,
+      blockId: run.blockId,
+      armId: run.armId,
+      availability: "available",
+      modelEvidence: {
+        exportId: authenticated.payload.exportId,
+        payloadSha256: authenticated.authentication.payloadSha256,
+        signatureSha256: authenticated.authentication.signatureSha256,
+        publicKeySha256: authenticated.authentication.publicKeySha256,
+        roles
+      }
+    };
+  });
+}
+
+function bindingAvailabilityFor(observations, unavailableRunIds = []) {
+  const unavailable = new Set(unavailableRunIds);
+  return {
+    evidence: {
+      algorithm: "Ed25519",
+      payloadSha256: "a".repeat(64),
+      signatureSha256: "b".repeat(64),
+      publicKeySha256: "c".repeat(64)
+    },
+    runs: observations.filter((observation) => observation.armId !== 0).map((observation) => ({
+      runId: observation.runId,
+      blockId: observation.blockId,
+      armId: observation.armId,
+      requestedModel: [1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5",
+      requestedWorkerModel: [2, 4].includes(observation.armId)
+        ? ([1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5")
+        : null,
+      status: unavailable.has(observation.runId) ? "unavailable" : "available",
+      roles: (observation.armId === 2 || observation.armId === 4 ? ["parent", "worker"] : ["parent"])
+        .map((role) => ({
+          role,
+          sessionId: `${observation.runId}-${role}`,
+          observedModel: [1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5"
+        }))
+    }))
+  };
+}
+
+function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegated }) {
+  const modelId = [1, 2].includes(armId) ? "gpt-5.6-sol" : "claude-haiku-4.5";
+  const parentSessionId = `${runId}-parent`;
+  const roles = delegated ? ["parent", "worker"] : ["parent"];
+  return roles.flatMap((role) => {
+    const sessionId = role === "parent" ? parentSessionId : `${runId}-worker`;
+    return [
+      {
+        eventId: `${sessionId}-created`,
+        type: "session.created",
+        timestamp: "2026-07-29T00:00:30Z",
+        sessionId,
+        runId,
+        blockId,
+        armId,
+        role,
+        ...(role === "worker" ? { parentSessionId } : {})
+      },
+      {
+        eventId: `${sessionId}-bound`,
+        type: "model.bound",
+        timestamp: "2026-07-29T00:00:45Z",
+        sessionId,
+        runId,
+        blockId,
+        armId,
+        role,
+        modelId,
+        atomic: true
+      },
+      {
+        eventId: `${sessionId}-policy`,
+        type: "sandbox.policy.applied",
+        timestamp: "2026-07-29T00:01:00Z",
+        sessionId,
+        runId,
+        blockId,
+        armId,
+        role,
+        candidateRoot,
+        deniedRoots: [evaluatorRoot],
+        filesystemMode: "candidate-root-only",
+        networkMode: "deny"
+      },
+      {
+        eventId: `${sessionId}-audit`,
+        type: "audit.completed",
+        timestamp: "2026-07-29T00:04:00Z",
+        sessionId,
+        runId,
+        blockId,
+        armId,
+        role,
+        filesystemComplete: true,
+        networkComplete: true
+      }
+    ];
+  });
 }
 
 test("Node 20 or newer is active", () => {
@@ -390,36 +526,24 @@ test("delegated arms use one byte-identical mechanism and tool contract", () => 
 
 test("signed run evidence enforces the common delegated mechanism", () => {
   const candidateRoot = resolve(root, ".test-work", "semantic-delegated-audit");
+  const stagingPath = resolve(candidateRoot, "staging", "B01-A2.json");
+  const runId = "B01-A2";
+  const blockId = "B01";
+  const armId = 2;
   const skillSha256 = createHash("sha256")
     .update(readFileSync(resolve(root, "design", "delegated-worker-skill.md")))
     .digest("hex");
-  const events = [];
-  for (const sessionId of ["a2-parent", "a2-worker"]) {
-    events.push({
-      eventId: `${sessionId}-policy`,
-      type: "sandbox.policy.applied",
-      timestamp: "2026-07-29T00:01:00Z",
-      sessionId,
-      candidateRoot,
-      deniedRoots: [evaluatorRoot],
-      filesystemMode: "candidate-root-only",
-      networkMode: "deny"
-    });
-    events.push({
-      eventId: `${sessionId}-audit`,
-      type: "audit.completed",
-      timestamp: "2026-07-29T00:04:00Z",
-      sessionId,
-      filesystemComplete: true,
-      networkComplete: true
-    });
-  }
+  const events = authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegated: true });
   events.push({
     eventId: "delegation-invoked",
     type: "delegation.invoked",
     timestamp: "2026-07-29T00:02:00Z",
-    sessionId: "a2-parent",
-    workerSessionId: "a2-worker",
+    sessionId: `${runId}-parent`,
+    runId,
+    blockId,
+    armId,
+    role: "parent",
+    workerSessionId: `${runId}-worker`,
     skillName: "semantic-scenario-stager",
     skillSha256
   });
@@ -427,15 +551,41 @@ test("signed run evidence enforces the common delegated mechanism", () => {
     eventId: "delegation-completed",
     type: "delegation.completed",
     timestamp: "2026-07-29T00:03:00Z",
-    sessionId: "a2-parent",
+    sessionId: `${runId}-parent`,
+    runId,
+    blockId,
+    armId,
+    role: "parent",
     returnFields: ["stagingPath", "payloadSha256", "submittedCases", "promotableCases", "errorCount"]
   });
   events.push({
     eventId: "worker-write",
     type: "tool.called",
     timestamp: "2026-07-29T00:02:30Z",
-    sessionId: "a2-worker",
-    toolName: "file.write"
+    sessionId: `${runId}-worker`,
+    runId,
+    blockId,
+    armId,
+    role: "worker",
+    actor: "worker",
+    callId: "write-staging",
+    toolName: "file.write",
+    path: stagingPath
+  });
+  events.push({
+    eventId: "worker-write-access",
+    type: "fs.access",
+    timestamp: "2026-07-29T00:02:30Z",
+    sessionId: `${runId}-worker`,
+    runId,
+    blockId,
+    armId,
+    role: "worker",
+    actor: "worker",
+    callId: "write-staging",
+    path: stagingPath,
+    operation: "write",
+    decision: "allow"
   });
   const payload = {
     formatVersion: 1,
@@ -445,28 +595,121 @@ test("signed run evidence enforces the common delegated mechanism", () => {
     capturedAt: "2026-07-29T00:05:00Z",
     events
   };
+  const compliantPayload = structuredClone(payload);
   const signed = signedExport(payload);
   const compliant = evaluateIsolationEvidence(
     authenticateExport(signed.bytes, signed.signature, signed.publicKey),
-    { armId: 2, candidateRoot, evaluatorRoot, sessionIds: ["a2-parent", "a2-worker"] }
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
   assert.equal(compliant.status, "compliant");
+  assert.equal(compliant.checks.correlatedFileCalls, 1);
 
   events.find((event) => event.eventId === "delegation-invoked").skillSha256 = "0".repeat(64);
   const wrongSkillSigned = signedExport(payload);
   const wrongSkill = evaluateIsolationEvidence(
     authenticateExport(wrongSkillSigned.bytes, wrongSkillSigned.signature, wrongSkillSigned.publicKey),
-    { armId: 2, candidateRoot, evaluatorRoot, sessionIds: ["a2-parent", "a2-worker"] }
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
   assert.equal(wrongSkill.status, "noncompliant");
   assert(wrongSkill.violations.some((violation) => violation.includes("noncanonical Skill")));
+
+  events.find((event) => event.eventId === "delegation-invoked").skillSha256 = skillSha256;
+  const missingAccessPayload = { ...payload, events: events.filter((event) => event.type !== "fs.access") };
+  const missingAccessSigned = signedExport(missingAccessPayload);
+  const missingAccess = evaluateIsolationEvidence(
+    authenticateExport(missingAccessSigned.bytes, missingAccessSigned.signature, missingAccessSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(missingAccess.status, "noncompliant");
+  assert(missingAccess.violations.some((violation) => violation.includes("requires exactly one fs.access")));
+
+  for (const event of events.filter((item) => ["worker-write", "worker-write-access"].includes(item.eventId))) {
+    event.sessionId = `${runId}-parent`;
+    event.role = "parent";
+    event.actor = "parent";
+  }
+  const parentDoesAllSigned = signedExport(payload);
+  const parentDoesAll = evaluateIsolationEvidence(
+    authenticateExport(parentDoesAllSigned.bytes, parentDoesAllSigned.signature, parentDoesAllSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(parentDoesAll.status, "noncompliant");
+  assert(parentDoesAll.violations.some((violation) => violation.includes("worker-only")));
+  assert(parentDoesAll.violations.some((violation) => violation.includes("worker did not write")));
+
+  for (const event of events.filter((item) => ["worker-write", "worker-write-access"].includes(item.eventId))) {
+    event.sessionId = `${runId}-worker`;
+    event.role = "worker";
+    event.actor = "worker";
+    event.path = resolve(candidateRoot, "notes.json");
+  }
+  const workerOutsideSigned = signedExport(payload);
+  const workerOutside = evaluateIsolationEvidence(
+    authenticateExport(workerOutsideSigned.bytes, workerOutsideSigned.signature, workerOutsideSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(workerOutside.status, "noncompliant");
+  assert(workerOutside.violations.some((violation) => violation.includes("worker wrote outside")));
+
+  const parentReadPayload = structuredClone(compliantPayload);
+  parentReadPayload.events.push(
+    {
+      eventId: "parent-read",
+      type: "tool.called",
+      timestamp: "2026-07-29T00:02:40Z",
+      sessionId: `${runId}-parent`,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      actor: "parent",
+      callId: "parent-read-staging",
+      toolName: "file.read",
+      path: stagingPath
+    },
+    {
+      eventId: "parent-read-access",
+      type: "fs.access",
+      timestamp: "2026-07-29T00:02:40Z",
+      sessionId: `${runId}-parent`,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      actor: "parent",
+      callId: "parent-read-staging",
+      path: stagingPath,
+      operation: "read",
+      decision: "allow"
+    }
+  );
+  const parentReadSigned = signedExport(parentReadPayload);
+  const parentRead = evaluateIsolationEvidence(
+    authenticateExport(parentReadSigned.bytes, parentReadSigned.signature, parentReadSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(parentRead.status, "noncompliant");
+  assert(parentRead.violations.some((violation) => violation.includes("parent accessed staging")));
+
+  const spoofedActorPayload = structuredClone(compliantPayload);
+  spoofedActorPayload.events.find((event) => event.eventId === "worker-write").actor = "parent";
+  const spoofedActorSigned = signedExport(spoofedActorPayload);
+  const spoofedActor = evaluateIsolationEvidence(
+    authenticateExport(spoofedActorSigned.bytes, spoofedActorSigned.signature, spoofedActorSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(spoofedActor.status, "noncompliant");
+  assert(spoofedActor.violations.some((violation) => violation.includes("authenticated actor")));
 });
 
 test("model preflight accepts only authenticated fresh atomic platform evidence", () => {
   const signed = signedExport(modelEvidencePayload());
   const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
-  const available = evaluateModelBindings(authenticated);
-  assert.equal(available.factorialAvailable, true);
+  const runRecords = modelRunRecords(authenticated);
+  const available = evaluateModelBindings(authenticated, runRecords);
+  assert.equal(available.allRunsAvailable, true);
+  assert.equal(available.plannedRuns, 48);
+  assert.equal(available.availableRuns, 48);
   assert.deepEqual(validateJsonSchema(
     available,
     readRootJson("schemas", "model-preflight.schema.json"),
@@ -474,6 +717,41 @@ test("model preflight accepts only authenticated fresh atomic platform evidence"
   ), []);
   assert.match(available.evidence.payloadSha256, /^[a-f0-9]{64}$/);
   assert.match(available.evidence.publicKeySha256, /^[a-f0-9]{64}$/);
+  const schemaRecord = {
+    ...runRecords[0],
+    phase: "complete",
+    timing: {
+      startedAt: "2026-07-29T00:03:00Z",
+      endedAt: "2026-07-29T00:04:00Z",
+      latencyMs: 60000
+    },
+    usage: Object.fromEntries(["parent", "worker", "total"].map((actor) => [actor, {
+      available: false,
+      nanoAiu: null,
+      credits: null,
+      inputTokens: null,
+      outputTokens: null,
+      totalTokens: null
+    }])),
+    tools: { surface: [], calls: [] },
+    compliance: {
+      isolationAuditPath: "audit.json",
+      evidenceSha256: authenticated.authentication.payloadSha256,
+      status: "compliant",
+      checks: {},
+      violations: []
+    }
+  };
+  assert.deepEqual(validateJsonSchema(
+    schemaRecord,
+    readRootJson("schemas", "run-record.schema.json"),
+    { schemaDir: resolve(root, "schemas") }
+  ), []);
+  assert(validateJsonSchema(
+    { ...schemaRecord, modelEvidence: null },
+    readRootJson("schemas", "run-record.schema.json"),
+    { schemaDir: resolve(root, "schemas") }
+  ).some((error) => error.path === "$.modelEvidence" && error.keyword === "type"));
 
   const fabricated = Buffer.from(signed.bytes);
   fabricated[fabricated.length - 2] ^= 1;
@@ -488,27 +766,47 @@ test("model preflight accepts only authenticated fresh atomic platform evidence"
   ), /schema validation/);
 
   const reusedPayload = modelEvidencePayload();
-  for (const event of reusedPayload.events.filter((item) => item.sessionId === "a4-worker")) {
-    event.sessionId = "a2-worker";
+  for (const event of reusedPayload.events.filter((item) =>
+    item.runId === "B02-A4" && item.role === "worker")) {
+    event.sessionId = "B01-A2-worker";
   }
   const reusedSigned = signedExport(reusedPayload);
-  const reused = evaluateModelBindings(authenticateExport(reusedSigned.bytes, reusedSigned.signature, reusedSigned.publicKey));
-  assert.equal(reused.factorialAvailable, false);
-  assert(reused.cells.some((cell) => cell.reasons.some((reason) => reason.includes("reused"))));
+  const reusedAuthenticated = authenticateExport(reusedSigned.bytes, reusedSigned.signature, reusedSigned.publicKey);
+  const reused = evaluateModelBindings(reusedAuthenticated, modelRunRecords(reusedAuthenticated));
+  assert.equal(reused.allRunsAvailable, false);
+  assert(reused.runs.some((run) => run.reasons.some((reason) => reason.includes("reused"))));
 
   const missingPayload = modelEvidencePayload();
-  missingPayload.events = missingPayload.events.filter((event) => event.armId !== 4);
+  missingPayload.events = missingPayload.events.filter((event) => event.runId !== "B12-A4");
   const missingSigned = signedExport(missingPayload);
-  const missing = evaluateModelBindings(authenticateExport(missingSigned.bytes, missingSigned.signature, missingSigned.publicKey));
-  assert.equal(missing.factorialAvailable, false);
-  assert.equal(missing.cells.find((cell) => cell.armId === 4).status, "unavailable");
+  const missingAuthenticated = authenticateExport(missingSigned.bytes, missingSigned.signature, missingSigned.publicKey);
+  const missing = evaluateModelBindings(missingAuthenticated, modelRunRecords(missingAuthenticated));
+  assert.equal(missing.allRunsAvailable, false);
+  assert.equal(missing.runs.find((run) => run.runId === "B12-A4").status, "unavailable");
 
   const stalePayload = modelEvidencePayload();
-  stalePayload.events.find((event) => event.eventId === "a1-parent-created").timestamp = "2026-07-28T00:01:00Z";
+  stalePayload.events.find((event) => event.eventId === "B01-A1-parent-created").timestamp = "2026-07-28T00:01:00Z";
   const staleSigned = signedExport(stalePayload);
-  const stale = evaluateModelBindings(authenticateExport(staleSigned.bytes, staleSigned.signature, staleSigned.publicKey));
-  assert.equal(stale.factorialAvailable, false);
-  assert(stale.cells[0].reasons.some((reason) => reason.includes("too old")));
+  const staleAuthenticated = authenticateExport(staleSigned.bytes, staleSigned.signature, staleSigned.publicKey);
+  const stale = evaluateModelBindings(staleAuthenticated, modelRunRecords(staleAuthenticated));
+  assert.equal(stale.allRunsAvailable, false);
+  assert(stale.runs.find((run) => run.runId === "B01-A1").reasons.some((reason) => reason.includes("too old")));
+
+  const mismatchPayload = modelEvidencePayload();
+  mismatchPayload.events.find((event) =>
+    event.runId === "B03-A3" && event.type === "model.bound").modelId = "gpt-5.6-sol";
+  const mismatchSigned = signedExport(mismatchPayload);
+  const mismatchAuthenticated = authenticateExport(
+    mismatchSigned.bytes, mismatchSigned.signature, mismatchSigned.publicKey);
+  const mismatch = evaluateModelBindings(mismatchAuthenticated, modelRunRecords(mismatchAuthenticated));
+  assert.equal(mismatch.runs.find((run) => run.runId === "B03-A3").status, "unavailable");
+
+  const wrongHashRecords = structuredClone(runRecords);
+  wrongHashRecords.find((record) => record.runId === "B04-A1").modelEvidence.payloadSha256 = "0".repeat(64);
+  const wrongHash = evaluateModelBindings(authenticated, wrongHashRecords);
+  assert.equal(wrongHash.runs.find((run) => run.runId === "B04-A1").status, "unavailable");
+  assert(wrongHash.runs.find((run) => run.runId === "B04-A1").reasons
+    .some((reason) => reason.includes("exact authenticated raw export")));
 
   const invalidTimestampPayload = modelEvidencePayload();
   invalidTimestampPayload.capturedAt = "not-a-timestamp";
@@ -549,54 +847,68 @@ test("candidate materialization excludes evaluator assets in an external reposit
 
 test("isolation compliance is derived from signed policy and access logs", () => {
   const candidateRoot = resolve(root, ".test-work", "semantic-candidate-audit");
-  const sessions = ["a1-parent"];
+  const stagingPath = resolve(candidateRoot, "staging", "B01-A1.json");
+  const runId = "B01-A1";
+  const blockId = "B01";
+  const armId = 1;
+  const events = authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegated: false });
+  events.push(
+    {
+      eventId: "file-tool",
+      type: "tool.called",
+      timestamp: "2026-07-29T00:02:00Z",
+      sessionId: `${runId}-parent`,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      actor: "parent",
+      callId: "inline-write",
+      toolName: "file.write",
+      path: stagingPath
+    },
+    {
+      eventId: "file",
+      type: "fs.access",
+      timestamp: "2026-07-29T00:02:00Z",
+      sessionId: `${runId}-parent`,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      actor: "parent",
+      callId: "inline-write",
+      path: stagingPath,
+      operation: "write",
+      decision: "allow"
+    },
+    {
+      eventId: "network",
+      type: "network.access",
+      timestamp: "2026-07-29T00:03:00Z",
+      sessionId: `${runId}-parent`,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      actor: "parent",
+      endpoint: "https://example.test",
+      decision: "deny"
+    }
+  );
   const payload = {
     formatVersion: 1,
     provider: "github-copilot-platform",
     exportId: "export-isolation",
     exportedAt: "2026-07-29T00:10:00Z",
     capturedAt: "2026-07-29T00:05:00Z",
-    events: [
-      {
-        eventId: "policy",
-        type: "sandbox.policy.applied",
-        timestamp: "2026-07-29T00:01:00Z",
-        sessionId: "a1-parent",
-        candidateRoot,
-        deniedRoots: [evaluatorRoot],
-        filesystemMode: "candidate-root-only",
-        networkMode: "deny"
-      },
-      {
-        eventId: "file",
-        type: "fs.access",
-        timestamp: "2026-07-29T00:02:00Z",
-        sessionId: "a1-parent",
-        path: resolve(candidateRoot, "staging", "run.json"),
-        operation: "write",
-        decision: "allow"
-      },
-      {
-        eventId: "network",
-        type: "network.access",
-        timestamp: "2026-07-29T00:03:00Z",
-        sessionId: "a1-parent",
-        endpoint: "https://example.test",
-        decision: "deny"
-      },
-      {
-        eventId: "audit",
-        type: "audit.completed",
-        timestamp: "2026-07-29T00:04:00Z",
-        sessionId: "a1-parent",
-        filesystemComplete: true,
-        networkComplete: true
-      }
-    ]
+    events
   };
   const signed = signedExport(payload);
   const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
-  const compliant = evaluateIsolationEvidence(authenticated, { armId: 1, candidateRoot, evaluatorRoot, sessionIds: sessions });
+  const compliant = evaluateIsolationEvidence(authenticated, {
+    armId, runId, candidateRoot, evaluatorRoot, stagingPath
+  });
   assert.equal(compliant.status, "compliant");
   assert.equal(compliant.violations.length, 0);
   assert.deepEqual(validateJsonSchema(
@@ -610,7 +922,7 @@ test("isolation compliance is derived from signed policy and access logs", () =>
   const violatingSigned = signedExport(payload);
   const noncompliant = evaluateIsolationEvidence(
     authenticateExport(violatingSigned.bytes, violatingSigned.signature, violatingSigned.publicKey),
-    { armId: 1, candidateRoot, evaluatorRoot, sessionIds: sessions }
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
   assert.equal(noncompliant.status, "noncompliant");
   assert(noncompliant.violations.some((violation) => violation.includes("evaluator access")));
@@ -622,6 +934,7 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   for (let block = 1; block <= 12; block += 1) {
     const blockId = `B${String(block).padStart(2, "0")}`;
     observations.push({
+      runId: `${blockId}-A0`,
       blockId,
       armId: 0,
       promotionRate: 0.8,
@@ -630,6 +943,7 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
     });
     for (const armId of [1, 2, 3, 4]) {
       observations.push({
+        runId: `${blockId}-A${armId}`,
         blockId,
         armId,
         promotionRate: 0.82,
@@ -638,7 +952,11 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
       });
     }
   }
-  const result = analyzeBaselineComparisons(observations);
+  const result = analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindingAvailabilityFor(observations)
+  });
+  assert.equal(result.analysisEligibility.completeBlocks.length, 12);
+  assert.equal(result.analysisEligibility.confirmatoryAvailable, true);
   assert.equal(result.families.noninferiority.hypotheses, 12);
   assert.equal(result.families.noninferiority.sidedness, "one-sided");
   assert.equal(result.families.equality.hypotheses, 12);
@@ -654,8 +972,9 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   const highVarianceNoninferior = [];
   const differences = [0.11, 0.11, 0.11, 0.11, 0.11, 0.11, -0.049, -0.049, -0.049, -0.049, -0.049, -0.049];
   for (let block = 1; block <= 12; block += 1) {
-    const blockId = `V${String(block).padStart(2, "0")}`;
+    const blockId = `B${String(block).padStart(2, "0")}`;
     highVarianceNoninferior.push({
+      runId: `${blockId}-A0`,
       blockId,
       armId: 0,
       promotionRate: 0.5,
@@ -664,6 +983,7 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
     });
     for (const armId of [1, 2, 3, 4]) {
       highVarianceNoninferior.push({
+        runId: `${blockId}-A${armId}`,
         blockId,
         armId,
         promotionRate: 0.5 + differences[block - 1],
@@ -672,7 +992,9 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
       });
     }
   }
-  const highVariance = analyzeBaselineComparisons(highVarianceNoninferior);
+  const highVariance = analyzeBaselineComparisons(highVarianceNoninferior, {
+    bindingAvailability: bindingAvailabilityFor(highVarianceNoninferior)
+  });
   assert(highVariance.comparisons.every((comparison) =>
     comparison.noninferiority.noninferior
       === (comparison.noninferiority.holmAdjustedPValue <= highVariance.alpha)),
@@ -686,10 +1008,47 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
         mutantKillRate: 0.7
       }
     : observation);
-  const failed = analyzeBaselineComparisons(belowMargin);
+  const failed = analyzeBaselineComparisons(belowMargin, {
+    bindingAvailability: bindingAvailabilityFor(belowMargin)
+  });
   assert(failed.comparisons
     .filter((comparison) => comparison.armId === 4)
     .every((comparison) => comparison.noninferiority.noninferior === false));
+
+  const nineBlocks = observations.filter((observation) =>
+    Number(observation.blockId.slice(1)) <= 9);
+  const descriptive = analyzeBaselineComparisons(nineBlocks, {
+    bindingAvailability: bindingAvailabilityFor(nineBlocks)
+  });
+  assert.equal(descriptive.analysisEligibility.completeBlocks.length, 9);
+  assert.equal(descriptive.analysisEligibility.incompleteBlocks.length, 3);
+  assert.equal(descriptive.analysisEligibility.confirmatoryAvailable, false);
+  assert.match(descriptive.analysisEligibility.unavailableReason, /3 of 12 blocks are incomplete/);
+  assert(descriptive.comparisons.every((comparison) =>
+    comparison.noninferiority.decisionAvailable === false
+      && comparison.noninferiority.noninferior === null
+      && comparison.noninferiority.unavailableReason));
+
+  const rejectedBindings = analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindingAvailabilityFor(observations, ["B01-A1", "B02-A2", "B03-A3"])
+  });
+  assert.deepEqual(rejectedBindings.analysisEligibility.completeBlocks,
+    ["B04", "B05", "B06", "B07", "B08", "B09", "B10", "B11", "B12"]);
+  assert.equal(rejectedBindings.analysisEligibility.confirmatoryAvailable, false);
+  assert(rejectedBindings.analysisEligibility.incompleteBlocks.every((block) =>
+    block.reasons.some((reason) => reason.includes("authenticated run binding"))));
+
+  const reusedAvailability = bindingAvailabilityFor(observations);
+  reusedAvailability.runs[1].roles[0].sessionId = reusedAvailability.runs[0].roles[0].sessionId;
+  assert.throws(() => analyzeBaselineComparisons(observations, {
+    bindingAvailability: reusedAvailability
+  }), /reused binding sessionId/);
+
+  const mismatchAvailability = bindingAvailabilityFor(observations);
+  mismatchAvailability.runs[0].roles[0].observedModel = "wrong-model";
+  assert.throws(() => analyzeBaselineComparisons(observations, {
+    bindingAvailability: mismatchAvailability
+  }), /model mismatch/);
 });
 
 test("migration CLI emits the instrumented candidate result", () => {
