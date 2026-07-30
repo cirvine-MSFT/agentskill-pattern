@@ -137,4 +137,7 @@ were withheld. See the
 [repository README](../../README.md#benchmark) and
 [observability and measurement](../agent-skill-pattern.md#observability-and-measurement)
 for how measured results will be distinguished from inferred claims when the benchmark
-is interpreted.
+is interpreted. For a task-size-focused reading of this same report — why the
+delegated banner was too small for the pattern's fixed per-delegation overhead to pay
+for itself — see the
+[`ascii-art` "task too small" case study](../case-studies/ascii-art-task-too-small.md).
