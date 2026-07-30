@@ -1084,8 +1084,49 @@ test("isolation compliance is derived from signed policy and access logs", () =>
     ),
     { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
-  assert.equal(unrelatedNetworkResult.status, "compliant",
-    "an unrelated run/session network event must be left to that run's audit");
+  assert.equal(unrelatedNetworkResult.status, "noncompliant");
+  assert.equal(unrelatedNetworkResult.networkAttribution.status, "noncompliant");
+  assert(unrelatedNetworkResult.networkAttribution.violations.some((violation) =>
+    violation.includes("maps to 0 scheduled run roles")));
+
+  const ambiguousNetworkPayload = structuredClone(compliantPayload);
+  ambiguousNetworkPayload.events.push(
+    {
+      eventId: "ambiguous-created",
+      type: "session.created",
+      timestamp: "2026-07-29T00:00:30Z",
+      sessionId: `${runId}-parent`,
+      runId: "B02-A1",
+      blockId: "B02",
+      armId: 1,
+      role: "parent"
+    },
+    {
+      eventId: "ambiguous-bound",
+      type: "model.bound",
+      timestamp: "2026-07-29T00:00:45Z",
+      sessionId: `${runId}-parent`,
+      runId: "B02-A1",
+      blockId: "B02",
+      armId: 1,
+      role: "parent",
+      modelId: "gpt-5.6-sol",
+      atomic: true
+    }
+  );
+  const ambiguousNetworkSigned = signedExport(ambiguousNetworkPayload);
+  const ambiguousNetwork = evaluateIsolationEvidence(
+    authenticateExport(
+      ambiguousNetworkSigned.bytes,
+      ambiguousNetworkSigned.signature,
+      ambiguousNetworkSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(ambiguousNetwork.status, "noncompliant");
+  assert.equal(ambiguousNetwork.networkAttribution.status, "noncompliant");
+  assert(ambiguousNetwork.networkAttribution.violations.some((violation) =>
+    violation.includes("maps to 2 scheduled run roles")));
 });
 
 test("noninferiority and equality use separate multiplicity-adjusted families", () => {

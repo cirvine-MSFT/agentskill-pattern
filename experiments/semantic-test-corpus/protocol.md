@@ -218,8 +218,10 @@ Every signed `network.access` event associated with an authenticated run session
 must identify the run, block, arm, role, actor session, call ID, endpoint, and
 allow/deny decision. The verifier scans by authenticated session as well as run
 ID, including `actorSessionId`, so changing `sessionId` or run ID cannot hide a
-network event from an authenticated run actor. Events whose session and actor
-both belong only to another run remain that run's audit responsibility.
+network event from an authenticated run actor. Before per-run checks, a global
+attribution pass requires every signed network event to resolve to exactly one
+scheduled run and authenticated role; unknown, ambiguous, reused, or mismatched
+identities fail the entire evidence dataset.
 
 `evaluator/acceptance/held-out-rules.json` and
 `evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29

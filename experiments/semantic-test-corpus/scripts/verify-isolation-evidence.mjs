@@ -32,6 +32,66 @@ function expectedRoles(arm) {
   return arm.delegated ? ["parent", "worker"] : ["parent"];
 }
 
+export function evaluateNetworkAttribution(authenticated) {
+  const { payload } = authenticated;
+  const mappings = [];
+  for (const creation of payload.events.filter((event) => event.type === "session.created")) {
+    const planned = schedule.runs.find((run) => run.runId === creation.runId);
+    const arm = armContract.arms.find((item) => item.id === creation.armId);
+    if (!planned
+      || planned.armId !== creation.armId
+      || planned.blockId !== creation.blockId
+      || !arm
+      || !expectedRoles(arm).includes(creation.role)) {
+      continue;
+    }
+    const bindings = payload.events.filter((event) =>
+      event.type === "model.bound"
+      && event.runId === creation.runId
+      && event.blockId === creation.blockId
+      && event.armId === creation.armId
+      && event.role === creation.role
+      && event.sessionId === creation.sessionId);
+    if (bindings.length === 1) {
+      mappings.push({
+        runId: creation.runId,
+        blockId: creation.blockId,
+        armId: creation.armId,
+        role: creation.role,
+        sessionId: creation.sessionId
+      });
+    }
+  }
+
+  const violations = [];
+  let attributedEvents = 0;
+  const networkEvents = payload.events.filter((event) => event.type === "network.access");
+  for (const event of networkEvents) {
+    const actorMappings = mappings.filter((mapping) =>
+      mapping.sessionId === event.actorSessionId);
+    const matches = actorMappings.filter((mapping) =>
+      mapping.runId === event.runId
+      && mapping.blockId === event.blockId
+      && mapping.armId === event.armId
+      && mapping.role === event.role
+      && mapping.sessionId === event.sessionId);
+    if (actorMappings.length !== 1) {
+      violations.push(`network access ${event.eventId} actor session maps to ${actorMappings.length} scheduled run roles`);
+    }
+    if (matches.length !== 1) {
+      violations.push(`network access ${event.eventId} is not attributable to exactly one scheduled run role`);
+    } else if (actorMappings.length === 1) {
+      attributedEvents += 1;
+    }
+  }
+  return {
+    status: violations.length === 0 ? "compliant" : "noncompliant",
+    totalEvents: networkEvents.length,
+    attributedEvents,
+    violations
+  };
+}
+
 export function evaluateIsolationEvidence(authenticated, {
   armId,
   runId,
@@ -46,6 +106,8 @@ export function evaluateIsolationEvidence(authenticated, {
   const evaluator = resolve(evaluatorRoot);
   const staging = resolve(stagingPath);
   const violations = [];
+  const networkAttribution = evaluateNetworkAttribution(authenticated);
+  violations.push(...networkAttribution.violations.map((violation) => `global: ${violation}`));
   if (!arm || armId === 0) {
     violations.push(`arm ${armId} is not a measured AI arm`);
   }
@@ -329,6 +391,7 @@ export function evaluateIsolationEvidence(authenticated, {
     candidateRoot: candidate,
     stagingPath: staging,
     roleSessions,
+    networkAttribution,
     status: violations.length === 0 ? "compliant" : "noncompliant",
     checks: {
       policyEvents: policyEvents.length,

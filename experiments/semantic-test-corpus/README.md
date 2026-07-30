@@ -127,7 +127,8 @@ fails compliance.
 Every network event from an authenticated run session must carry its run/arm/
 role, actor session, call ID, endpoint, and allow/deny decision; unscoped or
 mismapped signed events fail closed. Scoping checks both `sessionId` and
-`actorSessionId`, so altering the former cannot hide an authenticated actor.
+`actorSessionId`, and a dataset-wide attribution pass rejects unknown,
+ambiguous, or cross-run identities before any per-run audit.
 
 ## Layout
 
