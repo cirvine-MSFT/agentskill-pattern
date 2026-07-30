@@ -8,13 +8,26 @@
 where, a bounded AI subagent task fits inside a deterministic configuration-migration test
 pipeline. It does not modify [`prior-art.md`](./prior-art.md), [`evidence.csv`](./evidence.csv),
 [`search-log.md`](./search-log.md), the README, any Skill/agent definition, `experiments/`, or any
-report. Every substantive external claim below is backed by a row in `semantic-corpus-evidence.csv`
-and was verified by fetching the primary source directly (arXiv API, vendor docs, NIST, GitHub
-project READMEs, or the author's own institutional copy); four rows draw their quoted text from a
-secondary source rather than a directly rendered primary document — QuickCheck and Csmith (ACM
-paywalls the abstract itself), KLEE (the fetched PDF rendered as raw/garbled byte-stream), and the
-ISTQB black-box test-technique definitions (the glossary is a client-side-rendered page this
-session's fetch tool could not render) — each flagged accordingly in the CSV with its own caveat.
+report. Every row in `semantic-corpus-evidence.csv` was checked in this session for whether its
+quoted or paraphrased text came from a primary source fetched directly (arXiv API, vendor docs,
+NIST, GitHub project READMEs, or an author's own institutional copy) or was relayed through a
+secondary source, and each row's own `source_type`/`caveats` fields state which. **Nine of
+twenty-nine rows draw their quoted or paraphrased text from a secondary source** rather than a
+directly rendered primary document, and this document does not claim primary verification for any
+of them: Barr, Harman, McMinn, Shahbaz & Yoo's oracle-problem survey (row 1 — the direct PDF fetch
+timed out, re-attempted in this pass and still times out; text via a web-search summary), QuickCheck
+and Csmith (rows 5, 12 — ACM paywalls the abstract itself, text via an academic mirror), DeMillo,
+Lipton & Sayward's 1978 mutation-testing paper (row 13 — original text paywalled, paraphrase
+corroborated by independent bibliographic sources, not a verbatim quote), Jia & Harman's mutation-
+testing survey (row 14 — fetched PDF rendered as raw/garbled byte-stream), McMinn's search-based
+survey (row 16 — same raw/garbled-PDF issue), McKeeman's differential-testing paper (row 20 — text
+via a web-search summary), KLEE (row 24 — fetched PDF rendered as raw/garbled byte-stream), and the
+ISTQB black-box test-technique definitions (row 25 — the glossary is a client-side-rendered page
+this session's fetch tool could not render, re-attempted in this pass with the same result). The
+remaining twenty rows, including the three rows added in this pass documenting GitHub Copilot CLI's
+local-sandbox architecture and mid-session model selection (rows 27–29), were fetched and verified
+directly. None of this reference's claims should be read as implying primary-source verification for
+the nine flagged rows; each is used only for the narrower point its own caveat says it supports.
 
 ## 1. The concern this reference exists to settle
 
@@ -38,9 +51,10 @@ results* to an AI. These are different questions with different answers.
 > source fixtures and scenario metadata** — candidate v1 inputs, edge cases, and a label describing
 > what each is meant to exercise — drawn from the v1/v2 schemas, the mapping rules, cross-field/domain
 > invariants, legacy examples, and bug history. The AI **never** computes or writes an expected
-> output or expected error for any fixture it proposes, and this must be enforced by a real access
-> boundary — an isolated staging location the subagent's tools cannot see out of, not merely by
-> omitting an "oracle" tool from its allowlist (§6). A deterministic reference oracle, built from the
+> output or expected error for any fixture it proposes, and this must be enforced by a real,
+> OS/filesystem-level access boundary — not merely a separate repository or worktree checked out on
+> the same machine, and not merely by omitting an "oracle" tool from its allowlist (§6). A
+> deterministic reference oracle, built from the
 > same mapping-rule specification the migration script implements and given its own independent trust
 > chain (executable spec, hand-reviewed golden cases, metamorphic invariants, and — where feasible —
 > an independently written differential implementation; §7), computes every expected result. Corpus
@@ -299,13 +313,24 @@ individual element already exists as documented, independently citable prior art
   and [`agent-skill-pattern.md`](../agent-skill-pattern.md). This document adds a **new candidate task
   shape** (semantic corpus/scenario design for a deterministic migration) to evaluate against that
   existing pattern definition — it does not revisit or modify the pattern definition itself.
-- **Path/directory isolation via a separate worktree, repository, or a capability-scoped tool** is not
-  a novel access-control idea this reference invents — it is standard sandboxing practice, and is the
-  necessary correction once GitHub's own documentation (row 23) is read carefully: a custom agent's
-  `tools` allowlist is scoped by tool name, not by file path, so this reference's isolation
-  architecture (§6) names an actual boundary (a location the tools cannot reach) rather than reusing
-  this repository's existing recursive-delegation tool-omission argument for a claim it was never
-  meant to support.
+- **OS/filesystem-level sandboxing — not a bare separate worktree or repository — as the actual
+  access-control mechanism** is not a novel idea this reference invents; it is standard sandboxing
+  practice, and is the necessary correction once GitHub's own documentation is read carefully on two
+  points. First, a custom agent's `tools` allowlist is scoped by tool name, not by file path (row 23),
+  so a generic `edit`/`read` tool is not confined to any particular directory by virtue of the agent's
+  tool list. Second, and more specifically: even GitHub Copilot CLI's own local-sandbox feature, when
+  enabled, does not close this gap by itself — the CLI's built-in file tools run in-process and are
+  never seen by the OS-level sandbox, so they only honor path restrictions on a best-effort basis
+  (row 27), and even the shell commands and MCP/LSP subprocesses that genuinely are OS-sandboxed
+  receive default filesystem grants that extend read (or, on Linux, read/write) access above the
+  working directory into the rest of the same repository, with path-denial unenforced on Windows
+  (row 28). A separate staging repository or worktree checked out on the same machine is therefore
+  **not, by itself,** the access boundary — it is one candidate location to point a genuinely
+  confining mechanism at. This reference's isolation architecture (§6) names an actual boundary (an
+  OS/filesystem-level sandbox with explicitly narrowed, verified grants, or a tool whose own
+  implementation rejects any path outside a configured root) rather than reusing this repository's
+  existing recursive-delegation tool-omission argument, or mere directory placement, for a claim
+  neither was ever meant to support.
 
 **What this reference specifically does not find prior art for:** a named, evaluated composition of
 (a) AI-proposed domain-semantic scenario design, (b) deterministic schema/combinatorial validation of
@@ -318,9 +343,9 @@ during this research pass and is not asserted to exist elsewhere.
 
 Following this repository's existing Skill/subagent contract shape
 ([Direct artifact write and compact return](../agent-skill-pattern.md#direct-artifact-write-and-compact-return)),
-**with one correction to this pattern's usual isolation reasoning**: GitHub Copilot's own
-documentation confirms that a custom agent's `tools` field is "a list of tool names the custom agent
-can use... If unset, defaults to all tools"
+**with one correction to this pattern's usual isolation reasoning, now made in two parts**: GitHub
+Copilot's own documentation confirms that a custom agent's `tools` field is "a list of tool names the
+custom agent can use... If unset, defaults to all tools"
 ([Custom agents configuration](https://docs.github.com/en/copilot/reference/custom-agents-configuration),
 row 23) — tool names are not scoped to a directory or path. A generic `edit`/`read` tool entry
 therefore does **not**, by itself, stop a subagent from writing to an oracle/expected-output location
@@ -331,6 +356,40 @@ protection](../agent-skill-pattern.md#recursive-delegation-protection) claim (wh
 a *delegation* tool, a different and still-valid claim) as if it also covered path isolation — it
 does not, and this reference does not reuse that reasoning for the oracle boundary.
 
+**Second, and separately: a separate repository or worktree is not, by itself, a fix either.** It is
+tempting to read "the tools allowlist isn't path-scoped" as implying the remedy is simply to run the
+subagent from a different directory. GitHub's own local-sandbox documentation shows this does not
+hold up on its own reference platform. Even with local sandboxing enabled, the CLI's own built-in
+`edit`/`read` tools run in-process and are never seen by the OS-level sandbox — they "check the
+sandbox policy themselves and honor your configured settings on a best-effort basis," not as an
+enforced boundary (row 27). And the shell commands and MCP/LSP subprocesses that genuinely do run
+inside the OS sandbox still receive, by default, read (and, on Linux, read/write) access above the
+working directory into the rest of the same repository checkout — reaching a sibling worktree of the
+same repository is exactly the kind of path this default grant does not stop — with path-denial rules
+unenforced on Windows entirely (row 28). A subagent whose only isolation is "it was started in a
+different worktree" can, depending on platform and sandbox configuration, still read or write the
+oracle, the golden cases, or the migration implementation through an absolute path, a sibling
+worktree path, or a default above-CWD grant. Genuine isolation requires one of:
+
+- **OS/filesystem-level confinement**, e.g. a container, chroot/mount namespace, restricted VM, or
+  this platform's local sandbox (row 27) *configured with explicitly narrowed filesystem grants* (not
+  the defaults in row 28) so that the sandboxed process's readable/writable set is exactly the staging
+  fixtures directory and nothing else — no oracle, no migration implementation, no sibling worktree,
+  no path above the staging root. On this platform this means running the subagent's file operations
+  through shell commands or a sandboxed MCP/LSP subprocess (row 27) with local sandboxing enabled and
+  the filesystem grant narrowed to the staging path only, on a backend that actually enforces denied
+  paths (macOS or Linux; Windows does not enforce them, row 28); or
+- **exclusively a genuinely path-constrained tool**: a purpose-built tool (for example exposed via
+  this platform's documented `mcp-servers` mechanism, row 23) whose own implementation — not a prompt
+  instruction, and not merely "it happens to be pointed at a different directory" — resolves symlinks
+  and rejects any path that is absolute, contains `..` traversal, or otherwise falls outside a single
+  configured fixtures/scenario-metadata root, so the tool itself cannot open the oracle, the migration
+  implementation, or any sibling worktree/repository regardless of what the subagent asks it to do.
+
+A generic `edit`/`read` tool granted access to "a separate staging repository or worktree" satisfies
+**neither** of these unless it is additionally wrapped in one of them; the directory choice alone is
+not the boundary, and this reference does not present it as one.
+
 - **Inputs to the subagent:** the v1 schema, the v2 schema, the mapping-rule specification, documented
   cross-field/domain invariants, a bounded sample of legacy v1 examples, and a bounded excerpt of
   migration-related bug history. All read-only.
@@ -338,18 +397,14 @@ does not, and this reference does not reuse that reasoning for the oracle bounda
   structured scenario metadata per fixture (a short label/rationale naming the rule, invariant, or
   history item each fixture is meant to exercise). **No expected v2 output or expected error is ever
   part of the subagent's output.**
-- **Isolation architecture (the actual access boundary):** the subagent must write into a location its
-  tools have no path to escape — in practice, one of:
-  1. a **separate staging repository or worktree** that contains no copy of the oracle, the migration
-     implementation, or any golden/expected-output file, so a generic `edit`/`read` tool simply has
-     nothing sensitive to reach; or
-  2. a **purpose-built, path-constrained tool** exposed via this platform's documented `mcp-servers`
-     mechanism (row 23), scoped in its own implementation — not by prompt instruction — to a single
-     fixtures/scenario-metadata directory.
-  A prose instruction telling the subagent "never write expected output" is retained as a
-  defense-in-depth second layer, per this repository's existing structural-first, prose-second
-  guard design — but it is explicitly **not** the primary control here, unlike the recursive-
-  delegation case where tool-name omission alone is sufficient.
+- **Isolation architecture (the actual access boundary):** the subagent must write into a location
+  confined by one of the two genuine mechanisms above (OS/filesystem-level sandbox with narrowed
+  grants, verified to enforce denied paths on the backend in use; or a tool whose own implementation
+  rejects out-of-root paths) — never by directory placement alone. A prose instruction telling the
+  subagent "never write expected output" is retained as a defense-in-depth second layer, per this
+  repository's existing structural-first, prose-second guard design — but it is explicitly **not**
+  the primary control here, unlike the recursive-delegation case where tool-name omission alone is
+  sufficient.
 - **Parent-side promotion step:** the parent (not the subagent) validates the staged fixtures against
   the v1 schema and the deterministic baseline's own checks, and only then promotes accepted fixtures
   into the corpus location the reference oracle and migration script read from. The subagent never
@@ -359,9 +414,9 @@ does not, and this reference does not reuse that reasoning for the oracle bounda
   staging path, one-line summary) — no fixture content streamed back through the parent, consistent
   with this pattern's existing contract; promotion into the shared corpus location is the parent's
   own subsequent, deterministic step, not part of the subagent's direct-write claim.
-- **No expected-output generation, ever:** the subagent's tool allowlist and its isolation boundary
-  (above) jointly ensure it cannot reach an expected-results location; its instructions additionally
-  state this explicitly as the second, defense-in-depth layer.
+- **No expected-output generation, ever:** the subagent's tool allowlist and its OS/filesystem-level
+  or tool-enforced isolation boundary (above) jointly ensure it cannot reach an expected-results
+  location; its instructions additionally state this explicitly as the second, defense-in-depth layer.
 
 ## 7. Oracle trust and validation
 
@@ -402,9 +457,9 @@ because it is a script.
 ## 8. Evaluation design recommendation
 
 Five arms, run against the same fixed set of migration mapping rules and the same held-out mutant
-set (mutants not visible to any arm during corpus construction). The first four are a **partial
-factorial design** separating *delegation* (subagent vs. inline) from *model tier* (parent model vs.
-cheap/small model), plus the deterministic baseline as a control:
+set (mutants not visible to any arm during corpus construction). Arms 2–5 are a **full 2×2 factorial
+design** crossing *delegation* (inline vs. subagent-delegated) with *model tier* (parent model vs.
+cheap/small model), plus the deterministic baseline as a fifth, non-factorial control arm:
 
 1. **Script-only baseline.** The full deterministic baseline from §3.2: decision-table-driven
    generation from the mapping-rule specification, schema-driven generation (rows 6–7), combinatorial
@@ -418,22 +473,41 @@ cheap/small model), plus the deterministic baseline as a control:
    delegation (context isolation, narrow tool allowlist, staging boundary) independent of model tier,
    since the model is unchanged from arm 2.
 4. **Cheap/small model, inline.** A smaller/cheaper model performs the scenario-design task directly
-   in the primary session, if and only if the harness in use supports selecting a non-default model
-   for the primary session's inline work. **Limitation:** several harnesses, including this
-   repository's reference GitHub Copilot CLI setup, do not expose an inline model swap independent of
-   delegation — if the evaluator's harness cannot run this arm, this must be stated explicitly as a
-   **partial-factorial limitation**, and arm 5 below (delegated cheap model) should not be
-   misinterpreted as isolating model tier on its own when arm 4 is missing.
+   in the primary session, with no delegation to a subagent. On this reference's platform this is
+   achievable directly: GitHub Copilot CLI's `/model` slash command (or `--model` flag) switches the
+   active model for the session's subsequent inline work independent of any delegation mechanism
+   (row 29), so this arm does not require a separate harness feature to exist — it requires only
+   switching models before running the inline task.
 5. **Cheap/small model, delegated.** A narrow-tool, isolated-context subagent (per §6) on a smaller/
    cheaper model performs the same scenario-design task — this is the configuration this repository's
    Agent Skill Pattern recommends by default, and the one most existing references in this repository
    (e.g. `ascii-art`) already use.
 
-Comparing arm 2 vs. arm 3 isolates the effect of delegation/isolation holding model tier fixed; arm 3
-vs. arm 5 isolates the effect of model tier holding delegation fixed (when arm 4 is available, arm 2
-vs. arm 4 provides the same model-tier isolation without delegation, as a cross-check). All four AI
-arms are compared against arm 1 to answer the empirical question in §3.3: does any AI configuration
-add hidden-mutant kills or documented rule/invariant coverage beyond the deterministic baseline alone.
+**Preregistered platform check.** Before running any arm, confirm and record whether the harness in
+use exposes inline model selection independent of delegation. For GitHub Copilot CLI, this is
+confirmed available (row 29) and this design should run as the full 2×2 factorial above. Only fall
+back to a **partial-factorial design that omits arm 4** if this check finds the evaluator's own
+harness genuinely cannot select a non-default model for inline (non-delegated) work — and if that
+fallback is used, it must be stated explicitly in the writeup as a partial-factorial limitation, per
+§9, rather than silently assumed from this reference's own default recommendation.
+
+**Contrasts, with the full 2×2 design available:**
+
+- **Model-tier main effect** (marginal across delegation): average(arm 4, arm 5) vs. average(arm 2,
+  arm 3) — does the cheap/small model underperform the parent model regardless of whether the task is
+  inline or delegated.
+- **Delegation effect, conditional on model tier** (not assumed constant across tiers): arm 3 vs.
+  arm 2 isolates the effect of delegation/isolation at the parent-model tier; arm 5 vs. arm 4 isolates
+  the same effect at the cheap-model tier. These two contrasts are reported separately, not averaged,
+  because the whole point of running the full factorial rather than a single delegation contrast is
+  to avoid assuming the delegation effect is the same at both tiers.
+- **Interaction** — (arm 5 − arm 4) − (arm 3 − arm 2) — tests whether delegation's effect on any
+  metric depends on model tier (for example, isolation/narrow-tooling mattering more, or less, for a
+  cheap model than for the parent model). A non-zero interaction is itself a reportable finding, not
+  noise to average away.
+- All four AI arms are compared against arm 1 (the deterministic baseline) to answer the empirical
+  question in §3.3: does any AI configuration add hidden-mutant kills or documented rule/invariant
+  coverage beyond the deterministic baseline alone.
 
 **Metrics, all measured, none inferred:**
 
@@ -470,8 +544,8 @@ add hidden-mutant kills or documented rule/invariant coverage beyond the determi
 - **Latency** — wall-clock time per arm to produce a corpus of fixed target size.
 
 Preregister the target mutant set, the mapping-rule/invariant checklist used for semantic coverage,
-the similarity threshold for duplicate/novelty detection, and the contamination-auditing protocol
-**before** running any arm, per §9 below.
+the similarity threshold for duplicate/novelty detection, the contamination-auditing protocol, and
+the platform check for inline model selection above, **before** running any arm, per §9 below.
 
 ## 9. Risks and preregistration guidance
 
@@ -481,13 +555,16 @@ the similarity threshold for duplicate/novelty detection, and the contamination-
 - **Redundancy (near-duplicates).** Score every arm's output with the same similarity metric (row 19)
   against the same reference set; a delegated-cheap-model arm that "wins" on fixture count but not on
   unique-rule coverage should be reported as such, not averaged away.
-- **Oracle hallucination.** Mitigated by an **isolation architecture that is a real access boundary**
-  (§6) — a staging repository/worktree or a path-constrained tool the subagent's tools cannot escape —
-  combined with the oracle's own separate trust chain (§7). This report does not claim this is
-  "structurally prevented" by tool-name omission alone: as row 23 documents, a generic `edit`/`read`
-  tool is not path-scoped, so the boundary must be architectural (a location the tools cannot reach),
-  not a matter of which tool names happen to be listed. This remains the single highest-severity risk
-  this reference exists to close off, per rows 1 and 3–4.
+- **Oracle hallucination.** Mitigated by an **isolation architecture that is a real OS/filesystem-level
+  access boundary or a genuinely path-constrained tool** (§6) — never a bare staging repository/
+  worktree with a generic `edit`/`read` tool, combined with the oracle's own separate trust chain
+  (§7). This report does not claim this is "structurally prevented" by tool-name omission alone: as
+  row 23 documents, a generic `edit`/`read` tool is not path-scoped; and it does not claim directory
+  placement alone is sufficient either, since even this platform's own local sandboxing leaves the
+  CLI's built-in file tools unconstrained by the OS boundary (row 27) and grants shell/MCP
+  subprocesses default read (or read/write) access above the working directory into the rest of the
+  same repository, with denied paths unenforced on Windows (row 28). This remains the single
+  highest-severity risk this reference exists to close off, per rows 1 and 3–4.
 - **Leakage (training-data contamination), distinct from redundancy.** An AI-proposed fixture that
   closely reproduces material the model saw during training (rather than a genuinely new scenario, and
   rather than a mere near-duplicate of the existing corpus) is not detected by edit-distance similarity
@@ -505,9 +582,12 @@ the similarity threshold for duplicate/novelty detection, and the contamination-
   rule/path coverage exclusively from the deterministic migration/oracle scripts' own execution traces
   (§8); treat any AI-authored scenario label as an explanatory annotation to be spot-checked by a human
   reviewer, never as the coverage number itself.
-- **Partial factorial design.** If the evaluation harness cannot run arm 4 (cheap/small model, inline)
-  independently of delegation, state this limitation explicitly in any report of results, and do not
-  present the arm 3 vs. arm 5 comparison as if it cleanly isolated model tier when the arm 2 vs. arm 4
+- **Full-factorial platform dependency.** This design's arm 4 (cheap/small model, inline) depends on
+  the harness in use exposing inline model selection independent of delegation; this is confirmed
+  available on this repository's reference GitHub Copilot CLI platform via `/model`/`--model` (row
+  29). If a different evaluation harness is used and genuinely cannot select a non-default model for
+  inline work, state this explicitly as a **partial-factorial limitation** and do not present the arm
+  3 vs. arm 5 comparison as if it cleanly isolated model tier on its own when the arm 2 vs. arm 4
   cross-check is unavailable.
 - **Cost asymmetry.** Report parent vs. subagent credit/token consumption per arm exactly as this
   repository's existing benchmark does (see
@@ -522,10 +602,13 @@ the similarity threshold for duplicate/novelty detection, and the contamination-
   used for duplicate/novelty detection, (d) the contamination-auditing protocol and/or held-out
   privately-authored material used for leakage detection, (e) the oracle's own trust-chain artifacts
   (reviewed spec, golden cases, metamorphic invariants, and differential implementation if used) as
-  reviewed and signed off *before* any arm is scored against that oracle, and (f) the fixed target
-  corpus size used for the latency comparison. Any metric not on this preregistered list that is
-  reported later should be clearly labeled exploratory, matching this repository's existing practice
-  of keeping measured, preregistered results distinct from directional/inferred ones.
+  reviewed and signed off *before* any arm is scored against that oracle, (f) the fixed target corpus
+  size used for the latency comparison, and (g) the platform check confirming whether the evaluation
+  harness supports inline model selection independent of delegation (§8) — recording the check's
+  result and, if the full 2×2 factorial is not run, the specific reason arm 4 was omitted. Any metric
+  not on this preregistered list that is reported later should be clearly labeled exploratory,
+  matching this repository's existing practice of keeping measured, preregistered results distinct
+  from directional/inferred ones.
 
 ## 10. Summary
 
@@ -537,8 +620,9 @@ reduced to any declared model, and proposing fixtures and scenario metadata from
 must be demonstrated empirically, against the full deterministic baseline, using coverage measured
 from execution traces rather than the AI's own labels. The AI is never suited to anything involving
 the expected-output oracle, which must remain a deterministic script with its own independently
-validated trust chain (§7), isolated from the AI subagent by a real access boundary rather than by
-tool-name omission (§6), with mutation testing measuring the resulting corpus's effectiveness against
+validated trust chain (§7), isolated from the AI subagent by a real OS/filesystem-level access
+boundary or a genuinely path-constrained tool — never by tool-name omission or directory placement
+alone (§6) — with mutation testing measuring the resulting corpus's effectiveness against
 that independently-validated oracle — not the oracle's own correctness. **If the deterministic
 baseline alone matches or exceeds every AI arm's hidden-mutant kill rate and semantic coverage at the
 same corpus size (§8), this reference's recommendation is to reject the AI-subagent step entirely and
