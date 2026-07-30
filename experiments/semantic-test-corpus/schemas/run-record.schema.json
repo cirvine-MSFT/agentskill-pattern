@@ -67,7 +67,7 @@
       "properties": {
         "startedAt": {"type": "string"},
         "endedAt": {"type": "string"},
-        "latencyMs": {"type": "integer", "minimum": 0},
+        "latencyMs": {"type": "integer", "minimum": 0, "maximum": 1800000},
         "parentActiveMs": {"type": "integer", "minimum": 0},
         "workerActiveMs": {"type": "integer", "minimum": 0},
         "parentWaitMs": {"type": "integer", "minimum": 0}
@@ -88,7 +88,7 @@
             "credits": {},
             "inputTokens": {},
             "outputTokens": {},
-            "totalTokens": {}
+            "totalTokens": {"type": ["integer", "null"], "minimum": 0, "maximum": 100000}
           }
         },
         "worker": {
@@ -101,7 +101,7 @@
             "credits": {},
             "inputTokens": {},
             "outputTokens": {},
-            "totalTokens": {}
+            "totalTokens": {"type": ["integer", "null"], "minimum": 0, "maximum": 100000}
           }
         },
         "total": {
@@ -114,7 +114,7 @@
             "credits": {},
             "inputTokens": {},
             "outputTokens": {},
-            "totalTokens": {}
+            "totalTokens": {"type": ["integer", "null"], "minimum": 0, "maximum": 100000}
           }
         }
       }
@@ -132,7 +132,7 @@
             "properties": {
               "actor": {"type": "string", "enum": ["parent", "worker", "deterministic"]},
               "name": {"type": "string"},
-              "count": {"type": "integer", "minimum": 0}
+              "count": {"type": "integer", "minimum": 0, "maximum": 120}
             }
           }
         }

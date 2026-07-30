@@ -55,6 +55,9 @@ and no credentials, non-root path, query, or fragment. Redis endpoints require
 `redis`/`rediss`, a host, optional valid port and numeric database path, and no
 credentials, query, or fragment. Candidate and oracle implement these checks
 independently.
+Both inspect the raw string before parsing and reject any embedded ASCII control
+or whitespace (`U+0000`-`U+0020`, `U+007F`), raw/empty userinfo, or forbidden
+path/query/fragment marker that URL normalization could otherwise erase.
 
 Every structurally valid case emits the exact rule IDs, decision-path IDs, and
 applicable invariant IDs it exercised. Invalid semantic inputs still execute all

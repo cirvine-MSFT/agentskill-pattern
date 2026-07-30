@@ -23,7 +23,7 @@
           },
           {
             "if": {"properties": {"type": {"const": "run.started"}}},
-            "then": {"required": ["sequence"]}
+            "then": {"required": ["sequence", "processId"]}
           },
           {
             "if": {"properties": {"type": {"const": "model.bound"}}},
@@ -73,15 +73,16 @@
           "eventId": {"type": "string", "minLength": 1},
           "type": {
             "type": "string",
-            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "usage.reported", "audit.completed"]
+            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "usage.reported", "audit.started", "audit.completed"]
           },
           "timestamp": {"type": "string", "minLength": 1},
           "sessionId": {"type": "string", "minLength": 1},
           "runId": {"type": "string"},
           "blockId": {"type": "string"},
-          "armId": {"type": "integer", "minimum": 1, "maximum": 4},
-          "role": {"type": "string", "enum": ["parent", "worker"]},
+          "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+          "role": {"type": "string", "enum": ["baseline", "parent", "worker"]},
           "sequence": {"type": "integer", "minimum": 1, "maximum": 5},
+          "processId": {"type": "string", "minLength": 1},
           "parentSessionId": {"type": "string"},
           "workerSessionId": {"type": "string"},
           "modelId": {"type": "string"},

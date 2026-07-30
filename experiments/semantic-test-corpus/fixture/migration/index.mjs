@@ -58,7 +58,7 @@ function portIsValid(parsed) {
 }
 
 function splitRawLocation(value) {
-  if (typeof value !== "string" || value.trim() !== value) return null;
+  if (typeof value !== "string" || value.trim() !== value || /[\u0000-\u0020\u007f]/.test(value)) return null;
   const delimiter = value.indexOf("://");
   if (delimiter === -1) return null;
   const location = value.slice(delimiter + 3);

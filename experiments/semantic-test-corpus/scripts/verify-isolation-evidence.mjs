@@ -98,8 +98,8 @@ function attributeEvents(payload, mappings, types) {
 }
 
 const GLOBAL_ATTRIBUTION_TYPES = new Set([
-  "run.started",
   "sandbox.policy.applied",
+  "audit.started",
   "audit.completed",
   "tool.called",
   "tool.result",
@@ -113,9 +113,28 @@ const GLOBAL_ATTRIBUTION_TYPES = new Set([
   "outcomes.unblinded"
 ]);
 
-function evaluateStartOrder(payload) {
+export function evaluateStartOrder(payload, blockId) {
   const violations = [];
-  const starts = payload.events.filter((event) => event.type === "run.started");
+  const starts = payload.events.filter((event) =>
+    event.type === "run.started" && event.blockId === blockId);
+  const plannedStarts = schedule.runs.filter((run) => run.blockId === blockId);
+  if (starts.length !== 5) violations.push(`block ${blockId} requires exactly five signed run starts`);
+  for (const planned of plannedStarts) {
+    const matches = starts.filter((event) => event.runId === planned.runId);
+    if (matches.length !== 1) {
+      violations.push(`${planned.runId} requires exactly one signed run start`);
+      continue;
+    }
+    const event = matches[0];
+    const expectedRole = planned.armId === 0 ? "baseline" : "parent";
+    if (event.armId !== planned.armId
+      || event.sequence !== planned.order
+      || event.role !== expectedRole
+      || !event.sessionId
+      || !event.processId) {
+      violations.push(`run start ${event.eventId} differs from frozen schedule/process boundary`);
+    }
+  }
   for (const event of starts) {
     const planned = schedule.runs.find((run) => run.runId === event.runId);
     if (!planned
@@ -125,19 +144,19 @@ function evaluateStartOrder(payload) {
       violations.push(`run start ${event.eventId} differs from frozen schedule order`);
     }
   }
-  for (const blockId of new Set(starts.map((event) => event.blockId))) {
+  for (const currentBlock of new Set(starts.map((event) => event.blockId))) {
     const blockStarts = starts
-      .filter((event) => event.blockId === blockId)
+      .filter((event) => event.blockId === currentBlock)
       .toSorted((left, right) => left.sequence - right.sequence);
     const sequences = new Set();
     const timestamps = new Set();
     for (const [index, event] of blockStarts.entries()) {
-      if (sequences.has(event.sequence)) violations.push(`block ${blockId} has duplicate run-start sequence`);
-      if (timestamps.has(event.timestamp)) violations.push(`block ${blockId} has tied run-start timestamps`);
+      if (sequences.has(event.sequence)) violations.push(`block ${currentBlock} has duplicate run-start sequence`);
+      if (timestamps.has(event.timestamp)) violations.push(`block ${currentBlock} has tied run-start timestamps`);
       sequences.add(event.sequence);
       timestamps.add(event.timestamp);
       if (index > 0 && Date.parse(event.timestamp) <= Date.parse(blockStarts[index - 1].timestamp)) {
-        violations.push(`block ${blockId} run starts are not strictly monotonic`);
+        violations.push(`block ${currentBlock} run starts are not strictly monotonic`);
       }
     }
   }
@@ -150,8 +169,6 @@ export function evaluateGlobalAttribution(authenticated) {
     authenticatedRunMappings(authenticated.payload),
     GLOBAL_ATTRIBUTION_TYPES
   );
-  result.violations.push(...evaluateStartOrder(authenticated.payload));
-  result.status = result.violations.length === 0 ? "compliant" : "noncompliant";
   return result;
 }
 
@@ -184,6 +201,7 @@ export function evaluateIsolationEvidence(authenticated, {
     violations.push(`arm ${armId} is not a measured AI arm`);
   }
   if (!planned || planned.armId !== armId) violations.push("run/arm differs from the frozen schedule");
+  if (planned) violations.push(...evaluateStartOrder(payload, planned.blockId).map((violation) => `schedule: ${violation}`));
   if (!within(candidate, staging)) violations.push("staging path is outside the candidate root");
 
   const runEvents = payload.events.filter((event) => event.runId === runId);
@@ -220,6 +238,7 @@ export function evaluateIsolationEvidence(authenticated, {
 
   const relevantTypes = new Set([
     "sandbox.policy.applied",
+    "audit.started",
     "audit.completed",
     "fs.access",
     "network.access",
@@ -275,6 +294,7 @@ export function evaluateIsolationEvidence(authenticated, {
 
   const policyEvents = evidenceEvents.filter((event) => event.type === "sandbox.policy.applied");
   const auditEvents = evidenceEvents.filter((event) => event.type === "audit.completed");
+  const auditStartEvents = evidenceEvents.filter((event) => event.type === "audit.started");
   const fileEvents = evidenceEvents.filter((event) => event.type === "fs.access");
   const networkEvents = evidenceEvents.filter((event) => event.type === "network.access");
   const toolEvents = evidenceEvents.filter((event) => event.type === "tool.called");
@@ -332,13 +352,27 @@ export function evaluateIsolationEvidence(authenticated, {
   }
 
   for (const [role, sessionId] of Object.entries(roleSessions)) {
+    const creation = runEvents.find((event) =>
+      event.type === "session.created" && event.sessionId === sessionId && event.role === role);
     const policies = policyEvents.filter((event) => event.sessionId === sessionId);
+    const auditStarts = auditStartEvents.filter((event) => event.sessionId === sessionId);
     const audits = auditEvents.filter((event) => event.sessionId === sessionId);
     if (policies.length !== 1) {
       violations.push(`${role} requires exactly one signed sandbox.policy.applied event`);
       continue;
     }
     const policy = policies[0];
+    if (auditStarts.length !== 1) {
+      violations.push(`${role} requires exactly one signed audit.started event`);
+    } else if (Date.parse(auditStarts[0].timestamp) > Date.parse(policy.timestamp)
+      || Date.parse(auditStarts[0].timestamp) > Date.parse(creation?.timestamp)
+      || Date.parse(auditStarts[0].timestamp) > startedAt) {
+      violations.push(`${role} audit start does not cover policy, session, and run start`);
+    }
+    if (Date.parse(policy.timestamp) >= Date.parse(creation?.timestamp)
+      || Date.parse(policy.timestamp) >= startedAt) {
+      violations.push(`${role} sandbox policy was not applied strictly before session/run start`);
+    }
     if (!samePath(policy.candidateRoot ?? "", candidate)) violations.push(`${role} candidate root policy mismatch`);
     if (policy.filesystemMode !== "candidate-root-only") violations.push(`${role} filesystem policy is not candidate-root-only`);
     if (policy.networkMode !== "deny") violations.push(`${role} network policy is not deny`);
@@ -354,6 +388,9 @@ export function evaluateIsolationEvidence(authenticated, {
     if (audit.networkComplete !== true) violations.push(`${role} network audit is incomplete`);
     if (Date.parse(audit.timestamp) < Date.parse(policy.timestamp)) {
       violations.push(`${role} audit completion predates policy application`);
+    }
+    if (Date.parse(audit.timestamp) < completedAt) {
+      violations.push(`${role} audit completion does not cover run completion`);
     }
     for (const event of [...fileEvents, ...networkEvents].filter((item) => item.sessionId === sessionId)) {
       if (Date.parse(event.timestamp) < Date.parse(policy.timestamp)
@@ -534,6 +571,7 @@ export function evaluateIsolationEvidence(authenticated, {
     checks: {
       policyEvents: policyEvents.length,
       auditEvents: auditEvents.length,
+      auditStartEvents: auditStartEvents.length,
       fileToolCalls: fileToolEvents.length,
       fileAccessEvents: fileEvents.length,
       correlatedFileCalls,

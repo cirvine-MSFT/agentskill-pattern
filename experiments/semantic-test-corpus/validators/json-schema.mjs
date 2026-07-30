@@ -50,8 +50,9 @@ export function validateJsonSchema(value, schema, options = {}) {
       errors.push({ path, keyword: "const", message: `must equal ${JSON.stringify(currentSchema.const)}` });
       return;
     }
-    if (currentSchema.type && !typeMatches(current, currentSchema.type)) {
-      errors.push({ path, keyword: "type", message: `must be ${currentSchema.type}` });
+    const allowedTypes = Array.isArray(currentSchema.type) ? currentSchema.type : [currentSchema.type];
+    if (currentSchema.type && !allowedTypes.some((type) => typeMatches(current, type))) {
+      errors.push({ path, keyword: "type", message: `must be ${allowedTypes.join(" or ")}` });
       return;
     }
     if (currentSchema.enum && !currentSchema.enum.includes(current)) {

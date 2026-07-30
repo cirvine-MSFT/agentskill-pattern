@@ -102,6 +102,7 @@ function modelEvidencePayload() {
       type: "run.started",
       timestamp: `2026-07-29T00:03:0${run.order}Z`,
       sessionId: parentSessionId,
+      processId: `${run.runId}-process`,
       runId: run.runId,
       blockId: run.blockId,
       armId: run.armId,
@@ -213,9 +214,19 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
         atomic: true
       },
       {
+        eventId: `${sessionId}-audit-started`,
+        type: "audit.started",
+        timestamp: "2026-07-29T00:00:20Z",
+        sessionId,
+        runId,
+        blockId,
+        armId,
+        role
+      },
+      {
         eventId: `${sessionId}-policy`,
         type: "sandbox.policy.applied",
-        timestamp: "2026-07-29T00:01:00Z",
+        timestamp: "2026-07-29T00:00:25Z",
         sessionId,
         runId,
         blockId,
@@ -229,7 +240,7 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
       {
         eventId: `${sessionId}-audit`,
         type: "audit.completed",
-        timestamp: "2026-07-29T00:04:00Z",
+        timestamp: "2026-07-29T00:04:15Z",
         sessionId,
         runId,
         blockId,
@@ -251,18 +262,20 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
       }
     ];
   });
+  const blockStarts = frozenSchedule.runs.filter((run) => run.blockId === blockId).map((run) => ({
+    eventId: `${run.runId}-started`,
+    type: "run.started",
+    timestamp: `2026-07-29T00:00:5${run.order}Z`,
+    sessionId: run.runId === runId ? parentSessionId : `${run.runId}-process`,
+    processId: `${run.runId}-process`,
+    runId: run.runId,
+    blockId,
+    armId: run.armId,
+    role: run.armId === 0 ? "baseline" : "parent",
+    sequence: run.order
+  }));
   events.push(
-    {
-      eventId: `${runId}-started`,
-      type: "run.started",
-      timestamp: "2026-07-29T00:00:50Z",
-      sessionId: parentSessionId,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      sequence: frozenSchedule.runs.find((run) => run.runId === runId).order
-    },
+    ...blockStarts,
     {
       eventId: `${runId}-completed`,
       type: "run.completed",
@@ -521,6 +534,10 @@ test("URL invariants reject malformed ports, credentials, paths, and queries", (
     "https://example.test:abc",
     " https://example.test",
     "https://example.test ",
+    "https://exam\tple.test",
+    "https://exam\nple.test",
+    "https://exam\u0000ple.test",
+    "https://exam\u007fple.test",
     "https://example.test?",
     "https://example.test#",
     "https://example.test/.",
@@ -553,6 +570,10 @@ test("URL invariants reject malformed ports, credentials, paths, and queries", (
     "redis://cache.example.test:abc",
     " redis://cache.example.test:6379",
     "redis://cache.example.test:6379 ",
+    "redis://cache.\texample.test:6379",
+    "redis://cache.\nexample.test:6379",
+    "redis://cache.\u0000example.test:6379",
+    "redis://cache.\u007fexample.test:6379",
     "redis://cache.example.test:6379?",
     "redis://cache.example.test:6379#",
     "redis://cache.example.test:6379/.",
@@ -1220,56 +1241,42 @@ test("isolation compliance is derived from signed policy and access logs", () =>
   assert.equal(toolBudget.status, "noncompliant");
   assert.equal(toolBudget.budgets.toolCalls, 121);
 
-  const addEarlierRunStart = (targetPayload, timestamp) => {
-    targetPayload.events.push(
-      {
-        eventId: "other-created",
-        type: "session.created",
-        timestamp: "2026-07-29T00:00:20Z",
-        sessionId: "B01-A3-parent",
-        runId: "B01-A3",
-        blockId: "B01",
-        armId: 3,
-        role: "parent"
-      },
-      {
-        eventId: "other-bound",
-        type: "model.bound",
-        timestamp: "2026-07-29T00:00:25Z",
-        sessionId: "B01-A3-parent",
-        runId: "B01-A3",
-        blockId: "B01",
-        armId: 3,
-        role: "parent",
-        modelId: "claude-haiku-4.5",
-        atomic: true
-      },
-      {
-        eventId: "other-started",
-        type: "run.started",
-        timestamp,
-        sessionId: "B01-A3-parent",
-        runId: "B01-A3",
-        blockId: "B01",
-        armId: 3,
-        role: "parent",
-        sequence: 1
-      }
-    );
-  };
+  const latePolicyPayload = structuredClone(compliantPayload);
+  latePolicyPayload.events.find((event) =>
+    event.type === "sandbox.policy.applied" && event.role === "parent").timestamp
+    = latePolicyPayload.events.find((event) => event.runId === runId && event.type === "run.started").timestamp;
+  const latePolicySigned = signedExport(latePolicyPayload);
+  const latePolicy = evaluateIsolationEvidence(
+    authenticateExport(latePolicySigned.bytes, latePolicySigned.signature, latePolicySigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert(latePolicy.violations.some((violation) => violation.includes("strictly before session/run start")));
+
+  const shortAuditPayload = structuredClone(compliantPayload);
+  shortAuditPayload.events.find((event) =>
+    event.type === "audit.completed" && event.role === "parent").timestamp = "2026-07-29T00:04:00Z";
+  const shortAuditSigned = signedExport(shortAuditPayload);
+  const shortAudit = evaluateIsolationEvidence(
+    authenticateExport(shortAuditSigned.bytes, shortAuditSigned.signature, shortAuditSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert(shortAudit.violations.some((violation) => violation.includes("does not cover run completion")));
+
   const tiedStartPayload = structuredClone(compliantPayload);
-  addEarlierRunStart(tiedStartPayload, "2026-07-29T00:00:50Z");
+  tiedStartPayload.events.find((event) => event.eventId === "B01-A3-started").timestamp
+    = tiedStartPayload.events.find((event) => event.eventId === `${runId}-started`).timestamp;
   const tiedStartSigned = signedExport(tiedStartPayload);
   const tiedStart = evaluateIsolationEvidence(
     authenticateExport(tiedStartSigned.bytes, tiedStartSigned.signature, tiedStartSigned.publicKey),
     { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
   assert.equal(tiedStart.status, "noncompliant");
-  assert(tiedStart.globalAttribution.violations.some((violation) =>
+  assert(tiedStart.violations.some((violation) =>
     violation.includes("tied run-start timestamps")));
 
   const reorderedStartPayload = structuredClone(compliantPayload);
-  addEarlierRunStart(reorderedStartPayload, "2026-07-29T00:00:55Z");
+  reorderedStartPayload.events.find((event) => event.eventId === "B01-A3-started").timestamp
+    = "2026-07-29T00:00:59Z";
   const reorderedStartSigned = signedExport(reorderedStartPayload);
   const reorderedStart = evaluateIsolationEvidence(
     authenticateExport(
@@ -1280,8 +1287,20 @@ test("isolation compliance is derived from signed policy and access logs", () =>
     { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
   assert.equal(reorderedStart.status, "noncompliant");
-  assert(reorderedStart.globalAttribution.violations.some((violation) =>
+  assert(reorderedStart.violations.some((violation) =>
     violation.includes("not strictly monotonic")));
+
+  const missingStartPayload = structuredClone(compliantPayload);
+  missingStartPayload.events = missingStartPayload.events.filter((event) =>
+    event.eventId !== "B01-A0-started");
+  const missingStartSigned = signedExport(missingStartPayload);
+  const missingStart = evaluateIsolationEvidence(
+    authenticateExport(missingStartSigned.bytes, missingStartSigned.signature, missingStartSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(missingStart.status, "noncompliant");
+  assert(missingStart.violations.some((violation) =>
+    violation.includes("requires exactly five signed run starts")));
 
   const allowedTargetPayload = structuredClone(compliantPayload);
   const allowedTargetNetwork = allowedTargetPayload.events.find((event) => event.type === "network.access");

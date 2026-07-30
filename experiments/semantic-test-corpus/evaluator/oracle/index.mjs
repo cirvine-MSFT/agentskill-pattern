@@ -42,7 +42,7 @@ function validPort(url) {
 }
 
 function rawAuthorityAndSuffix(value) {
-  if (typeof value !== "string" || value !== value.trim()) return null;
+  if (typeof value !== "string" || value !== value.trim() || /[\u0000-\u0020\u007f]/.test(value)) return null;
   const scheme = value.indexOf("://");
   if (scheme < 0) return null;
   const remainder = value.slice(scheme + 3);
