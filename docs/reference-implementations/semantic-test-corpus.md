@@ -1,10 +1,8 @@
 # Reference implementation: `semantic-test-corpus` (GitHub Copilot)
 
-**Status: implemented reference.** This reference applies the Agent Skill Pattern to
-semantic acceptance-test source-scenario design for a deterministic configuration
-migration. AI is limited to proposing source inputs and explanatory metadata. The
-migration, expected-output oracle, validation, promotion, execution tracing, and mutant
-scoring remain deterministic parent-owned operations.
+**Status: implemented reference.** AI proposes schema-valid v1 source documents. It
+never computes expected results. Deterministic parent code owns validation, promotion,
+migration execution, the expected-output oracle, traces, and mutant scoring.
 
 ## Components
 
@@ -14,122 +12,181 @@ scoring remain deterministic parent-owned operations.
 | Custom agent | [`.github/agents/semantic-test-corpus.agent.md`](../../.github/agents/semantic-test-corpus.agent.md) |
 | Model | `claude-haiku-4.5` |
 | Agent tools | Four namespaced `semantic-corpus/*` MCP tools only |
-| MCP server | [`tools/semantic-corpus-mcp/server.mjs`](../../tools/semantic-corpus-mcp/server.mjs), Node 20+, dependency-free local stdio |
+| MCP server | [`tools/semantic-corpus-mcp/server.mjs`](../../tools/semantic-corpus-mcp/server.mjs), dependency-free Node 20+ stdio |
 | Tests | [`tests/semantic-corpus-mcp/`](../../tests/semantic-corpus-mcp/) |
 
-The custom-agent profile follows GitHub's
-[custom agent configuration](https://docs.github.com/en/copilot/reference/custom-agents-configuration):
-`target: github-copilot`, `user-invocable: false`, a local MCP server, and an explicit
-namespaced tool allowlist. It exposes no generic `read`, `edit`, `search`, `execute`,
-`web`, or `agent` tool. Omitting `agent` is the structural recursion guard.
+The agent profile has no generic `read`, `edit`, `search`, `execute`, `web`, or `agent`
+tool. Omitting `agent` is the structural recursion guard. All filesystem capability
+comes from the local MCP process.
 
-## Fixed capability boundary
+## Mandatory launcher boundary
 
-The MCP process derives exactly two roots from its process working directory:
+The MCP process **must** run in a container, restricted-mount sandbox, restricted VM, or
+dedicated ACL identity. This is a startup requirement, not optional hardening:
 
-| Root | Agent capability |
+- mount or ACL `corpus-contract/` and the sandbox config read-only;
+- expose only `corpus-staging/` as writable;
+- deny the MCP identity access to repositories, migration source, oracle and expected
+  artifacts, existing tests, parent directories, and sibling worktrees; and
+- use a disposable run directory, not a repository or bare worktree.
+
+After establishing those grants, the trusted launcher writes an immutable sandbox config
+outside both roots and passes its absolute path and a fresh token through
+`SEMANTIC_CORPUS_SANDBOX_CONFIG` and `SEMANTIC_CORPUS_SANDBOX_TOKEN`:
+
+```json
+{
+  "version": 1,
+  "sandboxKind": "restricted-mounts",
+  "tokenHash": "sha256:<64-lowercase-hex-characters>",
+  "requestHash": "<request.json requestHash>",
+  "roots": {
+    "contract": {
+      "path": "C:\\isolated-run\\corpus-contract",
+      "access": "read-only",
+      "identity": { "device": "123", "fileId": "456" }
+    },
+    "staging": {
+      "path": "C:\\isolated-run\\corpus-staging",
+      "access": "read-write",
+      "identity": { "device": "123", "fileId": "789" }
+    }
+  },
+  "lock": { "waitTimeoutMs": 5000, "staleAfterMs": 300000 }
+}
+```
+
+`sandboxKind` is `container`, `restricted-mounts`, or `restricted-acl`. `fileId` is
+Node's inode/file-identity value, including the Windows file ID exposed by Node where the
+filesystem provides it. The config contains only the token hash; the token comes from
+the launcher environment. Roots must be absolute, disjoint, canonical non-reparse
+directories with the exact attested device/file identity.
+
+Before emitting an MCP response, the server requires the config and token, verifies the
+token hash, launcher-pinned request hash, config identity/content, root identities, and
+the immutable request, and confirms that the config and request deny write opens. Contract
+reads likewise require write denial for the selected file. It
+rechecks config, root, request-file, and opened-file identity around every operation.
+Missing, stale, changed, or unverifiable evidence fails closed.
+
+These Node checks are **defense in depth, not a TOCTOU-proof sandbox**. Portable Node
+pathname checks cannot provide race-proof `openat`-style confinement on every platform.
+The implementation uses `O_NOFOLLOW` where Node exposes it, opens only verified regular
+files, rejects symlinks/junctions/case aliases, and rechecks identities before and after
+operations. The container, restricted mounts, or ACL boundary remains the primary access
+control and must stay effective for the process lifetime.
+
+## Immutable request
+
+The parent writes read-only `corpus-contract/request.json`. It is a closed object with a
+self-hash over canonical JSON excluding `requestHash`:
+
+```json
+{
+  "version": 1,
+  "targetCount": 2,
+  "scenarios": [
+    { "scenarioId": "mapping-null-region", "category": "mapping-rules" },
+    { "scenarioId": "cross-field-flags", "category": "cross-field-invariants" }
+  ],
+  "categories": [
+    { "category": "mapping-rules", "minQuota": 1 },
+    { "category": "cross-field-invariants", "minQuota": 1 }
+  ],
+  "maxSizes": {
+    "contractFileBytes": 262144,
+    "scenarioBytes": 65536,
+    "manifestBytes": 262144
+  },
+  "v1ConfigSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["version", "id", "profile"],
+    "properties": {
+      "version": { "type": "integer", "const": 1 },
+      "id": { "type": "string", "minLength": 1, "maxLength": 40 },
+      "profile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["region"],
+        "properties": {
+          "region": { "type": "string", "maxLength": 4, "enum": ["us", "eu"] }
+        }
+      }
+    }
+  },
+  "requestHash": "<SHA-256 of canonical request without this field>"
+}
+```
+
+`targetCount` must exactly equal the request-defined scenario list. IDs are unique;
+categories are closed and satisfy every minimum quota before delegation. The model cannot
+initialize or change the request.
+
+The supported schema dialect is deliberately small: recursively closed objects, bounded
+arrays and strings, finite numbers, safe integers, booleans, null, `const`, scalar enums,
+numeric bounds, patterns, and bounded `anyOf`. Every object schema must explicitly set
+`additionalProperties: false`; unsupported schema keywords are rejected.
+
+This positive schema is the structural output-exclusion control. The write tool accepts
+only `scenarioId` plus `config`, and `config` must match the exact v1 schema recursively.
+`expectedOutcome`, `oracleVerdict`, punctuation aliases, Unicode-confusable keys, and
+nested variants are naturally unknown properties. There is no semantic-name denylist or
+unrestricted JSON escape hatch.
+
+## Narrow tools
+
+| Tool | Capability |
 | --- | --- |
-| `corpus-contract/` | List and read regular files only |
-| `corpus-staging/` | Write source scenarios and one manifest only |
+| `list_contract_files` | List bounded regular files under the attested contract root. |
+| `read_contract_file` | Read one exact relative contract path. |
+| `write_scenario_input` | Accept only a request-defined `scenarioId` and exact closed-schema `config`; atomically publish the config under the fixed staging path. |
+| `write_scenario_manifest` | Accept only the exact request-defined ID/category pairs; validate every staged config, exact count, and quotas, then publish once. |
 
-The parent creates clean roots before delegation. The server never accepts a root path
-or output path from the model. Scenario IDs map to
-`corpus-staging/scenarios/<id>.json`; the manifest always maps to
-`corpus-staging/manifest.json`. There is no staging read/list tool and no contract write
-tool.
+There is no agent corpus-initialization tool, metadata tool, staging read tool, generic
+filesystem tool, free-form summary, rationale, evidence string, path, or output/oracle
+field. The JSON-RPC `initialize` method is MCP protocol negotiation, not an agent
+capability to initialize corpus state.
 
-This is stronger than prompt-only path restrictions or a separate worktree. Every
-accepted contract path must be relative, NFC-normalized, ASCII, `/`-separated, and exact
-case. Absolute paths, drive paths, UNC paths, `.`/`..`, empty segments, alternate
-separators, Unicode separator lookalikes, and case aliases are rejected. Each existing
-component is checked with `lstat` and `realpath`; symlinks, Windows junctions, and other
-redirections are rejected at the fixed root and below it. Resolved paths must remain
-inside the corresponding fixed root.
+## Cross-process staging lock
 
-Writes use server-selected destinations and write-once atomic publication: a bounded
-JSON document is written to an exclusive temporary file in the destination directory,
-flushed, and hard-linked into its final name. Publication cannot replace an existing
-file, and failed temporary files are removed. Server requests are serialized so
-concurrent calls cannot race the 60-scenario limit.
+Every operation atomically acquires `corpus-staging/.corpus.lock` with exclusive-create
+semantics. Initialization and request reading, contract reads, scenario count checks,
+writes, complete manifest snapshot validation, and publication occur while the lock is
+held. The lock records owner PID, hostname, acquisition time, and a random nonce.
 
-## Narrow MCP tools
+Contenders wait only for the launcher-configured bounded interval. A malformed lock fails
+closed. A lock older than `staleAfterMs` returns `LOCK_STALE` and is **never removed or
+stolen**; the parent must destroy or inspect the disposable run. Release verifies the open
+handle and pathname still identify the owner's lock before removal.
 
-| Tool | Contract |
-| --- | --- |
-| `list_contract_files` | Returns at most 200 bounded regular files under `corpus-contract/`; any redirection or unexpected filesystem object fails the whole call. |
-| `read_contract_file` | Reads one exact listed path, limited to 256 KiB. |
-| `write_scenario_input` | Accepts a lowercase slug ID and one bounded JSON object; writes at most 64 KiB to the fixed scenarios directory. |
-| `write_scenario_manifest` | Accepts metadata for 40-60 scenarios whose IDs must exactly match staged files; writes the fixed manifest once. |
-
-The server implements MCP JSON-RPC over stdio for `initialize`, `ping`, `tools/list`,
-and `tools/call`. It emits only protocol messages on stdout and has no shell or process
-execution capability.
-
-## Structural output exclusion
-
-Scenario input validation recursively enforces depth, node, object-key, array-item,
-string, document-size, and scenario-count limits. It rejects fields representing:
-
-- expected outputs, expected results, or expected errors;
-- oracle outputs or oracle results;
-- migration source, implementation, scripts, or paths; and
-- dangerous prototype fields.
-
-Path-shaped input fields receive the same relative-path checks and additionally reject
-expected-output, oracle, migration-source, and existing test/fixture directory segments.
-Manifest objects have a closed schema: only scenario ID, category, rationale, and
-contract references are model-supplied. The server generates each staging file path.
-Unexpected fields are errors rather than silently ignored data.
-
-These checks prevent the model from smuggling an expected result or migration artifact
-through a differently named output file or extra manifest field. They do not claim that
-AI-authored rationale is a coverage result: rationale records intent only.
+Scenario and manifest publication writes a bounded exclusive temporary file in the
+destination directory, flushes it, marks it read-only, and hard-links it to a write-once
+final name. Existing files are never replaced. Manifest publication reopens and validates
+every scenario twice around the snapshot boundary.
 
 ## Parent workflow
 
-1. Create clean `corpus-contract/` and `corpus-staging/` directories in the invocation
-   working directory.
-2. Populate the contract with bounded v1/v2 schemas, mapping rules, cross-field/domain
-   invariants, legacy examples, and migration bug history. Do not expose migration
-   source, expected outputs, oracle artifacts, existing test directories, or mutants.
-3. Prepare deterministic schema, duplicate, promotion, trusted-oracle, trace, and mutant
-   validators before delegation.
-4. Invoke the named `semantic-test-corpus` agent with a target from 40 through 60 and an
-   explicit category set. There is no inline fallback.
-5. After its terse path/count/status return, validate every staged source input.
-6. Promote only accepted source inputs. The deterministic oracle then computes expected
-   outcomes, and deterministic traces and hidden mutants measure corpus effectiveness.
-
-The agent never computes expected output, promotes a candidate, executes the migration,
-runs the oracle, or sees the mutant set. If the deterministic baseline already matches
-or exceeds the AI-assisted corpus, omit the AI step.
-
-## Defense in depth
-
-The MCP server is the primary path capability boundary because its API cannot name
-arbitrary roots or output paths. Production use should still add an OS boundary:
-
-- run the local MCP process in a container, restricted VM, or enforceable sandbox with
-  only `corpus-contract/` mounted read-only and `corpus-staging/` mounted writable;
-- apply filesystem ACLs that deny the MCP identity access to migration source, oracle
-  artifacts, expected results, existing tests, sibling worktrees, and parent paths; and
-- use a dedicated temporary working directory rather than a repository root.
-
-These controls limit damage from runtime, filesystem, or platform defects. They are
-defense in depth, not substitutes for the server's fixed-root API. In particular, a bare
-worktree, generic file tools, or Windows path-denial settings that are not enforced do
-not establish the required boundary.
+1. Create a disposable run and establish container, mount, or ACL confinement.
+2. Write the closed request and contract; compute its canonical request hash.
+3. Record final root identities, write the read-only sandbox config, and launch with a
+   fresh matching token.
+4. Invoke the `semantic-test-corpus` agent. There is no inline fallback.
+5. Independently validate staged v1 documents and promote only accepted inputs.
+6. Run the deterministic oracle, migration, traces, and hidden mutants outside the
+   agent/MCP identity.
+7. Destroy the disposable run, including any stale lock.
 
 ## Validation
 
-Run the dependency-free suite with Node 20 or later:
+Run with Node 20 or later:
 
 ```powershell
 $tests = (Get-ChildItem tests\semantic-corpus-mcp -Filter *.test.mjs).FullName
 node --test $tests
 ```
 
-The suite exercises normal reads/writes; MCP initialization, discovery, and calls;
-traversal, absolute, alternate-separator, Unicode, and case attacks; symlink, junction,
-reparse, and root redirection; forbidden fields and paths; payload and count limits;
-write-once atomicity; and the custom-agent MCP/tool allowlist.
+The suite covers MCP discovery/calls, fail-closed startup, recursively closed schemas,
+oracle/expected aliases and confusables, immutable request and sandbox identity, exact
+counts/quotas, traversal/case/Unicode/symlink/junction attacks, write-once publication,
+stale-lock policy, and two-process count/write/manifest races.

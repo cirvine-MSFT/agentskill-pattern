@@ -2,87 +2,92 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
+import { createDispatcher } from "../../tools/semantic-corpus-mcp/protocol.mjs";
+import { createRun, scenarioInput } from "./fixtures.mjs";
 
 const server = fileURLToPath(
   new URL("../../tools/semantic-corpus-mcp/server.mjs", import.meta.url),
 );
 
-async function startClient(t) {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "semantic-corpus-protocol-"));
-  await mkdir(path.join(cwd, "corpus-contract"));
-  await mkdir(path.join(cwd, "corpus-staging"));
-  await writeFile(path.join(cwd, "corpus-contract", "rules.md"), "rules");
-
+test("fails closed before MCP startup without launcher sandbox evidence", async (t) => {
+  const run = await createRun();
+  t.after(() => run.cleanup());
+  const env = { ...process.env };
+  delete env.SEMANTIC_CORPUS_SANDBOX_CONFIG;
+  delete env.SEMANTIC_CORPUS_SANDBOX_TOKEN;
   const child = spawn(process.execPath, [server], {
-    cwd,
+    cwd: run.cwd,
+    env,
     stdio: ["pipe", "pipe", "pipe"],
   });
-  const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
-  const pending = new Map();
   let stderr = "";
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => {
     stderr += chunk;
   });
-  lines.on("line", (line) => {
-    const message = JSON.parse(line);
-    const waiter = pending.get(message.id);
-    if (waiter) {
-      pending.delete(message.id);
-      waiter.resolve(message);
-    }
-  });
+  child.stdin.end();
+  const [code] = await once(child, "exit");
+  assert.equal(code, 78);
+  assert.match(stderr, /SANDBOX_REQUIRED/);
+  assert.equal(child.stdout.read(), null);
+});
 
-  let nextId = 1;
-  function request(method, params = {}) {
-    const id = nextId;
-    nextId += 1;
-    const response = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        pending.delete(id);
-        reject(new Error(`timed out waiting for ${method}`));
-      }, 5_000);
-      pending.set(id, {
-        resolve(message) {
-          clearTimeout(timeout);
-          resolve(message);
-        },
-      });
-    });
-    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
-    return response;
+test("stdio server starts only with launcher evidence and serves MCP", async (t) => {
+  const run = await createRun();
+  t.after(() => run.cleanup());
+  const child = spawn(process.execPath, [server], {
+    cwd: run.cwd,
+    env: run.env,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
+  const response = new Promise((resolve) => {
+    lines.once("line", (line) => resolve(JSON.parse(line)));
+  });
+  child.stdin.write(
+    `${JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18" },
+    })}\n`,
+  );
+  assert.equal((await response).result.serverInfo.name, "semantic-corpus");
+  child.stdin.end();
+  const [code] = await once(child, "exit");
+  assert.equal(code, 0);
+  assert.equal(stderr, "");
+});
+
+test("implements MCP with only request-bound narrow tools", async (t) => {
+  const run = await createRun();
+  const service = await run.open();
+  t.after(() => run.cleanup());
+  const responses = [];
+  const dispatch = createDispatcher(service, (message) => responses.push(message));
+  let id = 0;
+  async function request(method, params = {}) {
+    id += 1;
+    await dispatch({ jsonrpc: "2.0", id, method, params });
+    return responses.find((message) => message.id === id);
   }
 
-  t.after(async () => {
-    child.stdin.end();
-    if (child.exitCode === null) {
-      await once(child, "exit");
-    }
-    assert.equal(stderr, "");
-    await rm(cwd, { recursive: true, force: true });
-  });
-  return { child, cwd, request };
-}
-
-test("implements initialize, tools/list, tools/call, and JSON-RPC errors", async (t) => {
-  const client = await startClient(t);
-  const initialized = await client.request("initialize", {
+  const initialized = await request("initialize", {
     protocolVersion: "2025-06-18",
     capabilities: {},
     clientInfo: { name: "test", version: "1" },
   });
   assert.equal(initialized.result.protocolVersion, "2025-06-18");
-  assert.equal(initialized.result.serverInfo.name, "semantic-corpus");
+  assert.equal(initialized.result.serverInfo.version, "2.0.0");
 
-  client.child.stdin.write(
-    `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`,
-  );
-  const listed = await client.request("tools/list");
+  const listed = await request("tools/list");
   assert.deepEqual(
     listed.result.tools.map((tool) => tool.name),
     [
@@ -93,57 +98,71 @@ test("implements initialize, tools/list, tools/call, and JSON-RPC errors", async
     ],
   );
   assert.equal(
-    listed.result.tools.some((tool) => /shell|execute|expected|oracle/i.test(tool.name)),
+    listed.result.tools.some((tool) => /initialize|oracle|expected|shell|execute/i.test(tool.name)),
     false,
   );
+  const inputTool = listed.result.tools.find(
+    (tool) => tool.name === "write_scenario_input",
+  );
+  assert.deepEqual(inputTool.inputSchema.required, ["scenarioId", "config"]);
+  assert.equal(inputTool.inputSchema.additionalProperties, false);
+  assert.equal(inputTool.inputSchema.properties.config.additionalProperties, false);
+  assert.equal(
+    inputTool.inputSchema.properties.config.properties.profile.additionalProperties,
+    false,
+  );
+  assert.deepEqual(inputTool.inputSchema.properties.scenarioId.enum, [
+    "scenario-001",
+    "scenario-002",
+    "scenario-003",
+    "scenario-004",
+  ]);
 
-  const contract = await client.request("tools/call", {
+  const contract = await request("tools/call", {
     name: "list_contract_files",
     arguments: {},
   });
-  assert.equal(contract.result.isError, false);
-  assert.equal(contract.result.structuredContent.files[0].path, "rules.md");
+  assert.deepEqual(
+    contract.result.structuredContent.files.map((file) => file.path),
+    ["request.json", "rules.md", "schemas/v1.json"],
+  );
+  assert.equal(contract.result.structuredContent.requestHash, run.requestHash);
 
-  const read = await client.request("tools/call", {
+  const pinned = await request("tools/call", {
     name: "read_contract_file",
-    arguments: { path: "rules.md" },
+    arguments: { path: "request.json" },
   });
-  assert.equal(read.result.structuredContent.content, "rules");
-
-  const written = await client.request("tools/call", {
-    name: "write_scenario_input",
-    arguments: {
-      scenarioId: "protocol-scenario",
-      input: { id: "protocol-scenario", enabled: true },
-    },
-  });
-  assert.equal(written.result.isError, false);
   assert.equal(
-    written.result.structuredContent.path,
-    "corpus-staging/scenarios/protocol-scenario.json",
+    JSON.parse(pinned.result.structuredContent.content).requestHash,
+    run.requestHash,
   );
 
-  const denied = await client.request("tools/call", {
-    name: "read_contract_file",
-    arguments: { path: "../outside" },
+  const written = await request("tools/call", {
+    name: "write_scenario_input",
+    arguments: {
+      scenarioId: "scenario-001",
+      config: scenarioInput(1),
+    },
   });
-  assert.equal(denied.result.isError, true);
-  assert.equal(JSON.parse(denied.result.content[0].text).error.code, "PATH_ESCAPE");
+  assert.equal(written.result.structuredContent.scenarioId, "scenario-001");
 
-  const unknownTool = await client.request("tools/call", {
-    name: "run_oracle",
+  const invalid = await request("tools/call", {
+    name: "write_scenario_input",
+    arguments: {
+      scenarioId: "scenario-002",
+      config: { ...scenarioInput(2), expectedOutcome: "v2" },
+    },
+  });
+  assert.equal(invalid.error.code, -32602);
+  assert.equal(invalid.error.data.code, "SCHEMA_ERROR");
+
+  const unknownTool = await request("tools/call", {
+    name: "initialize_corpus",
     arguments: {},
   });
   assert.equal(unknownTool.error.code, -32602);
   assert.equal(unknownTool.error.data.code, "TOOL_NOT_FOUND");
 
-  const invalidArguments = await client.request("tools/call", {
-    name: "read_contract_file",
-    arguments: {},
-  });
-  assert.equal(invalidArguments.error.code, -32602);
-  assert.equal(invalidArguments.error.data.code, "SCHEMA_ERROR");
-
-  const unknownMethod = await client.request("resources/list");
+  const unknownMethod = await request("resources/list");
   assert.equal(unknownMethod.error.code, -32601);
 });

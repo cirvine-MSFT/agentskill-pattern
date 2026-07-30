@@ -10,7 +10,7 @@ const skillPath = fileURLToPath(
   new URL("../../.github/skills/semantic-test-corpus/SKILL.md", import.meta.url),
 );
 
-test("custom-agent frontmatter exposes only the four namespaced MCP tools", async () => {
+test("custom-agent frontmatter exposes only request-bound MCP tools", async () => {
   const text = await readFile(agentPath, "utf8");
   const frontmatter = text.split("---")[1];
   assert.match(frontmatter, /^name: semantic-test-corpus$/m);
@@ -45,10 +45,12 @@ test("agent and Skill preserve deterministic parent ownership and no fallback", 
     readFile(agentPath, "utf8"),
     readFile(skillPath, "utf8"),
   ]);
-  assert.match(agent, /Never produce, infer, request, encode, or describe an\s+expected output/);
-  assert.match(agent, /Do not attempt to .*delegate to another agent/s);
-  assert.match(agent, /40 through 60/);
+  assert.match(agent, /Never produce, infer, request, encode, or\s+describe an expected output/);
+  assert.match(agent, /Do not\s+attempt to .*delegate to another agent/s);
+  assert.match(agent, /self-hash, exact target count/);
   assert.match(skill, /never\s+generate scenarios inline/i);
+  assert.match(skill, /container, enforceable OS sandbox, or dedicated ACL/i);
+  assert.match(skill, /fails before MCP\s+initialization otherwise/i);
   assert.match(skill, /parent deterministically validates staged inputs/i);
   assert.match(skill, /trusted oracle/i);
   assert.match(skill, /mutant scoring/i);
