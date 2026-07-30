@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "promoted-corpus.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "generator", "promotion", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "generator": {"type": "object"},
+    "promotion": {
+      "type": "object",
+      "required": ["oracle", "promotedAt", "inputSha256"],
+      "additionalProperties": false,
+      "properties": {
+        "oracle": {"const": "fixture/oracle/index.mjs"},
+        "promotedAt": {"type": "string"},
+        "inputSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "cases": {"type": "array", "minItems": 60, "maxItems": 60}
+  }
+}

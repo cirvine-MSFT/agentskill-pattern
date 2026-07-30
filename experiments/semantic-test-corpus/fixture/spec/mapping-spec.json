@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "id": "config-v1-to-v2",
+  "version": "1.0.0",
+  "sourceVersion": 1,
+  "targetVersion": "config.example/v2",
+  "rules": [
+    {
+      "id": "R-NAME-SLUG",
+      "op": "slug",
+      "source": "service.name",
+      "target": "metadata.serviceId",
+      "paths": ["P-NAME-AS-IS", "P-NAME-NORMALIZED"]
+    },
+    {
+      "id": "R-ENVIRONMENT",
+      "op": "copy",
+      "source": "service.environment",
+      "target": "metadata.environment",
+      "paths": ["P-ENV-DEV", "P-ENV-TEST", "P-ENV-PROD"]
+    },
+    {
+      "id": "R-REGION",
+      "op": "lookup",
+      "source": "service.region",
+      "target": "runtime.region",
+      "map": {
+        "eastus": "eastus",
+        "westeurope": "westeurope",
+        "southeastasia": "southeastasia",
+        "us": "eastus",
+        "eu": "westeurope",
+        "apac": "southeastasia"
+      },
+      "legacy": ["us", "eu", "apac"],
+      "paths": ["P-REGION-CANONICAL", "P-REGION-LEGACY", "P-REGION-UNKNOWN"]
+    },
+    {
+      "id": "R-SERVICE-PORT",
+      "op": "defaultByEnvironment",
+      "source": "service.port",
+      "target": "runtime.listen.port",
+      "defaults": {"dev": 3000, "test": 4000, "prod": 8080},
+      "paths": ["P-PORT-EXPLICIT", "P-PORT-DEFAULT-DEV", "P-PORT-DEFAULT-TEST", "P-PORT-DEFAULT-PROD"]
+    },
+    {
+      "id": "R-TIMEOUT",
+      "op": "secondsToMillisecondsDefault",
+      "source": "service.timeoutSeconds",
+      "target": "runtime.timeoutMs",
+      "defaults": {"dev": 30, "test": 20, "prod": 10},
+      "paths": ["P-TIMEOUT-EXPLICIT", "P-TIMEOUT-DEFAULT-DEV", "P-TIMEOUT-DEFAULT-TEST", "P-TIMEOUT-DEFAULT-PROD"]
+    },
+    {
+      "id": "R-LOG-LEVEL",
+      "op": "lookup",
+      "source": "logging.level",
+      "target": "observability.level",
+      "map": {"debug": "debug", "info": "info", "warn": "warning", "error": "error"},
+      "paths": ["P-LOG-LEVEL-DIRECT", "P-LOG-LEVEL-WARN"]
+    },
+    {
+      "id": "R-LOG-FORMAT",
+      "op": "logFormat",
+      "source": "logging.pretty",
+      "target": "observability.format",
+      "paths": ["P-LOG-FORMAT-JSON", "P-LOG-FORMAT-PRETTY", "P-LOG-FORMAT-PROD-FORCED-JSON"]
+    },
+    {
+      "id": "R-CACHE",
+      "op": "cache",
+      "source": "cache",
+      "target": "cache",
+      "paths": ["P-CACHE-NONE", "P-CACHE-MEMORY", "P-CACHE-REDIS"]
+    },
+    {
+      "id": "R-DATABASE",
+      "op": "database",
+      "source": "database",
+      "target": "data",
+      "defaultPorts": {"postgres": 5432, "mysql": 3306},
+      "drivers": {"postgres": "pg", "mysql": "mysql2", "sqlite": "sqlite"},
+      "paths": ["P-DB-SQLITE", "P-DB-REMOTE", "P-DB-PORT-EXPLICIT", "P-DB-PORT-DEFAULT-POSTGRES", "P-DB-PORT-DEFAULT-MYSQL"]
+    },
+    {
+      "id": "R-RETRIES",
+      "op": "retries",
+      "source": "retries",
+      "target": "resilience",
+      "paths": ["P-RETRY-FIXED", "P-RETRY-EXPONENTIAL", "P-RETRY-MAX-CAPPED"]
+    },
+    {
+      "id": "R-CORS",
+      "op": "sortedUnique",
+      "source": "security.allowedOrigins",
+      "target": "http.cors.origins",
+      "paths": ["P-CORS-AS-IS", "P-CORS-NORMALIZED"]
+    },
+    {
+      "id": "R-FEATURES",
+      "op": "featureArray",
+      "source": "features.flags",
+      "target": "features",
+      "paths": ["P-FEATURES-EMPTY", "P-FEATURES-AS-IS", "P-FEATURES-NORMALIZED"]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "I-VERSION",
+      "when": {"op": "always"},
+      "assert": {"op": "eq", "left": {"path": "version"}, "right": {"value": 1}},
+      "diagnostic": {"id": "D-VERSION", "category": "domain", "path": "version", "message": "version must equal 1."},
+      "paths": ["P-I-VERSION-PASS", "P-I-VERSION-FAIL"]
+    },
+    {
+      "id": "I-SERVICE-NAME",
+      "when": {"op": "always"},
+      "assert": {"op": "custom", "name": "nonBlankServiceName"},
+      "diagnostic": {"id": "D-SERVICE-NAME", "category": "domain", "path": "service.name", "message": "service.name must contain a letter or digit."},
+      "paths": ["P-I-SERVICE-NAME-PASS", "P-I-SERVICE-NAME-FAIL"]
+    },
+    {
+      "id": "I-SERVICE-PORT",
+      "when": {"op": "always"},
+      "assert": {"op": "custom", "name": "validServicePort"},
+      "diagnostic": {"id": "D-SERVICE-PORT", "category": "domain", "path": "service.port", "message": "service.port must be an integer from 1 through 65535 when supplied."},
+      "paths": ["P-I-SERVICE-PORT-PASS", "P-I-SERVICE-PORT-FAIL"]
+    },
+    {
+      "id": "I-REGION",
+      "when": {"op": "always"},
+      "assert": {"op": "in", "value": {"path": "service.region"}, "set": ["eastus", "westeurope", "southeastasia", "us", "eu", "apac"]},
+      "diagnostic": {"id": "D-REGION", "category": "domain", "path": "service.region", "message": "service.region is not recognized."},
+      "paths": ["P-I-REGION-PASS", "P-I-REGION-FAIL"]
+    },
+    {
+      "id": "I-PROD-DEBUG",
+      "when": {"op": "eq", "left": {"path": "service.environment"}, "right": {"value": "prod"}},
+      "assert": {"op": "notEq", "left": {"path": "logging.level"}, "right": {"value": "debug"}},
+      "diagnostic": {"id": "D-PROD-DEBUG", "category": "cross-field", "path": "logging.level", "message": "debug logging is forbidden in prod."},
+      "paths": ["P-I-PROD-DEBUG-PASS", "P-I-PROD-DEBUG-FAIL"]
+    },
+    {
+      "id": "I-CACHE-TTL",
+      "when": {"op": "eq", "left": {"path": "cache.enabled"}, "right": {"value": true}},
+      "assert": {"op": "custom", "name": "validCacheTtl"},
+      "diagnostic": {"id": "D-CACHE-TTL", "category": "domain", "path": "cache.ttlSeconds", "message": "enabled cache requires ttlSeconds from 1 through 86400."},
+      "paths": ["P-I-CACHE-TTL-PASS", "P-I-CACHE-TTL-FAIL"]
+    },
+    {
+      "id": "I-REDIS-ENDPOINT",
+      "when": {"op": "eq", "left": {"path": "cache.provider"}, "right": {"value": "redis"}},
+      "assert": {"op": "custom", "name": "validRedisEndpoint"},
+      "diagnostic": {"id": "D-REDIS-ENDPOINT", "category": "cross-field", "path": "cache.endpoint", "message": "redis cache requires a redis:// or rediss:// endpoint."},
+      "paths": ["P-I-REDIS-ENDPOINT-PASS", "P-I-REDIS-ENDPOINT-FAIL"]
+    },
+    {
+      "id": "I-SQLITE-PROD",
+      "when": {"op": "eq", "left": {"path": "database.engine"}, "right": {"value": "sqlite"}},
+      "assert": {"op": "notEq", "left": {"path": "service.environment"}, "right": {"value": "prod"}},
+      "diagnostic": {"id": "D-SQLITE-PROD", "category": "cross-field", "path": "database.engine", "message": "sqlite is forbidden in prod."},
+      "paths": ["P-I-SQLITE-PROD-PASS", "P-I-SQLITE-PROD-FAIL"]
+    },
+    {
+      "id": "I-PROD-DB-TLS",
+      "when": {"op": "custom", "name": "prodRemoteDatabase"},
+      "assert": {"op": "eq", "left": {"path": "database.ssl"}, "right": {"value": true}},
+      "diagnostic": {"id": "D-PROD-DB-TLS", "category": "cross-field", "path": "database.ssl", "message": "prod remote databases require ssl=true."},
+      "paths": ["P-I-PROD-DB-TLS-PASS", "P-I-PROD-DB-TLS-FAIL"]
+    },
+    {
+      "id": "I-DB-PORT-CONFLICT",
+      "when": {"op": "custom", "name": "remoteDatabase"},
+      "assert": {"op": "custom", "name": "distinctEffectivePorts"},
+      "diagnostic": {"id": "D-PORT-CONFLICT", "category": "cross-field", "path": "database.port", "message": "service and database ports must differ."},
+      "paths": ["P-I-DB-PORT-CONFLICT-PASS", "P-I-DB-PORT-CONFLICT-FAIL"]
+    },
+    {
+      "id": "I-RETRY-BOUNDS",
+      "when": {"op": "always"},
+      "assert": {"op": "custom", "name": "validRetryBounds"},
+      "diagnostic": {"id": "D-RETRY-BOUNDS", "category": "domain", "path": "retries", "message": "retries require maxAttempts 0..10 and delayMs 100..10000."},
+      "paths": ["P-I-RETRY-BOUNDS-PASS", "P-I-RETRY-BOUNDS-FAIL"]
+    },
+    {
+      "id": "I-EXPONENTIAL-ATTEMPTS",
+      "when": {"op": "eq", "left": {"path": "retries.mode"}, "right": {"value": "exponential"}},
+      "assert": {"op": "gte", "left": {"path": "retries.maxAttempts"}, "right": {"value": 2}},
+      "diagnostic": {"id": "D-EXPONENTIAL-ATTEMPTS", "category": "cross-field", "path": "retries.maxAttempts", "message": "exponential retries require at least 2 attempts."},
+      "paths": ["P-I-EXPONENTIAL-ATTEMPTS-PASS", "P-I-EXPONENTIAL-ATTEMPTS-FAIL"]
+    },
+    {
+      "id": "I-PROD-CORS",
+      "when": {"op": "eq", "left": {"path": "service.environment"}, "right": {"value": "prod"}},
+      "assert": {"op": "custom", "name": "prodCorsHasNoWildcard"},
+      "diagnostic": {"id": "D-PROD-CORS", "category": "cross-field", "path": "security.allowedOrigins", "message": "prod CORS origins cannot contain '*'."},
+      "paths": ["P-I-PROD-CORS-PASS", "P-I-PROD-CORS-FAIL"]
+    },
+    {
+      "id": "I-FEATURE-COLLISION",
+      "when": {"op": "always"},
+      "assert": {"op": "custom", "name": "featureNamesDoNotCollide"},
+      "diagnostic": {"id": "D-FEATURE-COLLISION", "category": "normalization", "path": "features.flags", "message": "feature names must remain unique after normalization."},
+      "paths": ["P-I-FEATURE-COLLISION-PASS", "P-I-FEATURE-COLLISION-FAIL"]
+    },
+    {
+      "id": "I-ORIGIN-SYNTAX",
+      "when": {"op": "always"},
+      "assert": {"op": "custom", "name": "validOriginSyntax"},
+      "diagnostic": {"id": "D-ORIGIN-SYNTAX", "category": "domain", "path": "security.allowedOrigins", "message": "origins must be '*' or absolute http(s) origins without paths."},
+      "paths": ["P-I-ORIGIN-SYNTAX-PASS", "P-I-ORIGIN-SYNTAX-FAIL"]
+    }
+  ],
+  "diagnosticCategories": ["cross-field", "deprecation", "domain", "ignored-input", "normalization"]
+}

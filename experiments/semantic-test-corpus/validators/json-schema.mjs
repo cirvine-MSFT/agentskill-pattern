@@ -1,0 +1,87 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+
+function typeMatches(value, type) {
+  if (type === "array") return Array.isArray(value);
+  if (type === "integer") return Number.isInteger(value);
+  if (type === "object") return value !== null && typeof value === "object" && !Array.isArray(value);
+  if (type === "null") return value === null;
+  return typeof value === type;
+}
+
+function childPath(path, key) {
+  return typeof key === "number" ? `${path}[${key}]` : `${path}.${key}`;
+}
+
+export function validateJsonSchema(value, schema, options = {}) {
+  const errors = [];
+  const schemaDir = options.schemaDir ?? process.cwd();
+
+  function visit(current, currentSchema, path, currentSchemaDir) {
+    if (currentSchema.$ref) {
+      const referencePath = resolve(currentSchemaDir, currentSchema.$ref);
+      const referenced = JSON.parse(readFileSync(referencePath, "utf8"));
+      visit(current, referenced, path, dirname(referencePath));
+      return;
+    }
+
+    if ("const" in currentSchema && current !== currentSchema.const) {
+      errors.push({ path, keyword: "const", message: `must equal ${JSON.stringify(currentSchema.const)}` });
+      return;
+    }
+    if (currentSchema.type && !typeMatches(current, currentSchema.type)) {
+      errors.push({ path, keyword: "type", message: `must be ${currentSchema.type}` });
+      return;
+    }
+    if (currentSchema.enum && !currentSchema.enum.includes(current)) {
+      errors.push({ path, keyword: "enum", message: `must be one of ${currentSchema.enum.join(", ")}` });
+    }
+    if (typeof current === "string") {
+      if (currentSchema.minLength !== undefined && current.length < currentSchema.minLength) {
+        errors.push({ path, keyword: "minLength", message: `must contain at least ${currentSchema.minLength} characters` });
+      }
+      if (currentSchema.pattern && !(new RegExp(currentSchema.pattern).test(current))) {
+        errors.push({ path, keyword: "pattern", message: `must match ${currentSchema.pattern}` });
+      }
+    }
+    if (typeof current === "number") {
+      if (currentSchema.minimum !== undefined && current < currentSchema.minimum) {
+        errors.push({ path, keyword: "minimum", message: `must be at least ${currentSchema.minimum}` });
+      }
+      if (currentSchema.maximum !== undefined && current > currentSchema.maximum) {
+        errors.push({ path, keyword: "maximum", message: `must be at most ${currentSchema.maximum}` });
+      }
+    }
+    if (Array.isArray(current)) {
+      if (currentSchema.minItems !== undefined && current.length < currentSchema.minItems) {
+        errors.push({ path, keyword: "minItems", message: `must contain at least ${currentSchema.minItems} items` });
+      }
+      if (currentSchema.maxItems !== undefined && current.length > currentSchema.maxItems) {
+        errors.push({ path, keyword: "maxItems", message: `must contain at most ${currentSchema.maxItems} items` });
+      }
+      if (currentSchema.items) {
+        current.forEach((item, index) => visit(item, currentSchema.items, childPath(path, index), currentSchemaDir));
+      }
+    }
+    if (current !== null && typeof current === "object" && !Array.isArray(current)) {
+      for (const required of currentSchema.required ?? []) {
+        if (!(required in current)) {
+          errors.push({ path: childPath(path, required), keyword: "required", message: "is required" });
+        }
+      }
+      const properties = currentSchema.properties ?? {};
+      for (const [key, item] of Object.entries(current)) {
+        if (properties[key]) {
+          visit(item, properties[key], childPath(path, key), currentSchemaDir);
+        } else if (currentSchema.additionalProperties === false) {
+          errors.push({ path: childPath(path, key), keyword: "additionalProperties", message: "is not allowed" });
+        } else if (currentSchema.additionalProperties && typeof currentSchema.additionalProperties === "object") {
+          visit(item, currentSchema.additionalProperties, childPath(path, key), currentSchemaDir);
+        }
+      }
+    }
+  }
+
+  visit(value, schema, "$", schemaDir);
+  return errors;
+}

@@ -1,0 +1,18 @@
+{
+  "name": "semantic-test-corpus",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "baseline": "node baseline/generate.mjs --out staging/baseline.json",
+    "promote": "node scripts/promote.mjs --in staging/baseline.json --out artifacts/baseline-corpus.json",
+    "mutate": "node mutants/run.mjs --corpus artifacts/baseline-corpus.json --out artifacts/baseline-kill-matrix.json",
+    "report": "node scripts/report.mjs --corpus artifacts/baseline-corpus.json --matrix artifacts/baseline-kill-matrix.json --out artifacts/baseline-report.json",
+    "randomize": "node scripts/randomize.mjs --out design/schedule.json",
+    "reproduce": "node scripts/reproduce.mjs",
+    "test": "node tests/run-tests.mjs"
+  }
+}

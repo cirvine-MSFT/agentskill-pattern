@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "staging.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "generator", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "generator": {
+      "type": "object",
+      "required": ["armId", "blockId", "seed"],
+      "additionalProperties": false,
+      "properties": {
+        "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+        "blockId": {"type": "string", "minLength": 1},
+        "seed": {"type": "integer"}
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 60,
+      "maxItems": 60,
+      "items": {"$ref": "scenario.schema.json"}
+    }
+  }
+}

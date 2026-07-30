@@ -1,0 +1,105 @@
+{
+  "setId": "semantic-held-out-2026-07-29",
+  "cases": [
+    {
+      "id": "H001",
+      "ruleId": "H-PRECEDENCE-PROD-FORMAT",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "prod", "region": "eastus"},
+        "logging": {"level": "info", "pretty": true},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db", "name": "app", "ssl": true},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://prod.example.test"]},
+        "features": {"flags": {"alpha": true}}
+      },
+      "expect": {
+        "status": "ok",
+        "configPaths": {"observability.format": "json"},
+        "diagnosticIds": ["W-PROD-PRETTY"],
+        "requiredTracePaths": ["P-LOG-FORMAT-PROD-FORCED-JSON"]
+      }
+    },
+    {
+      "id": "H002",
+      "ruleId": "H-EFFECTIVE-PORT-CONFLICT",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "prod", "region": "eastus"},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db", "port": 8080, "name": "app", "ssl": true},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://prod.example.test"]},
+        "features": {"flags": {"alpha": true}}
+      },
+      "expect": {
+        "status": "invalid",
+        "configPaths": {},
+        "diagnosticIds": ["D-PORT-CONFLICT"],
+        "requiredTracePaths": ["P-I-DB-PORT-CONFLICT-FAIL", "P-PORT-DEFAULT-PROD"]
+      }
+    },
+    {
+      "id": "H003",
+      "ruleId": "H-NORMALIZED-FEATURE-COLLISION",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "dev", "region": "eastus"},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "sqlite", "name": "local.db"},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["http://localhost:3000"]},
+        "features": {"flags": {"NEW__UI": true, "new ui": false}}
+      },
+      "expect": {
+        "status": "invalid",
+        "configPaths": {},
+        "diagnosticIds": ["D-FEATURE-COLLISION", "W-FEATURE-NORMALIZED"],
+        "requiredTracePaths": ["P-I-FEATURE-COLLISION-FAIL", "P-FEATURES-NORMALIZED"]
+      }
+    },
+    {
+      "id": "H004",
+      "ruleId": "H-CORS-CANONICALIZATION",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "test", "region": "westeurope"},
+        "logging": {"level": "warn", "pretty": false},
+        "cache": {"enabled": true, "provider": "memory", "ttlSeconds": 1},
+        "database": {"engine": "mysql", "host": "db", "name": "app", "ssl": false},
+        "retries": {"mode": "fixed", "maxAttempts": 2, "delayMs": 100},
+        "security": {"allowedOrigins": ["https://EXAMPLE.test", "https://example.test/"]},
+        "features": {"flags": {}}
+      },
+      "expect": {
+        "status": "ok",
+        "configPaths": {"http.cors.origins": ["https://example.test"]},
+        "diagnosticIds": ["W-ORIGIN-DEDUP"],
+        "requiredTracePaths": ["P-CORS-NORMALIZED"]
+      }
+    },
+    {
+      "id": "H005",
+      "ruleId": "H-RETRY-CAP",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "dev", "region": "southeastasia"},
+        "logging": {"level": "error", "pretty": false},
+        "cache": {"enabled": true, "provider": "redis", "ttlSeconds": 86400, "endpoint": "rediss://cache:6380/0"},
+        "database": {"engine": "postgres", "host": "db", "port": 5433, "name": "app", "ssl": false},
+        "retries": {"mode": "exponential", "maxAttempts": 10, "delayMs": 10000},
+        "security": {"allowedOrigins": ["https://example.test"]},
+        "features": {"flags": {"stable": true}}
+      },
+      "expect": {
+        "status": "ok",
+        "configPaths": {"resilience.maxDelayMs": 60000},
+        "diagnosticIds": [],
+        "requiredTracePaths": ["P-RETRY-EXPONENTIAL", "P-RETRY-MAX-CAPPED"]
+      }
+    }
+  ]
+}

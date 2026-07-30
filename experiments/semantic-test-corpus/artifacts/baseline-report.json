@@ -1,0 +1,72 @@
+{
+  "formatVersion": 1,
+  "corpus": {
+    "cases": 60,
+    "promoted": 60,
+    "promotionRate": 1,
+    "semanticallyValid": 40,
+    "semanticValidityRate": 0.6666666666666666,
+    "semanticallyInvalid": 20,
+    "strategyCounts": {
+      "pairwise-covering": 13,
+      "decision-table": 19,
+      "boundary-partition": 16,
+      "grammar-property": 4,
+      "constraint-solver": 8
+    }
+  },
+  "semanticCoverage": {
+    "rules": {
+      "exercised": 12,
+      "total": 12,
+      "rate": 1,
+      "missing": []
+    },
+    "paths": {
+      "exercised": 67,
+      "total": 67,
+      "rate": 1,
+      "missing": []
+    },
+    "invariants": {
+      "exercised": 15,
+      "total": 15,
+      "rate": 1,
+      "missing": []
+    }
+  },
+  "diagnosticCoverage": {
+    "categories": [
+      "cross-field",
+      "deprecation",
+      "domain",
+      "ignored-input",
+      "normalization"
+    ],
+    "totalDefinedCategories": 5,
+    "rate": 1,
+    "counts": {
+      "cross-field": 8,
+      "deprecation": 4,
+      "domain": 12,
+      "ignored-input": 6,
+      "normalization": 16
+    }
+  },
+  "mutation": {
+    "cases": 60,
+    "mutants": 33,
+    "applicable": 33,
+    "notApplicable": 0,
+    "killed": 33,
+    "survived": 0,
+    "mutationScore": 1
+  },
+  "redundancyAndDiversity": {
+    "exactDuplicateCases": 0,
+    "semanticDuplicateCases": 14,
+    "semanticUniqueSignatures": 46,
+    "meanPairwiseJaccardDistance": 0.3963408803856197,
+    "note": "Duplicate detection compares corpus artifacts only; it is not a training-data leakage test."
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "review": {
+    "status": "reviewed",
+    "reviewedAt": "2026-07-29",
+    "reviewedBy": "benchmark author (manual semantic derivation)",
+    "method": "Inputs and assertions were derived from the mapping decision tables, then checked against the promoted oracle output. They are not regenerated during tests."
+  },
+  "cases": [
+    {
+      "id": "G001",
+      "description": "Development defaults",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "dev", "region": "eastus"},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db", "name": "app", "ssl": false},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://example.test"]},
+        "features": {"flags": {"alpha": true}}
+      },
+      "expect": {
+        "status": "ok",
+        "configPaths": {
+          "metadata.serviceId": "api",
+          "runtime.listen.port": 3000,
+          "runtime.timeoutMs": 30000,
+          "data.port": 5432,
+          "resilience.maxDelayMs": 500
+        },
+        "diagnosticIds": [],
+        "requiredTracePaths": ["P-PORT-DEFAULT-DEV", "P-DB-PORT-DEFAULT-POSTGRES", "P-RETRY-FIXED"]
+      }
+    },
+    {
+      "id": "G002",
+      "description": "Normalization and legacy mapping",
+      "input": {
+        "version": 1,
+        "service": {"name": "Billing API", "environment": "test", "region": "eu", "port": 9000, "timeoutSeconds": 7},
+        "logging": {"level": "warn", "pretty": true},
+        "cache": {"enabled": true, "provider": "memory", "ttlSeconds": 60},
+        "database": {"engine": "mysql", "host": "db", "name": "billing", "ssl": false},
+        "retries": {"mode": "exponential", "maxAttempts": 3, "delayMs": 1000},
+        "security": {"allowedOrigins": ["https://B.example.test", "https://a.example.test"]},
+        "features": {"flags": {"New UI": true, "alpha": false}}
+      },
+      "expect": {
+        "status": "ok",
+        "configPaths": {
+          "metadata.serviceId": "billing-api",
+          "runtime.region": "westeurope",
+          "observability.level": "warning",
+          "cache.ttlMs": 60000,
+          "data.port": 3306,
+          "resilience.maxDelayMs": 4000
+        },
+        "diagnosticIds": ["W-FEATURE-NORMALIZED", "W-NAME-NORMALIZED", "W-ORIGIN-DEDUP", "W-REGION-LEGACY"],
+        "requiredTracePaths": ["P-NAME-NORMALIZED", "P-REGION-LEGACY", "P-LOG-LEVEL-WARN", "P-FEATURES-NORMALIZED"]
+      }
+    },
+    {
+      "id": "G003",
+      "description": "Redis mapping",
+      "input": {
+        "version": 1,
+        "service": {"name": "worker", "environment": "dev", "region": "southeastasia"},
+        "logging": {"level": "error", "pretty": false},
+        "cache": {"enabled": true, "provider": "redis", "ttlSeconds": 300, "endpoint": "redis://cache:6379/2"},
+        "database": {"engine": "sqlite", "name": "local.db"},
+        "retries": {"mode": "fixed", "maxAttempts": 0, "delayMs": 100},
+        "security": {"allowedOrigins": ["*"]},
+        "features": {"flags": {}}
+      },
+      "expect": {
+        "status": "ok",
+        "configPaths": {
+          "cache.strategy": "redis",
+          "cache.ttlMs": 300000,
+          "cache.endpoint": "redis://cache:6379/2",
+          "data.driver": "sqlite"
+        },
+        "diagnosticIds": [],
+        "requiredTracePaths": ["P-CACHE-REDIS", "P-DB-SQLITE", "P-FEATURES-EMPTY"]
+      }
+    },
+    {
+      "id": "G004",
+      "description": "Multiple production invariant failures",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "prod", "region": "eastus"},
+        "logging": {"level": "debug", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db", "name": "app", "ssl": false},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["*"]},
+        "features": {"flags": {"alpha": true}}
+      },
+      "expect": {
+        "status": "invalid",
+        "configPaths": {},
+        "diagnosticIds": ["D-PROD-CORS", "D-PROD-DB-TLS", "D-PROD-DEBUG"],
+        "requiredTracePaths": ["P-I-PROD-CORS-FAIL", "P-I-PROD-DB-TLS-FAIL", "P-I-PROD-DEBUG-FAIL"]
+      }
+    },
+    {
+      "id": "G005",
+      "description": "Domain boundaries rejected together",
+      "input": {
+        "version": 2,
+        "service": {"name": "!!!", "environment": "dev", "region": "unknown", "port": 0},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": true, "provider": "memory", "ttlSeconds": 0},
+        "database": {"engine": "postgres", "host": "db", "name": "app", "ssl": false},
+        "retries": {"mode": "fixed", "maxAttempts": 11, "delayMs": 99},
+        "security": {"allowedOrigins": ["https://example.test/path"]},
+        "features": {"flags": {"alpha": true}}
+      },
+      "expect": {
+        "status": "invalid",
+        "configPaths": {},
+        "diagnosticIds": ["D-CACHE-TTL", "D-ORIGIN-SYNTAX", "D-REGION", "D-RETRY-BOUNDS", "D-SERVICE-NAME", "D-SERVICE-PORT", "D-VERSION", "W-NAME-NORMALIZED", "W-ORIGIN-DEDUP"],
+        "requiredTracePaths": ["P-I-VERSION-FAIL", "P-I-SERVICE-NAME-FAIL", "P-I-ORIGIN-SYNTAX-FAIL"]
+      }
+    }
+  ]
+}
