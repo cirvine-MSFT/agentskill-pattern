@@ -172,8 +172,7 @@ export function analyzeBaselineComparisons(observations, {
   for (const [index, comparison] of comparisons.entries()) {
     const noninferiority = comparison.noninferiority;
     noninferiority.holmAdjustedPValue = noninferiorityAdjusted[index];
-    noninferiority.noninferior = noninferiority.holmAdjustedPValue <= alpha
-      && noninferiority.lowerConfidenceBound > comparison.margin;
+    noninferiority.noninferior = noninferiority.holmAdjustedPValue <= alpha;
     comparison.equality.holmAdjustedPValue = equalityAdjusted[index];
     comparison.equality.rejectEquality = comparison.equality.holmAdjustedPValue <= alpha;
   }

@@ -651,6 +651,33 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
     comparison.equality.holmAdjustedPValue >= comparison.equality.rawPValue));
   assert(result.comparisons.every((comparison) => comparison.equality.confidenceInterval.length === 2));
 
+  const highVarianceNoninferior = [];
+  const differences = [0.11, 0.11, 0.11, 0.11, 0.11, 0.11, -0.049, -0.049, -0.049, -0.049, -0.049, -0.049];
+  for (let block = 1; block <= 12; block += 1) {
+    const blockId = `V${String(block).padStart(2, "0")}`;
+    highVarianceNoninferior.push({
+      blockId,
+      armId: 0,
+      promotionRate: 0.5,
+      semanticPathCoverage: 0.5,
+      mutantKillRate: 0.5
+    });
+    for (const armId of [1, 2, 3, 4]) {
+      highVarianceNoninferior.push({
+        blockId,
+        armId,
+        promotionRate: 0.5 + differences[block - 1],
+        semanticPathCoverage: 0.5 + differences[block - 1],
+        mutantKillRate: 0.5 + differences[block - 1]
+      });
+    }
+  }
+  const highVariance = analyzeBaselineComparisons(highVarianceNoninferior);
+  assert(highVariance.comparisons.every((comparison) =>
+    comparison.noninferiority.noninferior
+      === (comparison.noninferiority.holmAdjustedPValue <= highVariance.alpha)),
+  "only the Holm-adjusted one-sided p-value may gate noninferiority");
+
   const belowMargin = observations.map((observation) => observation.armId === 4
     ? {
         ...observation,
