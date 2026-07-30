@@ -1,0 +1,36 @@
+{
+  "preregistrationVersion": "1.2.0",
+  "fixedModels": {
+    "frontier": "gpt-5.6-sol",
+    "cheap": "claude-haiku-4.5"
+  },
+  "commonContract": {
+    "caseCount": 60,
+    "output": "staging/<run-id>.json",
+    "schema": "schemas/staging.schema.json",
+    "wallClockMinutes": 30,
+    "maximumToolCalls": 120,
+    "maximumTotalModelTokens": 100000,
+    "freshSessionEvidence": "signed-platform-session.created",
+    "acceptanceBoundary": "external-evaluator-not-mounted",
+    "expectedOutputPolicy": "oracle-after-promotion-only",
+    "taskArtifact": "task/shared-task-prompt.txt",
+    "toolSurface": ["file.read", "file.write", "staging.validate"]
+  },
+  "delegationContract": {
+    "artifact": "task/delegated-worker-skill.md",
+    "invocation": "semantic-scenario-stager",
+    "workspaceOwnership": "worker-direct-staging",
+    "returnFields": ["stagingPath", "payloadSha256", "submittedCases", "promotableCases", "errorCount"],
+    "parentCorpusReadAllowed": false,
+    "parentToolSurface": ["staging.validate", "staging.promote"],
+    "toolSurface": ["file.read", "file.write", "staging.validate"]
+  },
+  "arms": [
+    {"id": 0, "name": "strong deterministic baseline", "modelTier": "none", "delegated": false, "model": null},
+    {"id": 1, "name": "frontier inline", "modelTier": "frontier", "delegated": false, "model": "gpt-5.6-sol"},
+    {"id": 2, "name": "frontier same-model delegated", "modelTier": "frontier", "delegated": true, "model": "gpt-5.6-sol", "workerModel": "gpt-5.6-sol", "delegationContract": "delegationContract"},
+    {"id": 3, "name": "cheap inline", "modelTier": "cheap", "delegated": false, "model": "claude-haiku-4.5"},
+    {"id": 4, "name": "cheap delegated via Skill/agent", "modelTier": "cheap", "delegated": true, "model": "claude-haiku-4.5", "workerModel": "claude-haiku-4.5", "delegationContract": "delegationContract"}
+  ]
+}

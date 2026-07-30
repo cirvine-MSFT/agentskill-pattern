@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "v1-config.schema.json",
+  "type": "object",
+  "required": ["version", "service", "logging", "cache", "database", "retries", "security", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"type": "integer"},
+    "service": {
+      "type": "object",
+      "required": ["name", "environment", "region"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "environment": {"type": "string", "enum": ["dev", "test", "prod"]},
+        "region": {"type": "string"},
+        "port": {"type": "integer"},
+        "timeoutSeconds": {"type": "integer"}
+      }
+    },
+    "logging": {
+      "type": "object",
+      "required": ["level"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {"type": "string", "enum": ["debug", "info", "warn", "error"]},
+        "pretty": {"type": "boolean"}
+      }
+    },
+    "cache": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "provider": {"type": "string", "enum": ["memory", "redis"]},
+        "ttlSeconds": {"type": "integer"},
+        "endpoint": {"type": "string"}
+      }
+    },
+    "database": {
+      "type": "object",
+      "required": ["engine", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": {"type": "string", "enum": ["postgres", "mysql", "sqlite"]},
+        "host": {"type": "string"},
+        "port": {"type": "integer"},
+        "name": {"type": "string"},
+        "ssl": {"type": "boolean"}
+      }
+    },
+    "retries": {
+      "type": "object",
+      "required": ["mode", "maxAttempts", "delayMs"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixed", "exponential"]},
+        "maxAttempts": {"type": "integer"},
+        "delayMs": {"type": "integer"}
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": ["allowedOrigins"],
+      "additionalProperties": false,
+      "properties": {
+        "allowedOrigins": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "features": {
+      "type": "object",
+      "required": ["flags"],
+      "additionalProperties": false,
+      "properties": {
+        "flags": {"type": "object", "additionalProperties": {"type": "boolean"}}
+      }
+    }
+  }
+}

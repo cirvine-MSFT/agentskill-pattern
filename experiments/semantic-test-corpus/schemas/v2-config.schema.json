@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "v2-config.schema.json",
+  "type": "object",
+  "required": ["apiVersion", "metadata", "runtime", "observability", "cache", "data", "resilience", "http", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "config.example/v2"},
+    "metadata": {"type": "object"},
+    "runtime": {"type": "object"},
+    "observability": {"type": "object"},
+    "cache": {"type": "object"},
+    "data": {"type": "object"},
+    "resilience": {"type": "object"},
+    "http": {"type": "object"},
+    "features": {"type": "array"}
+  }
+}

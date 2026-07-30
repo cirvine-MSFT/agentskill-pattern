@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model-preflight.schema.json",
+  "type": "object",
+  "required": ["exportId", "capturedAt", "evidence", "plannedRuns", "availableRuns", "allRunsAvailable", "runs"],
+  "additionalProperties": false,
+  "properties": {
+    "exportId": {"type": "string"},
+    "capturedAt": {"type": "string"},
+    "evidence": {
+      "type": "object",
+      "required": ["algorithm", "payloadSha256", "signatureSha256", "publicKeySha256"],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {"const": "Ed25519"},
+        "payloadSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "signatureSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "publicKeySha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "plannedRuns": {"const": 48},
+    "availableRuns": {"type": "integer", "minimum": 0, "maximum": 48},
+    "allRunsAvailable": {"type": "boolean"},
+    "runs": {
+      "type": "array",
+      "minItems": 48,
+      "maxItems": 48,
+      "items": {
+        "type": "object",
+        "required": ["runId", "blockId", "armId", "requestedModel", "requestedWorkerModel", "status", "roles", "reasons"],
+        "additionalProperties": false,
+        "properties": {
+          "runId": {"type": "string"},
+          "blockId": {"type": "string"},
+          "armId": {"type": "integer", "minimum": 1, "maximum": 4},
+          "requestedModel": {"type": "string"},
+          "requestedWorkerModel": {},
+          "status": {"type": "string", "enum": ["available", "unavailable"]},
+          "roles": {
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "required": ["role", "sessionId", "sessionCreatedEventId", "modelBoundEventId", "observedModel"],
+              "additionalProperties": false,
+              "properties": {
+                "role": {"type": "string", "enum": ["parent", "worker"]},
+                "sessionId": {"type": "string"},
+                "sessionCreatedEventId": {"type": "string"},
+                "modelBoundEventId": {"type": "string"},
+                "observedModel": {}
+              }
+            }
+          },
+          "reasons": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

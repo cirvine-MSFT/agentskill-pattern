@@ -1,0 +1,30 @@
+{
+  "contractVersion": 3,
+  "provider": "github-copilot-platform",
+  "payloadSchema": "schemas/platform-export.schema.json",
+  "authentication": {
+    "algorithm": "Ed25519",
+    "payload": "Exact raw UTF-8 bytes exported by the platform",
+    "signature": "Detached 64-byte binary Ed25519 signature over the exact payload bytes",
+    "trustAnchor": "Coordinator-supplied platform public key; never embedded in the payload"
+  },
+  "requiredModelEvents": ["run.started", "session.created", "model.bound"],
+  "requiredIsolationEvents": ["sandbox.policy.applied", "tool.called", "fs.access", "audit.completed"],
+  "requiredDelegationEvents": ["delegation.invoked", "delegation.completed"],
+  "requiredOutcomeBoundaryEvents": ["run.completed", "outcomes.unblinded"],
+  "outcomeBoundaryEvent": "outcome.accessed",
+  "maxPreflightSessionAgeSeconds": 600,
+  "policy": {
+    "filesystemMode": "candidate-root-only",
+    "networkMode": "deny",
+    "evaluatorRootDenied": true
+  },
+  "notes": [
+    "Availability and compliance are derived only from signed events.",
+    "Payload strings claiming verification, freshness, or compliance are ignored.",
+    "The evidence SHA-256 and signing-key fingerprint are emitted by the verifier.",
+    "Every measured AI run and required parent/worker role has distinct signed session and binding events tied to runId, blockId, and armId.",
+    "Every file.read/file.write tool.called event has a unique callId and path with one matching fs.access event carrying the same callId, actor, path, and operation.",
+    "Any outcome.accessed event must use an authenticated run role and occur after both signed run.completed and outcomes.unblinded boundaries."
+  ]
+}

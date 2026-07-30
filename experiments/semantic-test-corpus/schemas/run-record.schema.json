@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-record.schema.json",
+  "type": "object",
+  "required": ["runId", "blockId", "armId", "availability", "phase", "modelEvidence", "timing", "usage", "tools", "compliance"],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"armId": {"const": 0}}},
+      "then": {"properties": {"modelEvidence": {"type": "null"}}},
+      "else": {"properties": {"modelEvidence": {"type": "object"}}}
+    }
+  ],
+  "properties": {
+    "runId": {"type": "string"},
+    "blockId": {"type": "string"},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+    "availability": {"type": "string", "enum": ["available", "unavailable"]},
+    "phase": {"type": "string", "enum": ["preflight", "session-started", "staged", "promoted", "excluded", "complete"]},
+    "sessionIds": {"type": "array", "items": {"type": "string"}},
+    "retryOf": {"type": "string"},
+    "exclusionReason": {"type": "string"},
+    "modelEvidence": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["exportId", "payloadSha256", "signatureSha256", "publicKeySha256", "roles"],
+          "additionalProperties": false,
+          "properties": {
+            "exportId": {"type": "string"},
+            "payloadSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "signatureSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "publicKeySha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "roles": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "required": ["role", "sessionId", "sessionCreatedEventId", "modelBoundEventId"],
+                "additionalProperties": false,
+                "properties": {
+                  "role": {"type": "string", "enum": ["parent", "worker"]},
+                  "sessionId": {"type": "string"},
+                  "sessionCreatedEventId": {"type": "string"},
+                  "modelBoundEventId": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "staging": {
+      "type": "object",
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"type": "string"},
+        "submittedCases": {"type": "integer"},
+        "promotedCases": {"type": "integer"}
+      }
+    },
+    "timing": {
+      "type": "object",
+      "required": ["startedAt", "endedAt", "latencyMs"],
+      "properties": {
+        "startedAt": {"type": "string"},
+        "endedAt": {"type": "string"},
+        "latencyMs": {"type": "integer", "minimum": 0, "maximum": 1800000},
+        "parentActiveMs": {"type": "integer", "minimum": 0},
+        "workerActiveMs": {"type": "integer", "minimum": 0},
+        "parentWaitMs": {"type": "integer", "minimum": 0}
+      }
+    },
+    "usage": {
+      "type": "object",
+      "required": ["parent", "worker", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": {
+          "type": "object",
+          "required": ["available", "nanoAiu", "credits", "inputTokens", "outputTokens", "totalTokens"],
+          "additionalProperties": false,
+          "properties": {
+            "available": {"type": "boolean"},
+            "nanoAiu": {},
+            "credits": {},
+            "inputTokens": {},
+            "outputTokens": {},
+            "totalTokens": {"type": ["integer", "null"], "minimum": 0, "maximum": 100000}
+          }
+        },
+        "worker": {
+          "type": "object",
+          "required": ["available", "nanoAiu", "credits", "inputTokens", "outputTokens", "totalTokens"],
+          "additionalProperties": false,
+          "properties": {
+            "available": {"type": "boolean"},
+            "nanoAiu": {},
+            "credits": {},
+            "inputTokens": {},
+            "outputTokens": {},
+            "totalTokens": {"type": ["integer", "null"], "minimum": 0, "maximum": 100000}
+          }
+        },
+        "total": {
+          "type": "object",
+          "required": ["available", "nanoAiu", "credits", "inputTokens", "outputTokens", "totalTokens"],
+          "additionalProperties": false,
+          "properties": {
+            "available": {"type": "boolean"},
+            "nanoAiu": {},
+            "credits": {},
+            "inputTokens": {},
+            "outputTokens": {},
+            "totalTokens": {"type": ["integer", "null"], "minimum": 0, "maximum": 100000}
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "required": ["surface", "calls"],
+      "properties": {
+        "surface": {"type": "array", "items": {"type": "string"}},
+        "calls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["actor", "name", "count"],
+            "properties": {
+              "actor": {"type": "string", "enum": ["parent", "worker", "deterministic"]},
+              "name": {"type": "string"},
+              "count": {"type": "integer", "minimum": 0, "maximum": 120}
+            }
+          }
+        }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "required": ["isolationAuditPath", "evidenceSha256", "status", "checks", "violations"],
+      "additionalProperties": false,
+      "properties": {
+        "isolationAuditPath": {"type": "string"},
+        "evidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
+        "checks": {"type": "object"},
+        "violations": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}
