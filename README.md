@@ -66,20 +66,24 @@ Editable [Excalidraw](https://aka.ms/excalidraw) sources live in
 See [`docs/diagrams/README.md`](docs/diagrams/README.md) for full alt text and
 descriptions of both diagrams.
 
-## Reference implementation
+## Reference implementations
 
-The live GitHub Copilot reference implementation consists of the
-[`ascii-art` routing Skill](.github/skills/ascii-art/SKILL.md) and
-[`ascii-art` custom agent](.github/agents/ascii-art.agent.md). The
-[implementation notes](docs/reference-implementations/ascii-art.md) describe how the
-minimal router delegates bounded asset work to Claude Haiku 4.5 with only `read` and
-`edit`, direct artifact writes, and terse status returns. The parent prepares the
-target's parent directory before delegation and retains all CLI/source integration and
-integration verification.
+| Reference | Live components | Status |
+| --- | --- | --- |
+| **ASCII art** | [`ascii-art` Skill](.github/skills/ascii-art/SKILL.md), [custom agent](.github/agents/ascii-art.agent.md), and [implementation notes](docs/reference-implementations/ascii-art.md) | Implemented; the [completed case study](experiments/ascii-art-powershell-cli) tests the pattern's small-task cost/quality hypothesis. |
+| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [custom agent](.github/agents/semantic-test-corpus.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [five-arm preregistered design](experiments/semantic-test-corpus/README.md) has a deterministic foundation, but no AI trials or AI benchmark results yet. |
 
-## Benchmark
+In the semantic reference, migration and expected-output oracle behavior remain
+deterministic. AI is limited to proposing semantic v1 source scenarios, with staged
+writes isolated behind a [path-constrained MCP server](tools/semantic-corpus-mcp/server.mjs)
+and its [tests](tests/semantic-corpus-mcp/). An enforceable OS sandbox is mandatory:
+use a container, restricted mounts, restricted VM, or dedicated ACL identity. The
+[executable protocol](experiments/semantic-test-corpus/protocol.md) compares one strong
+deterministic baseline with a 2x2 model-tier-by-delegation design.
 
-The completed benchmark is available at
+## Evidence and experiments
+
+The ASCII art case study is available at
 [`experiments/ascii-art-powershell-cli`](experiments/ascii-art-powershell-cli). Its
 immutable control is tag `experiment-control-v1` at
 `6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; its frozen treatment is tag
@@ -113,11 +117,11 @@ search methodology.
 ## Status
 
 This repository contains the pattern documentation, benchmark foundation, and live
-GitHub Copilot reference implementation. A clean CLI routing smoke has passed with
-parent-owned directory preparation and integration, asset-only delegation, and the
-Claude Haiku 4.5 `read`/`edit` boundary. The treatment and control are frozen and the
-experiment is complete. Its incomplete, dispatch-affected dataset supports
-descriptive results only; inferential conclusions were withheld.
+GitHub Copilot reference implementations. The ASCII art case study is complete; its
+incomplete, dispatch-affected dataset supports descriptive results only, so inferential
+conclusions were withheld. The semantic test-corpus implementation and deterministic
+benchmark foundation are complete, but no AI arm has run and no AI trial result is
+claimed.
 
 ## License
 
