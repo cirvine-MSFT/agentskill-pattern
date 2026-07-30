@@ -168,6 +168,10 @@ or 100,000 tokens marks the run noncompliant/excluded.
 Each final usage report is emitted no earlier than run completion and covers an
 interval beginning at/before `run.started` and ending at/after `run.completed`.
 Premature, partial, duplicate, or missing role reports fail closed.
+Report timestamp and interval bounds use strict RFC 3339 `date-time` values and
+must satisfy `intervalStart <= run.started < run.completed <= intervalEnd <=
+report timestamp`; non-finite, timezone-less, overflowed, invalid-calendar, or
+reversed values are rejected before totals are used.
 
 Staging files contain inputs only. They must not contain expected output,
 diagnostics, or traces. The evaluator measures JSON parse errors, missing slots,

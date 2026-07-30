@@ -835,7 +835,7 @@ test("signed run evidence enforces the common delegated mechanism", () => {
     ),
     { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
-  assert(prematureUsage.violations.some((violation) => violation.includes("usage report is premature")));
+  assert(prematureUsage.violations.some((violation) => violation.includes("usage report has invalid timestamps")));
 
   const partialUsagePayload = structuredClone(compliantPayload);
   partialUsagePayload.events.find((event) =>
@@ -846,6 +846,39 @@ test("signed run evidence enforces the common delegated mechanism", () => {
     { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
   assert(partialUsage.violations.some((violation) => violation.includes("does not cover")));
+
+  const reversedUsagePayload = structuredClone(compliantPayload);
+  const reversedUsage = reversedUsagePayload.events.find((event) =>
+    event.type === "usage.reported" && event.role === "worker");
+  reversedUsage.intervalStart = "2026-07-29T00:04:11Z";
+  reversedUsage.intervalEnd = "2026-07-29T00:04:10Z";
+  const reversedUsageSigned = signedExport(reversedUsagePayload);
+  const reversedUsageResult = evaluateIsolationEvidence(
+    authenticateExport(
+      reversedUsageSigned.bytes,
+      reversedUsageSigned.signature,
+      reversedUsageSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert(reversedUsageResult.violations.some((violation) =>
+    violation.includes("invalid timestamps")));
+
+  for (const invalidTimestamp of [
+    "2026-07-29T00:00:00",
+    "2026-02-30T00:00:00Z",
+    "not-a-date"
+  ]) {
+    const invalidUsagePayload = structuredClone(compliantPayload);
+    invalidUsagePayload.events.find((event) =>
+      event.type === "usage.reported" && event.role === "parent").intervalStart = invalidTimestamp;
+    const invalidUsageSigned = signedExport(invalidUsagePayload);
+    assert.throws(() => authenticateExport(
+      invalidUsageSigned.bytes,
+      invalidUsageSigned.signature,
+      invalidUsageSigned.publicKey
+    ), /schema validation/);
+  }
 
   const lateWorkerPayload = structuredClone(compliantPayload);
   for (const event of lateWorkerPayload.events.filter((item) =>

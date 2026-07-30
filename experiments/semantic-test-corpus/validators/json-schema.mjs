@@ -13,6 +13,26 @@ function childPath(path, key) {
   return typeof key === "number" ? `${path}[${key}]` : `${path}.${key}`;
 }
 
+function isStrictRfc3339(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, zone] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (day < 1 || day > daysInMonth) return false;
+  if (zone !== "Z") {
+    const [offsetHour, offsetMinute] = zone.slice(1).split(":").map(Number);
+    if (offsetHour > 23 || offsetMinute > 59) return false;
+  }
+  return Number.isFinite(Date.parse(value));
+}
+
 export function validateJsonSchema(value, schema, options = {}) {
   const errors = [];
   const schemaDir = options.schemaDir ?? process.cwd();
@@ -64,6 +84,9 @@ export function validateJsonSchema(value, schema, options = {}) {
       }
       if (currentSchema.pattern && !(new RegExp(currentSchema.pattern).test(current))) {
         errors.push({ path, keyword: "pattern", message: `must match ${currentSchema.pattern}` });
+      }
+      if (currentSchema.format === "date-time" && !isStrictRfc3339(current)) {
+        errors.push({ path, keyword: "format", message: "must be a strict RFC 3339 date-time" });
       }
     }
     if (typeof current === "number") {

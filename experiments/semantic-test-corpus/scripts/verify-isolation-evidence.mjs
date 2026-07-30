@@ -546,11 +546,17 @@ export function evaluateIsolationEvidence(authenticated, {
     const roleUsage = usageEvents.filter((event) =>
       event.sessionId === sessionId && event.role === role);
     if (roleUsage.length !== 1) violations.push(`${role} requires exactly one authenticated usage report`);
-    if (roleUsage.length === 1
-      && (Date.parse(roleUsage[0].timestamp) < completedAt
-        || Date.parse(roleUsage[0].intervalStart) > startedAt
-        || Date.parse(roleUsage[0].intervalEnd) < completedAt)) {
-      violations.push(`${role} usage report is premature or does not cover the complete run interval`);
+    if (roleUsage.length === 1) {
+      const reportAt = Date.parse(roleUsage[0].timestamp);
+      const intervalStart = Date.parse(roleUsage[0].intervalStart);
+      const intervalEnd = Date.parse(roleUsage[0].intervalEnd);
+      if (![reportAt, intervalStart, intervalEnd, startedAt, completedAt].every(Number.isFinite)
+        || intervalStart > startedAt
+        || startedAt >= completedAt
+        || completedAt > intervalEnd
+        || intervalEnd > reportAt) {
+        violations.push(`${role} usage report has invalid timestamps or does not cover the complete run interval`);
+      }
     }
   }
   const budgetMet = durationMs !== null
