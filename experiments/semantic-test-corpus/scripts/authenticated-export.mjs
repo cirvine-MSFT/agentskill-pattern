@@ -7,17 +7,21 @@ import { validateJsonSchema } from "../validators/json-schema.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaDir = resolve(root, "schemas");
 const exportSchema = JSON.parse(readFileSync(resolve(schemaDir, "platform-export.schema.json"), "utf8"));
-const RFC3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+const CANONICAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
 function parseTimestamp(value, label) {
-  if (!RFC3339.test(value) || !Number.isFinite(Date.parse(value))) {
-    throw new Error(`${label} must be an RFC 3339 UTC timestamp`);
+  const match = CANONICAL_TIME.exec(value);
+  const parsed = Date.parse(value);
+  const roundTrip = Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+  const canonical = match?.[1] ? roundTrip : roundTrip?.replace(".000Z", "Z");
+  if (!match || !Number.isFinite(parsed) || canonical !== value) {
+    throw new Error(`${label} must be canonical UTC RFC 3339 with no fraction or exactly three fractional digits`);
   }
-  return Date.parse(value);
+  return parsed;
 }
 
 export function authenticateExport(payloadBytes, signatureBytes, publicKeyPem) {
@@ -42,13 +46,27 @@ export function authenticateExport(payloadBytes, signatureBytes, publicKeyPem) {
 
   const exportedAt = parseTimestamp(payload.exportedAt, "exportedAt");
   const capturedAt = parseTimestamp(payload.capturedAt, "capturedAt");
+  const timestampStyles = new Set([
+    payload.exportedAt.includes(".") ? "milliseconds" : "seconds",
+    payload.capturedAt.includes(".") ? "milliseconds" : "seconds"
+  ]);
   if (capturedAt > exportedAt) throw new Error("capturedAt cannot be later than exportedAt");
   const eventIds = new Set();
   for (const event of payload.events) {
     if (eventIds.has(event.eventId)) throw new Error(`Duplicate signed eventId: ${event.eventId}`);
     eventIds.add(event.eventId);
     const timestamp = parseTimestamp(event.timestamp, `event ${event.eventId} timestamp`);
+    timestampStyles.add(event.timestamp.includes(".") ? "milliseconds" : "seconds");
+    for (const field of ["intervalStart", "intervalEnd"]) {
+      if (event[field] !== undefined) {
+        parseTimestamp(event[field], `event ${event.eventId} ${field}`);
+        timestampStyles.add(event[field].includes(".") ? "milliseconds" : "seconds");
+      }
+    }
     if (timestamp > exportedAt) throw new Error(`Event ${event.eventId} occurs after exportedAt`);
+  }
+  if (timestampStyles.size !== 1) {
+    throw new Error("Signed platform timestamps must consistently use seconds or exactly three fractional digits");
   }
 
   const keyDer = publicKey.export({ type: "spki", format: "der" });

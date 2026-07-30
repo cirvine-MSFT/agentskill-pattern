@@ -867,6 +867,10 @@ test("signed run evidence enforces the common delegated mechanism", () => {
   for (const invalidTimestamp of [
     "2026-07-29T00:00:00",
     "2026-02-30T00:00:00Z",
+    "2026-07-29T00:00:00+00:00",
+    "2026-07-29T00:00:00.0001Z",
+    "2026-07-29T00:00:00.0009Z",
+    "2026-07-29T00:00:60Z",
     "not-a-date"
   ]) {
     const invalidUsagePayload = structuredClone(compliantPayload);
@@ -879,6 +883,17 @@ test("signed run evidence enforces the common delegated mechanism", () => {
       invalidUsageSigned.publicKey
     ), /schema validation/);
   }
+
+  const mixedPrecisionPayload = structuredClone(compliantPayload);
+  mixedPrecisionPayload.events.find((event) =>
+    event.type === "usage.reported" && event.role === "parent").intervalStart
+    = "2026-07-29T00:00:50.000Z";
+  const mixedPrecisionSigned = signedExport(mixedPrecisionPayload);
+  assert.throws(() => authenticateExport(
+    mixedPrecisionSigned.bytes,
+    mixedPrecisionSigned.signature,
+    mixedPrecisionSigned.publicKey
+  ), /consistently use seconds or exactly three fractional digits/);
 
   const lateWorkerPayload = structuredClone(compliantPayload);
   for (const event of lateWorkerPayload.events.filter((item) =>

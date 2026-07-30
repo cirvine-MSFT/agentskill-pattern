@@ -33,6 +33,15 @@ function isStrictRfc3339(value) {
   return Number.isFinite(Date.parse(value));
 }
 
+function isCanonicalPlatformTime(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{3})?Z$/.exec(value);
+  if (!match) return false;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return false;
+  const canonical = new Date(parsed).toISOString();
+  return match[7] ? canonical === value : canonical.replace(".000Z", "Z") === value;
+}
+
 export function validateJsonSchema(value, schema, options = {}) {
   const errors = [];
   const schemaDir = options.schemaDir ?? process.cwd();
@@ -87,6 +96,13 @@ export function validateJsonSchema(value, schema, options = {}) {
       }
       if (currentSchema.format === "date-time" && !isStrictRfc3339(current)) {
         errors.push({ path, keyword: "format", message: "must be a strict RFC 3339 date-time" });
+      }
+      if (currentSchema.format === "canonical-platform-time" && !isCanonicalPlatformTime(current)) {
+        errors.push({
+          path,
+          keyword: "format",
+          message: "must be canonical UTC RFC 3339 with no fraction or exactly three fractional digits"
+        });
       }
     }
     if (typeof current === "number") {

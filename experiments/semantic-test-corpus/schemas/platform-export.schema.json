@@ -8,8 +8,8 @@
     "formatVersion": {"const": 1},
     "provider": {"const": "github-copilot-platform"},
     "exportId": {"type": "string", "minLength": 1},
-    "exportedAt": {"type": "string", "format": "date-time"},
-    "capturedAt": {"type": "string", "format": "date-time"},
+    "exportedAt": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
+    "capturedAt": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
     "events": {
       "type": "array",
       "items": {
@@ -75,7 +75,7 @@
             "type": "string",
             "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "usage.reported", "audit.started", "audit.completed"]
           },
-          "timestamp": {"type": "string", "format": "date-time"},
+          "timestamp": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
           "sessionId": {"type": "string", "minLength": 1},
           "runId": {"type": "string"},
           "blockId": {"type": "string"},
@@ -105,8 +105,8 @@
           "endpoint": {"type": "string", "minLength": 1},
           "target": {"type": "string", "minLength": 1},
           "totalTokens": {"type": "integer", "minimum": 0, "maximum": 100000},
-          "intervalStart": {"type": "string", "format": "date-time"},
-          "intervalEnd": {"type": "string", "format": "date-time"},
+          "intervalStart": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
+          "intervalEnd": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
           "filesystemComplete": {"type": "boolean"},
           "networkComplete": {"type": "boolean"}
         }

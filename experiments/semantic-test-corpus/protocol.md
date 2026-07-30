@@ -172,6 +172,11 @@ Report timestamp and interval bounds use strict RFC 3339 `date-time` values and
 must satisfy `intervalStart <= run.started < run.completed <= intervalEnd <=
 report timestamp`; non-finite, timezone-less, overflowed, invalid-calendar, or
 reversed values are rejected before totals are used.
+All signed platform timestamps use canonical UTC `YYYY-MM-DDTHH:mm:ss.sssZ` or,
+for a consistently second-precision export, `YYYY-MM-DDTHH:mm:ssZ`. Offsets,
+mixed precision, fractions beyond three digits, leap/invalid normalized dates,
+and values that fail canonical `Date` round-trip are rejected, making integer
+millisecond ordering lossless.
 
 Staging files contain inputs only. They must not contain expected output,
 diagnostics, or traces. The evaluator measures JSON parse errors, missing slots,
