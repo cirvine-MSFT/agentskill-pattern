@@ -165,6 +165,9 @@ events, and one signed usage report per required role. Duration is start through
 completion, calls are aggregated across parent and worker, and total tokens are
 the parent-plus-worker sum for delegated runs. Exceeding 30 minutes, 120 calls,
 or 100,000 tokens marks the run noncompliant/excluded.
+Each final usage report is emitted no earlier than run completion and covers an
+interval beginning at/before `run.started` and ending at/after `run.completed`.
+Premature, partial, duplicate, or missing role reports fail closed.
 
 Staging files contain inputs only. They must not contain expected output,
 diagnostics, or traces. The evaluator measures JSON parse errors, missing slots,
@@ -386,6 +389,10 @@ Analyze the 12 run-level observations per available arm.
 8. The analysis executable accepts no caller options. Alpha 0.05, all three
    margins, 10,000 bootstrap draws, and seed 20260729 are frozen protocol
    constants; supplied option or top-level override fields are errors.
+9. The production analysis CLI independently authenticates the platform export
+   and invokes the frozen model, schedule/order, isolation, and budget verifiers
+   for matching run IDs before constructing eligible observations. Caller-
+   supplied availability, compliance, budget, or evidence hashes are rejected.
 
 ## Missingness, retries, and exclusions
 

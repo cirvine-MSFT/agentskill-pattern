@@ -2,6 +2,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readAuthenticatedExport } from "../scripts/authenticated-export.mjs";
+import { evaluateModelBindings } from "../scripts/preflight-models.mjs";
+import { evaluateIsolationEvidence } from "../scripts/verify-isolation-evidence.mjs";
+import { validateJsonSchema } from "../validators/json-schema.mjs";
 
 const FROZEN_ALPHA = 0.05;
 const FROZEN_BOOTSTRAP_RESAMPLES = 10000;
@@ -13,6 +17,10 @@ const DEFAULT_ENDPOINTS = Object.freeze({
 });
 const evaluatorRoot = dirname(fileURLToPath(import.meta.url));
 const schedule = JSON.parse(readFileSync(resolve(evaluatorRoot, "..", "design", "schedule.json"), "utf8"));
+const schemaRoot = resolve(evaluatorRoot, "..", "schemas");
+const statisticsInputSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "statistics-input.schema.json"), "utf8")
+);
 const PLANNED_BLOCKS = [...new Set(schedule.runs.map((run) => run.blockId))].sort();
 const ARM_IDS = [0, 1, 2, 3, 4];
 const AI_ARM_IDS = [1, 2, 3, 4];
@@ -311,7 +319,8 @@ export function analyzeBaselineComparisons(observations, options = {}) {
     if (binding
       && binding.blockId === observation.blockId
       && binding.armId === observation.armId
-      && binding.status === "available") {
+      && binding.status === "available"
+      && observation.isolationVerified === true) {
       eligibleByBlockArm.set(key, observation);
     }
   }
@@ -333,13 +342,20 @@ export function analyzeBaselineComparisons(observations, options = {}) {
     .filter((run) => run.armId !== 0)
     .filter((run) => bindingRuns.get(run.runId)?.status !== "available")
     .map((run) => run.runId);
+  const unavailableIsolationRuns = observations
+    .filter((observation) => observation.armId !== 0 && observation.isolationVerified !== true)
+    .map((observation) => observation.runId)
+    .sort();
   const confirmatoryAvailable = unavailableAiRuns.length === 0
+    && unavailableIsolationRuns.length === 0
     && incompleteBlocks.length <= 2
     && completeBlocks.length > 0;
   const unavailableReason = confirmatoryAvailable
     ? null
     : unavailableAiRuns.length > 0
       ? `${unavailableAiRuns.length} measured AI run(s) lack frozen model availability`
+      : unavailableIsolationRuns.length > 0
+        ? `${unavailableIsolationRuns.length} measured AI run(s) lack authenticated compliant isolation/budget evidence`
       : completeBlocks.length === 0
       ? "no complete blocks are available for paired analysis"
       : `${incompleteBlocks.length} of ${PLANNED_BLOCKS.length} blocks are incomplete; protocol permits at most 2`;
@@ -361,7 +377,9 @@ export function analyzeBaselineComparisons(observations, options = {}) {
 
   let comparisons = null;
   let factorial = null;
-  if (completeBlocks.length > 0 && unavailableAiRuns.length === 0) {
+  if (completeBlocks.length > 0
+    && unavailableAiRuns.length === 0
+    && unavailableIsolationRuns.length === 0) {
     comparisons = [];
     for (const armId of AI_ARM_IDS) {
       for (const [endpoint, margin] of endpointEntries) {
@@ -453,6 +471,7 @@ export function analyzeBaselineComparisons(observations, options = {}) {
       completeBlocks,
       incompleteBlocks,
       unavailableAiRuns,
+      unavailableIsolationRuns,
       confirmatoryAvailable,
       unavailableReason,
       bindingEvidenceSha256: bindingAvailability.evidence.payloadSha256
@@ -495,27 +514,67 @@ export function analyzeBaselineComparisons(observations, options = {}) {
 export { DEFAULT_ENDPOINTS };
 
 export function analyzeStatisticsInput(input) {
+  throw new Error("authenticated platform export, signature, public key, run records, and isolation contexts are required");
+}
+
+export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("analysis input must be an object");
   }
   const unexpectedKeys = Object.keys(input).filter((key) =>
-    key !== "observations" && key !== "bindingAvailability");
+    key !== "observations" && key !== "runRecords");
   if (unexpectedKeys.length > 0) {
-    throw new Error(`analysis overrides are forbidden (${unexpectedKeys.join(", ")}); preregistered alpha, margins, bootstrap seed, and draws are frozen`);
+    throw new Error(`caller-supplied analysis/evidence fields are forbidden: ${unexpectedKeys.join(", ")}`);
   }
-  return analyzeBaselineComparisons(input.observations, {
-    bindingAvailability: input.bindingAvailability
+  const schemaErrors = validateJsonSchema(input, statisticsInputSchema, { schemaDir: schemaRoot });
+  if (schemaErrors.length > 0) {
+    throw new Error(`statistics input schema failed: ${schemaErrors[0].path} ${schemaErrors[0].message}`);
+  }
+  if (!Array.isArray(input.observations) || !Array.isArray(input.runRecords)) {
+    throw new Error("observations and runRecords arrays are required");
+  }
+  const bindingAvailability = evaluateModelBindings(authenticated, input.runRecords);
+  const verifiedObservations = input.observations.map((observation) => {
+    if ("isolationVerified" in observation || "isolationAudit" in observation) {
+      throw new Error(`caller-supplied isolation flags are forbidden for ${observation.runId}`);
+    }
+    if (observation.armId === 0) return { ...observation, isolationVerified: true };
+    const context = observation.evidenceContext;
+    if (!context?.candidateRoot || !context?.evaluatorRoot || !context?.stagingPath) {
+      throw new Error(`isolation evidence context is required for ${observation.runId}`);
+    }
+    const audit = evaluateIsolationEvidence(authenticated, {
+      armId: observation.armId,
+      runId: observation.runId,
+      candidateRoot: context.candidateRoot,
+      evaluatorRoot: context.evaluatorRoot,
+      stagingPath: context.stagingPath
+    });
+    return {
+      ...observation,
+      isolationVerified: audit.status === "compliant" && audit.budgets.met === true
+    };
   });
+  return analyzeBaselineComparisons(verifiedObservations, { bindingAvailability });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const inputIndex = process.argv.indexOf("--in");
   const outputIndex = process.argv.indexOf("--out");
-  if (inputIndex < 0 || outputIndex < 0 || !process.argv[inputIndex + 1] || !process.argv[outputIndex + 1]) {
-    throw new Error("Usage: node evaluator/statistics.mjs --in <blinded-run-metrics.json> --out <analysis.json>");
+  const payloadIndex = process.argv.indexOf("--payload");
+  const signatureIndex = process.argv.indexOf("--signature");
+  const publicKeyIndex = process.argv.indexOf("--public-key");
+  if ([inputIndex, outputIndex, payloadIndex, signatureIndex, publicKeyIndex].some((index) =>
+    index < 0 || !process.argv[index + 1])) {
+    throw new Error("Usage: node evaluator/statistics.mjs --in <metrics.json> --payload <platform-export.json> --signature <export.sig> --public-key <platform.pem> --out <analysis.json>");
   }
   const input = JSON.parse(readFileSync(resolve(process.argv[inputIndex + 1]), "utf8"));
-  const result = analyzeStatisticsInput(input);
+  const authenticated = readAuthenticatedExport({
+    payloadPath: process.argv[payloadIndex + 1],
+    signaturePath: process.argv[signatureIndex + 1],
+    publicKeyPath: process.argv[publicKeyIndex + 1]
+  });
+  const result = analyzeAuthenticatedStatisticsInput(input, authenticated);
   const target = resolve(process.argv[outputIndex + 1]);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, `${JSON.stringify(result, null, 2)}\n`);

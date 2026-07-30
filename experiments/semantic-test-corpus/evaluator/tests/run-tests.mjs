@@ -21,7 +21,11 @@ import { evaluateIsolationEvidence } from "../../scripts/verify-isolation-eviden
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
 import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
-import { analyzeBaselineComparisons, analyzeStatisticsInput } from "../statistics.mjs";
+import {
+  analyzeAuthenticatedStatisticsInput,
+  analyzeBaselineComparisons,
+  analyzeStatisticsInput
+} from "../statistics.mjs";
 import { validateJsonSchema } from "../../validators/json-schema.mjs";
 import { validateStaging } from "../../validators/staging.mjs";
 
@@ -157,6 +161,11 @@ function modelRunRecords(authenticated) {
 
 function bindingAvailabilityFor(observations, unavailableRunIds = []) {
   const unavailable = new Set(unavailableRunIds);
+  for (const observation of observations) {
+    if (observation.armId !== 0 && observation.isolationVerified === undefined) {
+      observation.isolationVerified = true;
+    }
+  }
   return {
     evidence: {
       algorithm: "Ed25519",
@@ -252,13 +261,15 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
       {
         eventId: `${sessionId}-usage`,
         type: "usage.reported",
-        timestamp: "2026-07-29T00:03:50Z",
+        timestamp: "2026-07-29T00:04:16Z",
         sessionId,
         runId,
         blockId,
         armId,
         role,
-        totalTokens: 100
+        totalTokens: 100,
+        intervalStart: "2026-07-29T00:00:50Z",
+        intervalEnd: "2026-07-29T00:04:10Z"
       }
     ];
   });
@@ -811,6 +822,30 @@ test("signed run evidence enforces the common delegated mechanism", () => {
   assert.equal(aggregateToken.status, "noncompliant");
   assert.equal(aggregateToken.budgets.totalTokens, 120000);
   assert(aggregateToken.violations.some((violation) => violation.includes("budget exceeded")));
+
+  const prematureUsagePayload = structuredClone(compliantPayload);
+  prematureUsagePayload.events.find((event) =>
+    event.type === "usage.reported" && event.role === "parent").timestamp = "2026-07-29T00:04:00Z";
+  const prematureUsageSigned = signedExport(prematureUsagePayload);
+  const prematureUsage = evaluateIsolationEvidence(
+    authenticateExport(
+      prematureUsageSigned.bytes,
+      prematureUsageSigned.signature,
+      prematureUsageSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert(prematureUsage.violations.some((violation) => violation.includes("usage report is premature")));
+
+  const partialUsagePayload = structuredClone(compliantPayload);
+  partialUsagePayload.events.find((event) =>
+    event.type === "usage.reported" && event.role === "worker").intervalEnd = "2026-07-29T00:04:00Z";
+  const partialUsageSigned = signedExport(partialUsagePayload);
+  const partialUsage = evaluateIsolationEvidence(
+    authenticateExport(partialUsageSigned.bytes, partialUsageSigned.signature, partialUsageSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert(partialUsage.violations.some((violation) => violation.includes("does not cover")));
 
   const lateWorkerPayload = structuredClone(compliantPayload);
   for (const event of lateWorkerPayload.events.filter((item) =>
@@ -1616,23 +1651,35 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
     observations,
     bindingAvailability: bindings,
     options: { alpha: 1, margin: 0, bootstrapSeed: 1 }
-  }), /overrides are forbidden/);
+  }), /authenticated platform export/);
   assert.throws(() => analyzeStatisticsInput({
     observations,
     bindingAvailability: bindings,
     alpha: 1
-  }), /overrides are forbidden/);
+  }), /authenticated platform export/);
   assert.throws(() => analyzeStatisticsInput({
     observations,
     bindingAvailability: bindings,
     margins: { promotionRate: 0 }
-  }), /overrides are forbidden/);
+  }), /authenticated platform export/);
   assert.throws(() => analyzeStatisticsInput({
     observations,
     bindingAvailability: bindings,
     bootstrapSeed: 1,
     bootstrapResamples: 1
-  }), /overrides are forbidden/);
+  }), /authenticated platform export/);
+
+  const signedEvidence = signedExport(modelEvidencePayload());
+  const authenticatedEvidence = authenticateExport(
+    signedEvidence.bytes,
+    signedEvidence.signature,
+    signedEvidence.publicKey
+  );
+  assert.throws(() => analyzeAuthenticatedStatisticsInput({
+    observations,
+    runRecords: modelRunRecords(authenticatedEvidence),
+    bindingAvailability: bindings
+  }, authenticatedEvidence), /caller-supplied analysis\/evidence fields are forbidden/);
 });
 
 test("factorial summaries and missingness sensitivity match known synthetic values", () => {
@@ -1692,6 +1739,16 @@ test("factorial summaries and missingness sensitivity match known synthetic valu
   assert.match(unavailableRun.analysisEligibility.unavailableReason, /lack frozen model availability/);
   assert.equal(unavailableRun.comparisons, null);
   assert.equal(unavailableRun.factorial, null);
+
+  const isolationUnavailableObservations = structuredClone(observations);
+  isolationUnavailableObservations.find((observation) => observation.runId === "B12-A4").isolationVerified = false;
+  const isolationUnavailable = analyzeBaselineComparisons(isolationUnavailableObservations, {
+    bindingAvailability: bindingAvailabilityFor(isolationUnavailableObservations)
+  });
+  assert.deepEqual(isolationUnavailable.analysisEligibility.unavailableIsolationRuns, ["B12-A4"]);
+  assert.equal(isolationUnavailable.analysisEligibility.confirmatoryAvailable, false);
+  assert.equal(isolationUnavailable.comparisons, null);
+  assert.equal(isolationUnavailable.factorial, null);
 
   const baselineOnly = observations.filter((observation) => observation.armId === 0);
   const zeroComplete = analyzeBaselineComparisons(baselineOnly, {

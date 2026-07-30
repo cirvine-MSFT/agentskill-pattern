@@ -119,6 +119,10 @@ export function evaluateStartOrder(payload, blockId) {
     event.type === "run.started" && event.blockId === blockId);
   const plannedStarts = schedule.runs.filter((run) => run.blockId === blockId);
   if (starts.length !== 5) violations.push(`block ${blockId} requires exactly five signed run starts`);
+  if (new Set(starts.map((event) => event.sessionId)).size !== starts.length
+    || new Set(starts.map((event) => event.processId)).size !== starts.length) {
+    violations.push(`block ${blockId} run starts require unique session/process boundaries`);
+  }
   for (const planned of plannedStarts) {
     const matches = starts.filter((event) => event.runId === planned.runId);
     if (matches.length !== 1) {
@@ -542,6 +546,12 @@ export function evaluateIsolationEvidence(authenticated, {
     const roleUsage = usageEvents.filter((event) =>
       event.sessionId === sessionId && event.role === role);
     if (roleUsage.length !== 1) violations.push(`${role} requires exactly one authenticated usage report`);
+    if (roleUsage.length === 1
+      && (Date.parse(roleUsage[0].timestamp) < completedAt
+        || Date.parse(roleUsage[0].intervalStart) > startedAt
+        || Date.parse(roleUsage[0].intervalEnd) < completedAt)) {
+      violations.push(`${role} usage report is premature or does not cover the complete run interval`);
+    }
   }
   const budgetMet = durationMs !== null
     && durationMs >= 0

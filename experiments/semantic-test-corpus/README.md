@@ -86,11 +86,15 @@ node .\scripts\preflight-models.mjs `
 Exit code 2 means at least one measured run/role is unavailable. Do not substitute
 a model or run a silent partial factorial.
 
-After blinded run metrics are frozen, execute the registered primary analyses:
+Only after every run's signed isolation/budget audit is verified, execute the
+registered primary analyses. The CLI authenticates the raw export itself:
 
 ```powershell
 node .\evaluator\statistics.mjs `
   --in .\raw\blinded-run-metrics.json `
+  --payload .\raw\platform-export.json `
+  --signature .\raw\platform-export.sig `
+  --public-key C:\trusted\copilot-platform-ed25519.pem `
   --out .\raw\baseline-analysis.json
 ```
 
@@ -105,7 +109,11 @@ and conditional simple-effect contrasts with the registered bootstrap, plus
 0/1 and worst/best missing-outcome sensitivity bounds. With zero complete
 blocks, paired comparisons and factorial results are null while deterministic
 arm availability and descriptive summaries remain.
-The CLI rejects `input.options` and all top-level analysis overrides; alpha
+Input follows `schemas/statistics-input.schema.json`: run records bind model
+events, and each AI observation supplies only candidate/evaluator/staging paths.
+The CLI derives model availability, isolation compliance, and budgets from the
+authenticated export; caller flags/hashes are forbidden. It also rejects
+`input.options` and all top-level analysis overrides; alpha
 0.05, the three registered margins, 10,000 draws, and seed 20260729 are frozen.
 
 After the run, derive isolation compliance from that signed export:
