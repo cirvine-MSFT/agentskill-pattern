@@ -137,4 +137,7 @@ were withheld. See the
 [repository README](../../README.md#benchmark) and
 [observability and measurement](../agent-skill-pattern.md#observability-and-measurement)
 for how measured results will be distinguished from inferred claims when the benchmark
-is interpreted.
+is interpreted. For a task-size-focused reading of this same report — a hypothesis, not
+an isolated finding, that fixed per-delegation overhead may have dominated a banner this
+small, alongside the confound that delegation and model tier changed together — see the
+[`ascii-art` overhead-dominated small-task case study](../case-studies/ascii-art-task-too-small.md).
