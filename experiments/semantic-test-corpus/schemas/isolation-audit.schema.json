@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "isolation-audit.schema.json",
+  "type": "object",
+  "required": ["exportId", "evidence", "candidateRoot", "sessionIds", "status", "checks", "violations"],
+  "additionalProperties": false,
+  "properties": {
+    "exportId": {"type": "string"},
+    "evidence": {"type": "object"},
+    "candidateRoot": {"type": "string"},
+    "sessionIds": {"type": "array", "items": {"type": "string"}},
+    "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
+    "checks": {"type": "object"},
+    "violations": {"type": "array", "items": {"type": "string"}}
+  }
+}

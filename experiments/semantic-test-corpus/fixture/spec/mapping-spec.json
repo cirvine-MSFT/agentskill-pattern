@@ -149,7 +149,7 @@
     },
     {
       "id": "I-REDIS-ENDPOINT",
-      "when": {"op": "eq", "left": {"path": "cache.provider"}, "right": {"value": "redis"}},
+      "when": {"op": "custom", "name": "enabledRedisCache"},
       "assert": {"op": "custom", "name": "validRedisEndpoint"},
       "diagnostic": {"id": "D-REDIS-ENDPOINT", "category": "cross-field", "path": "cache.endpoint", "message": "redis cache requires a redis:// or rediss:// endpoint."},
       "paths": ["P-I-REDIS-ENDPOINT-PASS", "P-I-REDIS-ENDPOINT-FAIL"]

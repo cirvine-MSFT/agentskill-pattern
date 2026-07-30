@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "platform-export.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "provider", "exportId", "exportedAt", "capturedAt", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "provider": {"const": "github-copilot-platform"},
+    "exportId": {"type": "string", "minLength": 1},
+    "exportedAt": {"type": "string", "minLength": 1},
+    "capturedAt": {"type": "string", "minLength": 1},
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["eventId", "type", "timestamp", "sessionId"],
+        "additionalProperties": false,
+        "properties": {
+          "eventId": {"type": "string", "minLength": 1},
+          "type": {
+            "type": "string",
+            "enum": ["session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "delegation.invoked", "delegation.completed", "audit.completed"]
+          },
+          "timestamp": {"type": "string", "minLength": 1},
+          "sessionId": {"type": "string", "minLength": 1},
+          "armId": {"type": "integer", "minimum": 1, "maximum": 4},
+          "role": {"type": "string", "enum": ["parent", "worker"]},
+          "parentSessionId": {"type": "string"},
+          "workerSessionId": {"type": "string"},
+          "modelId": {"type": "string"},
+          "atomic": {"type": "boolean"},
+          "skillName": {"type": "string"},
+          "skillSha256": {"type": "string"},
+          "returnFields": {"type": "array", "items": {"type": "string"}},
+          "toolName": {"type": "string"},
+          "candidateRoot": {"type": "string"},
+          "deniedRoots": {"type": "array", "items": {"type": "string"}},
+          "filesystemMode": {"type": "string"},
+          "networkMode": {"type": "string"},
+          "path": {"type": "string"},
+          "operation": {"type": "string"},
+          "decision": {"type": "string", "enum": ["allow", "deny"]},
+          "endpoint": {"type": "string"},
+          "filesystemComplete": {"type": "boolean"},
+          "networkComplete": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

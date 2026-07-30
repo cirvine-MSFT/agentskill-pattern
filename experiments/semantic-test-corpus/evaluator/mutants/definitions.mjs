@@ -105,6 +105,46 @@ export const mutants = [
   invariantMutant("M33", "I-ORIGIN-SYNTAX", "Accept an origin containing a path", "D-ORIGIN-SYNTAX")
 ];
 
+export const mutantCatalog = {
+  version: "2026-07-29.1",
+  frozenCount: 33,
+  faults: {
+    M01: "config.metadata.serviceId",
+    M02: "config.runtime.region",
+    M03: "diagnostics.W-REGION-LEGACY",
+    M04: "config.runtime.listen.port",
+    M05: "config.runtime.timeoutMs",
+    M06: "config.observability.level",
+    M07: "config.observability.format",
+    M08: "config.cache.ttlMs",
+    M09: "config.cache.ttlMs",
+    M10: "config.cache.endpoint",
+    M11: "config.data.port",
+    M12: "config.data.port",
+    M13: "config.data.host",
+    M14: "config.resilience.attempts",
+    M15: "config.resilience.maxDelayMs",
+    M16: "config.http.cors.origins",
+    M17: "config.features",
+    M18: "config.features",
+    M19: "diagnostics.D-VERSION",
+    M20: "diagnostics.D-SERVICE-NAME",
+    M21: "diagnostics.D-SERVICE-PORT",
+    M22: "diagnostics.D-REGION",
+    M23: "diagnostics.D-PROD-DEBUG",
+    M24: "diagnostics.D-CACHE-TTL",
+    M25: "diagnostics.D-REDIS-ENDPOINT",
+    M26: "diagnostics.D-SQLITE-PROD",
+    M27: "diagnostics.D-PROD-DB-TLS",
+    M28: "diagnostics.D-PORT-CONFLICT",
+    M29: "diagnostics.D-RETRY-BOUNDS",
+    M30: "diagnostics.D-EXPONENTIAL-ATTEMPTS",
+    M31: "diagnostics.D-PROD-CORS",
+    M32: "diagnostics.D-FEATURE-COLLISION",
+    M33: "diagnostics.D-ORIGIN-SYNTAX"
+  }
+};
+
 export function executeMutant(mutant, input, expected) {
   const outcome = structuredClone(expected);
   if (mutant.applies(input, expected)) mutant.mutate(outcome, input);

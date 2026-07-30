@@ -1,11 +1,16 @@
 {
   "formatVersion": 1,
+  "catalogVersion": "2026-07-29.1",
+  "catalogValidation": {
+    "frozenCount": 33,
+    "validated": 33
+  },
   "corpusInputSha256": "be31f42fa06d1b17c6656c1b93013127a48bb17fd88a5c1c25c3df9f0c8a0cc7",
   "totals": {
     "cases": 60,
-    "mutants": 33,
-    "applicable": 33,
-    "notApplicable": 0,
+    "total": 33,
+    "triggered": 33,
+    "untriggered": 0,
     "killed": 33,
     "survived": 0,
     "mutationScore": 1
@@ -16,7 +21,8 @@
       "kind": "mapping",
       "ruleId": "R-NAME-SLUG",
       "description": "Preserve an unnormalized service name",
-      "applicableCases": [
+      "fault": "config.metadata.serviceId",
+      "triggerCases": [
         "B050",
         "B051",
         "B052"
@@ -33,7 +39,8 @@
       "kind": "mapping",
       "ruleId": "R-REGION",
       "description": "Map legacy US to west Europe",
-      "applicableCases": [
+      "fault": "config.runtime.region",
+      "triggerCases": [
         "B002",
         "B005",
         "B006",
@@ -52,7 +59,8 @@
       "kind": "mapping",
       "ruleId": "R-REGION",
       "description": "Omit the legacy-region diagnostic",
-      "applicableCases": [
+      "fault": "diagnostics.W-REGION-LEGACY",
+      "triggerCases": [
         "B002",
         "B005",
         "B006",
@@ -71,7 +79,8 @@
       "kind": "mapping",
       "ruleId": "R-SERVICE-PORT",
       "description": "Use the development port for every default",
-      "applicableCases": [
+      "fault": "config.runtime.listen.port",
+      "triggerCases": [
         "B004",
         "B005",
         "B006",
@@ -98,7 +107,8 @@
       "kind": "mapping",
       "ruleId": "R-TIMEOUT",
       "description": "Treat timeout seconds as milliseconds",
-      "applicableCases": [
+      "fault": "config.runtime.timeoutMs",
+      "triggerCases": [
         "B015",
         "B050",
         "B051",
@@ -117,7 +127,8 @@
       "kind": "mapping",
       "ruleId": "R-LOG-LEVEL",
       "description": "Leave warn unrenamed",
-      "applicableCases": [
+      "fault": "config.observability.level",
+      "triggerCases": [
         "B016"
       ],
       "killingCases": [
@@ -130,7 +141,8 @@
       "kind": "mapping",
       "ruleId": "R-LOG-FORMAT",
       "description": "Allow pretty logs in production",
-      "applicableCases": [
+      "fault": "config.observability.format",
+      "triggerCases": [
         "B017"
       ],
       "killingCases": [
@@ -143,7 +155,8 @@
       "kind": "mapping",
       "ruleId": "R-CACHE",
       "description": "Preserve stale TTL for disabled cache",
-      "applicableCases": [
+      "fault": "config.cache.ttlMs",
+      "triggerCases": [
         "B018",
         "B053",
         "B054",
@@ -162,7 +175,8 @@
       "kind": "mapping",
       "ruleId": "R-CACHE",
       "description": "Leave memory-cache TTL in seconds",
-      "applicableCases": [
+      "fault": "config.cache.ttlMs",
+      "triggerCases": [
         "B001",
         "B006",
         "B007",
@@ -197,7 +211,8 @@
       "kind": "mapping",
       "ruleId": "R-CACHE",
       "description": "Drop the Redis endpoint",
-      "applicableCases": [
+      "fault": "config.cache.endpoint",
+      "triggerCases": [
         "B005",
         "B009",
         "B013"
@@ -214,7 +229,8 @@
       "kind": "mapping",
       "ruleId": "R-DATABASE",
       "description": "Use MySQL's default port for PostgreSQL",
-      "applicableCases": [
+      "fault": "config.data.port",
+      "triggerCases": [
         "B002",
         "B006",
         "B007",
@@ -279,7 +295,8 @@
       "kind": "mapping",
       "ruleId": "R-DATABASE",
       "description": "Use PostgreSQL's default port for MySQL",
-      "applicableCases": [
+      "fault": "config.data.port",
+      "triggerCases": [
         "B001",
         "B005",
         "B008",
@@ -308,7 +325,8 @@
       "kind": "mapping",
       "ruleId": "R-DATABASE",
       "description": "Emit a host for SQLite",
-      "applicableCases": [
+      "fault": "config.data.host",
+      "triggerCases": [
         "B004",
         "B010",
         "B055"
@@ -325,7 +343,8 @@
       "kind": "mapping",
       "ruleId": "R-RETRIES",
       "description": "Add one retry attempt",
-      "applicableCases": [
+      "fault": "config.resilience.attempts",
+      "triggerCases": [
         "B001",
         "B002",
         "B004",
@@ -416,7 +435,8 @@
       "kind": "mapping",
       "ruleId": "R-RETRIES",
       "description": "Do not cap exponential delay",
-      "applicableCases": [
+      "fault": "config.resilience.maxDelayMs",
+      "triggerCases": [
         "B023"
       ],
       "killingCases": [
@@ -429,7 +449,8 @@
       "kind": "mapping",
       "ruleId": "R-CORS",
       "description": "Keep duplicate and unsorted origins",
-      "applicableCases": [
+      "fault": "config.http.cors.origins",
+      "triggerCases": [
         "B027",
         "B050",
         "B051",
@@ -448,7 +469,8 @@
       "kind": "mapping",
       "ruleId": "R-FEATURES",
       "description": "Preserve feature insertion order",
-      "applicableCases": [
+      "fault": "config.features",
+      "triggerCases": [
         "B029",
         "B050",
         "B051",
@@ -467,7 +489,8 @@
       "kind": "mapping",
       "ruleId": "R-FEATURES",
       "description": "Preserve feature spelling",
-      "applicableCases": [
+      "fault": "config.features",
+      "triggerCases": [
         "B029",
         "B050",
         "B051",
@@ -486,7 +509,8 @@
       "kind": "invariant",
       "ruleId": "I-VERSION",
       "description": "Accept an unsupported source version",
-      "applicableCases": [
+      "fault": "diagnostics.D-VERSION",
+      "triggerCases": [
         "B031"
       ],
       "killingCases": [
@@ -499,7 +523,8 @@
       "kind": "invariant",
       "ruleId": "I-SERVICE-NAME",
       "description": "Accept a service name with no alphanumeric characters",
-      "applicableCases": [
+      "fault": "diagnostics.D-SERVICE-NAME",
+      "triggerCases": [
         "B049"
       ],
       "killingCases": [
@@ -512,7 +537,8 @@
       "kind": "invariant",
       "ruleId": "I-SERVICE-PORT",
       "description": "Accept an out-of-range service port",
-      "applicableCases": [
+      "fault": "diagnostics.D-SERVICE-PORT",
+      "triggerCases": [
         "B035",
         "B036"
       ],
@@ -527,7 +553,8 @@
       "kind": "invariant",
       "ruleId": "I-REGION",
       "description": "Accept an unknown region",
-      "applicableCases": [
+      "fault": "diagnostics.D-REGION",
+      "triggerCases": [
         "B014"
       ],
       "killingCases": [
@@ -540,7 +567,8 @@
       "kind": "invariant",
       "ruleId": "I-PROD-DEBUG",
       "description": "Allow debug logging in production",
-      "applicableCases": [
+      "fault": "diagnostics.D-PROD-DEBUG",
+      "triggerCases": [
         "B025"
       ],
       "killingCases": [
@@ -553,7 +581,8 @@
       "kind": "invariant",
       "ruleId": "I-CACHE-TTL",
       "description": "Accept an out-of-range cache TTL",
-      "applicableCases": [
+      "fault": "diagnostics.D-CACHE-TTL",
+      "triggerCases": [
         "B039",
         "B040"
       ],
@@ -568,7 +597,8 @@
       "kind": "invariant",
       "ruleId": "I-REDIS-ENDPOINT",
       "description": "Accept a non-Redis endpoint",
-      "applicableCases": [
+      "fault": "diagnostics.D-REDIS-ENDPOINT",
+      "triggerCases": [
         "B019"
       ],
       "killingCases": [
@@ -581,7 +611,8 @@
       "kind": "invariant",
       "ruleId": "I-SQLITE-PROD",
       "description": "Allow SQLite in production",
-      "applicableCases": [
+      "fault": "diagnostics.D-SQLITE-PROD",
+      "triggerCases": [
         "B003",
         "B020"
       ],
@@ -596,7 +627,8 @@
       "kind": "invariant",
       "ruleId": "I-PROD-DB-TLS",
       "description": "Allow a production remote database without TLS",
-      "applicableCases": [
+      "fault": "diagnostics.D-PROD-DB-TLS",
+      "triggerCases": [
         "B021"
       ],
       "killingCases": [
@@ -609,7 +641,8 @@
       "kind": "invariant",
       "ruleId": "I-DB-PORT-CONFLICT",
       "description": "Allow service/database port conflicts",
-      "applicableCases": [
+      "fault": "diagnostics.D-PORT-CONFLICT",
+      "triggerCases": [
         "B022"
       ],
       "killingCases": [
@@ -622,7 +655,8 @@
       "kind": "invariant",
       "ruleId": "I-RETRY-BOUNDS",
       "description": "Accept retry values outside their domain",
-      "applicableCases": [
+      "fault": "diagnostics.D-RETRY-BOUNDS",
+      "triggerCases": [
         "B043",
         "B044",
         "B047",
@@ -641,7 +675,8 @@
       "kind": "invariant",
       "ruleId": "I-EXPONENTIAL-ATTEMPTS",
       "description": "Allow a one-attempt exponential policy",
-      "applicableCases": [
+      "fault": "diagnostics.D-EXPONENTIAL-ATTEMPTS",
+      "triggerCases": [
         "B024"
       ],
       "killingCases": [
@@ -654,7 +689,8 @@
       "kind": "invariant",
       "ruleId": "I-PROD-CORS",
       "description": "Allow wildcard CORS in production",
-      "applicableCases": [
+      "fault": "diagnostics.D-PROD-CORS",
+      "triggerCases": [
         "B026"
       ],
       "killingCases": [
@@ -667,7 +703,8 @@
       "kind": "invariant",
       "ruleId": "I-FEATURE-COLLISION",
       "description": "Allow colliding normalized feature names",
-      "applicableCases": [
+      "fault": "diagnostics.D-FEATURE-COLLISION",
+      "triggerCases": [
         "B030"
       ],
       "killingCases": [
@@ -680,7 +717,8 @@
       "kind": "invariant",
       "ruleId": "I-ORIGIN-SYNTAX",
       "description": "Accept an origin containing a path",
-      "applicableCases": [
+      "fault": "diagnostics.D-ORIGIN-SYNTAX",
+      "triggerCases": [
         "B049"
       ],
       "killingCases": [
@@ -692,7 +730,7 @@
   "cases": [
     {
       "caseId": "B001",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -765,7 +803,7 @@
     },
     {
       "caseId": "B002",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": true,
         "M03": true,
@@ -838,7 +876,7 @@
     },
     {
       "caseId": "B003",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -911,7 +949,7 @@
     },
     {
       "caseId": "B004",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -984,7 +1022,7 @@
     },
     {
       "caseId": "B005",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": true,
         "M03": true,
@@ -1057,7 +1095,7 @@
     },
     {
       "caseId": "B006",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": true,
         "M03": true,
@@ -1130,7 +1168,7 @@
     },
     {
       "caseId": "B007",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1203,7 +1241,7 @@
     },
     {
       "caseId": "B008",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1276,7 +1314,7 @@
     },
     {
       "caseId": "B009",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1349,7 +1387,7 @@
     },
     {
       "caseId": "B010",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": true,
         "M03": true,
@@ -1422,7 +1460,7 @@
     },
     {
       "caseId": "B011",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1495,7 +1533,7 @@
     },
     {
       "caseId": "B012",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1568,7 +1606,7 @@
     },
     {
       "caseId": "B013",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1641,7 +1679,7 @@
     },
     {
       "caseId": "B014",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1714,7 +1752,7 @@
     },
     {
       "caseId": "B015",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1787,7 +1825,7 @@
     },
     {
       "caseId": "B016",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1860,7 +1898,7 @@
     },
     {
       "caseId": "B017",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -1933,7 +1971,7 @@
     },
     {
       "caseId": "B018",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2006,7 +2044,7 @@
     },
     {
       "caseId": "B019",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2079,7 +2117,7 @@
     },
     {
       "caseId": "B020",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2152,7 +2190,7 @@
     },
     {
       "caseId": "B021",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2225,7 +2263,7 @@
     },
     {
       "caseId": "B022",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2298,7 +2336,7 @@
     },
     {
       "caseId": "B023",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2371,7 +2409,7 @@
     },
     {
       "caseId": "B024",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2444,7 +2482,7 @@
     },
     {
       "caseId": "B025",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2517,7 +2555,7 @@
     },
     {
       "caseId": "B026",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2590,7 +2628,7 @@
     },
     {
       "caseId": "B027",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2663,7 +2701,7 @@
     },
     {
       "caseId": "B028",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2736,7 +2774,7 @@
     },
     {
       "caseId": "B029",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2809,7 +2847,7 @@
     },
     {
       "caseId": "B030",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2882,7 +2920,7 @@
     },
     {
       "caseId": "B031",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -2955,7 +2993,7 @@
     },
     {
       "caseId": "B032",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3028,7 +3066,7 @@
     },
     {
       "caseId": "B033",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3101,7 +3139,7 @@
     },
     {
       "caseId": "B034",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3174,7 +3212,7 @@
     },
     {
       "caseId": "B035",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3247,7 +3285,7 @@
     },
     {
       "caseId": "B036",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3320,7 +3358,7 @@
     },
     {
       "caseId": "B037",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3393,7 +3431,7 @@
     },
     {
       "caseId": "B038",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3466,7 +3504,7 @@
     },
     {
       "caseId": "B039",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3539,7 +3577,7 @@
     },
     {
       "caseId": "B040",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3612,7 +3650,7 @@
     },
     {
       "caseId": "B041",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3685,7 +3723,7 @@
     },
     {
       "caseId": "B042",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3758,7 +3796,7 @@
     },
     {
       "caseId": "B043",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3831,7 +3869,7 @@
     },
     {
       "caseId": "B044",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3904,7 +3942,7 @@
     },
     {
       "caseId": "B045",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -3977,7 +4015,7 @@
     },
     {
       "caseId": "B046",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4050,7 +4088,7 @@
     },
     {
       "caseId": "B047",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4123,7 +4161,7 @@
     },
     {
       "caseId": "B048",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4196,7 +4234,7 @@
     },
     {
       "caseId": "B049",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4269,7 +4307,7 @@
     },
     {
       "caseId": "B050",
-      "applicable": {
+      "triggered": {
         "M01": true,
         "M02": false,
         "M03": false,
@@ -4342,7 +4380,7 @@
     },
     {
       "caseId": "B051",
-      "applicable": {
+      "triggered": {
         "M01": true,
         "M02": false,
         "M03": false,
@@ -4415,7 +4453,7 @@
     },
     {
       "caseId": "B052",
-      "applicable": {
+      "triggered": {
         "M01": true,
         "M02": false,
         "M03": false,
@@ -4488,7 +4526,7 @@
     },
     {
       "caseId": "B053",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4561,7 +4599,7 @@
     },
     {
       "caseId": "B054",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4634,7 +4672,7 @@
     },
     {
       "caseId": "B055",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4707,7 +4745,7 @@
     },
     {
       "caseId": "B056",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4780,7 +4818,7 @@
     },
     {
       "caseId": "B057",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4853,7 +4891,7 @@
     },
     {
       "caseId": "B058",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4926,7 +4964,7 @@
     },
     {
       "caseId": "B059",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,
@@ -4999,7 +5037,7 @@
     },
     {
       "caseId": "B060",
-      "applicable": {
+      "triggered": {
         "M01": false,
         "M02": false,
         "M03": false,

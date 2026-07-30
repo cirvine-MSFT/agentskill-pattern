@@ -1,8 +1,9 @@
 # Preregistered semantic migration corpus benchmark
 
-**Status:** protocol and deterministic foundation only. Frozen 2026-07-29 against
-`48f44fbf3dca97a001ab2e822cf17faff869b846` (`main`). No AI arm has been run and
-this repository contains no AI outcomes.
+**Status:** protocol and deterministic foundation only. Initially frozen
+2026-07-29 against `48f44fbf3dca97a001ab2e822cf17faff869b846` (`main`) and
+revised 2026-07-30 in response to pre-run review. No AI arm has been run and this
+repository contains no AI outcomes.
 
 Any protocol change after a measured session starts is a deviation. Preserve the
 original protocol, record the deviation in the run record, and do not overwrite
@@ -31,7 +32,8 @@ The fixture migrates a v1 service configuration into a deterministic v2 shape.
 The public, machine-executable mapping and invariant program is
 `fixture/spec/mapping-spec.json`. It contains stable rule, branch-path, invariant,
 and diagnostic IDs. The candidate implementation in `fixture/migration/index.mjs`
-interprets that program. The reference oracle in `fixture/oracle/index.mjs` is an
+interprets that program. The evaluator-only reference oracle in
+`evaluator/oracle/index.mjs` is an
 independent explicit implementation: it does not import the candidate, mapping
 interpreter, or candidate schema validator.
 
@@ -57,10 +59,11 @@ successful migrations.
 
 Do not start a measured session unless all of these pass:
 
-1. The manually derived assertions in `tests/golden-cases.json` agree with both
+1. The manually derived assertions in `evaluator/tests/golden-cases.json` agree with both
    the oracle and candidate.
-2. Metamorphic checks pass for property order, ignored disabled-cache fields,
-   canonical/legacy region equivalence, timeout scaling, and origin duplication.
+2. Metamorphic checks pass for property order, full-outcome equivalence of
+   ignored disabled-cache fields, canonical/legacy region equivalence, timeout
+   scaling, and origin duplication.
 3. Candidate/oracle parity holds for the complete deterministic corpus and the
    acceptance-only examples.
 4. All trace IDs are declared by the mapping program.
@@ -80,31 +83,36 @@ substituted.
 |---:|---|---|---|
 | 0 | None | No | Strong deterministic baseline |
 | 1 | Frontier | No | `gpt-5.6-sol`, inline |
-| 2 | Frontier | Yes | `gpt-5.6-sol` parent and same-model direct-staging worker |
+| 2 | Frontier | Yes | `gpt-5.6-sol` parent and worker through the common delegated Skill |
 | 3 | Cheap | No | `claude-haiku-4.5`, inline |
-| 4 | Cheap | Yes | `claude-haiku-4.5` parent and worker via the staged Skill/agent contract |
+| 4 | Cheap | Yes | `claude-haiku-4.5` parent and worker through the common delegated Skill |
 
 Arms 1-4 form the complete 2x2 model-tier by delegation factorial. Arm 0 is the
-external baseline. The shared task text is byte-identical; routing instructions
-are injected by the coordinator and are not appended to that text.
+external baseline. All AI arms use the byte-identical shared task artifact and
+tool surface. Arms 2 and 4 use the same byte-identical
+`task/delegated-worker-skill.md`, invocation name, direct-staging ownership,
+return shape, and tool surface; only the bound parent/worker model IDs differ.
+Inline arms execute the same task contract directly.
 
 ### Atomic model-binding preflight
 
 Before opening any outcome:
 
 1. Create fresh no-outcome probe sessions using the exact requested bindings.
-2. Export platform event/session evidence identifying the observed parent model
-   and, for delegated cells, the observed worker model.
-3. Fill a copy of `design/model-preflight-template.json`.
-4. Run `scripts/preflight-models.mjs` and freeze its availability output.
+2. Obtain the platform's raw JSON event export, detached Ed25519 signature, and
+   trusted platform public key under `design/platform-evidence-contract.json`.
+3. Run `scripts/preflight-models.mjs` with all three files and freeze its output.
+4. Preserve the emitted payload, signature, and public-key SHA-256 values.
 
-A cell is available only when the requested and observed IDs match, model
-binding is reported atomic, fresh session IDs exist, delegated workers match the
-cell model, and evidence was captured before outcome inspection. If any AI cell
-is unavailable, mark it unavailable before runs. Do not substitute a model,
-run only a delegation or tier marginal, or describe the result as a partial
-factorial. The preregistered factorial analysis is withheld; arm 0 may be
-reported descriptively.
+A cell is available only when signature verification succeeds; all event,
+capture, and export timestamps are valid; signed creation events contain unique
+session IDs; signed atomic binding events match the requested parent/worker
+models; worker parentage is correct; and no signed outcome-access event predates
+the capture boundary. Caller-provided verification/freshness strings are not
+inputs. Missing, reused, unsigned, fabricated, non-atomic, late, or model-mismatched
+evidence makes the cell unavailable. If any AI cell is unavailable, do not
+substitute a model, run only a marginal, or call the result a partial factorial.
+The factorial analysis is withheld; arm 0 may be reported descriptively.
 
 ## Blocking, repetitions, and schedule
 
@@ -126,7 +134,7 @@ Every run receives:
 - the shared prompt in `design/shared-task-prompt.txt`;
 - public v1/scenario/staging schemas and the public mapping contract;
 - a fresh workspace and a single coordinator-selected block seed;
-- exactly 60 case slots and the same staging schema;
+- a target of exactly 60 case slots and the same 0-60 submission schema;
 - 30 wall-clock minutes, at most 120 tool calls, and at most 100,000 total model
   tokens for AI arms;
 - no retry for semantic quality or low scores.
@@ -136,9 +144,12 @@ output and wall-clock ceiling. Resource differences are measured, not normalized
 away.
 
 Staging files contain inputs only. They must not contain expected output,
-diagnostics, or traces. The coordinator validates and promotes each accepted
-staging file in a subprocess. Promotion invokes only the independent oracle.
-Expected outputs do not exist before promotion.
+diagnostics, or traces. The evaluator measures JSON parse errors, missing slots,
+and each malformed case rather than discarding the run. It validates every
+present slot independently, preserves indexed rejection reasons, and oracle-
+promotes only valid cases. `promotionRate = promotedCases / 60`, including zero
+and partial submissions. Expected outputs are created only by the independent
+oracle after each case passes promotion.
 
 ## Delegation and parent-context isolation
 
@@ -154,28 +165,37 @@ context. It validates/promotes by command and records compact stdout. This keeps
 the larger parent migration task meaningful without turning parent context into
 an unmeasured corpus-review treatment.
 
-For arm 4, copy `design/cheap-delegated-skill.md` into the fresh session's active
-Skill/agent location only after the workspace is created. For arm 2, inject
-`design/delegated-worker-instruction.txt` directly. Both workers use identical
-staging ownership and budget rules.
+For both arms 2 and 4, invoke the single materialized
+`task/delegated-worker-skill.md` artifact using the same Skill name. The
+coordinator rejects any run whose signed tool/session evidence shows a different
+delegation mechanism, return surface, or worker access pattern.
 
 ## Acceptance opacity and held-out provenance
 
-Measured generator workspaces include only the public contract, public schemas,
-shared prompt, seed, and empty staging destination. Exclude:
+All hidden material is under the separate `evaluator/` package: oracle, goldens,
+held-out rules/examples, mutants, promoted artifacts, and evaluator tests.
+Measured sessions never use this benchmark checkout as their repository.
+`scripts/materialize-candidate.mjs` creates a new external Git repository from
+the exact allowlist in `design/candidate-manifest.json`; it refuses destinations
+inside or containing the benchmark repository and never copies `evaluator/`,
+prior staging, the candidate migration implementation, seeds, or schedule.
+The sole in-tree exception is the cleaned `.test-work/` path used by the
+materializer regression test; measured runs must use an external destination.
 
-- `acceptance/**`
-- `artifacts/**`
-- `fixture/oracle/**`
-- `mutants/**`
-- `tests/**`
-- all prior run files
+Before session creation, the platform must enforce `candidate-root-only`
+filesystem access, explicitly deny the evaluator root, and deny network access.
+Afterward, `scripts/verify-isolation-evidence.mjs` verifies the signed platform
+export and derives compliance from policy, file-access, network-access, and
+audit-completion events. Caller booleans are not accepted. An incomplete audit,
+outside-root/evaluator attempt, allowed network request, policy mismatch, or
+unexpected session is noncompliant.
 
-`acceptance/held-out-rules.json` and `acceptance/held-out-examples.json` were
-newly authored on 2026-07-29 against the frozen base commit and are not supplied
-to generators. Repository/path isolation establishes prompt and workspace
-opacity only. It does **not** establish that similar material was absent from
-model pretraining; no training-leakage claim is made.
+`evaluator/acceptance/held-out-rules.json` and
+`evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29
+against the frozen base commit. Materialization and signed access evidence prove
+only that they were not supplied to measured prompts/workspaces. They do **not**
+show that similar material was absent from model pretraining; no training-
+leakage claim is made.
 
 ## Strong deterministic baseline
 
@@ -196,17 +216,22 @@ case. The checked foundation corpus is 60 unique inputs.
 
 ## Hidden mutants and acceptance
 
-`mutants/definitions.mjs` defines 33 deterministic mapping/invariant faults. They
+`evaluator/mutants/definitions.mjs` defines a frozen catalog of 33 deterministic
+mapping/invariant faults. They
 include wrong aliases/defaults/units, precedence and canonicalization defects,
 omitted fields, retry-cap errors, and omitted domain/cross-field diagnostics.
 Definitions, triggers, and kill matrices are acceptance-only and never copied to
 generator workspaces.
 
-A mutant is killed when at least one promoted case produces a result different
-from its oracle expected result under that mutant. Nonapplicable cases are
-recorded separately from survivors. The per-case matrix records both
-applicability and kills, preventing a mutant from appearing covered merely
-because it exists in the catalog.
+Before scoring, `evaluator/mutants/validate.mjs` independently verifies unique
+IDs, declared rule/invariant targets, a baseline/golden witness for every
+mutant, non-equivalence, no fixture mutation, unchanged instrumentation/status,
+and changes confined to one declared config or diagnostic fault surface.
+
+A mutant is killed when at least one promoted case exposes it. The denominator
+is always the frozen 33-mutant valid catalog. A mutant with no triggering case
+is an untriggered survivor, never removed as “not applicable.” The matrix records
+trigger and kill evidence per case, and reports `killed / 33`.
 
 ## Metrics
 
@@ -217,7 +242,7 @@ All quality metrics are computed after opaque oracle promotion.
 | Structural validity | Staged cases passing scenario and v1 structural schemas / submitted cases |
 | Promotion rate | Cases accepted and oracle-promoted / 60 |
 | Semantic rule/path/invariant coverage | Distinct instrumented declared IDs exercised / declared IDs |
-| Hidden mutant kill rate | Mutants killed by at least one promoted case / applicable mutant catalog |
+| Hidden mutant kill rate | Mutants killed by at least one promoted case / frozen 33-mutant catalog |
 | Diagnostic category coverage | Distinct semantic diagnostic categories emitted / five declared categories |
 | Exact redundancy | Repeated SHA-256 of canonical JSON input; lower is better |
 | Semantic redundancy | Repeated signature of paths, invariant IDs, and diagnostic IDs |
@@ -225,14 +250,16 @@ All quality metrics are computed after opaque oracle promotion.
 | Usage | Parent, worker, and total nano-AIU/credits plus input/output/total tokens |
 | Tool behavior | Distinct tool surface and calls by tool, parent, and worker |
 | Latency | Start-to-staging wall time; parent active, worker active, and authenticated parent wait where available |
-| Compliance | Fresh session, exact models, opacity, direct staging, case/budget limits, and deviations |
+| Compliance | Derived signed model/policy/access/audit evidence plus budget and mechanism deviations |
 
 Semantic `status: invalid` is often an intentional negative case and is not a
 structural failure. Reports keep that count separate from promotion validity.
 Duplicate detection compares generated artifacts with one another; it is a
 redundancy/diversity measure, not a leakage detector.
 
-`schemas/run-record.schema.json` is the normative telemetry envelope. Total usage
+`schemas/run-record.schema.json` is the normative telemetry envelope. Its
+compliance object references the derived isolation audit and evidence hash; it
+does not accept self-attested booleans. Total usage
 must equal parent plus worker where the platform exposes additive units. Missing
 platform fields remain explicit `null`/unavailable in collected records; they are
 never reconstructed from outcome quality.
@@ -263,17 +290,24 @@ Analyze the 12 run-level observations per available arm.
 2. For arms 1-4, code tier and delegation as -1/+1. Estimate paired block-level
    tier, delegation, and interaction contrasts. Report contrast estimates and
    95% block-bootstrap intervals using 10,000 resamples and seed `20260729`.
-3. Compare each AI arm with arm 0 using paired within-block differences. Report
-   two-sided exact sign-flip/randomization p-values and 95% block-bootstrap
-   intervals.
-4. Claim noninferiority only when the lower 95% interval for the paired
-   difference exceeds the fixed margin. Report point estimates against the
-   materiality thresholds even when intervals are wide.
-5. Apply Holm correction across the four baseline comparisons separately for
-   each primary endpoint. Factorial main effects/interactions are the three
-   preregistered contrasts and are reported with unadjusted intervals plus a
-   clear multiplicity warning.
-6. Treat usage, tools, latency, compliance, diagnostic coverage, redundancy, and
+3. For each of four AI arms and each of three primary endpoints, use the paired
+   within-block difference `AI - baseline` for the one-sided noninferiority null
+   `H0: difference <= margin` against `H1: difference > margin`. Compute the
+   one-sided exact sign-flip/randomization p-value after shifting by the fixed
+   margin, and a one-sided 95% lower block-bootstrap bound.
+4. Apply Holm step-down control at family-wise alpha 0.05 across the complete
+   family of 12 noninferiority hypotheses (four arms x three primary endpoints).
+   Claim noninferiority only when its Holm-adjusted one-sided p-value is below
+   0.05. Also report the unadjusted lower bound and point estimate against the
+   practical margin; do not call an unadjusted interval confirmatory.
+5. Equality/superiority is a separate question. Report two-sided paired
+   sign-flip p-values and two-sided 95% block-bootstrap intervals descriptively,
+   with a separate Holm adjustment across the 12 equality hypotheses. A failed
+   equality test does not establish equivalence, and an equality result cannot
+   substitute for the one-sided noninferiority test.
+6. Factorial main effects/interactions are the three preregistered contrasts and
+   are reported with unadjusted intervals plus a clear multiplicity warning.
+7. Treat usage, tools, latency, compliance, diagnostic coverage, redundancy, and
    diversity as secondary/descriptive. Do not convert them into an unregistered
    composite score.
 
@@ -311,12 +345,14 @@ deterministic endpoints.
 
 1. Run `npm test` and `npm run reproduce`.
 2. Generate/freeze `design/schedule.json`.
-3. Run and freeze atomic model-binding availability preflight.
-4. Create isolated fresh workspaces in schedule order.
-5. Generate inputs directly to staging; collect raw telemetry.
-6. Validate staging without opening the corpus in parent context.
-7. Promote through the oracle and freeze hashes.
-8. Run hidden acceptance, traces, mutation, and compact reporting under blinded
+3. Verify the signed platform model-binding export and freeze availability.
+4. Materialize external allowlisted candidate repositories, apply filesystem/
+   network policy, and create fresh sessions in schedule order.
+5. Generate inputs directly to staging; collect signed raw telemetry/access logs.
+6. Verify the signed isolation audit, then validate each staging slot without
+   opening corpus content in parent context.
+7. Promote valid cases through the evaluator oracle and freeze hashes.
+8. Run evaluator-only held-out acceptance, traces, mutation, and compact reporting under blinded
    run IDs.
 9. Freeze metric tables, then join arm labels and execute the registered analysis.
 

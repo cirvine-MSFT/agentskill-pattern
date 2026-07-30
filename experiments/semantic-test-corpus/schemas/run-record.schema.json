@@ -101,13 +101,13 @@
     },
     "compliance": {
       "type": "object",
-      "required": ["freshSession", "fixedModel", "acceptanceOpaque", "directStaging", "budgetMet"],
+      "required": ["isolationAuditPath", "evidenceSha256", "status", "checks", "violations"],
+      "additionalProperties": false,
       "properties": {
-        "freshSession": {"type": "boolean"},
-        "fixedModel": {"type": "boolean"},
-        "acceptanceOpaque": {"type": "boolean"},
-        "directStaging": {"type": "boolean"},
-        "budgetMet": {"type": "boolean"},
+        "isolationAuditPath": {"type": "string"},
+        "evidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
+        "checks": {"type": "object"},
         "violations": {"type": "array", "items": {"type": "string"}}
       }
     }

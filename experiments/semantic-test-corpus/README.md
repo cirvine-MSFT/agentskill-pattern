@@ -22,7 +22,7 @@ foundation measurements only.
 | Hidden mutants killed | 33 / 33 (100%) |
 | Exact duplicate inputs | 0 |
 
-These values are reproduced from `artifacts/baseline-report.json`; mutation
+These values are reproduced from `evaluator/artifacts/baseline-report.json`; mutation
 score is not evidence that the oracle is correct. Goldens and metamorphic
 properties are separate prerequisites.
 
@@ -47,14 +47,16 @@ Regenerate the deterministic foundation:
 ```powershell
 node .\baseline\generate.mjs --out .\staging\baseline.json
 node .\scripts\validate-staging.mjs .\staging\baseline.json
-node .\scripts\promote.mjs --in .\staging\baseline.json `
-  --out .\artifacts\baseline-corpus.json `
+node .\evaluator\promote.mjs --in .\staging\baseline.json `
+  --out .\evaluator\artifacts\baseline-corpus.json `
   --promoted-at 2026-07-29T00:00:00.000Z
-node .\mutants\run.mjs --corpus .\artifacts\baseline-corpus.json `
-  --out .\artifacts\baseline-kill-matrix.json
-node .\scripts\report.mjs --corpus .\artifacts\baseline-corpus.json `
-  --matrix .\artifacts\baseline-kill-matrix.json `
-  --out .\artifacts\baseline-report.json
+node .\evaluator\mutants\run.mjs `
+  --corpus .\evaluator\artifacts\baseline-corpus.json `
+  --out .\evaluator\artifacts\baseline-kill-matrix.json
+node .\evaluator\report.mjs `
+  --corpus .\evaluator\artifacts\baseline-corpus.json `
+  --matrix .\evaluator\artifacts\baseline-kill-matrix.json `
+  --out .\evaluator\artifacts\baseline-report.json
 ```
 
 Generate the frozen 12-block schedule:
@@ -63,17 +65,48 @@ Generate the frozen 12-block schedule:
 node .\scripts\randomize.mjs --out .\design\schedule.json
 ```
 
-Before any AI outcome, copy and fill the model-binding template with actual
-platform evidence:
+Materialize a candidate repository outside this checkout:
+
+```powershell
+node .\scripts\materialize-candidate.mjs --out C:\benchmark-runs\B01-A1
+```
+
+Before any AI outcome, verify the raw signed platform export:
 
 ```powershell
 node .\scripts\preflight-models.mjs `
-  --evidence .\raw\model-binding-evidence.json `
+  --payload .\raw\platform-export.json `
+  --signature .\raw\platform-export.sig `
+  --public-key C:\trusted\copilot-platform-ed25519.pem `
   --out .\raw\availability.json
 ```
 
 Exit code 2 means at least one factorial cell is unavailable. Do not substitute
 a model or run a silent partial factorial.
+
+After blinded run metrics are frozen, execute the registered baseline tests:
+
+```powershell
+node .\evaluator\statistics.mjs `
+  --in .\raw\blinded-run-metrics.json `
+  --out .\raw\baseline-analysis.json
+```
+
+The evaluator runs 12 one-sided noninferiority hypotheses with one Holm
+adjustment and 12 two-sided equality hypotheses with a separate Holm adjustment.
+
+After the run, derive isolation compliance from that signed export:
+
+```powershell
+node .\scripts\verify-isolation-evidence.mjs `
+  --payload .\raw\platform-export.json `
+  --signature .\raw\platform-export.sig `
+  --public-key C:\trusted\copilot-platform-ed25519.pem `
+  --candidate-root C:\benchmark-runs\B01-A1 `
+  --evaluator-root (Join-Path $PWD evaluator) `
+  --session-ids <signed-session-id> `
+  --out .\raw\B01-A1-isolation.json
+```
 
 ## Layout
 
@@ -82,16 +115,17 @@ a model or run a silent partial factorial.
 | `protocol.md` | Immutable arms, budgets, isolation, metrics, thresholds, and analysis |
 | `fixture/spec/` | Executable public mapping and invariant program |
 | `fixture/migration/` | Candidate spec interpreter |
-| `fixture/oracle/` | Independent explicit reference implementation |
 | `schemas/`, `validators/` | Input, staging, promotion, telemetry contracts and validators |
 | `baseline/` | Decision, boundary, pairwise, grammar/property, and solver generator |
-| `acceptance/`, `mutants/` | Generator-hidden rules/examples and deterministic faults |
-| `design/` | Shared prompt, Skill/agent routing text, fixed models, seeds, and schedule |
+| `candidate-template/`, `design/candidate-manifest.json` | External candidate materialization allowlist |
+| `evaluator/` | Isolated oracle, acceptance, mutants, statistics, goldens, artifacts, and evaluator tests |
+| `design/` | Shared prompt/Skill, evidence contract, fixed models, seeds, and schedule |
 | `staging/` | Inputs only; expected output is forbidden |
-| `artifacts/` | Oracle-promoted deterministic corpus, kill matrix, and compact report |
-| `tests/` | Reviewed goldens, metamorphic properties, parity, isolation, and reproduction |
 
-Generator workspaces must exclude `acceptance`, `artifacts`, `fixture/oracle`,
-`mutants`, `tests`, and prior runs. Delegated workers write staging directly;
-parents consume only compact validator/promotion summaries, never the full
-corpus.
+Measured generators run only in external repositories created by the
+materializer; the evaluator directory is never copied or mounted. Signed
+platform policy/access exports prove candidate-root-only filesystem access and
+network denial. Both delegated arms invoke the same byte-identical materialized
+Skill and return only compact staging metadata; parents never read the corpus.
+The materializer's in-tree `.test-work/` allowance exists only for the cleaned
+regression test and is forbidden for measured runs.

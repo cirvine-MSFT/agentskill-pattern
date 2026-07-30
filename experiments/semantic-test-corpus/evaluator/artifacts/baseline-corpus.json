@@ -6,10 +6,18 @@
     "seed": 20260729
   },
   "promotion": {
-    "oracle": "fixture/oracle/index.mjs",
+    "oracle": "evaluator/oracle/index.mjs",
     "promotedAt": "2026-07-29T00:00:00.000Z",
-    "inputSha256": "be31f42fa06d1b17c6656c1b93013127a48bb17fd88a5c1c25c3df9f0c8a0cc7"
+    "inputSha256": "be31f42fa06d1b17c6656c1b93013127a48bb17fd88a5c1c25c3df9f0c8a0cc7",
+    "targetCases": 60,
+    "submittedCases": 60,
+    "promotedCases": 60,
+    "invalidCases": 0,
+    "missingSlots": 0,
+    "promotionRate": 1
   },
+  "submissionErrors": [],
+  "invalidCases": [],
   "cases": [
     {
       "id": "B001",
@@ -2641,7 +2649,6 @@
             "P-I-DB-PORT-CONFLICT-PASS",
             "P-I-FEATURE-COLLISION-PASS",
             "P-I-ORIGIN-SYNTAX-PASS",
-            "P-I-REDIS-ENDPOINT-PASS",
             "P-I-REGION-PASS",
             "P-I-RETRY-BOUNDS-PASS",
             "P-I-SERVICE-NAME-PASS",
@@ -2659,7 +2666,6 @@
             "I-DB-PORT-CONFLICT",
             "I-FEATURE-COLLISION",
             "I-ORIGIN-SYNTAX",
-            "I-REDIS-ENDPOINT",
             "I-REGION",
             "I-RETRY-BOUNDS",
             "I-SERVICE-NAME",

@@ -5,11 +5,11 @@
     "authoredAt": "2026-07-29",
     "authoredAgainstCommit": "48f44fbf3dca97a001ab2e822cf17faff869b846",
     "origin": "Newly authored for this benchmark; not copied from repository examples.",
-    "trainingLeakageClaim": "No claim is made that these rules or examples are absent from any model's training data. Repository isolation only proves they are not supplied in measured prompts or candidate workspaces."
+    "trainingLeakageClaim": "No claim is made that these rules or examples are absent from any model's training data. External candidate materialization plus signed platform access evidence proves only that they are not supplied in measured prompts or candidate workspaces."
   },
   "generatorAccess": {
     "suppliedToArms": false,
-    "excludedPaths": ["acceptance/**", "artifacts/**", "fixture/oracle/**", "mutants/**", "tests/**"]
+    "excludedPaths": ["evaluator/**"]
   },
   "rules": [
     {

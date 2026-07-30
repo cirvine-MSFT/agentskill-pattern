@@ -106,7 +106,7 @@ export function referenceOracle(input) {
   checkInvariant(trace, diagnostics, "I-CACHE-TTL", input.cache.enabled === true,
     Number.isInteger(input.cache.ttlSeconds) && input.cache.ttlSeconds >= 1 && input.cache.ttlSeconds <= 86400,
     detail("I-CACHE-TTL"));
-  checkInvariant(trace, diagnostics, "I-REDIS-ENDPOINT", input.cache.provider === "redis",
+  checkInvariant(trace, diagnostics, "I-REDIS-ENDPOINT", input.cache.enabled === true && input.cache.provider === "redis",
     typeof input.cache.endpoint === "string" && /^rediss?:\/\/[^/\s]+(?::\d+)?(?:\/\d+)?$/i.test(input.cache.endpoint),
     detail("I-REDIS-ENDPOINT"));
   checkInvariant(trace, diagnostics, "I-SQLITE-PROD", input.database.engine === "sqlite",

@@ -1,0 +1,26 @@
+{
+  "contractVersion": 1,
+  "provider": "github-copilot-platform",
+  "payloadSchema": "schemas/platform-export.schema.json",
+  "authentication": {
+    "algorithm": "Ed25519",
+    "payload": "Exact raw UTF-8 bytes exported by the platform",
+    "signature": "Detached 64-byte binary Ed25519 signature over the exact payload bytes",
+    "trustAnchor": "Coordinator-supplied platform public key; never embedded in the payload"
+  },
+  "requiredModelEvents": ["session.created", "model.bound"],
+  "requiredIsolationEvents": ["sandbox.policy.applied", "audit.completed"],
+  "requiredDelegationEvents": ["delegation.invoked", "delegation.completed"],
+  "outcomeBoundaryEvent": "outcome.accessed",
+  "maxPreflightSessionAgeSeconds": 600,
+  "policy": {
+    "filesystemMode": "candidate-root-only",
+    "networkMode": "deny",
+    "evaluatorRootDenied": true
+  },
+  "notes": [
+    "Availability and compliance are derived only from signed events.",
+    "Payload strings claiming verification, freshness, or compliance are ignored.",
+    "The evidence SHA-256 and signing-key fingerprint are emitted by the verifier."
+  ]
+}

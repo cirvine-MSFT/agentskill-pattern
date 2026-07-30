@@ -52,6 +52,7 @@ function customPredicate(name, input) {
       || (Number.isInteger(input.service.port) && input.service.port >= 1 && input.service.port <= 65535),
     validCacheTtl: () => Number.isInteger(input.cache.ttlSeconds)
       && input.cache.ttlSeconds >= 1 && input.cache.ttlSeconds <= 86400,
+    enabledRedisCache: () => input.cache.enabled === true && input.cache.provider === "redis",
     validRedisEndpoint: () => typeof input.cache.endpoint === "string"
       && /^rediss?:\/\/[^/\s]+(?::\d+)?(?:\/\d+)?$/i.test(input.cache.endpoint),
     prodRemoteDatabase: () => input.service.environment === "prod" && input.database.engine !== "sqlite",

@@ -2,21 +2,29 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "promoted-corpus.schema.json",
   "type": "object",
-  "required": ["formatVersion", "generator", "promotion", "cases"],
+  "required": ["formatVersion", "generator", "promotion", "submissionErrors", "invalidCases", "cases"],
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "generator": {"type": "object"},
+    "generator": {},
     "promotion": {
       "type": "object",
-      "required": ["oracle", "promotedAt", "inputSha256"],
+      "required": ["oracle", "promotedAt", "inputSha256", "targetCases", "submittedCases", "promotedCases", "invalidCases", "missingSlots", "promotionRate"],
       "additionalProperties": false,
       "properties": {
-        "oracle": {"const": "fixture/oracle/index.mjs"},
+        "oracle": {"const": "evaluator/oracle/index.mjs"},
         "promotedAt": {"type": "string"},
-        "inputSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        "inputSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "targetCases": {"const": 60},
+        "submittedCases": {"type": "integer", "minimum": 0},
+        "promotedCases": {"type": "integer", "minimum": 0, "maximum": 60},
+        "invalidCases": {"type": "integer", "minimum": 0},
+        "missingSlots": {"type": "integer", "minimum": 0, "maximum": 60},
+        "promotionRate": {"type": "number", "minimum": 0, "maximum": 1}
       }
     },
-    "cases": {"type": "array", "minItems": 60, "maxItems": 60}
+    "submissionErrors": {"type": "array"},
+    "invalidCases": {"type": "array"},
+    "cases": {"type": "array", "minItems": 0, "maxItems": 60}
   }
 }

@@ -8,11 +8,12 @@
   },
   "scripts": {
     "baseline": "node baseline/generate.mjs --out staging/baseline.json",
-    "promote": "node scripts/promote.mjs --in staging/baseline.json --out artifacts/baseline-corpus.json",
-    "mutate": "node mutants/run.mjs --corpus artifacts/baseline-corpus.json --out artifacts/baseline-kill-matrix.json",
-    "report": "node scripts/report.mjs --corpus artifacts/baseline-corpus.json --matrix artifacts/baseline-kill-matrix.json --out artifacts/baseline-report.json",
+    "promote": "node evaluator/promote.mjs --in staging/baseline.json --out evaluator/artifacts/baseline-corpus.json",
+    "mutate": "node evaluator/mutants/run.mjs --corpus evaluator/artifacts/baseline-corpus.json --out evaluator/artifacts/baseline-kill-matrix.json",
+    "report": "node evaluator/report.mjs --corpus evaluator/artifacts/baseline-corpus.json --matrix evaluator/artifacts/baseline-kill-matrix.json --out evaluator/artifacts/baseline-report.json",
+    "analyze": "node evaluator/statistics.mjs",
     "randomize": "node scripts/randomize.mjs --out design/schedule.json",
-    "reproduce": "node scripts/reproduce.mjs",
-    "test": "node tests/run-tests.mjs"
+    "reproduce": "node evaluator/reproduce.mjs",
+    "test": "node evaluator/tests/run-tests.mjs"
   }
 }

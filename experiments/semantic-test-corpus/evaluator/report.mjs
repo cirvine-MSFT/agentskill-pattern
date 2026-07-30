@@ -67,11 +67,20 @@ export function buildReport(corpus, matrix, mappingSpec) {
   return {
     formatVersion: 1,
     corpus: {
+      targetCases: corpus.promotion.targetCases,
+      submittedCases: corpus.promotion.submittedCases,
       cases: corpus.cases.length,
-      promoted: corpus.cases.length,
-      promotionRate: 1,
+      promoted: corpus.promotion.promotedCases,
+      invalidCases: corpus.promotion.invalidCases,
+      missingSlots: corpus.promotion.missingSlots,
+      structurallyValidCases: corpus.promotion.promotedCases,
+      structurallyInvalidCases: corpus.promotion.invalidCases,
+      structuralValidityRate: corpus.promotion.submittedCases === 0
+        ? 0
+        : corpus.promotion.promotedCases / corpus.promotion.submittedCases,
+      promotionRate: corpus.promotion.promotionRate,
       semanticallyValid: valid,
-      semanticValidityRate: valid / corpus.cases.length,
+      semanticValidityRate: corpus.cases.length === 0 ? null : valid / corpus.cases.length,
       semanticallyInvalid: corpus.cases.length - valid,
       strategyCounts
     },
@@ -89,12 +98,18 @@ export function buildReport(corpus, matrix, mappingSpec) {
         diagnostics.filter((item) => item.category === category).length
       ]))
     },
-    mutation: matrix.totals,
+    mutation: {
+      catalogVersion: matrix.catalogVersion,
+      catalogValidation: matrix.catalogValidation,
+      ...matrix.totals
+    },
     redundancyAndDiversity: {
       exactDuplicateCases: exactHashes.length - new Set(exactHashes).size,
       semanticDuplicateCases: semanticSignatures.length - new Set(semanticSignatures).size,
       semanticUniqueSignatures: new Set(semanticSignatures).size,
-      meanPairwiseJaccardDistance: distances.reduce((sum, value) => sum + value, 0) / distances.length,
+      meanPairwiseJaccardDistance: distances.length === 0
+        ? null
+        : distances.reduce((sum, value) => sum + value, 0) / distances.length,
       note: "Duplicate detection compares corpus artifacts only; it is not a training-data leakage test."
     }
   };
@@ -106,7 +121,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const matrixPath = argument(args, "--matrix");
   const outputPath = argument(args, "--out");
   if (!corpusPath || !matrixPath || !outputPath) {
-    throw new Error("Usage: node scripts/report.mjs --corpus <corpus.json> --matrix <matrix.json> --out <report.json>");
+    throw new Error("Usage: node evaluator/report.mjs --corpus <corpus.json> --matrix <matrix.json> --out <report.json>");
   }
   const corpus = JSON.parse(readFileSync(resolve(corpusPath), "utf8"));
   const matrix = JSON.parse(readFileSync(resolve(matrixPath), "utf8"));

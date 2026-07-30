@@ -2,28 +2,38 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "model-preflight.schema.json",
   "type": "object",
-  "required": ["capturedAt", "beforeOutcomeInspection", "cells"],
+  "required": ["exportId", "capturedAt", "evidence", "factorialAvailable", "cells"],
   "additionalProperties": false,
   "properties": {
+    "exportId": {"type": "string"},
     "capturedAt": {"type": "string"},
-    "beforeOutcomeInspection": {"const": true},
+    "evidence": {
+      "type": "object",
+      "required": ["algorithm", "payloadSha256", "signatureSha256", "publicKeySha256"],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {"const": "Ed25519"},
+        "payloadSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "signatureSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "publicKeySha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "factorialAvailable": {"type": "boolean"},
     "cells": {
       "type": "array",
       "minItems": 4,
       "maxItems": 4,
       "items": {
         "type": "object",
-        "required": ["armId", "requestedModel", "observedModel", "atomicBinding", "sessionId", "evidence"],
+        "required": ["armId", "requestedModel", "requestedWorkerModel", "status", "sessionIds", "reasons"],
         "additionalProperties": false,
         "properties": {
           "armId": {"type": "integer", "minimum": 1, "maximum": 4},
           "requestedModel": {"type": "string"},
-          "observedModel": {"type": "string"},
-          "atomicBinding": {"type": "boolean"},
-          "sessionId": {"type": "string"},
-          "workerSessionId": {"type": "string"},
-          "workerObservedModel": {"type": "string"},
-          "evidence": {"type": "string", "minLength": 1}
+          "requestedWorkerModel": {},
+          "status": {"type": "string", "enum": ["available", "unavailable"]},
+          "sessionIds": {"type": "array", "items": {"type": "string"}},
+          "reasons": {"type": "array", "items": {"type": "string"}}
         }
       }
     }

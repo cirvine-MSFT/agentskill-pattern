@@ -1,0 +1,22 @@
+{
+  "manifestVersion": 1,
+  "files": [
+    {"source": "candidate-template/package.json", "destination": "package.json"},
+    {"source": "fixture/spec/mapping-spec.json", "destination": "contract/mapping-spec.json"},
+    {"source": "schemas/v1-config.schema.json", "destination": "schemas/v1-config.schema.json"},
+    {"source": "schemas/scenario.schema.json", "destination": "schemas/scenario.schema.json"},
+    {"source": "schemas/staging.schema.json", "destination": "schemas/staging.schema.json"},
+    {"source": "validators/json-schema.mjs", "destination": "validators/json-schema.mjs"},
+    {"source": "validators/staging.mjs", "destination": "validators/staging.mjs"},
+    {"source": "scripts/validate-staging.mjs", "destination": "scripts/validate-staging.mjs"},
+    {"source": "design/shared-task-prompt.txt", "destination": "task/shared-task-prompt.txt"},
+    {"source": "design/delegated-worker-skill.md", "destination": "task/delegated-worker-skill.md"}
+  ],
+  "forbiddenSourcePrefixes": [
+    "evaluator/",
+    "staging/",
+    "fixture/migration/",
+    "design/schedule.json",
+    "design/seeds.json"
+  ]
+}
