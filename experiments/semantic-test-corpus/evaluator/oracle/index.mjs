@@ -9,6 +9,15 @@ const REGIONS = new Map([
 
 const LEGACY_REGIONS = new Set(["us", "eu", "apac"]);
 
+export function compareCodePoints(left, right) {
+  const leftPoints = Array.from(left, (character) => character.codePointAt(0));
+  const rightPoints = Array.from(right, (character) => character.codePointAt(0));
+  for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
+    if (leftPoints[index] !== rightPoints[index]) return leftPoints[index] < rightPoints[index] ? -1 : 1;
+  }
+  return Math.sign(leftPoints.length - rightPoints.length);
+}
+
 function slugName(value) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -32,8 +41,22 @@ function validPort(url) {
   return Number.isInteger(port) && port >= 1 && port <= 65535;
 }
 
+function rawAuthorityAndSuffix(value) {
+  if (typeof value !== "string" || value !== value.trim()) return null;
+  const scheme = value.indexOf("://");
+  if (scheme < 0) return null;
+  const remainder = value.slice(scheme + 3);
+  const boundary = remainder.search(/[/?#]/);
+  return {
+    authority: boundary < 0 ? remainder : remainder.slice(0, boundary),
+    suffix: boundary < 0 ? "" : remainder.slice(boundary)
+  };
+}
+
 function validHttpOrigin(value) {
   if (value === "*") return true;
+  const raw = rawAuthorityAndSuffix(value);
+  if (!raw || raw.authority.includes("@") || !["", "/"].includes(raw.suffix)) return false;
   try {
     const url = new URL(value);
     return ["http:", "https:"].includes(url.protocol)
@@ -50,7 +73,8 @@ function validHttpOrigin(value) {
 }
 
 function validRedisEndpoint(value) {
-  if (typeof value !== "string") return false;
+  const raw = rawAuthorityAndSuffix(value);
+  if (!raw || raw.authority.includes("@") || !/^(?:|\/\d+)$/.test(raw.suffix)) return false;
   try {
     const url = new URL(value);
     return ["redis:", "rediss:"].includes(url.protocol)
@@ -79,7 +103,9 @@ function topLevelShapeError(input) {
 
 function sortedResult(config, diagnostics, trace) {
   diagnostics.sort((a, b) =>
-    a.severity.localeCompare(b.severity) || a.id.localeCompare(b.id) || a.path.localeCompare(b.path));
+    compareCodePoints(a.severity, b.severity)
+      || compareCodePoints(a.id, b.id)
+      || compareCodePoints(a.path, b.path));
   trace.rules.sort();
   trace.paths.sort();
   trace.invariants.sort();
@@ -264,7 +290,7 @@ export function referenceOracle(input) {
   trace.rules.push("R-FEATURES");
   const unsortedFeatures = Object.entries(input.features.flags)
     .map(([feature, enabled]) => ({ name: canonicalFeature(feature), enabled }));
-  const features = unsortedFeatures.toSorted((a, b) => a.name.localeCompare(b.name));
+  const features = unsortedFeatures.toSorted((a, b) => compareCodePoints(a.name, b.name));
   if (features.length === 0) {
     trace.paths.push("P-FEATURES-EMPTY");
   } else {

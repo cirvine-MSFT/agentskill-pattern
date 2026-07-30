@@ -133,6 +133,9 @@ each arm exactly once. `design/seeds.json` freezes block seeds and
 `design/schedule.json` freezes within-block order. Arm 0 uses its block seed for
 the grammar/property component; the other deterministic components remain fixed.
 AI arms receive the same block seed as an input-design seed.
+Signed `run.started` events carry the frozen schedule order, and timestamps must
+be distinct and strictly increasing in that order within each block. Ties or
+reordering fail compliance.
 
 Twelve paired repetitions per arm were chosen to expose run-to-run session
 variation while retaining complete-block comparisons. Inference is at the run
@@ -154,6 +157,11 @@ Every run receives:
 The deterministic baseline has no model usage but is held to the same 60-case
 output and wall-clock ceiling. Resource differences are measured, not normalized
 away.
+AI budget compliance is derived from authenticated timestamps, signed tool-call
+events, and one signed usage report per required role. Duration is start through
+completion, calls are aggregated across parent and worker, and total tokens are
+the parent-plus-worker sum for delegated runs. Exceeding 30 minutes, 120 calls,
+or 100,000 tokens marks the run noncompliant/excluded.
 
 Staging files contain inputs only. They must not contain expected output,
 diagnostics, or traces. The evaluator measures JSON parse errors, missing slots,
@@ -239,6 +247,9 @@ event must resolve to exactly one scheduled run and authenticated role/session.
 All generation tools, results, filesystem/network activity, delegation, and
 staging writes must occur strictly before `run.completed`; only outcome access
 strictly after both completion and unblinding is allowed.
+Delegated runs additionally require exactly one call-ID-matched lifecycle:
+invocation precedes every worker generation/write event, completion follows
+them, and delegation completion precedes run completion.
 
 `evaluator/acceptance/held-out-rules.json` and
 `evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29
@@ -308,6 +319,9 @@ Duplicate detection compares generated artifacts with one another; it is a
 redundancy/diversity measure, not a leakage detector.
 Exact duplicate hashing uses canonical JSON with recursively sorted object keys
 and original array order.
+Reproduction compares canonical serialized UTF-8 bytes—including indentation,
+key order, LF newlines, and final newline—for corpus, kill matrix, and report;
+parsed-object equality is insufficient.
 
 `schemas/run-record.schema.json` is the normative telemetry envelope. Its
 compliance object references the derived isolation audit and evidence hash; it

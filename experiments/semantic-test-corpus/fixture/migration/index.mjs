@@ -8,6 +8,21 @@ const spec = JSON.parse(readFileSync(resolve(here, "..", "spec", "mapping-spec.j
 const schemaDir = resolve(here, "..", "..", "schemas");
 const v1Schema = JSON.parse(readFileSync(resolve(schemaDir, "v1-config.schema.json"), "utf8"));
 
+export function compareCodePointStrings(left, right) {
+  const leftIterator = left[Symbol.iterator]();
+  const rightIterator = right[Symbol.iterator]();
+  while (true) {
+    const leftNext = leftIterator.next();
+    const rightNext = rightIterator.next();
+    if (leftNext.done || rightNext.done) {
+      return leftNext.done === rightNext.done ? 0 : leftNext.done ? -1 : 1;
+    }
+    const leftPoint = leftNext.value.codePointAt(0);
+    const rightPoint = rightNext.value.codePointAt(0);
+    if (leftPoint !== rightPoint) return leftPoint < rightPoint ? -1 : 1;
+  }
+}
+
 function get(object, path) {
   return path.split(".").reduce((value, part) => value?.[part], object);
 }
@@ -42,8 +57,22 @@ function portIsValid(parsed) {
   return Number.isInteger(numericPort) && numericPort > 0 && numericPort <= 65535;
 }
 
+function splitRawLocation(value) {
+  if (typeof value !== "string" || value.trim() !== value) return null;
+  const delimiter = value.indexOf("://");
+  if (delimiter === -1) return null;
+  const location = value.slice(delimiter + 3);
+  const suffixIndex = location.search(/[/?#]/);
+  return {
+    authority: suffixIndex === -1 ? location : location.slice(0, suffixIndex),
+    suffix: suffixIndex === -1 ? "" : location.slice(suffixIndex)
+  };
+}
+
 function isHttpOrigin(value) {
   if (value === "*") return true;
+  const raw = splitRawLocation(value);
+  if (!raw || raw.authority.includes("@") || (raw.suffix !== "" && raw.suffix !== "/")) return false;
   try {
     const parsed = new URL(value);
     return (parsed.protocol === "http:" || parsed.protocol === "https:")
@@ -60,7 +89,8 @@ function isHttpOrigin(value) {
 }
 
 function isRedisLocation(value) {
-  if (typeof value !== "string") return false;
+  const raw = splitRawLocation(value);
+  if (!raw || raw.authority.includes("@") || !/^(?:|\/[0-9]+)$/.test(raw.suffix)) return false;
   try {
     const parsed = new URL(value);
     const databasePath = parsed.pathname === "" || /^\/[0-9]+$/.test(parsed.pathname);
@@ -131,7 +161,9 @@ function diagnostic(base, severity = "error") {
 
 function finalize(config, diagnostics, trace) {
   diagnostics.sort((a, b) =>
-    a.severity.localeCompare(b.severity) || a.id.localeCompare(b.id) || a.path.localeCompare(b.path));
+    compareCodePointStrings(a.severity, b.severity)
+      || compareCodePointStrings(a.id, b.id)
+      || compareCodePointStrings(a.path, b.path));
   for (const values of Object.values(trace)) values.sort();
   const invalid = diagnostics.some((item) => item.severity === "error");
   return { status: invalid ? "invalid" : "ok", config: invalid ? null : config, diagnostics, trace };
@@ -276,7 +308,7 @@ function executeRule(rule, input, output, diagnostics, trace) {
     }
     case "featureArray": {
       const entries = Object.entries(source).map(([name, enabled]) => ({ name: featureName(name), enabled }));
-      const sorted = entries.toSorted((a, b) => a.name.localeCompare(b.name));
+      const sorted = entries.toSorted((a, b) => compareCodePointStrings(a.name, b.name));
       set(output, rule.target, sorted);
       if (entries.length === 0) {
         trace.paths.push("P-FEATURES-EMPTY");

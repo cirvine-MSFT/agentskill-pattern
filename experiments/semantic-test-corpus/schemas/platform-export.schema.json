@@ -22,12 +22,20 @@
             "then": {"required": ["runId", "blockId", "armId", "role"]}
           },
           {
+            "if": {"properties": {"type": {"const": "run.started"}}},
+            "then": {"required": ["sequence"]}
+          },
+          {
             "if": {"properties": {"type": {"const": "model.bound"}}},
             "then": {"required": ["modelId", "atomic"]}
           },
           {
             "if": {"properties": {"type": {"enum": ["tool.called", "tool.result"]}}},
             "then": {"required": ["runId", "blockId", "armId", "role", "actor", "toolName"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "tool.result"}}},
+            "then": {"required": ["callId"]}
           },
           {
             "if": {
@@ -51,13 +59,21 @@
                 {"anyOf": [{"required": ["decision"]}, {"required": ["allowed"]}]}
               ]
             }
+          },
+          {
+            "if": {"properties": {"type": {"enum": ["delegation.invoked", "delegation.completed"]}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "callId"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "usage.reported"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "totalTokens"]}
           }
         ],
         "properties": {
           "eventId": {"type": "string", "minLength": 1},
           "type": {
             "type": "string",
-            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "audit.completed"]
+            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "usage.reported", "audit.completed"]
           },
           "timestamp": {"type": "string", "minLength": 1},
           "sessionId": {"type": "string", "minLength": 1},
@@ -65,6 +81,7 @@
           "blockId": {"type": "string"},
           "armId": {"type": "integer", "minimum": 1, "maximum": 4},
           "role": {"type": "string", "enum": ["parent", "worker"]},
+          "sequence": {"type": "integer", "minimum": 1, "maximum": 5},
           "parentSessionId": {"type": "string"},
           "workerSessionId": {"type": "string"},
           "modelId": {"type": "string"},
@@ -86,6 +103,7 @@
           "allowed": {"type": "boolean"},
           "endpoint": {"type": "string", "minLength": 1},
           "target": {"type": "string", "minLength": 1},
+          "totalTokens": {"type": "integer", "minimum": 0, "maximum": 100000},
           "filesystemComplete": {"type": "boolean"},
           "networkComplete": {"type": "boolean"}
         }

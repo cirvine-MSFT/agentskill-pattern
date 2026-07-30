@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "isolation-audit.schema.json",
   "type": "object",
-  "required": ["exportId", "runId", "armId", "evidence", "candidateRoot", "stagingPath", "roleSessions", "globalAttribution", "networkAttribution", "status", "checks", "violations"],
+  "required": ["exportId", "runId", "armId", "evidence", "candidateRoot", "stagingPath", "roleSessions", "globalAttribution", "networkAttribution", "budgets", "status", "checks", "violations"],
   "additionalProperties": false,
   "properties": {
     "exportId": {"type": "string"},
@@ -42,10 +42,31 @@
         "violations": {"type": "array", "items": {"type": "string"}}
       }
     },
+    "budgets": {
+      "type": "object",
+      "required": ["durationMs", "toolCalls", "totalTokens", "limits", "met"],
+      "additionalProperties": false,
+      "properties": {
+        "durationMs": {},
+        "toolCalls": {"type": "integer", "minimum": 0},
+        "totalTokens": {"type": "integer", "minimum": 0},
+        "limits": {
+          "type": "object",
+          "required": ["durationMs", "toolCalls", "totalTokens"],
+          "additionalProperties": false,
+          "properties": {
+            "durationMs": {"const": 1800000},
+            "toolCalls": {"const": 120},
+            "totalTokens": {"const": 100000}
+          }
+        },
+        "met": {"type": "boolean"}
+      }
+    },
     "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
     "checks": {
       "type": "object",
-      "required": ["policyEvents", "auditEvents", "fileToolCalls", "fileAccessEvents", "correlatedFileCalls", "networkAccessEvents", "toolCallEvents", "toolResultEvents", "delegationEvents", "completionEvents", "unblindingEvents", "outcomeAccessEvents"],
+      "required": ["policyEvents", "auditEvents", "fileToolCalls", "fileAccessEvents", "correlatedFileCalls", "networkAccessEvents", "toolCallEvents", "toolResultEvents", "usageEvents", "startEvents", "delegationEvents", "completionEvents", "unblindingEvents", "outcomeAccessEvents"],
       "additionalProperties": false,
       "properties": {
         "policyEvents": {"type": "integer", "minimum": 0},
@@ -56,6 +77,8 @@
         "networkAccessEvents": {"type": "integer", "minimum": 0},
         "toolCallEvents": {"type": "integer", "minimum": 0},
         "toolResultEvents": {"type": "integer", "minimum": 0},
+        "usageEvents": {"type": "integer", "minimum": 0},
+        "startEvents": {"type": "integer", "minimum": 0},
         "delegationEvents": {"type": "integer", "minimum": 0},
         "completionEvents": {"type": "integer", "minimum": 0},
         "unblindingEvents": {"type": "integer", "minimum": 0},

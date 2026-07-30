@@ -361,7 +361,7 @@ export function analyzeBaselineComparisons(observations, options = {}) {
 
   let comparisons = null;
   let factorial = null;
-  if (completeBlocks.length > 0) {
+  if (completeBlocks.length > 0 && unavailableAiRuns.length === 0) {
     comparisons = [];
     for (const armId of AI_ARM_IDS) {
       for (const [endpoint, margin] of endpointEntries) {

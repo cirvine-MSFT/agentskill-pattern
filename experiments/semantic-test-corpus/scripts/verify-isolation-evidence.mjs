@@ -98,6 +98,9 @@ function attributeEvents(payload, mappings, types) {
 }
 
 const GLOBAL_ATTRIBUTION_TYPES = new Set([
+  "run.started",
+  "sandbox.policy.applied",
+  "audit.completed",
   "tool.called",
   "tool.result",
   "fs.access",
@@ -105,16 +108,51 @@ const GLOBAL_ATTRIBUTION_TYPES = new Set([
   "outcome.accessed",
   "delegation.invoked",
   "delegation.completed",
+  "usage.reported",
   "run.completed",
   "outcomes.unblinded"
 ]);
 
+function evaluateStartOrder(payload) {
+  const violations = [];
+  const starts = payload.events.filter((event) => event.type === "run.started");
+  for (const event of starts) {
+    const planned = schedule.runs.find((run) => run.runId === event.runId);
+    if (!planned
+      || event.blockId !== planned.blockId
+      || event.armId !== planned.armId
+      || event.sequence !== planned.order) {
+      violations.push(`run start ${event.eventId} differs from frozen schedule order`);
+    }
+  }
+  for (const blockId of new Set(starts.map((event) => event.blockId))) {
+    const blockStarts = starts
+      .filter((event) => event.blockId === blockId)
+      .toSorted((left, right) => left.sequence - right.sequence);
+    const sequences = new Set();
+    const timestamps = new Set();
+    for (const [index, event] of blockStarts.entries()) {
+      if (sequences.has(event.sequence)) violations.push(`block ${blockId} has duplicate run-start sequence`);
+      if (timestamps.has(event.timestamp)) violations.push(`block ${blockId} has tied run-start timestamps`);
+      sequences.add(event.sequence);
+      timestamps.add(event.timestamp);
+      if (index > 0 && Date.parse(event.timestamp) <= Date.parse(blockStarts[index - 1].timestamp)) {
+        violations.push(`block ${blockId} run starts are not strictly monotonic`);
+      }
+    }
+  }
+  return violations;
+}
+
 export function evaluateGlobalAttribution(authenticated) {
-  return attributeEvents(
+  const result = attributeEvents(
     authenticated.payload,
     authenticatedRunMappings(authenticated.payload),
     GLOBAL_ATTRIBUTION_TYPES
   );
+  result.violations.push(...evaluateStartOrder(authenticated.payload));
+  result.status = result.violations.length === 0 ? "compliant" : "noncompliant";
+  return result;
 }
 
 export function evaluateNetworkAttribution(authenticated) {
@@ -187,6 +225,8 @@ export function evaluateIsolationEvidence(authenticated, {
     "network.access",
     "tool.called",
     "tool.result",
+    "usage.reported",
+    "run.started",
     "delegation.invoked",
     "delegation.completed",
     "run.completed",
@@ -239,11 +279,18 @@ export function evaluateIsolationEvidence(authenticated, {
   const networkEvents = evidenceEvents.filter((event) => event.type === "network.access");
   const toolEvents = evidenceEvents.filter((event) => event.type === "tool.called");
   const toolResultEvents = evidenceEvents.filter((event) => event.type === "tool.result");
+  const usageEvents = evidenceEvents.filter((event) => event.type === "usage.reported");
+  const startEvents = evidenceEvents.filter((event) => event.type === "run.started");
   const delegationEvents = evidenceEvents.filter((event) => event.type.startsWith("delegation."));
   const completionEvents = evidenceEvents.filter((event) => event.type === "run.completed");
   const unblindingEvents = evidenceEvents.filter((event) => event.type === "outcomes.unblinded");
   const outcomeEvents = evidenceEvents.filter((event) => event.type === "outcome.accessed");
 
+  if (startEvents.length !== 1
+    || startEvents[0]?.sessionId !== roleSessions.parent
+    || startEvents[0]?.role !== "parent") {
+    violations.push("run requires one signed start boundary from the authenticated parent");
+  }
   if (completionEvents.length !== 1
     || completionEvents[0]?.sessionId !== roleSessions.parent
     || completionEvents[0]?.role !== "parent") {
@@ -255,6 +302,7 @@ export function evaluateIsolationEvidence(authenticated, {
     violations.push("run requires one signed unblinding boundary from the authenticated parent");
   }
   const completedAt = Date.parse(completionEvents[0]?.timestamp);
+  const startedAt = Date.parse(startEvents[0]?.timestamp);
   const unblindedAt = Date.parse(unblindingEvents[0]?.timestamp);
   if (Number.isFinite(completedAt) && Number.isFinite(unblindedAt) && unblindedAt < completedAt) {
     violations.push("unblinding boundary predates run completion");
@@ -265,21 +313,21 @@ export function evaluateIsolationEvidence(authenticated, {
     if (!role || event.role !== role) {
       violations.push(`outcome access ${event.eventId} lacks an authenticated session/role`);
     }
-    if (Number.isFinite(completedAt)) {
-      for (const event of [
-        ...toolEvents,
-        ...toolResultEvents,
-        ...fileEvents,
-        ...networkEvents,
-        ...delegationEvents
-      ]) {
-        if (Date.parse(event.timestamp) >= completedAt) {
-          violations.push(`generation event ${event.eventId} did not occur strictly before run completion`);
-        }
-      }
-    }
     if (!Number.isFinite(outcomeBoundary) || Date.parse(event.timestamp) <= outcomeBoundary) {
       violations.push(`outcome access ${event.eventId} occurred before completion/unblinding`);
+    }
+  }
+  if (Number.isFinite(startedAt) && Number.isFinite(completedAt)) {
+    for (const event of [
+      ...toolEvents,
+      ...toolResultEvents,
+      ...fileEvents,
+      ...networkEvents,
+      ...delegationEvents
+    ]) {
+      if (Date.parse(event.timestamp) <= startedAt || Date.parse(event.timestamp) >= completedAt) {
+        violations.push(`generation event ${event.eventId} is outside the strict run-start/completion boundary`);
+      }
     }
   }
 
@@ -428,9 +476,42 @@ export function evaluateIsolationEvidence(authenticated, {
         violations.push("delegated arm returned a noncanonical field set");
       }
     }
+    if (invocations.length === 1 && completions.length === 1) {
+      const invokedAt = Date.parse(invocations[0].timestamp);
+      const delegatedAt = Date.parse(completions[0].timestamp);
+      if (invocations[0].callId !== completions[0].callId || invokedAt >= delegatedAt) {
+        violations.push("delegation invocation/completion lifecycle is not exactly matched");
+      }
+      for (const event of [...toolEvents, ...toolResultEvents, ...fileEvents]
+        .filter((item) => sessionRoles.get(item.sessionId) === "worker")) {
+        const timestamp = Date.parse(event.timestamp);
+        if (timestamp <= invokedAt || timestamp >= delegatedAt) {
+          violations.push(`worker generation event ${event.eventId} is outside delegation lifecycle`);
+        }
+      }
+      if (Number.isFinite(completedAt) && delegatedAt >= completedAt) {
+        violations.push("delegation completion does not precede run completion");
+      }
+    }
   } else if (delegationEvents.length > 0) {
     violations.push("inline arm emitted delegation events");
   }
+
+  const durationMs = Number.isFinite(startedAt) && Number.isFinite(completedAt)
+    ? completedAt - startedAt
+    : null;
+  const totalTokens = usageEvents.reduce((sum, event) => sum + event.totalTokens, 0);
+  for (const [role, sessionId] of Object.entries(roleSessions)) {
+    const roleUsage = usageEvents.filter((event) =>
+      event.sessionId === sessionId && event.role === role);
+    if (roleUsage.length !== 1) violations.push(`${role} requires exactly one authenticated usage report`);
+  }
+  const budgetMet = durationMs !== null
+    && durationMs >= 0
+    && durationMs <= 30 * 60 * 1000
+    && toolEvents.length <= 120
+    && totalTokens <= 100000;
+  if (!budgetMet) violations.push("authenticated duration/tool/token budget exceeded or unavailable");
 
   return {
     exportId: payload.exportId,
@@ -442,6 +523,13 @@ export function evaluateIsolationEvidence(authenticated, {
     roleSessions,
     globalAttribution,
     networkAttribution,
+    budgets: {
+      durationMs,
+      toolCalls: toolEvents.length,
+      totalTokens,
+      limits: { durationMs: 1800000, toolCalls: 120, totalTokens: 100000 },
+      met: budgetMet
+    },
     status: violations.length === 0 ? "compliant" : "noncompliant",
     checks: {
       policyEvents: policyEvents.length,
@@ -452,6 +540,8 @@ export function evaluateIsolationEvidence(authenticated, {
       networkAccessEvents: networkEvents.length,
       toolCallEvents: toolEvents.length,
       toolResultEvents: toolResultEvents.length,
+      usageEvents: usageEvents.length,
+      startEvents: startEvents.length,
       delegationEvents: delegationEvents.length,
       completionEvents: completionEvents.length,
       unblindingEvents: unblindingEvents.length,

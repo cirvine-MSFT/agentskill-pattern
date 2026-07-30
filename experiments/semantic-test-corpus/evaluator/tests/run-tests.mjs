@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 import { generateBaseline, PAIRWISE_FACTORS } from "../../baseline/generate.mjs";
 import { FiniteDomainSolver } from "../../baseline/finite-domain-solver.mjs";
 import { findUncoveredPairs, generatePairwiseCoveringArray } from "../../baseline/pairwise.mjs";
-import { mappingSpec, migrateV1ToV2 } from "../../fixture/migration/index.mjs";
-import { referenceOracle } from "../oracle/index.mjs";
+import { compareCodePointStrings, mappingSpec, migrateV1ToV2 } from "../../fixture/migration/index.mjs";
+import { compareCodePoints, referenceOracle } from "../oracle/index.mjs";
 import { mutants, executeMutant } from "../mutants/definitions.mjs";
 import { buildKillMatrix } from "../mutants/run.mjs";
 import { validateMutantCatalog } from "../mutants/validate.mjs";
@@ -20,6 +20,7 @@ import { createSchedule } from "../../scripts/randomize.mjs";
 import { evaluateIsolationEvidence } from "../../scripts/verify-isolation-evidence.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
+import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
 import { analyzeBaselineComparisons, analyzeStatisticsInput } from "../statistics.mjs";
 import { validateJsonSchema } from "../../validators/json-schema.mjs";
 import { validateStaging } from "../../validators/staging.mjs";
@@ -99,12 +100,13 @@ function modelEvidencePayload() {
     events.push({
       eventId: `${run.runId}-started`,
       type: "run.started",
-      timestamp: "2026-07-29T00:03:00Z",
+      timestamp: `2026-07-29T00:03:0${run.order}Z`,
       sessionId: parentSessionId,
       runId: run.runId,
       blockId: run.blockId,
       armId: run.armId,
-      role: "parent"
+      role: "parent",
+      sequence: run.order
     });
     addSession(run, "parent", parentSessionId, modelId);
     if ([2, 4].includes(run.armId)) {
@@ -235,10 +237,32 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
         role,
         filesystemComplete: true,
         networkComplete: true
+      },
+      {
+        eventId: `${sessionId}-usage`,
+        type: "usage.reported",
+        timestamp: "2026-07-29T00:03:50Z",
+        sessionId,
+        runId,
+        blockId,
+        armId,
+        role,
+        totalTokens: 100
       }
     ];
   });
   events.push(
+    {
+      eventId: `${runId}-started`,
+      type: "run.started",
+      timestamp: "2026-07-29T00:00:50Z",
+      sessionId: parentSessionId,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      sequence: frozenSchedule.runs.find((run) => run.runId === runId).order
+    },
     {
       eventId: `${runId}-completed`,
       type: "run.completed",
@@ -288,6 +312,14 @@ test("mapping and invariant IDs are unique", () => {
     ...mappingSpec.invariants.flatMap((invariant) => invariant.paths)
   ];
   assert.equal(new Set(paths).size, paths.length);
+});
+
+test("sorting uses deterministic Unicode code-point order", () => {
+  for (const compare of [compareCodePoints, compareCodePointStrings]) {
+    assert(compare("z", "ä") < 0);
+    assert(compare("😀", "�") > 0);
+    assert.equal(compare("same", "same"), 0);
+  }
 });
 
 test("baseline is deterministic and staging-valid", () => {
@@ -487,6 +519,13 @@ test("URL invariants reject malformed ports, credentials, paths, and queries", (
   for (const origin of [
     "https://example.test:99999",
     "https://example.test:abc",
+    " https://example.test",
+    "https://example.test ",
+    "https://example.test?",
+    "https://example.test#",
+    "https://example.test/.",
+    "https://example.test/a/..",
+    "https://@example.test",
     "https://user:pass@example.test",
     "https://example.test/path",
     "https://example.test?query=1"
@@ -512,6 +551,12 @@ test("URL invariants reject malformed ports, credentials, paths, and queries", (
   for (const endpoint of [
     "redis://cache.example.test:99999",
     "redis://cache.example.test:abc",
+    " redis://cache.example.test:6379",
+    "redis://cache.example.test:6379 ",
+    "redis://cache.example.test:6379?",
+    "redis://cache.example.test:6379#",
+    "redis://cache.example.test:6379/.",
+    "redis://@cache.example.test:6379",
     "redis://user:pass@cache.example.test:6379",
     "redis://cache.example.test:6379/not-a-db",
     "redis://cache.example.test:6379/1?query=1"
@@ -624,6 +669,18 @@ test("baseline report is derived and complete", () => {
   assert.equal(duplicateReport.redundancyAndDiversity.exactDuplicateCases, 1);
 });
 
+test("reproduction rejects JSON formatting, key-order, and newline tampering", () => {
+  const value = { alpha: 1, nested: { beta: 2, gamma: 3 } };
+  assert.doesNotThrow(() => assertExactArtifact(value, canonicalArtifactBytes(value), "fixture"));
+  for (const tampered of [
+    Buffer.from(JSON.stringify(value)),
+    Buffer.from('{\n  "nested": {\n    "beta": 2,\n    "gamma": 3\n  },\n  "alpha": 1\n}\n'),
+    Buffer.from(`${JSON.stringify(value, null, 2)}\r\n`)
+  ]) {
+    assert.throws(() => assertExactArtifact(value, tampered, "fixture"), /byte-for-byte/);
+  }
+});
+
 test("delegated arms use one byte-identical mechanism and tool contract", () => {
   const contract = readRootJson("design", "arm-contract.json");
   const frontier = contract.arms.find((arm) => arm.id === 2);
@@ -652,6 +709,7 @@ test("signed run evidence enforces the common delegated mechanism", () => {
     blockId,
     armId,
     role: "parent",
+    callId: "delegation-lifecycle",
     workerSessionId: `${runId}-worker`,
     skillName: "semantic-scenario-stager",
     skillSha256
@@ -665,6 +723,7 @@ test("signed run evidence enforces the common delegated mechanism", () => {
     blockId,
     armId,
     role: "parent",
+    callId: "delegation-lifecycle",
     returnFields: ["stagingPath", "payloadSha256", "submittedCases", "promotableCases", "errorCount"]
   });
   events.push({
@@ -713,6 +772,38 @@ test("signed run evidence enforces the common delegated mechanism", () => {
   assert.equal(compliant.status, "compliant");
   assert.equal(compliant.checks.correlatedFileCalls, 1);
   assert.equal(compliant.checks.outcomeAccessEvents, 1);
+  assert.equal(compliant.budgets.met, true);
+
+  const aggregateTokenPayload = structuredClone(compliantPayload);
+  for (const event of aggregateTokenPayload.events.filter((item) => item.type === "usage.reported")) {
+    event.totalTokens = 60000;
+  }
+  const aggregateTokenSigned = signedExport(aggregateTokenPayload);
+  const aggregateToken = evaluateIsolationEvidence(
+    authenticateExport(
+      aggregateTokenSigned.bytes,
+      aggregateTokenSigned.signature,
+      aggregateTokenSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(aggregateToken.status, "noncompliant");
+  assert.equal(aggregateToken.budgets.totalTokens, 120000);
+  assert(aggregateToken.violations.some((violation) => violation.includes("budget exceeded")));
+
+  const lateWorkerPayload = structuredClone(compliantPayload);
+  for (const event of lateWorkerPayload.events.filter((item) =>
+    item.eventId === "worker-write" || item.eventId === "worker-write-access")) {
+    event.timestamp = "2026-07-29T00:03:10Z";
+  }
+  const lateWorkerSigned = signedExport(lateWorkerPayload);
+  const lateWorker = evaluateIsolationEvidence(
+    authenticateExport(lateWorkerSigned.bytes, lateWorkerSigned.signature, lateWorkerSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(lateWorker.status, "noncompliant");
+  assert(lateWorker.violations.some((violation) =>
+    violation.includes("outside delegation lifecycle")));
 
   events.find((event) => event.eventId === "delegation-invoked").skillSha256 = "0".repeat(64);
   const wrongSkillSigned = signedExport(payload);
@@ -1093,6 +1184,105 @@ test("isolation compliance is derived from signed policy and access logs", () =>
     { schemaDir: resolve(root, "schemas") }
   ), []);
 
+  const durationPayload = structuredClone(compliantPayload);
+  durationPayload.exportedAt = "2026-07-29T00:32:00Z";
+  durationPayload.events.find((event) => event.type === "run.completed").timestamp = "2026-07-29T00:31:00Z";
+  durationPayload.events.find((event) => event.type === "outcomes.unblinded").timestamp = "2026-07-29T00:31:10Z";
+  durationPayload.events.find((event) => event.type === "outcome.accessed").timestamp = "2026-07-29T00:31:20Z";
+  const durationSigned = signedExport(durationPayload);
+  const duration = evaluateIsolationEvidence(
+    authenticateExport(durationSigned.bytes, durationSigned.signature, durationSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(duration.status, "noncompliant");
+  assert(duration.budgets.durationMs > duration.budgets.limits.durationMs);
+
+  const toolBudgetPayload = structuredClone(compliantPayload);
+  for (let index = 0; index < 120; index += 1) {
+    toolBudgetPayload.events.push({
+      eventId: `extra-tool-${index}`,
+      type: "tool.called",
+      timestamp: "2026-07-29T00:02:10Z",
+      sessionId: `${runId}-parent`,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      actor: "parent",
+      toolName: "staging.validate"
+    });
+  }
+  const toolBudgetSigned = signedExport(toolBudgetPayload);
+  const toolBudget = evaluateIsolationEvidence(
+    authenticateExport(toolBudgetSigned.bytes, toolBudgetSigned.signature, toolBudgetSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(toolBudget.status, "noncompliant");
+  assert.equal(toolBudget.budgets.toolCalls, 121);
+
+  const addEarlierRunStart = (targetPayload, timestamp) => {
+    targetPayload.events.push(
+      {
+        eventId: "other-created",
+        type: "session.created",
+        timestamp: "2026-07-29T00:00:20Z",
+        sessionId: "B01-A3-parent",
+        runId: "B01-A3",
+        blockId: "B01",
+        armId: 3,
+        role: "parent"
+      },
+      {
+        eventId: "other-bound",
+        type: "model.bound",
+        timestamp: "2026-07-29T00:00:25Z",
+        sessionId: "B01-A3-parent",
+        runId: "B01-A3",
+        blockId: "B01",
+        armId: 3,
+        role: "parent",
+        modelId: "claude-haiku-4.5",
+        atomic: true
+      },
+      {
+        eventId: "other-started",
+        type: "run.started",
+        timestamp,
+        sessionId: "B01-A3-parent",
+        runId: "B01-A3",
+        blockId: "B01",
+        armId: 3,
+        role: "parent",
+        sequence: 1
+      }
+    );
+  };
+  const tiedStartPayload = structuredClone(compliantPayload);
+  addEarlierRunStart(tiedStartPayload, "2026-07-29T00:00:50Z");
+  const tiedStartSigned = signedExport(tiedStartPayload);
+  const tiedStart = evaluateIsolationEvidence(
+    authenticateExport(tiedStartSigned.bytes, tiedStartSigned.signature, tiedStartSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(tiedStart.status, "noncompliant");
+  assert(tiedStart.globalAttribution.violations.some((violation) =>
+    violation.includes("tied run-start timestamps")));
+
+  const reorderedStartPayload = structuredClone(compliantPayload);
+  addEarlierRunStart(reorderedStartPayload, "2026-07-29T00:00:55Z");
+  const reorderedStartSigned = signedExport(reorderedStartPayload);
+  const reorderedStart = evaluateIsolationEvidence(
+    authenticateExport(
+      reorderedStartSigned.bytes,
+      reorderedStartSigned.signature,
+      reorderedStartSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(reorderedStart.status, "noncompliant");
+  assert(reorderedStart.globalAttribution.violations.some((violation) =>
+    violation.includes("not strictly monotonic")));
+
   const allowedTargetPayload = structuredClone(compliantPayload);
   const allowedTargetNetwork = allowedTargetPayload.events.find((event) => event.type === "network.access");
   delete allowedTargetNetwork.decision;
@@ -1263,7 +1453,7 @@ test("isolation compliance is derived from signed policy and access logs", () =>
   );
   assert.equal(postCompletion.status, "noncompliant");
   assert(postCompletion.violations.some((violation) =>
-    violation.includes("did not occur strictly before run completion")));
+    violation.includes("outside the strict run-start/completion boundary")));
 });
 
 test("noninferiority and equality use separate multiplicity-adjusted families", () => {
@@ -1481,8 +1671,8 @@ test("factorial summaries and missingness sensitivity match known synthetic valu
   assert.equal(unavailableRun.analysisEligibility.confirmatoryAvailable, false);
   assert.deepEqual(unavailableRun.analysisEligibility.unavailableAiRuns, ["B12-A4"]);
   assert.match(unavailableRun.analysisEligibility.unavailableReason, /lack frozen model availability/);
-  assert(unavailableRun.comparisons.every((comparison) =>
-    comparison.noninferiority.noninferior === null));
+  assert.equal(unavailableRun.comparisons, null);
+  assert.equal(unavailableRun.factorial, null);
 
   const baselineOnly = observations.filter((observation) => observation.armId === 0);
   const zeroComplete = analyzeBaselineComparisons(baselineOnly, {

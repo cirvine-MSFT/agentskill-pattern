@@ -154,6 +154,9 @@ Skill and return only compact staging metadata; parents never read the corpus.
 Dataset-wide attribution covers tool/results, filesystem, network, outcome,
 delegation, completion, and unblinding events; generation activity at or after
 completion fails closed.
+Signed start sequence/timestamps enforce the frozen within-block order. Signed
+completion, tool-call counts, and parent-plus-worker token reports derive the
+30-minute/120-call/100,000-token run budgets.
 The materializer's in-tree `.test-work/` allowance exists only for the cleaned
 regression test and is forbidden for measured runs.
 Production materialization canonicalizes source and destination with `realpath`
