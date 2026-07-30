@@ -26,6 +26,46 @@ function canonicalOrigin(value) {
   }
 }
 
+function validPort(url) {
+  if (url.port === "") return true;
+  const port = Number(url.port);
+  return Number.isInteger(port) && port >= 1 && port <= 65535;
+}
+
+function validHttpOrigin(value) {
+  if (value === "*") return true;
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol)
+      && url.hostname.length > 0
+      && url.username === ""
+      && url.password === ""
+      && validPort(url)
+      && url.pathname === "/"
+      && url.search === ""
+      && url.hash === "";
+  } catch {
+    return false;
+  }
+}
+
+function validRedisEndpoint(value) {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return ["redis:", "rediss:"].includes(url.protocol)
+      && url.hostname.length > 0
+      && url.username === ""
+      && url.password === ""
+      && validPort(url)
+      && (url.pathname === "" || /^\/\d+$/.test(url.pathname))
+      && url.search === ""
+      && url.hash === "";
+  } catch {
+    return false;
+  }
+}
+
 function addDiagnostic(list, id, category, path, message, severity = "error") {
   list.push({ id, category, path, message, severity });
 }
@@ -92,8 +132,7 @@ export function referenceOracle(input) {
   const servicePort = input.service.port ?? ({ dev: 3000, test: 4000, prod: 8080 }[input.service.environment]);
   const databasePort = input.database.port ?? ({ postgres: 5432, mysql: 3306 }[input.database.engine]);
   const featureNames = Object.keys(input.features.flags).map(canonicalFeature);
-  const originSyntaxValid = input.security.allowedOrigins.every((origin) =>
-    origin === "*" || /^https?:\/\/[^/?#\s]+\/?$/i.test(origin));
+  const originSyntaxValid = input.security.allowedOrigins.every(validHttpOrigin);
 
   checkInvariant(trace, diagnostics, "I-VERSION", true, input.version === 1, detail("I-VERSION"));
   checkInvariant(trace, diagnostics, "I-SERVICE-NAME", true, slugName(input.service.name).length > 0, detail("I-SERVICE-NAME"));
@@ -107,7 +146,7 @@ export function referenceOracle(input) {
     Number.isInteger(input.cache.ttlSeconds) && input.cache.ttlSeconds >= 1 && input.cache.ttlSeconds <= 86400,
     detail("I-CACHE-TTL"));
   checkInvariant(trace, diagnostics, "I-REDIS-ENDPOINT", input.cache.enabled === true && input.cache.provider === "redis",
-    typeof input.cache.endpoint === "string" && /^rediss?:\/\/[^/\s]+(?::\d+)?(?:\/\d+)?$/i.test(input.cache.endpoint),
+    validRedisEndpoint(input.cache.endpoint),
     detail("I-REDIS-ENDPOINT"));
   checkInvariant(trace, diagnostics, "I-SQLITE-PROD", input.database.engine === "sqlite",
     input.service.environment !== "prod", detail("I-SQLITE-PROD"));

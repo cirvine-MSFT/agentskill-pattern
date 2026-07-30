@@ -329,10 +329,18 @@ export function analyzeBaselineComparisons(observations, options = {}) {
     if (reasons.length === 0) completeBlocks.push(blockId);
     else incompleteBlocks.push({ blockId, reasons });
   }
-  const confirmatoryAvailable = incompleteBlocks.length <= 2 && completeBlocks.length > 0;
+  const unavailableAiRuns = schedule.runs
+    .filter((run) => run.armId !== 0)
+    .filter((run) => bindingRuns.get(run.runId)?.status !== "available")
+    .map((run) => run.runId);
+  const confirmatoryAvailable = unavailableAiRuns.length === 0
+    && incompleteBlocks.length <= 2
+    && completeBlocks.length > 0;
   const unavailableReason = confirmatoryAvailable
     ? null
-    : completeBlocks.length === 0
+    : unavailableAiRuns.length > 0
+      ? `${unavailableAiRuns.length} measured AI run(s) lack frozen model availability`
+      : completeBlocks.length === 0
       ? "no complete blocks are available for paired analysis"
       : `${incompleteBlocks.length} of ${PLANNED_BLOCKS.length} blocks are incomplete; protocol permits at most 2`;
 
@@ -444,6 +452,7 @@ export function analyzeBaselineComparisons(observations, options = {}) {
       plannedBlocks: PLANNED_BLOCKS.length,
       completeBlocks,
       incompleteBlocks,
+      unavailableAiRuns,
       confirmatoryAvailable,
       unavailableReason,
       bindingEvidenceSha256: bindingAvailability.evidence.payloadSha256

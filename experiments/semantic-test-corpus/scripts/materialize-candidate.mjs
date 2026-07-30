@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync
+} from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -9,6 +18,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const evaluatorRoot = resolve(root, "evaluator");
 const testWorkRoot = resolve(root, ".test-work");
 const manifest = JSON.parse(readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8"));
+const canonicalRoot = realpathSync.native(root);
+const canonicalEvaluatorRoot = realpathSync.native(evaluatorRoot);
 
 function hash(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -24,14 +35,55 @@ function runGit(destination, args) {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
 }
 
-export function materializeCandidate(destination) {
+function rejectReparseComponents(path) {
+  const existing = [];
+  let cursor = resolve(path);
+  while (true) {
+    if (existsSync(cursor)) existing.push(cursor);
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  for (const component of existing.reverse()) {
+    if (lstatSync(component).isSymbolicLink()) {
+      throw new Error(`Path contains a symbolic link, junction, or reparse component: ${component}`);
+    }
+  }
+}
+
+function canonicalProspectivePath(path) {
+  const target = resolve(path);
+  let ancestor = target;
+  while (!existsSync(ancestor)) {
+    const parent = dirname(ancestor);
+    if (parent === ancestor) throw new Error(`No existing ancestor for ${target}`);
+    ancestor = parent;
+  }
+  return resolve(realpathSync.native(ancestor), relative(ancestor, target));
+}
+
+export function materializeCandidate(destination, { allowTestDestination = false } = {}) {
   const target = resolve(destination);
-  if (within(root, target) && !within(testWorkRoot, target)) {
+  rejectReparseComponents(target);
+  const canonicalTarget = canonicalProspectivePath(target);
+  const testDestination = allowTestDestination
+    && within(canonicalProspectivePath(testWorkRoot), canonicalTarget);
+  if (within(canonicalRoot, canonicalTarget) && !testDestination) {
     throw new Error("Candidate root must be outside the benchmark repository");
   }
-  if (within(target, root)) throw new Error("Candidate root cannot contain the benchmark repository");
+  if (within(canonicalTarget, canonicalRoot)) {
+    throw new Error("Candidate root cannot contain the benchmark repository");
+  }
   if (existsSync(target) && readdirSync(target).length > 0) throw new Error("Candidate root must be absent or empty");
   mkdirSync(target, { recursive: true });
+  rejectReparseComponents(target);
+  const materializedReal = realpathSync.native(target);
+  if (!testDestination && within(canonicalRoot, materializedReal)) {
+    throw new Error("Candidate root resolves inside the benchmark repository");
+  }
+  if (within(materializedReal, canonicalRoot)) {
+    throw new Error("Candidate root resolves around the benchmark repository");
+  }
 
   const files = [];
   for (const entry of manifest.files) {
@@ -40,12 +92,15 @@ export function materializeCandidate(destination) {
       throw new Error(`Manifest exposes forbidden evaluator source: ${entry.source}`);
     }
     const source = resolve(root, entry.source);
-    if (!within(root, source) || within(evaluatorRoot, source)) {
+    rejectReparseComponents(source);
+    const canonicalSource = realpathSync.native(source);
+    if (!within(canonicalRoot, canonicalSource) || within(canonicalEvaluatorRoot, canonicalSource)) {
       throw new Error(`Manifest source crosses evaluator boundary: ${entry.source}`);
     }
     const output = resolve(target, entry.destination);
     if (!within(target, output)) throw new Error(`Manifest destination escapes candidate root: ${entry.destination}`);
     mkdirSync(dirname(output), { recursive: true });
+    rejectReparseComponents(dirname(output));
     copyFileSync(source, output);
     files.push({ path: entry.destination.replaceAll("\\", "/"), sha256: hash(readFileSync(output)) });
   }
@@ -53,7 +108,7 @@ export function materializeCandidate(destination) {
   const boundary = {
     formatVersion: 1,
     manifestVersion: manifest.manifestVersion,
-    candidateRoot: target,
+    candidateRoot: materializedReal,
     networkPolicy: "deny",
     filesystemPolicy: "candidate-root-only",
     files

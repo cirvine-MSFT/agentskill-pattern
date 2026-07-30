@@ -26,7 +26,7 @@
             "then": {"required": ["modelId", "atomic"]}
           },
           {
-            "if": {"properties": {"type": {"const": "tool.called"}}},
+            "if": {"properties": {"type": {"enum": ["tool.called", "tool.result"]}}},
             "then": {"required": ["runId", "blockId", "armId", "role", "actor", "toolName"]}
           },
           {
@@ -57,7 +57,7 @@
           "eventId": {"type": "string", "minLength": 1},
           "type": {
             "type": "string",
-            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "delegation.invoked", "delegation.completed", "audit.completed"]
+            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "audit.completed"]
           },
           "timestamp": {"type": "string", "minLength": 1},
           "sessionId": {"type": "string", "minLength": 1},

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -481,6 +481,60 @@ test("metamorphic properties independently constrain the oracle", () => {
   assert.deepEqual(diagnosticIds(duplicateOutcome), ["W-ORIGIN-DEDUP"]);
 });
 
+test("URL invariants reject malformed ports, credentials, paths, and queries", () => {
+  const base = readEvaluatorJson("tests", "golden-cases.json").cases[0].input;
+  const executors = [referenceOracle, migrateV1ToV2];
+  for (const origin of [
+    "https://example.test:99999",
+    "https://example.test:abc",
+    "https://user:pass@example.test",
+    "https://example.test/path",
+    "https://example.test?query=1"
+  ]) {
+    const input = structuredClone(base);
+    input.security.allowedOrigins = [origin];
+    for (const execute of executors) {
+      assert(diagnosticIds(execute(input)).includes("D-ORIGIN-SYNTAX"), origin);
+    }
+  }
+  for (const origin of [
+    "http://127.0.0.1:8080",
+    "https://service.example.test",
+    "https://[2001:db8::1]:8443"
+  ]) {
+    const input = structuredClone(base);
+    input.security.allowedOrigins = [origin];
+    for (const execute of executors) {
+      assert(!diagnosticIds(execute(input)).includes("D-ORIGIN-SYNTAX"), origin);
+    }
+  }
+
+  for (const endpoint of [
+    "redis://cache.example.test:99999",
+    "redis://cache.example.test:abc",
+    "redis://user:pass@cache.example.test:6379",
+    "redis://cache.example.test:6379/not-a-db",
+    "redis://cache.example.test:6379/1?query=1"
+  ]) {
+    const input = structuredClone(base);
+    input.cache = { enabled: true, provider: "redis", ttlSeconds: 60, endpoint };
+    for (const execute of executors) {
+      assert(diagnosticIds(execute(input)).includes("D-REDIS-ENDPOINT"), endpoint);
+    }
+  }
+  for (const endpoint of [
+    "redis://127.0.0.1:6379/0",
+    "rediss://cache.example.test:6380/2",
+    "redis://[2001:db8::1]:6379"
+  ]) {
+    const input = structuredClone(base);
+    input.cache = { enabled: true, provider: "redis", ttlSeconds: 60, endpoint };
+    for (const execute of executors) {
+      assert(!diagnosticIds(execute(input)).includes("D-REDIS-ENDPOINT"), endpoint);
+    }
+  }
+});
+
 test("all meaningful deterministic mutants are killed", () => {
   assert(mutants.length >= 20);
   const corpus = readEvaluatorJson("artifacts", "baseline-corpus.json");
@@ -546,6 +600,28 @@ test("baseline report is derived and complete", () => {
   assert.equal(report.mutation.catalogValidation.validated, 33);
   assert.equal(report.mutation.total, 33);
   assert.equal(report.redundancyAndDiversity.exactDuplicateCases, 0);
+
+  const reverseKeys = (value) => {
+    if (Array.isArray(value)) return value.map(reverseKeys);
+    if (!value || typeof value !== "object") return value;
+    return Object.fromEntries(Object.keys(value).reverse().map((key) => [key, reverseKeys(value[key])]));
+  };
+  const first = corpus.cases[0];
+  const duplicateCorpus = {
+    ...corpus,
+    promotion: {
+      ...corpus.promotion,
+      submittedCases: 2,
+      promotedCases: 2,
+      promotionRate: 2 / 60
+    },
+    cases: [
+      first,
+      { ...first, id: `${first.id}-REORDERED`, input: reverseKeys(first.input) }
+    ]
+  };
+  const duplicateReport = buildReport(duplicateCorpus, matrix, mappingSpec);
+  assert.equal(duplicateReport.redundancyAndDiversity.exactDuplicateCases, 1);
 });
 
 test("delegated arms use one byte-identical mechanism and tool contract", () => {
@@ -900,7 +976,7 @@ test("candidate materialization excludes evaluator assets in an external reposit
   const temporary = resolve(root, ".test-work", "semantic-candidate");
   rmSync(temporary, { recursive: true, force: true });
   try {
-    const boundary = materializeCandidate(temporary);
+    const boundary = materializeCandidate(temporary, { allowTestDestination: true });
     assert.equal(boundary.files.length, readRootJson("design", "candidate-manifest.json").files.length);
     assert(boundary.files.every((file) => !file.path.startsWith("evaluator/")));
     assert.equal(existsSync(resolve(temporary, "evaluator")), false);
@@ -913,6 +989,17 @@ test("candidate materialization excludes evaluator assets in an external reposit
     });
     assert.equal(validation.status, 0, validation.stderr);
     assert.throws(() => materializeCandidate(resolve(root, "candidate-output")), /outside the benchmark repository/);
+
+    const junctionTarget = resolve(root, ".test-work", "junction-target");
+    const junction = resolve(root, ".test-work", "junction");
+    mkdirSync(junctionTarget, { recursive: true });
+    try {
+      symlinkSync(junctionTarget, junction, process.platform === "win32" ? "junction" : "dir");
+      assert.throws(() => materializeCandidate(junction, { allowTestDestination: true }),
+        /symbolic link, junction, or reparse/);
+    } catch (error) {
+      if (error.code !== "EPERM" && error.code !== "EACCES") throw error;
+    }
   } finally {
     rmSync(resolve(root, ".test-work"), { recursive: true, force: true });
   }
@@ -954,6 +1041,19 @@ test("isolation compliance is derived from signed policy and access logs", () =>
       path: stagingPath,
       operation: "write",
       decision: "allow"
+    },
+    {
+      eventId: "file-result",
+      type: "tool.result",
+      timestamp: "2026-07-29T00:02:01Z",
+      sessionId: `${runId}-parent`,
+      runId,
+      blockId,
+      armId,
+      role: "parent",
+      actor: "parent",
+      callId: "inline-write",
+      toolName: "file.write"
     },
     {
       eventId: "network",
@@ -1124,9 +1224,46 @@ test("isolation compliance is derived from signed policy and access logs", () =>
     { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
   );
   assert.equal(ambiguousNetwork.status, "noncompliant");
+  assert.equal(ambiguousNetwork.globalAttribution.status, "noncompliant");
   assert.equal(ambiguousNetwork.networkAttribution.status, "noncompliant");
   assert(ambiguousNetwork.networkAttribution.violations.some((violation) =>
     violation.includes("maps to 2 scheduled run roles")));
+
+  const bogusToolPayload = structuredClone(compliantPayload);
+  for (const event of bogusToolPayload.events.filter((item) =>
+    item.eventId === "file-tool" || item.eventId === "file" || item.eventId === "file-result")) {
+    event.runId = "B02-A1";
+    event.blockId = "B02";
+  }
+  const bogusToolSigned = signedExport(bogusToolPayload);
+  const bogusTool = evaluateIsolationEvidence(
+    authenticateExport(bogusToolSigned.bytes, bogusToolSigned.signature, bogusToolSigned.publicKey),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(bogusTool.status, "noncompliant");
+  assert.equal(bogusTool.globalAttribution.status, "noncompliant");
+  assert(bogusTool.globalAttribution.violations.some((violation) =>
+    violation.includes("tool.called file-tool is not attributable")));
+  assert(bogusTool.globalAttribution.violations.some((violation) =>
+    violation.includes("fs.access file is not attributable")));
+
+  const postCompletionPayload = structuredClone(compliantPayload);
+  for (const event of postCompletionPayload.events.filter((item) =>
+    item.eventId === "file-tool" || item.eventId === "file" || item.eventId === "file-result")) {
+    event.timestamp = "2026-07-29T00:04:15Z";
+  }
+  const postCompletionSigned = signedExport(postCompletionPayload);
+  const postCompletion = evaluateIsolationEvidence(
+    authenticateExport(
+      postCompletionSigned.bytes,
+      postCompletionSigned.signature,
+      postCompletionSigned.publicKey
+    ),
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
+  );
+  assert.equal(postCompletion.status, "noncompliant");
+  assert(postCompletion.violations.some((violation) =>
+    violation.includes("did not occur strictly before run completion")));
 });
 
 test("noninferiority and equality use separate multiplicity-adjusted families", () => {
@@ -1218,7 +1355,7 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   const nineBlocks = observations.filter((observation) =>
     Number(observation.blockId.slice(1)) <= 9);
   const descriptive = analyzeBaselineComparisons(nineBlocks, {
-    bindingAvailability: bindingAvailabilityFor(nineBlocks)
+    bindingAvailability: bindingAvailabilityFor(observations)
   });
   assert.equal(descriptive.analysisEligibility.completeBlocks.length, 9);
   assert.equal(descriptive.analysisEligibility.incompleteBlocks.length, 3);
@@ -1323,7 +1460,7 @@ test("factorial summaries and missingness sensitivity match known synthetic valu
   const missing = observations.filter((observation) =>
     !(observation.blockId === "B12" && observation.armId === 4));
   const missingResult = analyzeBaselineComparisons(missing, {
-    bindingAvailability: bindingAvailabilityFor(missing)
+    bindingAvailability: bindingAvailabilityFor(observations)
   });
   assert.equal(missingResult.analysisEligibility.completeBlocks.length, 11);
   assert.equal(missingResult.analysisEligibility.confirmatoryAvailable, true);
@@ -1337,9 +1474,19 @@ test("factorial summaries and missingness sensitivity match known synthetic valu
   close(comparisonBounds.worstMeanDifference, ((11 * -0.05) - 0.5) / 12);
   close(comparisonBounds.bestMeanDifference, ((11 * -0.05) + 0.5) / 12);
 
+  const unavailableRun = analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindingAvailabilityFor(observations, ["B12-A4"])
+  });
+  assert.equal(unavailableRun.analysisEligibility.completeBlocks.length, 11);
+  assert.equal(unavailableRun.analysisEligibility.confirmatoryAvailable, false);
+  assert.deepEqual(unavailableRun.analysisEligibility.unavailableAiRuns, ["B12-A4"]);
+  assert.match(unavailableRun.analysisEligibility.unavailableReason, /lack frozen model availability/);
+  assert(unavailableRun.comparisons.every((comparison) =>
+    comparison.noninferiority.noninferior === null));
+
   const baselineOnly = observations.filter((observation) => observation.armId === 0);
   const zeroComplete = analyzeBaselineComparisons(baselineOnly, {
-    bindingAvailability: bindingAvailabilityFor(baselineOnly)
+    bindingAvailability: bindingAvailabilityFor(observations)
   });
   assert.equal(zeroComplete.analysisEligibility.completeBlocks.length, 0);
   assert.equal(zeroComplete.analysisEligibility.confirmatoryAvailable, false);

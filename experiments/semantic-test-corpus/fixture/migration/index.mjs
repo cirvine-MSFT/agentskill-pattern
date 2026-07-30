@@ -36,6 +36,47 @@ function normalizeOrigin(value) {
   }
 }
 
+function portIsValid(parsed) {
+  if (!parsed.port) return true;
+  const numericPort = Number(parsed.port);
+  return Number.isInteger(numericPort) && numericPort > 0 && numericPort <= 65535;
+}
+
+function isHttpOrigin(value) {
+  if (value === "*") return true;
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "http:" || parsed.protocol === "https:")
+      && Boolean(parsed.hostname)
+      && !parsed.username
+      && !parsed.password
+      && portIsValid(parsed)
+      && parsed.pathname === "/"
+      && !parsed.search
+      && !parsed.hash;
+  } catch {
+    return false;
+  }
+}
+
+function isRedisLocation(value) {
+  if (typeof value !== "string") return false;
+  try {
+    const parsed = new URL(value);
+    const databasePath = parsed.pathname === "" || /^\/[0-9]+$/.test(parsed.pathname);
+    return (parsed.protocol === "redis:" || parsed.protocol === "rediss:")
+      && Boolean(parsed.hostname)
+      && !parsed.username
+      && !parsed.password
+      && portIsValid(parsed)
+      && databasePath
+      && !parsed.search
+      && !parsed.hash;
+  } catch {
+    return false;
+  }
+}
+
 function effectiveServicePort(input) {
   return input.service.port ?? ({ dev: 3000, test: 4000, prod: 8080 }[input.service.environment]);
 }
@@ -53,8 +94,7 @@ function customPredicate(name, input) {
     validCacheTtl: () => Number.isInteger(input.cache.ttlSeconds)
       && input.cache.ttlSeconds >= 1 && input.cache.ttlSeconds <= 86400,
     enabledRedisCache: () => input.cache.enabled === true && input.cache.provider === "redis",
-    validRedisEndpoint: () => typeof input.cache.endpoint === "string"
-      && /^rediss?:\/\/[^/\s]+(?::\d+)?(?:\/\d+)?$/i.test(input.cache.endpoint),
+    validRedisEndpoint: () => isRedisLocation(input.cache.endpoint),
     prodRemoteDatabase: () => input.service.environment === "prod" && input.database.engine !== "sqlite",
     remoteDatabase: () => input.database.engine !== "sqlite",
     distinctEffectivePorts: () => effectiveServicePort(input) !== effectiveDatabasePort(input),
@@ -67,8 +107,7 @@ function customPredicate(name, input) {
       const names = Object.keys(input.features.flags).map(featureName);
       return names.every(Boolean) && new Set(names).size === names.length;
     },
-    validOriginSyntax: () => input.security.allowedOrigins.every((origin) =>
-      origin === "*" || /^https?:\/\/[^/?#\s]+\/?$/i.test(origin))
+    validOriginSyntax: () => input.security.allowedOrigins.every(isHttpOrigin)
   };
   return predicates[name]();
 }

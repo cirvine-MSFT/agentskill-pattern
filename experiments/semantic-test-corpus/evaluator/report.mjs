@@ -9,8 +9,16 @@ function argument(args, name) {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalJson(value[key])]));
+  }
+  return value;
+}
+
 function hash(value) {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return createHash("sha256").update(JSON.stringify(canonicalJson(value))).digest("hex");
 }
 
 function coverage(observed, expected) {

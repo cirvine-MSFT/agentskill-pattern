@@ -98,6 +98,8 @@ The evaluator runs 12 one-sided noninferiority hypotheses with one Holm
 adjustment and 12 two-sided equality hypotheses with a separate Holm adjustment.
 Only common complete blocks enter the paired tests. More than two incomplete
 blocks forces `confirmatoryAvailable: false` and null noninferiority decisions.
+Any AI run with unavailable frozen model evidence also withholds all
+factorial/confirmatory decisions, even when 11 complete blocks remain.
 The same output includes per-arm summaries, paired tier/delegation/interaction
 and conditional simple-effect contrasts with the registered bootstrap, plus
 0/1 and worst/best missing-outcome sensitivity bounds. With zero complete
@@ -149,5 +151,10 @@ materializer; the evaluator directory is never copied or mounted. Signed
 platform policy/access exports prove candidate-root-only filesystem access and
 network denial. Both delegated arms invoke the same byte-identical materialized
 Skill and return only compact staging metadata; parents never read the corpus.
+Dataset-wide attribution covers tool/results, filesystem, network, outcome,
+delegation, completion, and unblinding events; generation activity at or after
+completion fails closed.
 The materializer's in-tree `.test-work/` allowance exists only for the cleaned
 regression test and is forbidden for measured runs.
+Production materialization canonicalizes source and destination with `realpath`
+and rejects symlink, junction, or reparse components before containment checks.

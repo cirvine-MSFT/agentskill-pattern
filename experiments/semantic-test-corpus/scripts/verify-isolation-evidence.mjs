@@ -32,8 +32,7 @@ function expectedRoles(arm) {
   return arm.delegated ? ["parent", "worker"] : ["parent"];
 }
 
-export function evaluateNetworkAttribution(authenticated) {
-  const { payload } = authenticated;
+function authenticatedRunMappings(payload) {
   const mappings = [];
   for (const creation of payload.events.filter((event) => event.type === "session.created")) {
     const planned = schedule.runs.find((run) => run.runId === creation.runId);
@@ -63,33 +62,67 @@ export function evaluateNetworkAttribution(authenticated) {
     }
   }
 
+  return mappings;
+}
+
+function attributeEvents(payload, mappings, types) {
   const violations = [];
   let attributedEvents = 0;
-  const networkEvents = payload.events.filter((event) => event.type === "network.access");
-  for (const event of networkEvents) {
+  const events = payload.events.filter((event) => types.has(event.type));
+  for (const event of events) {
+    const actorSessionId = event.type === "network.access" ? event.actorSessionId : event.sessionId;
     const actorMappings = mappings.filter((mapping) =>
-      mapping.sessionId === event.actorSessionId);
+      mapping.sessionId === actorSessionId);
     const matches = actorMappings.filter((mapping) =>
       mapping.runId === event.runId
       && mapping.blockId === event.blockId
       && mapping.armId === event.armId
       && mapping.role === event.role
-      && mapping.sessionId === event.sessionId);
+      && mapping.sessionId === event.sessionId
+      && (event.actor === undefined || event.actor === mapping.role));
     if (actorMappings.length !== 1) {
-      violations.push(`network access ${event.eventId} actor session maps to ${actorMappings.length} scheduled run roles`);
+      violations.push(`${event.type} ${event.eventId} actor session maps to ${actorMappings.length} scheduled run roles`);
     }
     if (matches.length !== 1) {
-      violations.push(`network access ${event.eventId} is not attributable to exactly one scheduled run role`);
+      violations.push(`${event.type} ${event.eventId} is not attributable to exactly one scheduled run role`);
     } else if (actorMappings.length === 1) {
       attributedEvents += 1;
     }
   }
   return {
     status: violations.length === 0 ? "compliant" : "noncompliant",
-    totalEvents: networkEvents.length,
+    totalEvents: events.length,
     attributedEvents,
     violations
   };
+}
+
+const GLOBAL_ATTRIBUTION_TYPES = new Set([
+  "tool.called",
+  "tool.result",
+  "fs.access",
+  "network.access",
+  "outcome.accessed",
+  "delegation.invoked",
+  "delegation.completed",
+  "run.completed",
+  "outcomes.unblinded"
+]);
+
+export function evaluateGlobalAttribution(authenticated) {
+  return attributeEvents(
+    authenticated.payload,
+    authenticatedRunMappings(authenticated.payload),
+    GLOBAL_ATTRIBUTION_TYPES
+  );
+}
+
+export function evaluateNetworkAttribution(authenticated) {
+  return attributeEvents(
+    authenticated.payload,
+    authenticatedRunMappings(authenticated.payload),
+    new Set(["network.access"])
+  );
 }
 
 export function evaluateIsolationEvidence(authenticated, {
@@ -106,8 +139,9 @@ export function evaluateIsolationEvidence(authenticated, {
   const evaluator = resolve(evaluatorRoot);
   const staging = resolve(stagingPath);
   const violations = [];
+  const globalAttribution = evaluateGlobalAttribution(authenticated);
+  violations.push(...globalAttribution.violations.map((violation) => `global: ${violation}`));
   const networkAttribution = evaluateNetworkAttribution(authenticated);
-  violations.push(...networkAttribution.violations.map((violation) => `global: ${violation}`));
   if (!arm || armId === 0) {
     violations.push(`arm ${armId} is not a measured AI arm`);
   }
@@ -152,6 +186,7 @@ export function evaluateIsolationEvidence(authenticated, {
     "fs.access",
     "network.access",
     "tool.called",
+    "tool.result",
     "delegation.invoked",
     "delegation.completed",
     "run.completed",
@@ -203,6 +238,7 @@ export function evaluateIsolationEvidence(authenticated, {
   const fileEvents = evidenceEvents.filter((event) => event.type === "fs.access");
   const networkEvents = evidenceEvents.filter((event) => event.type === "network.access");
   const toolEvents = evidenceEvents.filter((event) => event.type === "tool.called");
+  const toolResultEvents = evidenceEvents.filter((event) => event.type === "tool.result");
   const delegationEvents = evidenceEvents.filter((event) => event.type.startsWith("delegation."));
   const completionEvents = evidenceEvents.filter((event) => event.type === "run.completed");
   const unblindingEvents = evidenceEvents.filter((event) => event.type === "outcomes.unblinded");
@@ -228,6 +264,19 @@ export function evaluateIsolationEvidence(authenticated, {
     const role = sessionRoles.get(event.sessionId);
     if (!role || event.role !== role) {
       violations.push(`outcome access ${event.eventId} lacks an authenticated session/role`);
+    }
+    if (Number.isFinite(completedAt)) {
+      for (const event of [
+        ...toolEvents,
+        ...toolResultEvents,
+        ...fileEvents,
+        ...networkEvents,
+        ...delegationEvents
+      ]) {
+        if (Date.parse(event.timestamp) >= completedAt) {
+          violations.push(`generation event ${event.eventId} did not occur strictly before run completion`);
+        }
+      }
     }
     if (!Number.isFinite(outcomeBoundary) || Date.parse(event.timestamp) <= outcomeBoundary) {
       violations.push(`outcome access ${event.eventId} occurred before completion/unblinding`);
@@ -391,6 +440,7 @@ export function evaluateIsolationEvidence(authenticated, {
     candidateRoot: candidate,
     stagingPath: staging,
     roleSessions,
+    globalAttribution,
     networkAttribution,
     status: violations.length === 0 ? "compliant" : "noncompliant",
     checks: {
@@ -401,6 +451,7 @@ export function evaluateIsolationEvidence(authenticated, {
       correlatedFileCalls,
       networkAccessEvents: networkEvents.length,
       toolCallEvents: toolEvents.length,
+      toolResultEvents: toolResultEvents.length,
       delegationEvents: delegationEvents.length,
       completionEvents: completionEvents.length,
       unblindingEvents: unblindingEvents.length,

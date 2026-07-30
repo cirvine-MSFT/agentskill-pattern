@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "isolation-audit.schema.json",
   "type": "object",
-  "required": ["exportId", "runId", "armId", "evidence", "candidateRoot", "stagingPath", "roleSessions", "networkAttribution", "status", "checks", "violations"],
+  "required": ["exportId", "runId", "armId", "evidence", "candidateRoot", "stagingPath", "roleSessions", "globalAttribution", "networkAttribution", "status", "checks", "violations"],
   "additionalProperties": false,
   "properties": {
     "exportId": {"type": "string"},
@@ -31,10 +31,21 @@
         "violations": {"type": "array", "items": {"type": "string"}}
       }
     },
+    "globalAttribution": {
+      "type": "object",
+      "required": ["status", "totalEvents", "attributedEvents", "violations"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
+        "totalEvents": {"type": "integer", "minimum": 0},
+        "attributedEvents": {"type": "integer", "minimum": 0},
+        "violations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
     "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
     "checks": {
       "type": "object",
-      "required": ["policyEvents", "auditEvents", "fileToolCalls", "fileAccessEvents", "correlatedFileCalls", "networkAccessEvents", "toolCallEvents", "delegationEvents", "completionEvents", "unblindingEvents", "outcomeAccessEvents"],
+      "required": ["policyEvents", "auditEvents", "fileToolCalls", "fileAccessEvents", "correlatedFileCalls", "networkAccessEvents", "toolCallEvents", "toolResultEvents", "delegationEvents", "completionEvents", "unblindingEvents", "outcomeAccessEvents"],
       "additionalProperties": false,
       "properties": {
         "policyEvents": {"type": "integer", "minimum": 0},
@@ -44,6 +55,7 @@
         "correlatedFileCalls": {"type": "integer", "minimum": 0},
         "networkAccessEvents": {"type": "integer", "minimum": 0},
         "toolCallEvents": {"type": "integer", "minimum": 0},
+        "toolResultEvents": {"type": "integer", "minimum": 0},
         "delegationEvents": {"type": "integer", "minimum": 0},
         "completionEvents": {"type": "integer", "minimum": 0},
         "unblindingEvents": {"type": "integer", "minimum": 0},

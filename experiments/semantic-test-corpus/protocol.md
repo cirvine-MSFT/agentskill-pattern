@@ -49,6 +49,13 @@ The migration covers:
 - domain and cross-field invariants for production safety, cache requirements,
   effective port conflicts, retry bounds, origin syntax, and normalized collisions.
 
+Origin and Redis endpoint invariants use URL parsing rather than regular
+expressions. HTTP origins require `http`/`https`, a host, optional port 1-65535,
+and no credentials, non-root path, query, or fragment. Redis endpoints require
+`redis`/`rediss`, a host, optional valid port and numeric database path, and no
+credentials, query, or fragment. Candidate and oracle implement these checks
+independently.
+
 Every structurally valid case emits the exact rule IDs, decision-path IDs, and
 applicable invariant IDs it exercised. Invalid semantic inputs still execute all
 mapping decisions, but the returned `config` is `null`. This keeps diagnostics
@@ -194,6 +201,9 @@ inside or containing the benchmark repository and never copies `evaluator/`,
 prior staging, the candidate migration implementation, seeds, or schedule.
 The sole in-tree exception is the cleaned `.test-work/` path used by the
 materializer regression test; measured runs must use an external destination.
+Production materialization rejects symbolic-link, junction, and reparse
+components, canonicalizes existing parents and targets with `realpath`, and
+performs both directions of source/destination containment on canonical paths.
 
 Before session creation, the platform must enforce `candidate-root-only`
 filesystem access, explicitly deny the evaluator root, and deny network access.
@@ -222,6 +232,13 @@ network event from an authenticated run actor. Before per-run checks, a global
 attribution pass requires every signed network event to resolve to exactly one
 scheduled run and authenticated role; unknown, ambiguous, reused, or mismatched
 identities fail the entire evidence dataset.
+
+The same dataset-wide attribution pass covers tool calls/results, filesystem
+access, outcome access, delegation, completion, and unblinding events. Every
+event must resolve to exactly one scheduled run and authenticated role/session.
+All generation tools, results, filesystem/network activity, delegation, and
+staging writes must occur strictly before `run.completed`; only outcome access
+strictly after both completion and unblinding is allowed.
 
 `evaluator/acceptance/held-out-rules.json` and
 `evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29
@@ -289,6 +306,8 @@ Semantic `status: invalid` is often an intentional negative case and is not a
 structural failure. Reports keep that count separate from promotion validity.
 Duplicate detection compares generated artifacts with one another; it is a
 redundancy/diversity measure, not a leakage detector.
+Exact duplicate hashing uses canonical JSON with recursively sorted object keys
+and original array order.
 
 `schemas/run-record.schema.json` is the normative telemetry envelope. Its
 compliance object references the derived isolation audit and evidence hash; it
@@ -370,6 +389,9 @@ Analyze the 12 run-level observations per available arm.
   routines. Emit deterministic per-arm availability/summaries and sensitivity
   bounds, set paired comparisons/factorial results to null, and give an explicit
   unavailable reason.
+- Any unavailable frozen AI model binding withholds factorial and confirmatory
+  decisions regardless of how many complete blocks remain. Descriptive summaries
+  and registered 0/1/worst-best sensitivity bounds remain reportable.
 - If more than two blocks are incomplete, withhold confirmatory language and
   report the benchmark as descriptive. `evaluator/statistics.mjs` then emits
   `confirmatoryAvailable: false`, an explicit reason, and `noninferior: null` for
