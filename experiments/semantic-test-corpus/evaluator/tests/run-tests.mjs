@@ -68,14 +68,16 @@ const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluato
 const frozenSchedule = readRootJson("design", "schedule.json");
 const frozenContract = readRootJson("design", "arm-contract.json");
 const tests = [];
-const evidenceCandidateRoot = resolve(root, ".regression-work", "evidence-candidate");
+const evidenceCandidateRoot = resolve(
+  process.env.TEMP ?? resolve(root, ".."),
+  `semantic-evidence-candidate-${process.pid}`
+);
 
 function ensureEvidenceCandidate() {
   if (!existsSync(resolve(evidenceCandidateRoot, ".git"))
     || !existsSync(resolve(evidenceCandidateRoot, ".benchmark-boundary.json"))) {
     rmSync(evidenceCandidateRoot, { recursive: true, force: true });
     materializeCandidate(evidenceCandidateRoot, {
-      allowTestDestination: true,
       blockId: "B01"
     });
   }
@@ -877,7 +879,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
   assert.deepEqual(evidence, readRootJson("fixtures", "local-evidence", "expected.json"));
   assert.deepEqual(validateLocalEvidence(evidence, {
     artifactRoot: fixtureRoot,
-    candidateRoot
+    candidateRoot: ensureEvidenceCandidate()
   }), []);
   assert.equal(evidence.trust.signed, false);
   assert.equal(evidence.trust.complianceProof, false);
@@ -908,7 +910,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
-    candidateRoot,
+    candidateRoot: ensureEvidenceCandidate(),
     runManifest: manifest,
     runManifestBytes,
     runManifestPath,
@@ -934,7 +936,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
-    candidateRoot,
+    candidateRoot: ensureEvidenceCandidate(),
     runManifest: manifest,
     runManifestBytes,
     runManifestPath,
@@ -978,7 +980,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
-    candidateRoot,
+    candidateRoot: ensureEvidenceCandidate(),
     runManifest: manifest,
     runManifestBytes,
     runManifestPath,
@@ -1003,7 +1005,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
-    candidateRoot,
+    candidateRoot: ensureEvidenceCandidate(),
     runManifest: wrongBoundaryManifest,
     runManifestBytes: Buffer.from(`${JSON.stringify(wrongBoundaryManifest, null, 2)}\n`),
     runManifestPath,
@@ -1038,7 +1040,7 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
       localEvidenceBytes: evidenceBytes,
       modelPreflight: preflight,
       sourceArtifactRoot: fixtureRoot,
-      sourceCandidateRoot: candidateRoot,
+      sourceCandidateRoot: ensureEvidenceCandidate(),
       outputPath
     }), /local successful writes/);
     rmSync(resolve(stagingRoot, "scenarios", "scenario-001.json"));
@@ -1049,7 +1051,7 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
       localEvidenceBytes: evidenceBytes,
       modelPreflight: preflight,
       sourceArtifactRoot: fixtureRoot,
-      sourceCandidateRoot: candidateRoot,
+      sourceCandidateRoot: ensureEvidenceCandidate(),
       outputPath
     });
     assert.equal(snapshot.evidenceTier, "descriptive-local-v1");
@@ -1071,7 +1073,7 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
       localEvidenceBytes: evidenceBytes,
       modelPreflight: unavailable,
       sourceArtifactRoot: fixtureRoot,
-      sourceCandidateRoot: candidateRoot,
+      sourceCandidateRoot: ensureEvidenceCandidate(),
       outputPath: resolve(temporary, "snapshot", "rejected.json")
     }), /passing pre-outcome model evidence/);
   } finally {
