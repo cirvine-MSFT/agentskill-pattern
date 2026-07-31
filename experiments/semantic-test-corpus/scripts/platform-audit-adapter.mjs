@@ -122,7 +122,7 @@ export function adaptPlatformAudit({
     const present = new Set(runEvents.map((event) => event.type));
     const missingEvidence = requiredEventTypes.filter((type) => !present.has(type));
     const verificationFailures = [];
-    const armDelegated = runRecord.armId === 2 || runRecord.armId === 4;
+    const armDelegated = [2, 4, 5].includes(runRecord.armId);
     if ((cell === "delegated") !== armDelegated) {
       verificationFailures.push("cell-does-not-match-run-arm");
     }

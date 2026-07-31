@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-file-source.schema.json",
+  "type": "object",
+  "required": ["path", "sha256", "bytes"],
+  "additionalProperties": false,
+  "properties": {
+    "path": {"type": "string", "minLength": 1},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "bytes": {"type": "integer", "minimum": 1}
+  }
+}

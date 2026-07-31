@@ -1,0 +1,220 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "evidenceTier": "descriptive-local-v1",
+  "runId": "B01-A2",
+  "blockId": "B01",
+  "armId": 2,
+  "identity": {
+    "appProjectSessionId": "fixture-app-project-session",
+    "cliSessionId": "fixture-cli-session",
+    "terminalCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "candidateSnapshotSha256": "c059c65c044b07ba0dadf35396390262aca416f116b517985348d725898d69cf"
+  },
+  "source": {
+    "events": {
+      "path": "captured.events.jsonl",
+      "sha256": "90d56c77a23912597fd9ec0bdda22b37246348ae2f820c1ac886b9c6387e7a46",
+      "bytes": 4271
+    },
+    "usage": {
+      "path": "captured.usage.json",
+      "sha256": "9abe7da7c9288fff100f177ae6fb38a50449463b31d62565c952e87e3ee4e155",
+      "bytes": 2309
+    },
+    "candidateBoundary": {
+      "path": "candidate-boundary.json",
+      "sha256": "c059c65c044b07ba0dadf35396390262aca416f116b517985348d725898d69cf",
+      "bytes": 382
+    },
+    "runManifest": {
+      "path": "run-manifest.json",
+      "sha256": "e4baec72374b35c5985c29430db3daa6eaee7a515cbebaa33caa6e6698037c6d",
+      "bytes": 652
+    },
+    "runAttempt": {
+      "path": "attempt-1.json",
+      "sha256": "d3993b27d0784a8b386a3e8dd4b39be7565bfcfc1db52fe8a62e8b08940f56b4",
+      "bytes": 1115
+    },
+    "retry": null
+  },
+  "trust": {
+    "status": "local-hash-bound",
+    "signed": false,
+    "complianceProof": false,
+    "limitations": [
+      "No detached platform signature or external trust anchor",
+      "No signed sandbox, filesystem, network, run, adapter, or metrics envelope",
+      "Local hashes establish byte identity only"
+    ]
+  },
+  "availability": {
+    "session": {
+      "status": "available",
+      "reasons": []
+    },
+    "model": {
+      "status": "available",
+      "reasons": []
+    },
+    "mechanism": {
+      "status": "available",
+      "reasons": []
+    },
+    "fields": {
+      "premiumRequests": {
+        "status": "unavailable",
+        "reasons": [
+          "assistant_usage_events has no premium-request field"
+        ]
+      },
+      "toolSchemas": {
+        "status": "unavailable",
+        "reasons": [
+          "local events do not expose the complete tool schema payload"
+        ]
+      },
+      "parentWait": {
+        "status": "available",
+        "reasons": []
+      },
+      "sourceReadOnly": {
+        "status": "unavailable",
+        "reasons": [
+          "portable read-only state is not represented in the source formats"
+        ]
+      }
+    }
+  },
+  "models": {
+    "requested": {
+      "parent": [
+        "gpt-5.6-sol"
+      ],
+      "worker": [
+        "gpt-5.6-sol"
+      ]
+    },
+    "observed": {
+      "parent": [
+        "gpt-5.6-sol"
+      ],
+      "worker": [
+        "gpt-5.6-sol"
+      ]
+    }
+  },
+  "attempt": {
+    "attemptId": "B01-A2-attempt-1",
+    "number": 1,
+    "retryCount": 0,
+    "outcomesOpened": false
+  },
+  "usage": {
+    "parent": {
+      "available": true,
+      "aiCredits": 2.5,
+      "premiumRequests": null,
+      "nanoAiu": 2500000000,
+      "inputTokens": 1000,
+      "outputTokens": 50,
+      "cacheReadTokens": 800,
+      "cacheWriteTokens": 100,
+      "cachedTokens": 900,
+      "modelTokens": 1050,
+      "completionCount": 1
+    },
+    "worker": {
+      "available": true,
+      "aiCredits": 3.5,
+      "premiumRequests": null,
+      "nanoAiu": 3500000000,
+      "inputTokens": 700,
+      "outputTokens": 100,
+      "cacheReadTokens": 500,
+      "cacheWriteTokens": 50,
+      "cachedTokens": 550,
+      "modelTokens": 800,
+      "completionCount": 1
+    },
+    "total": {
+      "available": true,
+      "aiCredits": 6,
+      "premiumRequests": null,
+      "nanoAiu": 6000000000,
+      "inputTokens": 1700,
+      "outputTokens": 150,
+      "cacheReadTokens": 1300,
+      "cacheWriteTokens": 150,
+      "cachedTokens": 1450,
+      "modelTokens": 1850,
+      "completionCount": 2
+    }
+  },
+  "parentContext": {
+    "cumulativeInputTokens": 1000,
+    "peakInputTokens": 1000
+  },
+  "tools": {
+    "schemas": {
+      "available": false,
+      "count": null,
+      "names": null
+    },
+    "calls": [
+      {
+        "role": "parent",
+        "name": "skill",
+        "count": 1
+      },
+      {
+        "role": "parent",
+        "name": "task",
+        "count": 1
+      },
+      {
+        "role": "worker",
+        "name": "semantic-corpus/list_contract_files",
+        "count": 1
+      }
+    ],
+    "callCount": 3,
+    "resultCount": 3,
+    "resultBytes": 171
+  },
+  "toolErrors": [],
+  "delegation": {
+    "invoked": true,
+    "completed": true,
+    "agentName": "semantic-test-corpus",
+    "compactReturn": "corpus-staging/manifest.json - 60 scenarios - SUCCESS"
+  },
+  "timing": {
+    "startedAt": "2026-07-31T07:00:01.000Z",
+    "endedAt": "2026-07-31T07:00:10.000Z",
+    "wallMs": 9000,
+    "parentActiveMs": 1200,
+    "workerActiveMs": 4000,
+    "parentWaitMs": 7000
+  },
+  "budgets": {
+    "limits": {
+      "wallMs": 1800000,
+      "toolCalls": 120,
+      "modelTokens": 100000
+    },
+    "observed": {
+      "wallMs": 9000,
+      "toolCalls": 3,
+      "modelTokens": 1850
+    },
+    "status": "within-budget",
+    "reasons": []
+  },
+  "events": {
+    "count": 12,
+    "completionCount": 2
+  },
+  "deviations": []
+}

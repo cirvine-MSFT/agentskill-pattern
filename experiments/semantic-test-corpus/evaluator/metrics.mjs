@@ -134,12 +134,16 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
   if (snapshot.generator?.blockId !== blockId || snapshot.generator?.armId !== armId) {
     throw new Error("Snapshot generator metadata differs from the metrics run");
   }
+  const planned = schedule.runs.find((run) => run.runId === runId);
+  const seed = seeds.blocks.find((block) => block.id === blockId)?.seed;
+  if (!planned
+    || planned.armId !== armId
+    || planned.blockId !== blockId
+    || seed === undefined
+    || snapshot.generator?.seed !== seed) {
+    throw new Error("Metrics run differs from the frozen schedule and seed");
+  }
   if (armId === 0) {
-    const planned = schedule.runs.find((run) => run.runId === runId);
-    const seed = seeds.blocks.find((block) => block.id === blockId)?.seed;
-    if (!planned || planned.armId !== 0 || planned.blockId !== blockId || seed === undefined) {
-      throw new Error("Baseline metrics run differs from the frozen schedule");
-    }
     const expected = canonicalStagingBytes(generateBaseline({ seed, blockId }));
     if (!expected.equals(snapshotBytes)) {
       throw new Error("Baseline snapshot differs from the frozen seeded generator");

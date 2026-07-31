@@ -328,7 +328,7 @@ function validateBindings(bindingAvailability) {
   const bindingSessions = new Set();
   for (const run of bindingAvailability.runs) {
     if (bindingRuns.has(run.runId)) throw new Error(`reused binding availability runId ${run.runId}`);
-    const requiredRoles = run.armId === 2 || run.armId === 4 ? ["parent", "worker"] : ["parent"];
+    const requiredRoles = [2, 4, 5].includes(run.armId) ? ["parent", "worker"] : ["parent"];
     if (run.status === "available") {
       for (const role of requiredRoles) {
         const roleEvidence = run.roles?.find((item) => item.role === role);

@@ -40,6 +40,7 @@ function samePath(left, right) {
 function runGit(destination, args) {
   const result = spawnSync("git", args, { cwd: destination, encoding: "utf8" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout;
 }
 
 function rejectReparseComponents(path) {
@@ -114,14 +115,16 @@ export function materializeCandidate(destination, { allowTestDestination = false
   }
 
   const boundary = {
-    formatVersion: 1,
+    formatVersion: 2,
+    protocolId: "semantic-test-corpus-execution-v2",
     manifestVersion: manifest.manifestVersion,
     candidateRoot: materializedReal,
     networkPolicy: "deny",
     filesystemPolicy: "semantic-corpus-launcher-required",
     files
   };
-  writeFileSync(resolve(target, ".benchmark-boundary.json"), `${JSON.stringify(boundary, null, 2)}\n`);
+  const boundaryBytes = Buffer.from(`${JSON.stringify(boundary, null, 2)}\n`, "utf8");
+  writeFileSync(resolve(target, ".benchmark-boundary.json"), boundaryBytes);
   runGit(target, ["init", "--initial-branch", "main", "--quiet"]);
   runGit(target, ["add", "."]);
   runGit(target, [
@@ -129,7 +132,11 @@ export function materializeCandidate(destination, { allowTestDestination = false
     "-c", "user.email=benchmark.invalid",
     "commit", "--quiet", "-m", "Materialize isolated semantic corpus candidate"
   ]);
-  return boundary;
+  return {
+    ...boundary,
+    boundarySha256: hash(boundaryBytes),
+    terminalCommit: runGit(target, ["rev-parse", "HEAD"]).trim()
+  };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

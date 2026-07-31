@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-model-preflight.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "attemptNumber", "evidenceSha256",
+    "status", "retryEligible", "beforeOutcomesOpened", "expected", "observed",
+    "reasons"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string"},
+    "attemptNumber": {"type": "integer", "minimum": 1, "maximum": 2},
+    "evidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "status": {"type": "string", "enum": ["pass", "retry-required", "unavailable"]},
+    "retryEligible": {"type": "boolean"},
+    "beforeOutcomesOpened": {"type": "boolean"},
+    "expected": {"$ref": "model-roles.schema.json"},
+    "observed": {"$ref": "model-roles.schema.json"},
+    "reasons": {"type": "array", "items": {"type": "string"}}
+  }
+}

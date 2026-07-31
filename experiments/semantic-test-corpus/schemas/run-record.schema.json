@@ -18,7 +18,7 @@
   "properties": {
     "runId": {"type": "string"},
     "blockId": {"type": "string"},
-    "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 5},
     "availability": {"type": "string", "enum": ["available", "unavailable"]},
     "phase": {"type": "string", "enum": ["preflight", "session-started", "staged", "promoted", "excluded", "complete"]},
     "sessionIds": {"type": "array", "items": {"type": "string"}},

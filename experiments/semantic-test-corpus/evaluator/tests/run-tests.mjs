@@ -17,12 +17,23 @@ import { authenticateExport, readAuthenticatedExport } from "../../scripts/authe
 import { materializeCandidate } from "../../scripts/materialize-candidate.mjs";
 import { adaptPlatformAudit } from "../../scripts/platform-audit-adapter.mjs";
 import { evaluateModelBindings } from "../../scripts/preflight-models.mjs";
+import { collectLocalEvidence } from "../../scripts/collect-local-evidence.mjs";
+import { createUsageExport } from "../../scripts/export-local-usage.mjs";
+import { preflightLocalModel } from "../../scripts/preflight-local-model.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
+import { runDeterministicBlock } from "../../scripts/run-deterministic-block.mjs";
+import { validateExecutionRecords } from "../../scripts/validate-execution-records.mjs";
+import { validateLocalEvidence } from "../../scripts/validate-local-evidence.mjs";
 import {
   evaluateGlobalAttribution,
   evaluateIsolationEvidence
 } from "../../scripts/verify-isolation-evidence.mjs";
-import { canonicalStagingBytes, snapshotCorpusStaging } from "../adapter.mjs";
+import {
+  canonicalStagingBytes,
+  snapshotCorpusStaging,
+  snapshotLocalCorpusStaging
+} from "../adapter.mjs";
+import { analyzeDescriptiveInput, summarizeDescriptive } from "../descriptive-v2.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
 import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
@@ -44,6 +55,7 @@ const root = resolve(evaluatorRoot, "..");
 const readRootJson = (...parts) => JSON.parse(readFileSync(resolve(root, ...parts), "utf8"));
 const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluatorRoot, ...parts), "utf8"));
 const frozenSchedule = readRootJson("design", "schedule.json");
+const frozenContract = readRootJson("design", "arm-contract.json");
 const tests = [];
 
 function test(name, action) {
@@ -118,7 +130,7 @@ function modelEvidencePayload() {
     });
   };
   for (const run of frozenSchedule.runs.filter((item) => item.armId !== 0)) {
-    const modelId = [1, 2].includes(run.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5";
+    const arm = frozenContract.arms.find((item) => item.id === run.armId);
     const parentSessionId = `${run.runId}-parent`;
     events.push({
       eventId: `${run.runId}-started`,
@@ -132,9 +144,9 @@ function modelEvidencePayload() {
       role: "parent",
       sequence: run.order
     });
-    addSession(run, "parent", parentSessionId, modelId);
-    if ([2, 4].includes(run.armId)) {
-      addSession(run, "worker", `${run.runId}-worker`, modelId, parentSessionId);
+    addSession(run, "parent", parentSessionId, arm.model);
+    if (arm.delegated) {
+      addSession(run, "worker", `${run.runId}-worker`, arm.workerModel, parentSessionId);
     }
   }
   return {
@@ -149,7 +161,8 @@ function modelEvidencePayload() {
 
 function modelRunRecords(authenticated) {
   return frozenSchedule.runs.filter((run) => run.armId !== 0).map((run) => {
-    const roles = (run.armId === 2 || run.armId === 4 ? ["parent", "worker"] : ["parent"])
+    const arm = frozenContract.arms.find((item) => item.id === run.armId);
+    const roles = (arm.delegated ? ["parent", "worker"] : ["parent"])
       .map((role) => {
         const created = authenticated.payload.events.find((event) =>
           event.runId === run.runId && event.role === role && event.type === "session.created");
@@ -193,20 +206,23 @@ function bindingAvailabilityFor(observations, unavailableRunIds = []) {
       publicKeySha256: "c".repeat(64)
     },
     runs: observations.filter((observation) => observation.armId !== 0).map((observation) => ({
+      ...(() => {
+        const arm = frozenContract.arms.find((item) => item.id === observation.armId);
+        return {
+          requestedModel: arm.model,
+          requestedWorkerModel: arm.workerModel ?? null,
+          roles: (arm.delegated ? ["parent", "worker"] : ["parent"])
+            .map((role) => ({
+              role,
+              sessionId: `${observation.runId}-${role}`,
+              observedModel: role === "worker" ? arm.workerModel : arm.model
+            }))
+        };
+      })(),
       runId: observation.runId,
       blockId: observation.blockId,
       armId: observation.armId,
-      requestedModel: [1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5",
-      requestedWorkerModel: [2, 4].includes(observation.armId)
-        ? ([1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5")
-        : null,
       status: unavailable.has(observation.runId) ? "unavailable" : "available",
-      roles: (observation.armId === 2 || observation.armId === 4 ? ["parent", "worker"] : ["parent"])
-        .map((role) => ({
-          role,
-          sessionId: `${observation.runId}-${role}`,
-          observedModel: [1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5"
-        }))
     }))
   };
 }
@@ -415,13 +431,386 @@ test("baseline is deterministic and staging-valid", () => {
 test("randomized complete-block schedule is frozen", () => {
   const schedule = createSchedule();
   assert.deepEqual(schedule, readRootJson("design", "schedule.json"));
-  assert.equal(schedule.runs.length, 60);
+  assert.equal(schedule.protocolId, "semantic-test-corpus-execution-v2");
+  assert.equal(schedule.runs.length, 72);
+  assert.equal(schedule.runs.filter((run) => run.armId === 0).length, 12);
+  assert.equal(schedule.runs.filter((run) => run.armId !== 0).length, 60);
   for (let block = 1; block <= 12; block += 1) {
     const id = `B${String(block).padStart(2, "0")}`;
     const rows = schedule.runs.filter((run) => run.blockId === id);
-    assert.deepEqual(rows.map((run) => run.armId).toSorted(), [0, 1, 2, 3, 4]);
-    assert.deepEqual(rows.map((run) => run.order).toSorted(), [1, 2, 3, 4, 5]);
+    assert.deepEqual(rows.map((run) => run.armId).toSorted(), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(rows.map((run) => run.order).toSorted(), [1, 2, 3, 4, 5, 6]);
   }
+});
+
+test("condition instructions freeze all six mechanisms and fixed specialist", () => {
+  const conditions = readRootJson("design", "condition-instructions.json");
+  assert.equal(conditions.protocolId, "semantic-test-corpus-execution-v2");
+  assert.deepEqual(conditions.conditions.map((condition) => condition.armId), [0, 1, 2, 3, 4, 5]);
+  assert.equal(conditions.conditions.find((condition) => condition.armId === 5).workerModel,
+    "claude-haiku-4.5");
+  assert.match(conditions.conditions.find((condition) => condition.armId === 5).kickoff,
+    /semantic-test-corpus-haiku/);
+});
+
+test("v2 analyzer emits six-arm point estimates and pairs without inference", () => {
+  const endpointNames = Object.keys(
+    readRootJson("schemas", "descriptive-input.schema.json")
+      .properties.runs.items.properties.endpoints.properties
+  );
+  const runs = frozenSchedule.runs.map((run) => ({
+    runId: run.runId,
+    blockId: run.blockId,
+    armId: run.armId,
+    endpoints: {
+      ...Object.fromEntries(endpointNames.map((name) => [name, null])),
+      promotionRate: run.armId / 10,
+      mutantKillRate: run.armId / 10
+    }
+  }));
+  const summary = summarizeDescriptive(runs);
+  assert.equal(summary.analysis, "descriptive-point-estimates-and-within-block-pairs-only");
+  assert.equal(summary.observedRuns, 72);
+  assert.equal(summary.armPoints.length, 6);
+  assert.equal(summary.pairs.find((pair) =>
+    pair.armId === 5 && pair.endpoint === "promotionRate").blockPairs.length, 12);
+  assert.equal(summary.pairs.find((pair) =>
+    pair.armId === 5 && pair.endpoint === "promotionRate").mean, 0.5);
+  assert.doesNotMatch(JSON.stringify(summary),
+    /pValue|confidenceInterval|noninferior|bootstrap|holm/i);
+  assert.equal(analyzeDescriptiveInput({
+    formatVersion: 1,
+    protocolId: "semantic-test-corpus-execution-v2",
+    runs
+  }).observedRuns, 72);
+});
+
+test("deterministic runner executes every frozen baseline block", () => {
+  const executions = frozenContract.arms[0].id === 0
+    ? Array.from({ length: 12 }, (_, index) =>
+      runDeterministicBlock(`B${String(index + 1).padStart(2, "0")}`))
+    : [];
+  assert.equal(executions.length, 12);
+  for (const result of executions) {
+    assert.equal(result.staging.cases.length, 60);
+    assert.equal(result.execution.cases, 60);
+    assert.equal(result.execution.armId, 0);
+    assert.equal(result.staging.generator.blockId, result.execution.blockId);
+    assert.equal(result.staging.generator.seed, result.execution.seed);
+    assert.match(result.execution.stagingSha256, /^[a-f0-9]{64}$/);
+  }
+});
+
+test("captured local evidence is reproducible, fail-closed, and model-bound", () => {
+  const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+  const eventsPath = resolve(fixtureRoot, "captured.events.jsonl");
+  const usagePath = resolve(fixtureRoot, "captured.usage.json");
+  const candidateBoundaryPath = resolve(fixtureRoot, "candidate-boundary.json");
+  const runManifestPath = resolve(fixtureRoot, "run-manifest.json");
+  const runAttemptPath = resolve(fixtureRoot, "attempt-1.json");
+  const eventsBytes = readFileSync(eventsPath);
+  const usageBytes = readFileSync(usagePath);
+  const candidateBoundaryBytes = readFileSync(candidateBoundaryPath);
+  const runManifestBytes = readFileSync(runManifestPath);
+  const runAttemptBytes = readFileSync(runAttemptPath);
+  const manifest = readRootJson("fixtures", "local-evidence", "run-manifest.json");
+  const evidence = collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes,
+    usagePath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+
+  assert.deepEqual(evidence, readRootJson("fixtures", "local-evidence", "expected.json"));
+  assert.deepEqual(validateLocalEvidence(evidence, { artifactRoot: fixtureRoot }), []);
+  assert.equal(evidence.trust.signed, false);
+  assert.equal(evidence.trust.complianceProof, false);
+  assert.equal(evidence.availability.fields.premiumRequests.status, "unavailable");
+  assert.equal(evidence.usage.total.aiCredits, 6);
+  assert.equal(evidence.usage.total.cachedTokens, 1450);
+  assert.equal(evidence.delegation.compactReturn,
+    "corpus-staging/manifest.json - 60 scenarios - SUCCESS");
+
+  const evidenceBytes = Buffer.from(`${JSON.stringify(evidence, null, 2)}\n`);
+  assert.equal(preflightLocalModel(evidence, evidenceBytes).status, "pass");
+  const metadataOnlyMismatch = structuredClone(evidence);
+  metadataOnlyMismatch.models.observed.worker = ["claude-haiku-4.5"];
+  assert.equal(preflightLocalModel(
+    metadataOnlyMismatch,
+    Buffer.from(`${JSON.stringify(metadataOnlyMismatch, null, 2)}\n`)
+  ).status, "retry-required");
+
+  const mismatchUsage = JSON.parse(usageBytes);
+  mismatchUsage.rows.find((row) => row.agent_id !== null).model = "claude-haiku-4.5";
+  const mismatchBytes = Buffer.from(`${JSON.stringify(mismatchUsage, null, 2)}\n`);
+  const mismatch = collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes: mismatchBytes,
+    usagePath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+  const retry = preflightLocalModel(mismatch, Buffer.from(`${JSON.stringify(mismatch, null, 2)}\n`));
+  assert.equal(retry.status, "retry-required");
+  assert.equal(retry.retryEligible, true);
+  const secondMismatch = structuredClone(mismatch);
+  secondMismatch.attempt.number = 2;
+  secondMismatch.attempt.retryCount = 1;
+  const exhausted = preflightLocalModel(secondMismatch,
+    Buffer.from(`${JSON.stringify(secondMismatch, null, 2)}\n`));
+  assert.equal(exhausted.status, "unavailable");
+  assert.equal(exhausted.retryEligible, false);
+  const openedEvidence = structuredClone(evidence);
+  openedEvidence.attempt.outcomesOpened = true;
+  const opened = preflightLocalModel(openedEvidence,
+    Buffer.from(`${JSON.stringify(openedEvidence, null, 2)}\n`));
+  assert.equal(opened.status, "unavailable");
+  assert.equal(opened.beforeOutcomesOpened, false);
+
+  const unexpectedEvent = {
+    type: "tool.execution_start",
+    data: {
+      toolCallId: "fixture-prohibited",
+      toolName: "powershell",
+      arguments: { command: "Get-Content corpus-staging" },
+      turnId: "0",
+      model: "gpt-5.6-sol"
+    },
+    id: "fixture-prohibited-event",
+    timestamp: "2026-07-31T07:00:05.000Z",
+    parentId: "fixture-mcp-complete"
+  };
+  const prohibitedBytes = Buffer.concat([
+    eventsBytes,
+    Buffer.from(`${JSON.stringify(unexpectedEvent)}\n`)
+  ]);
+  const prohibited = collectLocalEvidence({
+    eventsBytes: prohibitedBytes,
+    eventsPath,
+    usageBytes,
+    usagePath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+  assert.equal(prohibited.availability.mechanism.status, "unavailable");
+  assert(prohibited.availability.mechanism.reasons.some((reason) =>
+    reason.includes("prohibited tool powershell")));
+
+  const wrongBoundaryManifest = {
+    ...manifest,
+    candidateSnapshotSha256: "0".repeat(64)
+  };
+  assert.throws(() => collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes,
+    usagePath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    runManifest: wrongBoundaryManifest,
+    runManifestBytes: Buffer.from(`${JSON.stringify(wrongBoundaryManifest, null, 2)}\n`),
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  }), /Candidate boundary SHA-256/);
+});
+
+test("local evaluator adapter snapshots only after passing model preflight", () => {
+  const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+  const evidenceBytes = readFileSync(resolve(fixtureRoot, "expected.json"));
+  const evidence = JSON.parse(evidenceBytes);
+  const preflight = preflightLocalModel(evidence, evidenceBytes);
+  const temporary = resolve(root, ".test-work", "local-adapter");
+  const contractRoot = resolve(temporary, "corpus-contract");
+  const stagingRoot = resolve(temporary, "corpus-staging");
+  const outputPath = resolve(temporary, "snapshot", "B01-A2.json");
+  rmSync(temporary, { recursive: true, force: true });
+  try {
+    mkdirSync(resolve(stagingRoot, "scenarios"), { recursive: true });
+    mkdirSync(contractRoot, { recursive: true });
+    writeFileSync(resolve(contractRoot, "request.json"),
+      readFileSync(resolve(root, "design", "corpus-request.json")));
+    writeFileSync(resolve(stagingRoot, "scenarios", "scenario-001.json"),
+      `${JSON.stringify(generateBaseline().cases[0].input, null, 2)}\n`);
+    const snapshot = snapshotLocalCorpusStaging({
+      corpusContractRoot: contractRoot,
+      corpusStagingRoot: stagingRoot,
+      localEvidence: evidence,
+      localEvidenceBytes: evidenceBytes,
+      modelPreflight: preflight,
+      sourceArtifactRoot: fixtureRoot,
+      outputPath
+    });
+    assert.equal(snapshot.evidenceTier, "descriptive-local-v1");
+    assert.equal(snapshot.submittedCases, 1);
+    assert.equal(snapshot.staging.generator.armId, 2);
+    assert.equal(snapshot.staging.adapter.successfulWrites, 1);
+    assert.deepEqual(snapshot.bytes, canonicalStagingBytes(snapshot.staging));
+
+    const retryRequired = { ...preflight, status: "retry-required", retryEligible: true };
+    assert.throws(() => snapshotLocalCorpusStaging({
+      corpusContractRoot: contractRoot,
+      corpusStagingRoot: stagingRoot,
+      localEvidence: evidence,
+      localEvidenceBytes: evidenceBytes,
+      modelPreflight: retryRequired,
+      sourceArtifactRoot: fixtureRoot,
+      outputPath: resolve(temporary, "snapshot", "rejected.json")
+    }), /passing pre-outcome model evidence/);
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("local usage export and execution record schemas reject cross-session ambiguity", () => {
+  const usage = readRootJson("fixtures", "local-evidence", "captured.usage.json");
+  assert.deepEqual(createUsageExport(usage.rows, {
+    cliSessionId: usage.source.cliSessionId,
+    exportedAt: usage.source.exportedAt
+  }), usage);
+  const crossSession = structuredClone(usage.rows);
+  crossSession[0].session_id = "another-session";
+  assert.throws(() => createUsageExport(crossSession, {
+    cliSessionId: usage.source.cliSessionId,
+    exportedAt: usage.source.exportedAt
+  }), /another CLI session/);
+
+  const schemaSamples = [
+    ["run-manifest.schema.json", readRootJson("fixtures", "local-evidence", "run-manifest.json")],
+    ["run-attempt.schema.json", {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      attemptId: "B01-A2-attempt-1",
+      runId: "B01-A2",
+      attemptNumber: 1,
+      appProjectSessionId: "fixture-app-project-session",
+      cliSessionId: "fixture-cli-session",
+      requestedParentModel: "gpt-5.6-sol",
+      requestedWorkerModel: "gpt-5.6-sol",
+      status: "completed",
+      startedAt: "2026-07-31T07:00:00.000Z",
+      endedAt: "2026-07-31T07:00:10.000Z",
+      terminalReturn: "corpus-staging/manifest.json - 60 scenarios - SUCCESS",
+      localEvidencePath: "local-evidence.json",
+      modelPreflightPath: "model-preflight.json",
+      treatment: {
+        blockId: "B01",
+        armId: 2,
+        seed: 1812433253,
+        terminalCommit: "a".repeat(40),
+        candidateSnapshotSha256: "b".repeat(64),
+        sharedTaskSha256: "c".repeat(64),
+        wallLimitMs: 1800000,
+        toolCallLimit: 120,
+        modelTokenLimit: 100000
+      },
+      evaluatorSnapshotPath: null,
+      outcomesOpenedAt: null,
+      deviations: []
+    }],
+    ["retry.schema.json", {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      retryId: "B01-A2-retry-1",
+      runId: "B01-A2",
+      fromAttemptId: "B01-A2-attempt-1",
+      toAttemptId: "B01-A2-attempt-2",
+      reason: "observed-model-mismatch",
+      authorizedAt: "2026-07-31T07:00:11.000Z",
+      outcomesOpened: false,
+      sameTreatment: true
+    }],
+    ["deviation.schema.json", {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      deviationId: "B01-A5-named-agent",
+      runId: "B01-A5",
+      attemptId: null,
+      category: "mechanism",
+      observedAt: "2026-07-31T07:00:00.000Z",
+      description: "Fixed-Haiku named specialist",
+      impact: "descriptive-only",
+      outcomesOpened: false
+    }]
+  ];
+  for (const [schemaName, sample] of schemaSamples) {
+    assert.deepEqual(validateJsonSchema(sample, readRootJson("schemas", schemaName), {
+      schemaDir: resolve(root, "schemas")
+    }), []);
+  }
+  const manifest = readRootJson("fixtures", "local-evidence", "run-manifest.json");
+  const attempt = readRootJson("fixtures", "local-evidence", "attempt-1.json");
+  const fixtureEvidenceBytes = readFileSync(resolve(root, "fixtures", "local-evidence", "expected.json"));
+  const fixturePreflight = readRootJson("fixtures", "local-evidence", "model-preflight.json");
+  assert.deepEqual(validateExecutionRecords({
+    manifest,
+    attempts: [attempt],
+    preflights: [fixturePreflight],
+    evidenceBytes: [fixtureEvidenceBytes],
+    retries: []
+  }), []);
+  const reused = { ...attempt, attemptId: "B01-A2-attempt-2", attemptNumber: 2 };
+  const twoAttemptManifest = {
+    ...manifest,
+    attemptNumber: 2,
+    attempts: ["attempt-1.json", "attempt-2.json"],
+    preflights: ["preflight-1.json", "preflight-2.json"],
+    retries: ["retry.json"]
+  };
+  const retry = schemaSamples.find(([name]) => name === "retry.schema.json")[1];
+  assert(validateExecutionRecords({
+    manifest: twoAttemptManifest,
+    attempts: [attempt, reused],
+    preflights: [{
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      runId: "B01-A2",
+      attemptNumber: 1,
+      evidenceSha256: "a".repeat(64),
+      status: "retry-required",
+      retryEligible: true,
+      beforeOutcomesOpened: true,
+      expected: { parent: ["gpt-5.6-sol"], worker: ["gpt-5.6-sol"] },
+      observed: { parent: ["gpt-5.6-sol"], worker: ["claude-haiku-4.5"] },
+      reasons: ["worker model mismatch"]
+    }, {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      runId: "B01-A2",
+      attemptNumber: 2,
+      evidenceSha256: "b".repeat(64),
+      status: "pass",
+      retryEligible: false,
+      beforeOutcomesOpened: true,
+      expected: { parent: ["gpt-5.6-sol"], worker: ["gpt-5.6-sol"] },
+      observed: { parent: ["gpt-5.6-sol"], worker: ["gpt-5.6-sol"] },
+      reasons: []
+    }],
+    evidenceBytes: [fixtureEvidenceBytes, fixtureEvidenceBytes],
+    retries: [retry]
+  }).some((error) => error.includes("fresh app and CLI sessions")));
 });
 
 test("pairwise array covers every two-factor tuple", () => {
@@ -1713,8 +2102,8 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
   const runRecords = modelRunRecords(authenticated);
   const available = evaluateModelBindings(authenticated, runRecords);
   assert.equal(available.allRunsAvailable, true);
-  assert.equal(available.plannedRuns, 48);
-  assert.equal(available.availableRuns, 48);
+  assert.equal(available.plannedRuns, 60);
+  assert.equal(available.availableRuns, 60);
   assert.deepEqual(validateJsonSchema(
     available,
     readRootJson("schemas", "model-preflight.schema.json"),
@@ -1850,10 +2239,14 @@ test("candidate materialization excludes evaluator assets in an external reposit
   try {
     const boundary = materializeCandidate(temporary, { allowTestDestination: true });
     assert.equal(boundary.files.length, readRootJson("design", "candidate-manifest.json").files.length);
+    assert.equal(boundary.protocolId, "semantic-test-corpus-execution-v2");
+    assert.match(boundary.boundarySha256, /^[a-f0-9]{64}$/);
+    assert.match(boundary.terminalCommit, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
     assert(boundary.files.every((file) => !file.path.startsWith("evaluator/")));
     assert.equal(existsSync(resolve(temporary, "evaluator")), false);
     assert.equal(spawnSync("git", ["status", "--short"], { cwd: temporary, encoding: "utf8" }).stdout, "");
     assert(existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus.agent.md")));
+    assert(existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus-haiku.agent.md")));
     assert(existsSync(resolve(temporary, "tools", "semantic-corpus-mcp", "server.mjs")));
     assert.equal(readRootJson("design", "corpus-request.json").targetCount, 60);
     assert.throws(() => materializeCandidate(resolve(root, "candidate-output")), /outside the source repository/);
@@ -2066,7 +2459,7 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
 
 test("factorial summaries and missingness sensitivity match known synthetic values", () => {
   const armValues = new Map([[0, 0.5], [1, 0.6], [2, 0.7], [3, 0.4], [4, 0.45]]);
-  const observations = frozenSchedule.runs.map((run) => ({
+  const observations = frozenSchedule.runs.filter((run) => run.armId <= 4).map((run) => ({
     runId: run.runId,
     blockId: run.blockId,
     armId: run.armId,

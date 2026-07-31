@@ -11,12 +11,13 @@
     "promote": "node evaluator/promote.mjs --in staging/baseline.json --out evaluator/artifacts/baseline-corpus.json",
     "mutate": "node evaluator/mutants/run.mjs --corpus evaluator/artifacts/baseline-corpus.json --out evaluator/artifacts/baseline-kill-matrix.json",
     "report": "node evaluator/report.mjs --corpus evaluator/artifacts/baseline-corpus.json --matrix evaluator/artifacts/baseline-kill-matrix.json --out evaluator/artifacts/baseline-report.json",
-    "analyze": "node evaluator/statistics.mjs",
+    "analyze": "node evaluator/descriptive-v2.mjs",
     "adapt": "node evaluator/adapter.mjs",
+    "adapt:local": "node evaluator/local-adapter-v2.mjs",
     "metrics": "node evaluator/metrics.mjs",
     "adapt-audit": "node scripts/platform-audit-adapter.mjs",
     "randomize": "node scripts/randomize.mjs --out design/schedule.json",
-    "reproduce": "node evaluator/reproduce.mjs",
-    "test": "node evaluator/tests/run-tests.mjs"
+    "reproduce": "node evaluator/reproduce.mjs && node scripts/reproduce-local-evidence.mjs",
+    "test": "node evaluator/tests/run-tests.mjs && node --test ../../tests/semantic-corpus-mcp/agent-config.test.mjs"
   }
 }

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-attempt.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "attemptId", "runId", "attemptNumber",
+    "appProjectSessionId", "cliSessionId", "requestedParentModel",
+    "requestedWorkerModel", "status", "startedAt", "endedAt", "terminalReturn",
+    "localEvidencePath", "modelPreflightPath", "treatment", "evaluatorSnapshotPath",
+    "outcomesOpenedAt", "deviations"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"enum": ["completed", "retry-required", "excluded", "evaluated"]}}},
+      "then": {
+        "properties": {
+          "localEvidencePath": {"type": "string", "minLength": 1},
+          "modelPreflightPath": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  ],
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "attemptId": {"type": "string", "minLength": 1},
+    "runId": {"type": "string"},
+    "attemptNumber": {"type": "integer", "minimum": 1, "maximum": 2},
+    "appProjectSessionId": {"type": "string", "minLength": 1},
+    "cliSessionId": {"type": "string", "minLength": 1},
+    "requestedParentModel": {"type": "string", "minLength": 1},
+    "requestedWorkerModel": {"type": ["string", "null"]},
+    "status": {
+      "type": "string",
+      "enum": ["created", "completed", "retry-required", "excluded", "evaluated"]
+    },
+    "startedAt": {"type": "string"},
+    "endedAt": {"type": ["string", "null"]},
+    "terminalReturn": {"type": ["string", "null"]},
+    "localEvidencePath": {"type": ["string", "null"]},
+    "modelPreflightPath": {"type": ["string", "null"]},
+    "treatment": {
+      "type": "object",
+      "required": [
+        "blockId", "armId", "seed", "terminalCommit", "candidateSnapshotSha256",
+        "sharedTaskSha256", "wallLimitMs", "toolCallLimit", "modelTokenLimit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+        "armId": {"type": "integer", "minimum": 1, "maximum": 5},
+        "seed": {"type": "integer"},
+        "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+        "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "sharedTaskSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "wallLimitMs": {"const": 1800000},
+        "toolCallLimit": {"const": 120},
+        "modelTokenLimit": {"const": 100000}
+      }
+    },
+    "evaluatorSnapshotPath": {"type": ["string", "null"]},
+    "outcomesOpenedAt": {"type": ["string", "null"]},
+    "deviations": {"type": "array", "items": {"type": "string"}}
+  }
+}

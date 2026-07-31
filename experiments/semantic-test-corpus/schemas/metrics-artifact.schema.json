@@ -8,7 +8,7 @@
     "formatVersion": {"const": 1},
     "runId": {"type": "string", "minLength": 1},
     "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
-    "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 5},
     "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "provenance": {
       "type": "object",

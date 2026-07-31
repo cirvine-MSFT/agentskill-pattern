@@ -18,13 +18,13 @@
         "publicKeySha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       }
     },
-    "plannedRuns": {"const": 48},
-    "availableRuns": {"type": "integer", "minimum": 0, "maximum": 48},
+    "plannedRuns": {"const": 60},
+    "availableRuns": {"type": "integer", "minimum": 0, "maximum": 60},
     "allRunsAvailable": {"type": "boolean"},
     "runs": {
       "type": "array",
-      "minItems": 48,
-      "maxItems": 48,
+      "minItems": 60,
+      "maxItems": 60,
       "items": {
         "type": "object",
         "required": ["runId", "blockId", "armId", "requestedModel", "requestedWorkerModel", "status", "roles", "reasons"],
@@ -32,7 +32,7 @@
         "properties": {
           "runId": {"type": "string"},
           "blockId": {"type": "string"},
-          "armId": {"type": "integer", "minimum": 1, "maximum": 4},
+          "armId": {"type": "integer", "minimum": 1, "maximum": 5},
           "requestedModel": {"type": "string"},
           "requestedWorkerModel": {},
           "status": {"type": "string", "enum": ["available", "unavailable"]},

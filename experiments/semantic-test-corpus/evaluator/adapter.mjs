@@ -12,13 +12,23 @@ import {
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateStaging } from "../validators/staging.mjs";
+import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { readAuthenticatedExport } from "../scripts/authenticated-export.mjs";
+import { preflightLocalModel } from "../scripts/preflight-local-model.mjs";
+import { validateLocalEvidence } from "../scripts/validate-local-evidence.mjs";
 import { computeRequestHash } from "../../../tools/semantic-corpus-mcp/lib.mjs";
 
 const benchmarkRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const frozenRequest = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "corpus-request.json"), "utf8"));
 const frozenSchedule = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "schedule.json"), "utf8"));
 const frozenSeeds = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "seeds.json"), "utf8"));
+const schemaRoot = resolve(benchmarkRoot, "schemas");
+const localEvidenceSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "local-evidence.schema.json"), "utf8")
+);
+const localPreflightSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "local-model-preflight.schema.json"), "utf8")
+);
 const MCP_TOOLS = new Set([
   "semantic-corpus/list_contract_files",
   "semantic-corpus/read_contract_file",
@@ -319,6 +329,105 @@ export function snapshotCorpusStaging({
     snapshotSha256: sha256(bytes),
     submittedCases: cases.length,
     toolErrorCount: toolErrors.length
+  };
+}
+
+export function snapshotLocalCorpusStaging({
+  corpusContractRoot,
+  corpusStagingRoot,
+  localEvidence,
+  localEvidenceBytes,
+  modelPreflight,
+  sourceArtifactRoot,
+  outputPath
+}) {
+  const evidenceErrors = validateJsonSchema(localEvidence, localEvidenceSchema, {
+    schemaDir: schemaRoot
+  });
+  if (evidenceErrors.length > 0) {
+    throw new Error(`Local evidence is invalid: ${evidenceErrors[0].path} ${evidenceErrors[0].message}`);
+  }
+  const preflightErrors = validateJsonSchema(modelPreflight, localPreflightSchema, {
+    schemaDir: schemaRoot
+  });
+  if (preflightErrors.length > 0) {
+    throw new Error(`Local model preflight is invalid: ${preflightErrors[0].path} ${preflightErrors[0].message}`);
+  }
+  const localEvidenceErrors = validateLocalEvidence(localEvidence, {
+    artifactRoot: sourceArtifactRoot
+  });
+  if (localEvidenceErrors.length > 0) {
+    throw new Error(`Local evidence source validation failed: ${localEvidenceErrors[0]}`);
+  }
+  const recomputedPreflight = preflightLocalModel(localEvidence, localEvidenceBytes);
+  if (JSON.stringify(modelPreflight) !== JSON.stringify(recomputedPreflight)
+    || modelPreflight.status !== "pass"
+    || modelPreflight.beforeOutcomesOpened !== true
+    || localEvidence.attempt.outcomesOpened !== false
+    || modelPreflight.runId !== localEvidence.runId
+    || modelPreflight.evidenceSha256 !== sha256(localEvidenceBytes)) {
+    throw new Error("Local evaluator snapshot requires exact passing pre-outcome model evidence");
+  }
+  const planned = frozenSchedule.runs.find((item) => item.runId === localEvidence.runId);
+  if (!planned
+    || planned.blockId !== localEvidence.blockId
+    || planned.armId !== localEvidence.armId) {
+    throw new Error("Local evidence run identity differs from the frozen schedule");
+  }
+  if (!localEvidence.timing.endedAt) {
+    throw new Error("Local evaluator snapshot requires observed model completion");
+  }
+
+  const contractRoot = resolve(corpusContractRoot);
+  const contractStats = lstatSync(contractRoot);
+  if (!contractStats.isDirectory() || contractStats.isSymbolicLink()
+    || !samePath(realpathSync.native(contractRoot), contractRoot)) {
+    throw new Error("corpus-contract root must be a regular non-symlink directory");
+  }
+  const request = JSON.parse(readExactFile(contractRoot, "request.json", 1024 * 1024));
+  validateImmutableRequest(request);
+  const stagingRoot = resolve(corpusStagingRoot);
+  const rootStats = lstatSync(stagingRoot);
+  if (!rootStats.isDirectory() || rootStats.isSymbolicLink()
+    || !samePath(realpathSync.native(stagingRoot), stagingRoot)) {
+    throw new Error("corpus-staging root must be a regular non-symlink directory");
+  }
+  const cases = snapshotCases(stagingRoot, request);
+  const manifest = snapshotManifest(stagingRoot, request);
+  const staging = {
+    formatVersion: 1,
+    generator: {
+      armId: planned.armId,
+      blockId: planned.blockId,
+      seed: planned.seed
+    },
+    adapter: {
+      version: 1,
+      requestHash: request.requestHash,
+      sourceRoot: "corpus-staging/",
+      successfulWrites: cases.length,
+      toolErrorCount: localEvidence.toolErrors.length,
+      manifest
+    },
+    cases,
+    toolErrors: localEvidence.toolErrors
+  };
+  const errors = validateStaging(staging);
+  if (errors.length > 0) {
+    throw new Error(`Local adapter produced invalid benchmark staging: ${JSON.stringify(errors)}`);
+  }
+  const bytes = canonicalStagingBytes(staging);
+  const target = resolve(outputPath);
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, bytes, { flag: "wx" });
+  return {
+    evidenceTier: "descriptive-local-v1",
+    staging,
+    bytes,
+    stagingPath: target,
+    snapshotSha256: sha256(bytes),
+    submittedCases: cases.length,
+    toolErrorCount: localEvidence.toolErrors.length
   };
 }
 

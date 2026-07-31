@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 const agentPath = fileURLToPath(
   new URL("../../.github/agents/semantic-test-corpus.agent.md", import.meta.url),
 );
+const haikuAgentPath = fileURLToPath(
+  new URL("../../.github/agents/semantic-test-corpus-haiku.agent.md", import.meta.url),
+);
 const skillPath = fileURLToPath(
   new URL("../../.github/skills/semantic-test-corpus/SKILL.md", import.meta.url),
 );
@@ -56,4 +59,17 @@ test("agent and Skill preserve deterministic parent ownership and no fallback", 
   assert.match(skill, /trusted oracle/i);
   assert.match(skill, /mutant scoring/i);
   assert.match(skill, /inherits the caller\/session model/i);
+});
+
+test("benchmark Haiku specialist differs only by name and fixed model", async () => {
+  const [inherited, fixed] = await Promise.all([
+    readFile(agentPath, "utf8"),
+    readFile(haikuAgentPath, "utf8"),
+  ]);
+  const normalize = (text) => text
+    .replace(/^name: semantic-test-corpus(?:-haiku)?$/m, "name: <benchmark-agent>")
+    .replace(/^model: claude-haiku-4\.5\r?\n/m, "");
+  assert.equal(normalize(fixed), normalize(inherited));
+  assert.match(fixed, /^name: semantic-test-corpus-haiku$/m);
+  assert.match(fixed, /^model: claude-haiku-4\.5$/m);
 });

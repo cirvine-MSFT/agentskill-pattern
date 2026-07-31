@@ -1,0 +1,54 @@
+{
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "version": 1,
+  "sharedTask": "task/shared-task-prompt.txt",
+  "executionLocation": "local",
+  "kickoffMode": "autopilot",
+  "sessionCreation": "atomic-create-session-with-kickoff",
+  "conditions": [
+    {
+      "armId": 0,
+      "execution": "deterministic",
+      "parentModel": null,
+      "workerModel": null,
+      "kickoff": null,
+      "command": "node scripts/run-deterministic-block.mjs --block <B01..B12> --out <external-artifact-root>"
+    },
+    {
+      "armId": 1,
+      "execution": "inline",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": null,
+      "kickoff": "Execute the exact bytes in task/shared-task-prompt.txt inline. Use only the four semantic-corpus MCP tools. Do not invoke a Skill or agent. Return only the required terminal line."
+    },
+    {
+      "armId": 2,
+      "execution": "delegated-inherited",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": "gpt-5.6-sol",
+      "kickoff": "Load the semantic-test-corpus Skill and invoke its registered semantic-test-corpus agent with the exact bytes in task/shared-task-prompt.txt. Do not call semantic-corpus tools or read corpus-staging in the parent. Return only the worker terminal line."
+    },
+    {
+      "armId": 3,
+      "execution": "inline",
+      "parentModel": "claude-haiku-4.5",
+      "workerModel": null,
+      "kickoff": "Execute the exact bytes in task/shared-task-prompt.txt inline. Use only the four semantic-corpus MCP tools. Do not invoke a Skill or agent. Return only the required terminal line."
+    },
+    {
+      "armId": 4,
+      "execution": "delegated-inherited",
+      "parentModel": "claude-haiku-4.5",
+      "workerModel": "claude-haiku-4.5",
+      "kickoff": "Load the semantic-test-corpus Skill and invoke its registered semantic-test-corpus agent with the exact bytes in task/shared-task-prompt.txt. Do not call semantic-corpus tools or read corpus-staging in the parent. Return only the worker terminal line."
+    },
+    {
+      "armId": 5,
+      "execution": "delegated-fixed-specialist",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": "claude-haiku-4.5",
+      "kickoff": "Invoke the benchmark-only semantic-test-corpus-haiku agent through the same custom-agent delegation API with the exact bytes in task/shared-task-prompt.txt. Do not load the core Skill because its contract forbids substituting another identity. Do not call semantic-corpus tools or read corpus-staging in the parent. Return only the worker terminal line.",
+      "unavoidableDifference": "Cross-model inheritance is unavailable and the core Skill forbids substituting its registered identity. Arm 5 therefore omits the Skill router and names semantic-test-corpus-haiku directly. Its test attests that the profile is byte-identical to semantic-test-corpus after removing only the name and fixed model lines."
+    }
+  ]
+}

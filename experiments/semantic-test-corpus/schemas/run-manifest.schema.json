@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-manifest.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "blockId", "armId", "seed",
+    "scheduleOrder", "appProjectSessionId", "cliSessionId", "terminalCommit",
+    "candidateSnapshotSha256", "candidateBoundaryPath", "attemptNumber", "outcomesOpenedAt",
+    "attempts", "preflights", "retries", "deviations"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"armId": {"const": 0}}},
+      "then": {
+        "properties": {
+          "appProjectSessionId": {"type": "null"},
+          "cliSessionId": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "appProjectSessionId": {"type": "string", "minLength": 1},
+          "cliSessionId": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  ],
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+    "seed": {"type": "integer"},
+    "scheduleOrder": {"type": "integer", "minimum": 1, "maximum": 6},
+    "appProjectSessionId": {"type": ["string", "null"]},
+    "cliSessionId": {"type": ["string", "null"]},
+    "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+    "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "candidateBoundaryPath": {"type": "string", "minLength": 1},
+    "attemptNumber": {"type": "integer", "minimum": 1, "maximum": 2},
+    "outcomesOpenedAt": {"type": ["string", "null"]},
+    "attempts": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "string"}},
+    "preflights": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "string"}},
+    "retries": {"type": "array", "maxItems": 1, "items": {"type": "string"}},
+    "deviations": {"type": "array", "items": {"type": "string"}}
+  }
+}

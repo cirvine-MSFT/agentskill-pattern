@@ -1,0 +1,31 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "attemptId": "B01-A2-attempt-1",
+  "runId": "B01-A2",
+  "attemptNumber": 1,
+  "appProjectSessionId": "fixture-app-project-session",
+  "cliSessionId": "fixture-cli-session",
+  "requestedParentModel": "gpt-5.6-sol",
+  "requestedWorkerModel": "gpt-5.6-sol",
+  "status": "completed",
+  "startedAt": "2026-07-31T07:00:00.000Z",
+  "endedAt": "2026-07-31T07:00:10.000Z",
+  "terminalReturn": "corpus-staging/manifest.json - 60 scenarios - SUCCESS",
+  "localEvidencePath": "expected.json",
+  "modelPreflightPath": "model-preflight.json",
+  "treatment": {
+    "blockId": "B01",
+    "armId": 2,
+    "seed": 1812433253,
+    "terminalCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "candidateSnapshotSha256": "c059c65c044b07ba0dadf35396390262aca416f116b517985348d725898d69cf",
+    "sharedTaskSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "wallLimitMs": 1800000,
+    "toolCallLimit": 120,
+    "modelTokenLimit": 100000
+  },
+  "evaluatorSnapshotPath": null,
+  "outcomesOpenedAt": null,
+  "deviations": []
+}

@@ -1,5 +1,8 @@
 {
-  "preregistrationVersion": "1.4.0",
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "preregistrationVersion": "2.0.0",
+  "amends": "protocol.md v1.4.0",
+  "normativeAmendment": "execution-amendment-v2.md",
   "fixedModels": {
     "frontier": "gpt-5.6-sol",
     "cheap": "claude-haiku-4.5"
@@ -11,7 +14,10 @@
     "wallClockMinutes": 30,
     "maximumToolCalls": 120,
     "maximumTotalModelTokens": 100000,
-    "freshSessionEvidence": "signed-platform-session.created",
+    "executionLocation": "local",
+    "kickoffMode": "autopilot",
+    "sessionCreation": "atomic-create-session-with-kickoff",
+    "freshSessionEvidence": "exact app project session ID plus internal CLI session ID",
     "acceptanceBoundary": "external-evaluator-not-mounted",
     "expectedOutputPolicy": "oracle-after-promotion-only",
     "taskArtifact": "task/shared-task-prompt.txt",
@@ -36,6 +42,22 @@
       "schema": "schemas/metrics-artifact.schema.json",
       "runRecordBinding": "metrics.sha256",
       "signedEvent": "metrics.computed"
+    },
+    "localEvidence": {
+      "tier": "descriptive-local-v1",
+      "collector": "scripts/collect-local-evidence.mjs",
+      "validator": "scripts/validate-local-evidence.mjs",
+      "modelPreflight": "scripts/preflight-local-model.mjs",
+      "signed": false,
+      "complianceProof": false,
+      "requiredBindings": [
+        "appProjectSessionId",
+        "cliSessionId",
+        "eventsSha256",
+        "usageSha256",
+        "terminalCommit",
+        "candidateSnapshotSha256"
+      ]
     },
     "platformAudit": {
       "adapter": "scripts/platform-audit-adapter.mjs",
@@ -70,6 +92,18 @@
     {"id": 1, "name": "frontier inline", "modelTier": "frontier", "delegated": false, "model": "gpt-5.6-sol"},
     {"id": 2, "name": "frontier same-model delegated", "modelTier": "frontier", "delegated": true, "model": "gpt-5.6-sol", "workerModel": "gpt-5.6-sol", "delegationContract": "delegationContract"},
     {"id": 3, "name": "cheap inline", "modelTier": "cheap", "delegated": false, "model": "claude-haiku-4.5"},
-    {"id": 4, "name": "cheap delegated via Skill/agent", "modelTier": "cheap", "delegated": true, "model": "claude-haiku-4.5", "workerModel": "claude-haiku-4.5", "delegationContract": "delegationContract"}
+    {"id": 4, "name": "cheap delegated via Skill/agent", "modelTier": "cheap", "delegated": true, "model": "claude-haiku-4.5", "workerModel": "claude-haiku-4.5", "delegationContract": "delegationContract"},
+    {
+      "id": 5,
+      "name": "frontier parent to fixed cheap specialist",
+      "modelTier": "mixed",
+      "delegated": true,
+      "model": "gpt-5.6-sol",
+      "workerModel": "claude-haiku-4.5",
+      "delegationContract": "delegationContract",
+      "agentName": "semantic-test-corpus-haiku",
+      "agentProfile": ".github/agents/semantic-test-corpus-haiku.agent.md",
+      "namedAgentDeviation": "The core Skill requires the inherited semantic-test-corpus identity, so it cannot route a cross-model worker. Arm 5 uses the same custom-agent delegation API directly with the byte-attested fixed-Haiku profile; the MCP server, tools, instructions, and terminal contract remain identical."
+    }
   ]
 }
