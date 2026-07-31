@@ -69,7 +69,10 @@ test("stdio server starts only with launcher evidence and serves MCP", async (t)
 test("implements MCP with only request-bound narrow tools", async (t) => {
   const run = await createRun();
   const service = await run.open();
-  t.after(() => run.cleanup());
+  t.after(async () => {
+    await service.close();
+    await run.cleanup();
+  });
   const responses = [];
   const dispatch = createDispatcher(service, (message) => responses.push(message));
   let id = 0;
@@ -91,6 +94,7 @@ test("implements MCP with only request-bound narrow tools", async (t) => {
   assert.deepEqual(
     listed.result.tools.map((tool) => tool.name),
     [
+      "read_request",
       "list_contract_files",
       "read_contract_file",
       "write_scenario_input",
@@ -111,12 +115,9 @@ test("implements MCP with only request-bound narrow tools", async (t) => {
     inputTool.inputSchema.properties.config.properties.profile.additionalProperties,
     false,
   );
-  assert.deepEqual(inputTool.inputSchema.properties.scenarioId.enum, [
-    "scenario-001",
-    "scenario-002",
-    "scenario-003",
-    "scenario-004",
-  ]);
+  assert.equal(inputTool.inputSchema.properties.scenarioId.enum.length, 40);
+  assert.equal(inputTool.inputSchema.properties.scenarioId.enum[0], "scenario-001");
+  assert.equal(inputTool.inputSchema.properties.scenarioId.enum.at(-1), "scenario-040");
 
   const contract = await request("tools/call", {
     name: "list_contract_files",
@@ -129,11 +130,11 @@ test("implements MCP with only request-bound narrow tools", async (t) => {
   assert.equal(contract.result.structuredContent.requestHash, run.requestHash);
 
   const pinned = await request("tools/call", {
-    name: "read_contract_file",
-    arguments: { path: "request.json" },
+    name: "read_request",
+    arguments: {},
   });
   assert.equal(
-    JSON.parse(pinned.result.structuredContent.content).requestHash,
+    pinned.result.structuredContent.request.requestHash,
     run.requestHash,
   );
 

@@ -5,6 +5,7 @@ target: github-copilot
 model: claude-haiku-4.5
 user-invocable: false
 tools:
+  - semantic-corpus/read_request
   - semantic-corpus/list_contract_files
   - semantic-corpus/read_contract_file
   - semantic-corpus/write_scenario_input
@@ -15,6 +16,7 @@ mcp-servers:
     command: node
     args: ["tools/semantic-corpus-mcp/server.mjs"]
     tools:
+      - read_request
       - list_contract_files
       - read_contract_file
       - write_scenario_input
@@ -23,7 +25,7 @@ mcp-servers:
 
 Generate only candidate semantic source inputs for the immutable request.
 
-First use `list_contract_files`, then read `request.json` and every other listed contract
+First use `read_request`, then `list_contract_files`, then read every listed contract
 file. The request's self-hash, exact target count, request-defined scenario IDs and
 categories, quotas, closed v1 config schema, and size limits are immutable. Treat the
 listed files as the complete source of truth: schemas, mapping rules, cross-field and

@@ -677,7 +677,7 @@ function validateRequest(request) {
   if (request.version !== 1) {
     fail("SCHEMA_ERROR", "request.version must be 1");
   }
-  assertInteger(request.targetCount, "request.targetCount", 1, 200);
+  assertInteger(request.targetCount, "request.targetCount", 40, 60);
   assertExactKeys(
     request.maxSizes,
     new Set(["contractFileBytes", "scenarioBytes", "manifestBytes"]),
@@ -923,23 +923,29 @@ export class CorpusService {
   static async create(options = {}) {
     const sandbox = await loadSandboxContext(options);
     const service = new CorpusService(INTERNAL, sandbox, options);
-    await service.withLock(async () => {
-      const loaded = await service.readRequestUnlocked();
-      if (loaded.request.requestHash !== sandbox.config.requestHash) {
-        fail(
-          "REQUEST_HASH_MISMATCH",
-          "request hash does not match the launcher sandbox config",
+    service.lock = await service.acquireLock();
+    try {
+      await service.withLock(async () => {
+        const loaded = await service.readRequestUnlocked();
+        if (loaded.request.requestHash !== sandbox.config.requestHash) {
+          fail(
+            "REQUEST_HASH_MISMATCH",
+            "request hash does not match the launcher sandbox config",
+          );
+        }
+        await assertWriteDenied(
+          path.join(service.contractRoot, "request.json"),
+          "corpus request",
         );
-      }
-      await assertWriteDenied(
-        path.join(service.contractRoot, "request.json"),
-        "corpus request",
-      );
-      service.request = loaded.request;
-      service.requestIdentity = loaded.identity;
-      service.requestCanonical = canonicalJson(loaded.request);
-    });
-    return service;
+        service.request = loaded.request;
+        service.requestIdentity = loaded.identity;
+        service.requestCanonical = canonicalJson(loaded.request);
+      });
+      return service;
+    } catch (error) {
+      await service.close().catch(() => {});
+      throw error;
+    }
   }
 
   constructor(internal, sandbox, options) {
@@ -956,6 +962,9 @@ export class CorpusService {
     this.request = undefined;
     this.requestIdentity = undefined;
     this.requestCanonical = undefined;
+    this.lock = undefined;
+    this.operationTail = Promise.resolve();
+    this.closed = false;
   }
 
   get toolDefinitions() {
@@ -965,6 +974,11 @@ export class CorpusService {
     const ids = this.request.scenarios.map((entry) => entry.scenarioId);
     const categories = this.request.categories.map((entry) => entry.category);
     return [
+      {
+        name: "read_request",
+        description: "Read the immutable launcher-pinned corpus request and closed v1 schema.",
+        inputSchema: { type: "object", additionalProperties: false, properties: {} },
+      },
       {
         name: "list_contract_files",
         description: "List bounded read-only files under the fixed corpus-contract root.",
@@ -1057,6 +1071,7 @@ export class CorpusService {
           hostname: os.hostname(),
           acquiredAt: new Date().toISOString(),
           nonce,
+          requestHash: this.sandbox.config.requestHash,
         };
         const ownerBytes = jsonBytes(metadata);
         await handle.writeFile(ownerBytes);
@@ -1104,27 +1119,7 @@ export class CorpusService {
   async releaseLock(lock) {
     let releaseError;
     try {
-      const opened = await lock.handle.stat({ bigint: true });
-      if (!identitiesEqual(identityFromStats(opened), lock.identity)) {
-        fail("LOCK_OWNERSHIP_LOST", "open staging lock identity changed");
-      }
-      const onDisk = await lstat(lock.lockPath, { bigint: true });
-      if (!identitiesEqual(identityFromStats(onDisk), lock.identity)) {
-        fail("LOCK_OWNERSHIP_LOST", "staging lock path no longer belongs to this process");
-      }
-      if (opened.size !== BigInt(lock.ownerBytes.length)) {
-        fail("LOCK_OWNERSHIP_LOST", "staging lock owner metadata changed");
-      }
-      const ownerBytes = Buffer.alloc(lock.ownerBytes.length);
-      const { bytesRead } = await lock.handle.read(
-        ownerBytes,
-        0,
-        ownerBytes.length,
-        0,
-      );
-      if (bytesRead !== ownerBytes.length || !ownerBytes.equals(lock.ownerBytes)) {
-        fail("LOCK_OWNERSHIP_LOST", "staging lock owner metadata changed");
-      }
+      await this.assertLockOwned(lock);
     } catch (error) {
       releaseError = error;
     }
@@ -1141,26 +1136,63 @@ export class CorpusService {
     }
   }
 
+  async assertLockOwned(lock = this.lock) {
+    if (!lock) {
+      fail("LOCK_OWNERSHIP_LOST", "staging lock is not held");
+    }
+    const opened = await lock.handle.stat({ bigint: true });
+    if (!identitiesEqual(identityFromStats(opened), lock.identity)) {
+      fail("LOCK_OWNERSHIP_LOST", "open staging lock identity changed");
+    }
+    const onDisk = await lstat(lock.lockPath, { bigint: true });
+    if (!identitiesEqual(identityFromStats(onDisk), lock.identity)) {
+      fail("LOCK_OWNERSHIP_LOST", "staging lock path no longer belongs to this process");
+    }
+    if (opened.size !== BigInt(lock.ownerBytes.length)) {
+      fail("LOCK_OWNERSHIP_LOST", "staging lock owner metadata changed");
+    }
+    const ownerBytes = Buffer.alloc(lock.ownerBytes.length);
+    const { bytesRead } = await lock.handle.read(
+      ownerBytes,
+      0,
+      ownerBytes.length,
+      0,
+    );
+    if (bytesRead !== ownerBytes.length || !ownerBytes.equals(lock.ownerBytes)) {
+      fail("LOCK_OWNERSHIP_LOST", "staging lock owner metadata changed");
+    }
+  }
+
   async withLock(action) {
-    const lock = await this.acquireLock();
-    let result;
-    let operationError;
+    const previous = this.operationTail;
+    let releaseQueue;
+    this.operationTail = new Promise((resolve) => {
+      releaseQueue = resolve;
+    });
+    await previous;
     try {
+      if (this.closed) {
+        fail("LOCK_OWNERSHIP_LOST", "service is closed");
+      }
+      await this.assertLockOwned();
       await this.verifySandboxUnlocked();
-      result = await action();
+      const result = await action();
       await this.verifySandboxUnlocked();
-    } catch (error) {
-      operationError = error;
+      await this.assertLockOwned();
+      return result;
+    } finally {
+      releaseQueue();
     }
-    try {
-      await this.releaseLock(lock);
-    } catch (error) {
-      operationError ??= error;
+  }
+
+  async close() {
+    if (this.closed) {
+      return;
     }
-    if (operationError) {
-      throw operationError;
-    }
-    return result;
+    await this.operationTail;
+    await this.releaseLock(this.lock);
+    this.lock = undefined;
+    this.closed = true;
   }
 
   async readRequestUnlocked() {
@@ -1173,6 +1205,14 @@ export class CorpusService {
     );
     const request = validateRequest(parseJson(loaded.content, "corpus-contract/request.json"));
     return { request, identity: loaded.identity };
+  }
+
+  async readRequest(args) {
+    assertExactKeys(args, new Set(), new Set(), "arguments");
+    return this.withOperation(async (request) => ({
+      requestHash: request.requestHash,
+      request: cloneJson(request),
+    }));
   }
 
   async withOperation(action) {
@@ -1496,6 +1536,8 @@ export class CorpusService {
 
 export async function callTool(service, name, args = {}) {
   switch (name) {
+    case "read_request":
+      return service.readRequest(args);
     case "list_contract_files":
       assertExactKeys(args, new Set(), new Set(), "arguments");
       return service.listContractFiles();

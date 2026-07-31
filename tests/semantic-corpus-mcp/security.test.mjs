@@ -44,7 +44,10 @@ async function fillValidCorpus(service, request) {
 test("writes exact request-defined IDs, categories, count, and quotas", async (t) => {
   const run = await createRun();
   const service = await run.open();
-  t.after(() => run.cleanup());
+  t.after(async () => {
+    await service.close();
+    await run.cleanup();
+  });
   await fillValidCorpus(service, run.request);
   const result = await service.writeScenarioManifest({
     scenarios: [...run.request.scenarios].reverse(),
@@ -68,7 +71,10 @@ test("writes exact request-defined IDs, categories, count, and quotas", async (t
 test("closed v1 schema rejects aliases, confusables, and nested unknowns", async (t) => {
   const run = await createRun();
   const service = await run.open();
-  t.after(() => run.cleanup());
+  t.after(async () => {
+    await service.close();
+    await run.cleanup();
+  });
   const attacks = [
     { ...scenarioInput(1), expectedOutcome: "v2" },
     { ...scenarioInput(1), oracleVerdict: "pass" },
@@ -98,7 +104,10 @@ test("closed v1 schema rejects aliases, confusables, and nested unknowns", async
 test("scenario and manifest arguments have strict positive shapes", async (t) => {
   const run = await createRun();
   const service = await run.open();
-  t.after(() => run.cleanup());
+  t.after(async () => {
+    await service.close();
+    await run.cleanup();
+  });
   await expectCode(
     () =>
       service.writeScenarioInput({
@@ -137,7 +146,10 @@ test("scenario and manifest arguments have strict positive shapes", async (t) =>
 test("rejects traversal, absolute paths, separators, Unicode, and case aliases", async (t) => {
   const run = await createRun();
   const service = await run.open();
-  t.after(() => run.cleanup());
+  t.after(async () => {
+    await service.close();
+    await run.cleanup();
+  });
   const attacks = [
     "../rules.md",
     "/etc/passwd",
@@ -161,6 +173,12 @@ test("rejects traversal, absolute paths, separators, Unicode, and case aliases",
 });
 
 test("rejects request hash errors, replacement, and open schemas", async (t) => {
+  for (const targetCount of [39, 61]) {
+    const countRun = await createRun(baseRequest({ targetCount }));
+    t.after(() => countRun.cleanup());
+    await expectCode(() => countRun.open(), "SCHEMA_ERROR");
+  }
+
   const badHash = baseRequest();
   badHash.requestHash = "0".repeat(64);
   const hashRun = await createRun(badHash);
@@ -182,7 +200,10 @@ test("rejects request hash errors, replacement, and open schemas", async (t) => 
 
   const run = await createRun();
   const service = await run.open();
-  t.after(() => run.cleanup());
+  t.after(async () => {
+    await service.close().catch(() => {});
+    await run.cleanup();
+  });
   const requestPath = path.join(run.contract, "request.json");
   const replacement = path.join(run.contract, "request-replacement.json");
   await writeFile(replacement, encodeJson(run.request));
@@ -232,7 +253,10 @@ test("fails closed when launcher-owned config or request is writable", async (t)
 test("rechecks sandbox config and root identity before and after operations", async (t) => {
   const configRun = await createRun();
   const configService = await configRun.open();
-  t.after(() => configRun.cleanup());
+  t.after(async () => {
+    await configService.close().catch(() => {});
+    await configRun.cleanup();
+  });
   const replacement = `${configRun.configPath}.replacement`;
   await writeFile(replacement, encodeJson(configRun.sandbox));
   await rm(configRun.configPath);
@@ -249,7 +273,10 @@ test("rechecks sandbox config and root identity before and after operations", as
       },
     },
   });
-  t.after(() => rootRun.cleanup());
+  t.after(async () => {
+    await rootService.close().catch(() => {});
+    await rootRun.cleanup();
+  });
   await expectCode(
     () =>
       rootService.writeScenarioInput({
@@ -276,7 +303,10 @@ test("rejects contract symlinks and staging junctions", async (t) => {
     throw error;
   }
   const contractService = await contractRun.open();
-  t.after(() => contractRun.cleanup());
+  t.after(async () => {
+    await contractService.close();
+    await contractRun.cleanup();
+  });
   await expectCode(() => contractService.listContractFiles(), "REPARSE_ESCAPE");
 
   const stagingRun = await createRun();
@@ -288,7 +318,10 @@ test("rejects contract symlinks and staging junctions", async (t) => {
     path.join(stagingRun.staging, "scenarios"),
     process.platform === "win32" ? "junction" : "dir",
   );
-  t.after(() => stagingRun.cleanup());
+  t.after(async () => {
+    await stagingService.close();
+    await stagingRun.cleanup();
+  });
   await expectCode(
     () =>
       stagingService.writeScenarioInput({
@@ -303,7 +336,10 @@ test("rejects contract symlinks and staging junctions", async (t) => {
 test("manifest revalidates every staged scenario and closes staging", async (t) => {
   const run = await createRun();
   const service = await run.open();
-  t.after(() => run.cleanup());
+  t.after(async () => {
+    await service.close();
+    await run.cleanup();
+  });
   await fillValidCorpus(service, run.request);
   const first = path.join(run.staging, "scenarios", "scenario-001.json");
   await chmod(first, 0o600);
@@ -375,7 +411,10 @@ test("enforces request byte limits and atomic write-once publication", async (t)
   smallRequest.requestHash = computeRequestHash(smallRequest);
   const smallRun = await createRun(smallRequest);
   const smallService = await smallRun.open();
-  t.after(() => smallRun.cleanup());
+  t.after(async () => {
+    await smallService.close();
+    await smallRun.cleanup();
+  });
   await expectCode(
     () =>
       smallService.writeScenarioInput({

@@ -11,7 +11,7 @@ migration execution, the expected-output oracle, traces, and mutant scoring.
 | Skill router | [`.github/skills/semantic-test-corpus/SKILL.md`](../../.github/skills/semantic-test-corpus/SKILL.md) |
 | Custom agent | [`.github/agents/semantic-test-corpus.agent.md`](../../.github/agents/semantic-test-corpus.agent.md) |
 | Model | `claude-haiku-4.5` |
-| Agent tools | Four namespaced `semantic-corpus/*` MCP tools only |
+| Agent tools | Five namespaced `semantic-corpus/*` MCP tools only |
 | MCP server | [`tools/semantic-corpus-mcp/server.mjs`](../../tools/semantic-corpus-mcp/server.mjs), dependency-free Node 20+ stdio |
 | Tests | [`tests/semantic-corpus-mcp/`](../../tests/semantic-corpus-mcp/) |
 
@@ -79,19 +79,20 @@ control and must stay effective for the process lifetime.
 ## Immutable request
 
 The parent writes read-only `corpus-contract/request.json`. It is a closed object with a
-self-hash over canonical JSON excluding `requestHash`:
+self-hash over canonical JSON excluding `requestHash`. The following is abbreviated;
+the real `scenarios` array contains exactly 40-60 entries:
 
 ```json
 {
   "version": 1,
-  "targetCount": 2,
+  "targetCount": 40,
   "scenarios": [
-    { "scenarioId": "mapping-null-region", "category": "mapping-rules" },
-    { "scenarioId": "cross-field-flags", "category": "cross-field-invariants" }
+    { "scenarioId": "scenario-001", "category": "mapping-rules" },
+    { "scenarioId": "scenario-002", "category": "cross-field-invariants" }
   ],
   "categories": [
-    { "category": "mapping-rules", "minQuota": 1 },
-    { "category": "cross-field-invariants", "minQuota": 1 }
+    { "category": "mapping-rules", "minQuota": 20 },
+    { "category": "cross-field-invariants", "minQuota": 10 }
   ],
   "maxSizes": {
     "contractFileBytes": 262144,
@@ -121,7 +122,7 @@ self-hash over canonical JSON excluding `requestHash`:
 
 `targetCount` must exactly equal the request-defined scenario list. IDs are unique;
 categories are closed and satisfy every minimum quota before delegation. The model cannot
-initialize or change the request.
+initialize or change the request. The target must be from 40 through 60.
 
 The supported schema dialect is deliberately small: recursively closed objects, bounded
 arrays and strings, finite numbers, safe integers, booleans, null, `const`, scalar enums,
@@ -138,6 +139,7 @@ unrestricted JSON escape hatch.
 
 | Tool | Capability |
 | --- | --- |
+| `read_request` | Read the immutable launcher-pinned request, exact ID/category assignments, limits, and closed v1 schema. |
 | `list_contract_files` | List bounded regular files under the attested contract root. |
 | `read_contract_file` | Read one exact relative contract path. |
 | `write_scenario_input` | Accept only a request-defined `scenarioId` and exact closed-schema `config`; atomically publish the config under the fixed staging path. |
@@ -150,15 +152,17 @@ capability to initialize corpus state.
 
 ## Cross-process staging lock
 
-Every operation atomically acquires `corpus-staging/.corpus.lock` with exclusive-create
-semantics. Initialization and request reading, contract reads, scenario count checks,
-writes, complete manifest snapshot validation, and publication occur while the lock is
-held. The lock records owner PID, hostname, acquisition time, and a random nonce.
+Startup atomically acquires `corpus-staging/.corpus.lock` with exclusive-create
+semantics and retains its open handle until the MCP process closes. Initialization and
+request reading, contract reads, scenario count checks, writes, complete manifest
+snapshot validation, and publication all occur while the same owner lock is held. The
+lock records owner PID, hostname, acquisition time, random nonce, and request hash.
 
-Contenders wait only for the launcher-configured bounded interval. A malformed lock fails
-closed. A lock older than `staleAfterMs` returns `LOCK_STALE` and is **never removed or
-stolen**; the parent must destroy or inspect the disposable run. Release verifies the open
-handle and pathname still identify the owner's lock before removal.
+Another server/process cannot initialize while that lease exists and fails after the
+launcher-configured bounded interval. A malformed lock fails closed. A lock older than
+`staleAfterMs` returns `LOCK_STALE` and is **never removed or stolen**; the parent must
+destroy or inspect the disposable run. Release verifies the open handle, owner bytes,
+nonce, and pathname still identify the owner's lock before removal.
 
 Scenario and manifest publication writes a bounded exclusive temporary file in the
 destination directory, flushes it, marks it read-only, and hard-links it to a write-once
@@ -189,4 +193,4 @@ node --test $tests
 The suite covers MCP discovery/calls, fail-closed startup, recursively closed schemas,
 oracle/expected aliases and confusables, immutable request and sandbox identity, exact
 counts/quotas, traversal/case/Unicode/symlink/junction attacks, write-once publication,
-stale-lock policy, and two-process count/write/manifest races.
+stale-lock policy, and a two-process lifetime-lock contention check.

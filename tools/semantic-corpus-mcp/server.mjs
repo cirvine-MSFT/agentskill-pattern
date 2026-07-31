@@ -46,7 +46,8 @@ input.on("line", (line) => {
 });
 
 input.on("close", () => {
-  queue.catch(() => {
+  queue.then(() => service.close()).catch((error) => {
+    process.stderr.write(`LOCK_RELEASE_FAILED: ${error.message}\n`);
     process.exitCode = 1;
   });
 });

@@ -25,6 +25,7 @@ test("custom-agent frontmatter exposes only request-bound MCP tools", async () =
   );
 
   const allowed = [
+    "semantic-corpus/read_request",
     "semantic-corpus/list_contract_files",
     "semantic-corpus/read_contract_file",
     "semantic-corpus/write_scenario_input",
