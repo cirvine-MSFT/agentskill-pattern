@@ -762,8 +762,8 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
   rmSync(temporary, { recursive: true, force: true });
   mkdirSync(temporary, { recursive: true });
   try {
-    const snapshotPath = resolve(temporary, "B00-A0.json");
-    const metricsPath = resolve(temporary, "B00-A0.metrics.json");
+    const snapshotPath = resolve(temporary, "B01-A0.json");
+    const metricsPath = resolve(temporary, "B01-A0.metrics.json");
     const baselineSnapshot = generateBaseline();
     baselineSnapshot.generator = { armId: 0, blockId: "B01", seed: 1812433253 };
     const snapshotBytes = Buffer.from(`${JSON.stringify(baselineSnapshot, null, 2)}\n`);
@@ -820,7 +820,7 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
           blockId: "B01",
           armId: 0,
           role: "baseline",
-          sequence: 1
+          sequence: 5
         },
         {
           eventId: "baseline-completed",
@@ -847,8 +847,8 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
           type: "metrics.computed",
           timestamp: "2026-07-29T00:04:20Z",
           sessionId: "evaluator-session",
-          runId: "B00-A0",
-          blockId: "B00",
+          runId: "B01-A0",
+          blockId: "B01",
           armId: 0,
           role: "evaluator",
           actor: "evaluator",
@@ -973,8 +973,8 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
 
     const oldShape = {
       runs: [{
-        runId: "B00-A0",
-        blockId: "B00",
+        runId: "B01-A0",
+        blockId: "B01",
         armId: 0,
         metricsPath,
         promotionRate: 1
