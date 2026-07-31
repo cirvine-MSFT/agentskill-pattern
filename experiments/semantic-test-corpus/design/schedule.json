@@ -1,6 +1,6 @@
 {
   "protocolId": "semantic-test-corpus-execution-v2",
-  "scheduleVersion": 2,
+  "scheduleVersion": 3,
   "randomizationSeed": 20260729,
   "runs": [
     {
@@ -8,504 +8,720 @@
       "blockId": "B01",
       "armId": 4,
       "order": 1,
-      "seed": 1812433253
+      "globalOrder": 1,
+      "seed": 1812433253,
+      "taskSha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
+      "kickoffSha256": "5bb3b0ea04a87a15356117f2962797513a8869bc082fcb0b6e929d147ab7be0f"
     },
     {
       "runId": "B01-A1",
       "blockId": "B01",
       "armId": 1,
       "order": 2,
-      "seed": 1812433253
+      "globalOrder": 2,
+      "seed": 1812433253,
+      "taskSha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
+      "kickoffSha256": "533e2448a8eee4cffe47596c4b6bafe7e700117bff106067480f983585d27b16"
     },
     {
       "runId": "B01-A3",
       "blockId": "B01",
       "armId": 3,
       "order": 3,
-      "seed": 1812433253
+      "globalOrder": 3,
+      "seed": 1812433253,
+      "taskSha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
+      "kickoffSha256": "533e2448a8eee4cffe47596c4b6bafe7e700117bff106067480f983585d27b16"
     },
     {
       "runId": "B01-A5",
       "blockId": "B01",
       "armId": 5,
       "order": 4,
-      "seed": 1812433253
+      "globalOrder": 4,
+      "seed": 1812433253,
+      "taskSha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
+      "kickoffSha256": "43458b93bcd552a5286ca39e8ee8987c689005f05fb6755383ef0f4f43884a55"
     },
     {
       "runId": "B01-A2",
       "blockId": "B01",
       "armId": 2,
       "order": 5,
-      "seed": 1812433253
+      "globalOrder": 5,
+      "seed": 1812433253,
+      "taskSha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
+      "kickoffSha256": "5bb3b0ea04a87a15356117f2962797513a8869bc082fcb0b6e929d147ab7be0f"
     },
     {
       "runId": "B01-A0",
       "blockId": "B01",
       "armId": 0,
       "order": 6,
-      "seed": 1812433253
+      "globalOrder": 6,
+      "seed": 1812433253,
+      "taskSha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
+      "kickoffSha256": null
     },
     {
       "runId": "B02-A4",
       "blockId": "B02",
       "armId": 4,
       "order": 1,
-      "seed": 1900727105
+      "globalOrder": 7,
+      "seed": 1900727105,
+      "taskSha256": "f60cd525434590898c29beda36ca6673ebfea3a3ccee36a6076f64f635943897",
+      "kickoffSha256": "0823369ff1778b40fcc48074866e4c85c6c796e9515c271f8c2160f08d2f0cc3"
     },
     {
       "runId": "B02-A5",
       "blockId": "B02",
       "armId": 5,
       "order": 2,
-      "seed": 1900727105
+      "globalOrder": 8,
+      "seed": 1900727105,
+      "taskSha256": "f60cd525434590898c29beda36ca6673ebfea3a3ccee36a6076f64f635943897",
+      "kickoffSha256": "a7e820d6c9056fba5070bcf0ec7bac3dd5bb903ab4ba683d136ea809726eb3cb"
     },
     {
       "runId": "B02-A2",
       "blockId": "B02",
       "armId": 2,
       "order": 3,
-      "seed": 1900727105
+      "globalOrder": 9,
+      "seed": 1900727105,
+      "taskSha256": "f60cd525434590898c29beda36ca6673ebfea3a3ccee36a6076f64f635943897",
+      "kickoffSha256": "0823369ff1778b40fcc48074866e4c85c6c796e9515c271f8c2160f08d2f0cc3"
     },
     {
       "runId": "B02-A0",
       "blockId": "B02",
       "armId": 0,
       "order": 4,
-      "seed": 1900727105
+      "globalOrder": 10,
+      "seed": 1900727105,
+      "taskSha256": "f60cd525434590898c29beda36ca6673ebfea3a3ccee36a6076f64f635943897",
+      "kickoffSha256": null
     },
     {
       "runId": "B02-A1",
       "blockId": "B02",
       "armId": 1,
       "order": 5,
-      "seed": 1900727105
+      "globalOrder": 11,
+      "seed": 1900727105,
+      "taskSha256": "f60cd525434590898c29beda36ca6673ebfea3a3ccee36a6076f64f635943897",
+      "kickoffSha256": "939308061750d89e8400eefdba0605cc65292c1803e339bd87c0aa7b8382ca2d"
     },
     {
       "runId": "B02-A3",
       "blockId": "B02",
       "armId": 3,
       "order": 6,
-      "seed": 1900727105
+      "globalOrder": 12,
+      "seed": 1900727105,
+      "taskSha256": "f60cd525434590898c29beda36ca6673ebfea3a3ccee36a6076f64f635943897",
+      "kickoffSha256": "939308061750d89e8400eefdba0605cc65292c1803e339bd87c0aa7b8382ca2d"
     },
     {
       "runId": "B03-A5",
       "blockId": "B03",
       "armId": 5,
       "order": 1,
-      "seed": 1208447044
+      "globalOrder": 13,
+      "seed": 1208447044,
+      "taskSha256": "4453bc0d544750d73c2d2a6d02e80d03dc02efa4e0aa9d963a1439d0525eb093",
+      "kickoffSha256": "e0b0260502116934d40fc4345cb3143479ad0553322d4c2d6484abf040dd950b"
     },
     {
       "runId": "B03-A3",
       "blockId": "B03",
       "armId": 3,
       "order": 2,
-      "seed": 1208447044
+      "globalOrder": 14,
+      "seed": 1208447044,
+      "taskSha256": "4453bc0d544750d73c2d2a6d02e80d03dc02efa4e0aa9d963a1439d0525eb093",
+      "kickoffSha256": "69f51f4e2c6d87ef60e48fc2691bad56be1a4e51237ce5cedabab4852d241c1e"
     },
     {
       "runId": "B03-A1",
       "blockId": "B03",
       "armId": 1,
       "order": 3,
-      "seed": 1208447044
+      "globalOrder": 15,
+      "seed": 1208447044,
+      "taskSha256": "4453bc0d544750d73c2d2a6d02e80d03dc02efa4e0aa9d963a1439d0525eb093",
+      "kickoffSha256": "69f51f4e2c6d87ef60e48fc2691bad56be1a4e51237ce5cedabab4852d241c1e"
     },
     {
       "runId": "B03-A2",
       "blockId": "B03",
       "armId": 2,
       "order": 4,
-      "seed": 1208447044
+      "globalOrder": 16,
+      "seed": 1208447044,
+      "taskSha256": "4453bc0d544750d73c2d2a6d02e80d03dc02efa4e0aa9d963a1439d0525eb093",
+      "kickoffSha256": "e98b85e9f9300a1d07a0ae94b9a3d716a7ee6a7a271e0f2bbc37d39592c9a83d"
     },
     {
       "runId": "B03-A0",
       "blockId": "B03",
       "armId": 0,
       "order": 5,
-      "seed": 1208447044
+      "globalOrder": 17,
+      "seed": 1208447044,
+      "taskSha256": "4453bc0d544750d73c2d2a6d02e80d03dc02efa4e0aa9d963a1439d0525eb093",
+      "kickoffSha256": null
     },
     {
       "runId": "B03-A4",
       "blockId": "B03",
       "armId": 4,
       "order": 6,
-      "seed": 1208447044
+      "globalOrder": 18,
+      "seed": 1208447044,
+      "taskSha256": "4453bc0d544750d73c2d2a6d02e80d03dc02efa4e0aa9d963a1439d0525eb093",
+      "kickoffSha256": "e98b85e9f9300a1d07a0ae94b9a3d716a7ee6a7a271e0f2bbc37d39592c9a83d"
     },
     {
       "runId": "B04-A0",
       "blockId": "B04",
       "armId": 0,
       "order": 1,
-      "seed": 2481403966
+      "globalOrder": 19,
+      "seed": 2481403966,
+      "taskSha256": "596a2b737bd1b3844dd9dce47000a717b826a55d963ec0e24d2d3a12bfb0dc9e",
+      "kickoffSha256": null
     },
     {
       "runId": "B04-A3",
       "blockId": "B04",
       "armId": 3,
       "order": 2,
-      "seed": 2481403966
+      "globalOrder": 20,
+      "seed": 2481403966,
+      "taskSha256": "596a2b737bd1b3844dd9dce47000a717b826a55d963ec0e24d2d3a12bfb0dc9e",
+      "kickoffSha256": "c6a1e32a08f1861443c1794fa20d1568782841cc890a4192adbb768439045a3b"
     },
     {
       "runId": "B04-A5",
       "blockId": "B04",
       "armId": 5,
       "order": 3,
-      "seed": 2481403966
+      "globalOrder": 21,
+      "seed": 2481403966,
+      "taskSha256": "596a2b737bd1b3844dd9dce47000a717b826a55d963ec0e24d2d3a12bfb0dc9e",
+      "kickoffSha256": "7b60e8b5c56084996301256221fda24d22a8c6cbb605ca971ca69957374e48b7"
     },
     {
       "runId": "B04-A1",
       "blockId": "B04",
       "armId": 1,
       "order": 4,
-      "seed": 2481403966
+      "globalOrder": 22,
+      "seed": 2481403966,
+      "taskSha256": "596a2b737bd1b3844dd9dce47000a717b826a55d963ec0e24d2d3a12bfb0dc9e",
+      "kickoffSha256": "c6a1e32a08f1861443c1794fa20d1568782841cc890a4192adbb768439045a3b"
     },
     {
       "runId": "B04-A4",
       "blockId": "B04",
       "armId": 4,
       "order": 5,
-      "seed": 2481403966
+      "globalOrder": 23,
+      "seed": 2481403966,
+      "taskSha256": "596a2b737bd1b3844dd9dce47000a717b826a55d963ec0e24d2d3a12bfb0dc9e",
+      "kickoffSha256": "bf35fc27d41ca772e12319d8535109b9796a469f28865b8d71d4cc1cd11fc2b0"
     },
     {
       "runId": "B04-A2",
       "blockId": "B04",
       "armId": 2,
       "order": 6,
-      "seed": 2481403966
+      "globalOrder": 24,
+      "seed": 2481403966,
+      "taskSha256": "596a2b737bd1b3844dd9dce47000a717b826a55d963ec0e24d2d3a12bfb0dc9e",
+      "kickoffSha256": "bf35fc27d41ca772e12319d8535109b9796a469f28865b8d71d4cc1cd11fc2b0"
     },
     {
       "runId": "B05-A4",
       "blockId": "B05",
       "armId": 4,
       "order": 1,
-      "seed": 4042607538
+      "globalOrder": 25,
+      "seed": 4042607538,
+      "taskSha256": "e50731b399fff5662f368a308b1abd496d41c4cfc8866a8ab022c8d51c2f3b70",
+      "kickoffSha256": "fa3d5c1a26a60ad2f2f07c0483b790a137df4c5b66f8b47d38c4e150494b8b5b"
     },
     {
       "runId": "B05-A2",
       "blockId": "B05",
       "armId": 2,
       "order": 2,
-      "seed": 4042607538
+      "globalOrder": 26,
+      "seed": 4042607538,
+      "taskSha256": "e50731b399fff5662f368a308b1abd496d41c4cfc8866a8ab022c8d51c2f3b70",
+      "kickoffSha256": "fa3d5c1a26a60ad2f2f07c0483b790a137df4c5b66f8b47d38c4e150494b8b5b"
     },
     {
       "runId": "B05-A1",
       "blockId": "B05",
       "armId": 1,
       "order": 3,
-      "seed": 4042607538
+      "globalOrder": 27,
+      "seed": 4042607538,
+      "taskSha256": "e50731b399fff5662f368a308b1abd496d41c4cfc8866a8ab022c8d51c2f3b70",
+      "kickoffSha256": "e273fab23f2c7c4cd1069878aa398c83ede016726a3705c1199907ec229a3243"
     },
     {
       "runId": "B05-A5",
       "blockId": "B05",
       "armId": 5,
       "order": 4,
-      "seed": 4042607538
+      "globalOrder": 28,
+      "seed": 4042607538,
+      "taskSha256": "e50731b399fff5662f368a308b1abd496d41c4cfc8866a8ab022c8d51c2f3b70",
+      "kickoffSha256": "721d274e68c50e3260ef0d6266132772d3b9c30bf57e0d7614beb978caa8fd7c"
     },
     {
       "runId": "B05-A0",
       "blockId": "B05",
       "armId": 0,
       "order": 5,
-      "seed": 4042607538
+      "globalOrder": 29,
+      "seed": 4042607538,
+      "taskSha256": "e50731b399fff5662f368a308b1abd496d41c4cfc8866a8ab022c8d51c2f3b70",
+      "kickoffSha256": null
     },
     {
       "runId": "B05-A3",
       "blockId": "B05",
       "armId": 3,
       "order": 6,
-      "seed": 4042607538
+      "globalOrder": 30,
+      "seed": 4042607538,
+      "taskSha256": "e50731b399fff5662f368a308b1abd496d41c4cfc8866a8ab022c8d51c2f3b70",
+      "kickoffSha256": "e273fab23f2c7c4cd1069878aa398c83ede016726a3705c1199907ec229a3243"
     },
     {
       "runId": "B06-A1",
       "blockId": "B06",
       "armId": 1,
       "order": 1,
-      "seed": 337614300
+      "globalOrder": 31,
+      "seed": 337614300,
+      "taskSha256": "42f5928b0eb47e02213934bd7c63498bc67147da30f75791dd02ec6685c6cc9a",
+      "kickoffSha256": "5e4dfd581ef20c873e35e93cdb6f49983d068ab4a4842506920484343b2e96ce"
     },
     {
       "runId": "B06-A4",
       "blockId": "B06",
       "armId": 4,
       "order": 2,
-      "seed": 337614300
+      "globalOrder": 32,
+      "seed": 337614300,
+      "taskSha256": "42f5928b0eb47e02213934bd7c63498bc67147da30f75791dd02ec6685c6cc9a",
+      "kickoffSha256": "f35f5d47b172da37dacf4164c099fa20b3b0a3a3094198315138721f8776d936"
     },
     {
       "runId": "B06-A0",
       "blockId": "B06",
       "armId": 0,
       "order": 3,
-      "seed": 337614300
+      "globalOrder": 33,
+      "seed": 337614300,
+      "taskSha256": "42f5928b0eb47e02213934bd7c63498bc67147da30f75791dd02ec6685c6cc9a",
+      "kickoffSha256": null
     },
     {
       "runId": "B06-A3",
       "blockId": "B06",
       "armId": 3,
       "order": 4,
-      "seed": 337614300
+      "globalOrder": 34,
+      "seed": 337614300,
+      "taskSha256": "42f5928b0eb47e02213934bd7c63498bc67147da30f75791dd02ec6685c6cc9a",
+      "kickoffSha256": "5e4dfd581ef20c873e35e93cdb6f49983d068ab4a4842506920484343b2e96ce"
     },
     {
       "runId": "B06-A5",
       "blockId": "B06",
       "armId": 5,
       "order": 5,
-      "seed": 337614300
+      "globalOrder": 35,
+      "seed": 337614300,
+      "taskSha256": "42f5928b0eb47e02213934bd7c63498bc67147da30f75791dd02ec6685c6cc9a",
+      "kickoffSha256": "765786352a6872ef77de6358782e79eb56ddeba7f3b76a2f2b1ec0c80068bc8d"
     },
     {
       "runId": "B06-A2",
       "blockId": "B06",
       "armId": 2,
       "order": 6,
-      "seed": 337614300
+      "globalOrder": 36,
+      "seed": 337614300,
+      "taskSha256": "42f5928b0eb47e02213934bd7c63498bc67147da30f75791dd02ec6685c6cc9a",
+      "kickoffSha256": "f35f5d47b172da37dacf4164c099fa20b3b0a3a3094198315138721f8776d936"
     },
     {
       "runId": "B07-A5",
       "blockId": "B07",
       "armId": 5,
       "order": 1,
-      "seed": 3232553940
+      "globalOrder": 37,
+      "seed": 3232553940,
+      "taskSha256": "fc24bb6648430f9d783d4d1c62466e5b7e5c99d33f3b4e2808a14d2820f7d592",
+      "kickoffSha256": "84d9f51089f0ad535d24eff73565d6122c9530c6b5197daa5a92ed256d031bfb"
     },
     {
       "runId": "B07-A4",
       "blockId": "B07",
       "armId": 4,
       "order": 2,
-      "seed": 3232553940
+      "globalOrder": 38,
+      "seed": 3232553940,
+      "taskSha256": "fc24bb6648430f9d783d4d1c62466e5b7e5c99d33f3b4e2808a14d2820f7d592",
+      "kickoffSha256": "f3f7687837afd38a8b9c50e4af0fa1b24328d5cd703ea975cba834a1badad578"
     },
     {
       "runId": "B07-A0",
       "blockId": "B07",
       "armId": 0,
       "order": 3,
-      "seed": 3232553940
+      "globalOrder": 39,
+      "seed": 3232553940,
+      "taskSha256": "fc24bb6648430f9d783d4d1c62466e5b7e5c99d33f3b4e2808a14d2820f7d592",
+      "kickoffSha256": null
     },
     {
       "runId": "B07-A1",
       "blockId": "B07",
       "armId": 1,
       "order": 4,
-      "seed": 3232553940
+      "globalOrder": 40,
+      "seed": 3232553940,
+      "taskSha256": "fc24bb6648430f9d783d4d1c62466e5b7e5c99d33f3b4e2808a14d2820f7d592",
+      "kickoffSha256": "a1530600fa6f905c046fb3f1115a4134a028ff664dfdd67e08d87d7b7fdc36ca"
     },
     {
       "runId": "B07-A3",
       "blockId": "B07",
       "armId": 3,
       "order": 5,
-      "seed": 3232553940
+      "globalOrder": 41,
+      "seed": 3232553940,
+      "taskSha256": "fc24bb6648430f9d783d4d1c62466e5b7e5c99d33f3b4e2808a14d2820f7d592",
+      "kickoffSha256": "a1530600fa6f905c046fb3f1115a4134a028ff664dfdd67e08d87d7b7fdc36ca"
     },
     {
       "runId": "B07-A2",
       "blockId": "B07",
       "armId": 2,
       "order": 6,
-      "seed": 3232553940
+      "globalOrder": 42,
+      "seed": 3232553940,
+      "taskSha256": "fc24bb6648430f9d783d4d1c62466e5b7e5c99d33f3b4e2808a14d2820f7d592",
+      "kickoffSha256": "f3f7687837afd38a8b9c50e4af0fa1b24328d5cd703ea975cba834a1badad578"
     },
     {
       "runId": "B08-A1",
       "blockId": "B08",
       "armId": 1,
       "order": 1,
-      "seed": 1015338097
+      "globalOrder": 43,
+      "seed": 1015338097,
+      "taskSha256": "32d9c4c64a3aac85f26a2051b2d70ef2b19202b48990e642eac565264e174551",
+      "kickoffSha256": "1cd145ec543168497cab84b1d7473942f30618a95f38c59f61efbaf674e19e4a"
     },
     {
       "runId": "B08-A4",
       "blockId": "B08",
       "armId": 4,
       "order": 2,
-      "seed": 1015338097
+      "globalOrder": 44,
+      "seed": 1015338097,
+      "taskSha256": "32d9c4c64a3aac85f26a2051b2d70ef2b19202b48990e642eac565264e174551",
+      "kickoffSha256": "47ab917c4031f47202f17ff947084139b2bc0fcc5c5dac88f832df7b95f265b1"
     },
     {
       "runId": "B08-A3",
       "blockId": "B08",
       "armId": 3,
       "order": 3,
-      "seed": 1015338097
+      "globalOrder": 45,
+      "seed": 1015338097,
+      "taskSha256": "32d9c4c64a3aac85f26a2051b2d70ef2b19202b48990e642eac565264e174551",
+      "kickoffSha256": "1cd145ec543168497cab84b1d7473942f30618a95f38c59f61efbaf674e19e4a"
     },
     {
       "runId": "B08-A0",
       "blockId": "B08",
       "armId": 0,
       "order": 4,
-      "seed": 1015338097
+      "globalOrder": 46,
+      "seed": 1015338097,
+      "taskSha256": "32d9c4c64a3aac85f26a2051b2d70ef2b19202b48990e642eac565264e174551",
+      "kickoffSha256": null
     },
     {
       "runId": "B08-A2",
       "blockId": "B08",
       "armId": 2,
       "order": 5,
-      "seed": 1015338097
+      "globalOrder": 47,
+      "seed": 1015338097,
+      "taskSha256": "32d9c4c64a3aac85f26a2051b2d70ef2b19202b48990e642eac565264e174551",
+      "kickoffSha256": "47ab917c4031f47202f17ff947084139b2bc0fcc5c5dac88f832df7b95f265b1"
     },
     {
       "runId": "B08-A5",
       "blockId": "B08",
       "armId": 5,
       "order": 6,
-      "seed": 1015338097
+      "globalOrder": 48,
+      "seed": 1015338097,
+      "taskSha256": "32d9c4c64a3aac85f26a2051b2d70ef2b19202b48990e642eac565264e174551",
+      "kickoffSha256": "34dc8072ece99eaa04ed117d324f95fcd0012278b0cfc2358f2674cf464bfae3"
     },
     {
       "runId": "B09-A0",
       "blockId": "B09",
       "armId": 0,
       "order": 1,
-      "seed": 3013564492
+      "globalOrder": 49,
+      "seed": 3013564492,
+      "taskSha256": "e8bdf0e7949c654e23e4979737daef66eaeb499bb75d5a56d98d159b3fbac334",
+      "kickoffSha256": null
     },
     {
       "runId": "B09-A3",
       "blockId": "B09",
       "armId": 3,
       "order": 2,
-      "seed": 3013564492
+      "globalOrder": 50,
+      "seed": 3013564492,
+      "taskSha256": "e8bdf0e7949c654e23e4979737daef66eaeb499bb75d5a56d98d159b3fbac334",
+      "kickoffSha256": "4017b3bc06ed6d34e7bc23eae428b5fbcbbbb14ef316a812f6288a0c513493e8"
     },
     {
       "runId": "B09-A4",
       "blockId": "B09",
       "armId": 4,
       "order": 3,
-      "seed": 3013564492
+      "globalOrder": 51,
+      "seed": 3013564492,
+      "taskSha256": "e8bdf0e7949c654e23e4979737daef66eaeb499bb75d5a56d98d159b3fbac334",
+      "kickoffSha256": "54c6bae6c3fd27eeb7a3f8679eaab9cb933574cf6561d2ae3375748b5e21e4f9"
     },
     {
       "runId": "B09-A5",
       "blockId": "B09",
       "armId": 5,
       "order": 4,
-      "seed": 3013564492
+      "globalOrder": 52,
+      "seed": 3013564492,
+      "taskSha256": "e8bdf0e7949c654e23e4979737daef66eaeb499bb75d5a56d98d159b3fbac334",
+      "kickoffSha256": "8e83c8c3e115a863497e57d0415997d20be99787c15880530d1c148455bb2ab2"
     },
     {
       "runId": "B09-A1",
       "blockId": "B09",
       "armId": 1,
       "order": 5,
-      "seed": 3013564492
+      "globalOrder": 53,
+      "seed": 3013564492,
+      "taskSha256": "e8bdf0e7949c654e23e4979737daef66eaeb499bb75d5a56d98d159b3fbac334",
+      "kickoffSha256": "4017b3bc06ed6d34e7bc23eae428b5fbcbbbb14ef316a812f6288a0c513493e8"
     },
     {
       "runId": "B09-A2",
       "blockId": "B09",
       "armId": 2,
       "order": 6,
-      "seed": 3013564492
+      "globalOrder": 54,
+      "seed": 3013564492,
+      "taskSha256": "e8bdf0e7949c654e23e4979737daef66eaeb499bb75d5a56d98d159b3fbac334",
+      "kickoffSha256": "54c6bae6c3fd27eeb7a3f8679eaab9cb933574cf6561d2ae3375748b5e21e4f9"
     },
     {
       "runId": "B10-A3",
       "blockId": "B10",
       "armId": 3,
       "order": 1,
-      "seed": 309504328
+      "globalOrder": 55,
+      "seed": 309504328,
+      "taskSha256": "17c6c996e68272e86ab2068bc79f63fe32a4ab951143ccde2650c1488acba994",
+      "kickoffSha256": "9756ccb58c4f0af06b85fecc01b78a1fcf02c1827c2bc59d1a5fee1f1bf183fa"
     },
     {
       "runId": "B10-A1",
       "blockId": "B10",
       "armId": 1,
       "order": 2,
-      "seed": 309504328
+      "globalOrder": 56,
+      "seed": 309504328,
+      "taskSha256": "17c6c996e68272e86ab2068bc79f63fe32a4ab951143ccde2650c1488acba994",
+      "kickoffSha256": "9756ccb58c4f0af06b85fecc01b78a1fcf02c1827c2bc59d1a5fee1f1bf183fa"
     },
     {
       "runId": "B10-A4",
       "blockId": "B10",
       "armId": 4,
       "order": 3,
-      "seed": 309504328
+      "globalOrder": 57,
+      "seed": 309504328,
+      "taskSha256": "17c6c996e68272e86ab2068bc79f63fe32a4ab951143ccde2650c1488acba994",
+      "kickoffSha256": "a68c42321f3abe9f25a4984bd49eaf646217c478ea4438017313f1109ac88ae6"
     },
     {
       "runId": "B10-A5",
       "blockId": "B10",
       "armId": 5,
       "order": 4,
-      "seed": 309504328
+      "globalOrder": 58,
+      "seed": 309504328,
+      "taskSha256": "17c6c996e68272e86ab2068bc79f63fe32a4ab951143ccde2650c1488acba994",
+      "kickoffSha256": "2ca85f4422f3148881dd24d6224e8202407488fd63acdf5401319fa6f71adbfc"
     },
     {
       "runId": "B10-A0",
       "blockId": "B10",
       "armId": 0,
       "order": 5,
-      "seed": 309504328
+      "globalOrder": 59,
+      "seed": 309504328,
+      "taskSha256": "17c6c996e68272e86ab2068bc79f63fe32a4ab951143ccde2650c1488acba994",
+      "kickoffSha256": null
     },
     {
       "runId": "B10-A2",
       "blockId": "B10",
       "armId": 2,
       "order": 6,
-      "seed": 309504328
+      "globalOrder": 60,
+      "seed": 309504328,
+      "taskSha256": "17c6c996e68272e86ab2068bc79f63fe32a4ab951143ccde2650c1488acba994",
+      "kickoffSha256": "a68c42321f3abe9f25a4984bd49eaf646217c478ea4438017313f1109ac88ae6"
     },
     {
       "runId": "B11-A0",
       "blockId": "B11",
       "armId": 0,
       "order": 1,
-      "seed": 1534980527
+      "globalOrder": 61,
+      "seed": 1534980527,
+      "taskSha256": "c5575344b720156857b9fba0193e6015ee8707807bef300d6f9d76fb4bdf5848",
+      "kickoffSha256": null
     },
     {
       "runId": "B11-A5",
       "blockId": "B11",
       "armId": 5,
       "order": 2,
-      "seed": 1534980527
+      "globalOrder": 62,
+      "seed": 1534980527,
+      "taskSha256": "c5575344b720156857b9fba0193e6015ee8707807bef300d6f9d76fb4bdf5848",
+      "kickoffSha256": "5d0d9d5920d38b8383158ed61ac506eb758baca2f3d495da79e40cdaf55faad9"
     },
     {
       "runId": "B11-A1",
       "blockId": "B11",
       "armId": 1,
       "order": 3,
-      "seed": 1534980527
+      "globalOrder": 63,
+      "seed": 1534980527,
+      "taskSha256": "c5575344b720156857b9fba0193e6015ee8707807bef300d6f9d76fb4bdf5848",
+      "kickoffSha256": "d1011f5dcda64f0df0a8b226629ed3f7b265083ff783c1106cc6ae821d2890b6"
     },
     {
       "runId": "B11-A4",
       "blockId": "B11",
       "armId": 4,
       "order": 4,
-      "seed": 1534980527
+      "globalOrder": 64,
+      "seed": 1534980527,
+      "taskSha256": "c5575344b720156857b9fba0193e6015ee8707807bef300d6f9d76fb4bdf5848",
+      "kickoffSha256": "4209e0a4e9f148d2a4659c143046b9c94f53bf217c31d87f23b50b7c48ff20ac"
     },
     {
       "runId": "B11-A2",
       "blockId": "B11",
       "armId": 2,
       "order": 5,
-      "seed": 1534980527
+      "globalOrder": 65,
+      "seed": 1534980527,
+      "taskSha256": "c5575344b720156857b9fba0193e6015ee8707807bef300d6f9d76fb4bdf5848",
+      "kickoffSha256": "4209e0a4e9f148d2a4659c143046b9c94f53bf217c31d87f23b50b7c48ff20ac"
     },
     {
       "runId": "B11-A3",
       "blockId": "B11",
       "armId": 3,
       "order": 6,
-      "seed": 1534980527
+      "globalOrder": 66,
+      "seed": 1534980527,
+      "taskSha256": "c5575344b720156857b9fba0193e6015ee8707807bef300d6f9d76fb4bdf5848",
+      "kickoffSha256": "d1011f5dcda64f0df0a8b226629ed3f7b265083ff783c1106cc6ae821d2890b6"
     },
     {
       "runId": "B12-A0",
       "blockId": "B12",
       "armId": 0,
       "order": 1,
-      "seed": 220583594
+      "globalOrder": 67,
+      "seed": 220583594,
+      "taskSha256": "dfee90df2191197051595442d4694d0a54d3455910384f39f586c0389c644ec7",
+      "kickoffSha256": null
     },
     {
       "runId": "B12-A4",
       "blockId": "B12",
       "armId": 4,
       "order": 2,
-      "seed": 220583594
+      "globalOrder": 68,
+      "seed": 220583594,
+      "taskSha256": "dfee90df2191197051595442d4694d0a54d3455910384f39f586c0389c644ec7",
+      "kickoffSha256": "ba081db38074983d5e30c099e5ba78a9cd88d54e8095f5a7ac10c33da0c471df"
     },
     {
       "runId": "B12-A2",
       "blockId": "B12",
       "armId": 2,
       "order": 3,
-      "seed": 220583594
+      "globalOrder": 69,
+      "seed": 220583594,
+      "taskSha256": "dfee90df2191197051595442d4694d0a54d3455910384f39f586c0389c644ec7",
+      "kickoffSha256": "ba081db38074983d5e30c099e5ba78a9cd88d54e8095f5a7ac10c33da0c471df"
     },
     {
       "runId": "B12-A1",
       "blockId": "B12",
       "armId": 1,
       "order": 4,
-      "seed": 220583594
+      "globalOrder": 70,
+      "seed": 220583594,
+      "taskSha256": "dfee90df2191197051595442d4694d0a54d3455910384f39f586c0389c644ec7",
+      "kickoffSha256": "98713341a09f12121d7970010891704c0e692966800bba1b0067018364d3f3ce"
     },
     {
       "runId": "B12-A3",
       "blockId": "B12",
       "armId": 3,
       "order": 5,
-      "seed": 220583594
+      "globalOrder": 71,
+      "seed": 220583594,
+      "taskSha256": "dfee90df2191197051595442d4694d0a54d3455910384f39f586c0389c644ec7",
+      "kickoffSha256": "98713341a09f12121d7970010891704c0e692966800bba1b0067018364d3f3ce"
     },
     {
       "runId": "B12-A5",
       "blockId": "B12",
       "armId": 5,
       "order": 6,
-      "seed": 220583594
+      "globalOrder": 72,
+      "seed": 220583594,
+      "taskSha256": "dfee90df2191197051595442d4694d0a54d3455910384f39f586c0389c644ec7",
+      "kickoffSha256": "88476e03207fe7578c2ebf3469398799c47fe51896e097de38ced26dec6065c5"
     }
   ]
 }
