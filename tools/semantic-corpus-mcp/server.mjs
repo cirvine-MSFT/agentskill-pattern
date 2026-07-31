@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 
+import { writeSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { CorpusError, CorpusService } from "./lib.mjs";
+import { CorpusService } from "./lib.mjs";
 import { createDispatcher } from "./protocol.mjs";
 
 let service;
 try {
-  service = await CorpusService.create();
+  service = await CorpusService.create({
+    audit: async (event) => {
+      writeSync(5, `${JSON.stringify(event)}\n`);
+    },
+  });
 } catch (error) {
-  const code = error instanceof CorpusError ? error.code : "INTERNAL_ERROR";
+  const code = error?.code ?? "INTERNAL_ERROR";
   const message = error instanceof Error ? error.message : "unknown startup error";
   process.stderr.write(`${code}: ${message}\n`);
   process.exit(78);

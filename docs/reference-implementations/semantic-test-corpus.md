@@ -1,6 +1,7 @@
 # Reference implementation: `semantic-test-corpus` (GitHub Copilot)
 
-**Status: implemented reference.** AI proposes only schema-valid v1 source scenarios.
+**Status: implemented reference.** AI attempts source-only v1 scenarios; invalid observed
+slots remain measurable for deterministic per-case validation.
 Deterministic parent code owns staging verification, promotion, migration execution, the
 expected-output oracle, traces, and mutant scoring.
 
@@ -9,7 +10,7 @@ expected-output oracle, traces, and mutant scoring.
 | Role | Implementation |
 | --- | --- |
 | Skill router | [`.github/skills/semantic-test-corpus/SKILL.md`](../../.github/skills/semantic-test-corpus/SKILL.md) |
-| Custom agent | [`.github/agents/semantic-test-corpus.agent.md`](../../.github/agents/semantic-test-corpus.agent.md) |
+| Custom agent | [`.github/agents/semantic-scenario-stager.agent.md`](../../.github/agents/semantic-scenario-stager.agent.md), identity `semantic-scenario-stager` |
 | Model | `claude-haiku-4.5` |
 | Agent tools | Five namespaced `semantic-corpus/*` MCP tools only |
 | Trusted launcher | [`tools/semantic-corpus-mcp/launcher.mjs`](../../tools/semantic-corpus-mcp/launcher.mjs) |
@@ -31,19 +32,23 @@ starting MCP, the launcher:
    contract manifest;
 4. derives the immutable run request, which pins the manifest hash, request hash, run
    metadata, schemas, limits, and the registered target of exactly 60;
-5. creates fresh server and cleanup tokens in parent-only runtime files;
+5. creates fresh server and cleanup tokens plus an ephemeral Ed25519 launch keypair;
 6. rejects symlinks, junctions, and reparse roots;
 7. applies and probes read-only contract/config ACLs on Windows or modes on POSIX, while
    proving staging remains writable; and
-8. launches the trusted server under Node's permission model with read access only to
-   the three hash-attested MCP sources, config, contract, and staging, and write access
+8. signs the fixed sandbox IDs, request hash, nonce/expiry, denied roots, and source,
+   launcher, server, and Node-executable hashes; passes the envelope and public key over
+   separate inherited descriptors with one-use replay state; and
+9. launches the trusted server under Node's permission model with read access only to
+   the hash-attested MCP sources, config, contract, and staging, and write access
    only to staging.
 
 The launcher also rejects trusted server sources that import network, child-process,
 worker, VM, or related execution modules. Node child, worker, add-on, and WASI
-permissions remain denied. The server rechecks the permission allowlist, source hashes,
-read/write denial, root and file identities, and request/config hashes before serving
-MCP. No caller-provided `sandboxKind` string is accepted as confinement evidence.
+permissions remain denied. The server ignores ambient config/token values. It verifies the inherited Ed25519
+attestation, parent process, expiry, one-use nonce, executable/source hashes, fixed layout,
+permission allowlist, read/write denial, root identities, and request/config hashes before
+serving MCP. No caller-provided `sandboxKind` string is accepted as confinement evidence.
 
 Required run metadata is supplied through the parent environment:
 
@@ -67,7 +72,7 @@ attestation failures stop before MCP initialization.
 The benchmark launcher derives `corpus-contract/request.json` from the merged
 [`arm-contract.json`](../../experiments/semantic-test-corpus/design/arm-contract.json)
 and public schemas. The current benchmark request always has `targetCount: 60` and
-publishes `corpus-staging/<run-id>.json`.
+returns the logical path `staging/<run-id>.json`.
 
 The generic request validator permits the documented 40-60 range, but only the 40 and
 60 boundaries are regression-tested; the benchmark integration is fixed at 60.
@@ -81,11 +86,10 @@ The supported safe schema dialect accepts the actual merged draft-2020-12 docume
 - optional bounds on arrays, strings, and numbers;
 - `const`, scalar `enum`, patterns, numeric constraints, and bounded `anyOf`.
 
-The merged scenario schema is composed with the merged v1 schema before any write. The
-v1 root and scenario root must remain `additionalProperties: false`. Nested unknown
-fields, expected outputs, traces, diagnostics, aliases, and confusable keys are rejected.
-Schema-valued `additionalProperties` validates each dynamic value rather than weakening
-unknown-property checks.
+The merged staging schema deliberately accepts zero through 60 observed slot values.
+`write_scenario` captures malformed safe JSON attempts and a bounded reason record when
+needed. Expected outputs, traces, and diagnostics are omitted. After finalization, the
+merged scenario and v1 validators classify each slot; only valid unique cases promote.
 
 ## Narrow tools and output
 
@@ -94,14 +98,14 @@ unknown-property checks.
 | `read_request` | Read the immutable launcher-derived request and retained hashes. |
 | `list_contract_files` | List bounded regular files under the attested read-only contract root. |
 | `read_contract_file` | Read one exact relative contract path. |
-| `write_scenario` | Atomically stage one source-only scenario matching the composed merged schemas. |
-| `finalize_staging` | Require the exact target, revalidate every write, and publish one canonical staging artifact. |
+| `write_scenario` | Atomically capture one bounded observed source-only slot, including a safe malformed-attempt record. |
+| `finalize_staging` | Publish exactly once for the observed 0-60 slots and report per-case validation totals. |
 
 Finalization publishes canonical UTF-8 JSON bytes, with recursively sorted object keys,
 LF termination, at:
 
 ```text
-corpus-staging/<run-id>.json
+staging/<run-id>.json
 ```
 
 The payload exactly matches the merged staging schema:
@@ -118,25 +122,25 @@ The payload exactly matches the merged staging schema:
 }
 ```
 
-For a successful benchmark run, `cases` contains exactly 60 unique source scenarios and
-no expected output, diagnostics, or traces. The tool returns only compact metadata:
+`cases` contains exactly the observed zero through 60 submissions. Invalid records are
+retained, never corrected after finalization, and promotion later reports valid cases
+against the fixed denominator of 60. The tool returns exactly five fields:
 
 ```json
 {
-  "stagingPath": "corpus-staging/B01-A4.json",
+  "stagingPath": "staging/B01-A4.json",
   "payloadSha256": "<sha256-of-exact-canonical-bytes>",
-  "count": 60,
-  "status": "SUCCESS",
-  "requestHash": "<immutable-request-hash>",
-  "manifestHash": "<immutable-contract-manifest-hash>"
+  "submittedCases": 59,
+  "promotableCases": 57,
+  "errorCount": 2
 }
 ```
 
 ## Parent verification and promotion
 
 The parent must not trust the delegated summary. It re-verifies the exact returned hash,
-canonical bytes, request and manifest hashes, exact count, and the merged staging/v1
-validators:
+canonical bytes, retained request and manifest hashes, observed count, and the merged
+staging/v1 validators:
 
 ```powershell
 $env:SEMANTIC_CORPUS_CLEANUP_TOKEN = Get-Content `
@@ -146,8 +150,8 @@ node tools\semantic-corpus-mcp\launcher.mjs verify `
   --payload-sha256 <returned-payload-sha256>
 ```
 
-Only a `SUCCESS` result may proceed to the trusted promotion command. The parent then
-computes oracle results, traces, and mutant scores outside the worker identity.
+Promotion evaluates each slot independently and reports promoted cases over 60. The
+parent then computes oracle results, traces, and mutant scores outside the worker identity.
 
 ## Lifetime lock and authorized recovery
 
@@ -190,6 +194,8 @@ node --test $tests
 The suite uses the real merged arm contract and schemas. It covers launcher startup and
 failure, Windows/POSIX access policy probes, permission-model MCP startup, full
 initialize/list/read/write/finalize flow, exact canonical output and parent hash
-verification, strict unknown-property rejection, 40/60 generic boundaries, traversal
-and reparse attacks, write-once publication, bounded contention, abrupt termination,
-fail-closed stale locks, and authorized cleanup/resume.
+verification, real v1 integration, 0/59/mixed-malformed/60-valid publication, normalized
+`file.read`/`file.write`/`staging.validate` events through the merged isolation verifier,
+forged/path-tampered/expired/replayed/executable-mismatched startup, traversal and reparse
+attacks, write-once publication, bounded contention, abrupt termination, fail-closed stale
+locks, and authorized cleanup/resume.

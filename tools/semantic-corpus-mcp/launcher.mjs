@@ -2,6 +2,7 @@
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
+import { createWriteStream, writeFileSync } from "node:fs";
 import {
   chmod,
   copyFile,
@@ -21,6 +22,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assessStaging } from "../../experiments/semantic-test-corpus/validators/staging.mjs";
+import { createLauncherBootEnvelope } from "./attestation.mjs";
 import {
   canonicalJson,
   canonicalJsonBytes,
@@ -35,19 +37,24 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
 const benchmarkRoot = path.join(repoRoot, "experiments", "semantic-test-corpus");
 const serverPath = path.join(here, "server.mjs");
+const launcherPath = fileURLToPath(import.meta.url);
 const trustedSources = [
+  path.join(here, "assessment.mjs"),
+  path.join(here, "attestation.mjs"),
   path.join(here, "lib.mjs"),
   path.join(here, "protocol.mjs"),
   serverPath,
 ];
 const contractFiles = [
-  ["design/arm-contract.json", "arm-contract.json"],
-  ["design/candidate-manifest.json", "candidate-manifest.json"],
-  ["design/shared-task-prompt.txt", "task/shared-task-prompt.txt"],
-  ["fixture/spec/mapping-spec.json", "mapping-spec.json"],
+  ["fixture/spec/mapping-spec.json", "contract/mapping-spec.json"],
+  ["schemas/v1-config.schema.json", "schemas/v1-config.schema.json"],
   ["schemas/scenario.schema.json", "schemas/scenario.schema.json"],
   ["schemas/staging.schema.json", "schemas/staging.schema.json"],
-  ["schemas/v1-config.schema.json", "schemas/v1-config.schema.json"],
+  ["validators/json-schema.mjs", "validators/json-schema.mjs"],
+  ["validators/staging.mjs", "validators/staging.mjs"],
+  ["scripts/validate-staging.mjs", "scripts/validate-staging.mjs"],
+  ["design/shared-task-prompt.txt", "task/shared-task-prompt.txt"],
+  ["design/delegated-worker-skill.md", "task/delegated-worker-skill.md"],
 ];
 const FORBIDDEN_SOURCE_IMPORT =
   /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["']node:(?:net|http|https|http2|tls|dgram|dns|child_process|worker_threads|cluster|vm)["']|\b(?:fetch|WebSocket|EventSource)\s*\(|process\.binding\s*\(/u;
@@ -368,7 +375,18 @@ export async function buildBenchmarkRequest(metadata) {
   if (
     armContract.commonContract?.caseCount !== 60 ||
     armContract.commonContract?.output !== "staging/<run-id>.json" ||
-    armContract.commonContract?.schema !== "schemas/staging.schema.json"
+    armContract.commonContract?.schema !== "schemas/staging.schema.json" ||
+    armContract.delegationContract?.invocation !== "semantic-scenario-stager" ||
+    canonicalJson(armContract.delegationContract?.returnFields) !==
+      canonicalJson([
+        "stagingPath",
+        "payloadSha256",
+        "submittedCases",
+        "promotableCases",
+        "errorCount",
+      ]) ||
+    canonicalJson(armContract.delegationContract?.toolSurface) !==
+      canonicalJson(["file.read", "file.write", "staging.validate"])
   ) {
     fail("BENCHMARK_CONTRACT_MISMATCH", "merged arm contract is not the registered 60-case staging contract");
   }
@@ -411,10 +429,12 @@ async function writeState(
 ) {
   const [stateReservation, serverTokenReservation, cleanupTokenReservation] =
     reservations;
+  const auditReservation = reservations[3];
   const serverTokenPath = serverTokenReservation.target;
   const cleanupTokenPath = cleanupTokenReservation.target;
   await writeReservedFile(serverTokenReservation, serverToken);
   await writeReservedFile(cleanupTokenReservation, cleanupToken);
+  await writeReservedFile(auditReservation, Buffer.alloc(0));
   const signed = {
     ...state,
     authorization: stateSignature(state, cleanupToken),
@@ -423,7 +443,12 @@ async function writeState(
     stateReservation,
     `${JSON.stringify(signed, null, 2)}\n`,
   );
-  return { ...signed, serverTokenPath, cleanupTokenPath };
+  return {
+    ...signed,
+    serverTokenPath,
+    cleanupTokenPath,
+    auditPath: auditReservation.target,
+  };
 }
 
 async function loadState(statePath, cleanupToken) {
@@ -437,9 +462,28 @@ async function loadState(statePath, cleanupToken) {
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
     fail("STATE_AUTHORIZATION_FAILED", "launcher state authorization is invalid");
   }
-  for (const key of ["sandboxRoot", "contractRoot", "stagingRoot", "configPath", "stagingPath"]) {
+  for (const key of [
+    "sandboxRoot",
+    "contractRoot",
+    "stagingRoot",
+    "configPath",
+    "stagingPath",
+    "auditPath",
+    "executablePath",
+  ]) {
     if (typeof state[key] !== "string" || !path.isAbsolute(state[key])) {
       fail("STATE_INVALID", `launcher state ${key} is invalid`);
+    }
+    if (state.logicalStagingPath !== `staging/${state.runId}.json`) {
+      fail("STATE_INVALID", "launcher state logical staging path is invalid");
+    }
+    if (
+      !/^[a-f0-9]{64}$/u.test(state.configSha256 ?? "") ||
+      !/^[a-f0-9]{64}$/u.test(state.expectedServerSha256 ?? "") ||
+      !/^[a-f0-9]{64}$/u.test(state.expectedExecutableSha256 ?? "") ||
+      !/^[a-f0-9]{64}$/u.test(state.expectedLauncherSha256 ?? "")
+    ) {
+      fail("STATE_INVALID", "launcher state executable/config hashes are invalid");
     }
   }
   await Promise.all([
@@ -452,7 +496,8 @@ async function loadState(statePath, cleanupToken) {
     !isWithin(state.sandboxRoot, state.contractRoot) ||
     !isWithin(state.sandboxRoot, state.stagingRoot) ||
     !isWithin(state.sandboxRoot, state.configPath) ||
-    !isWithin(state.stagingRoot, state.stagingPath)
+    !isWithin(state.stagingRoot, state.stagingPath) ||
+    state.auditPath !== `${absolute}.audit.jsonl`
   ) {
     fail("STATE_INVALID", "launcher state paths escape the disposable sandbox");
   }
@@ -474,6 +519,12 @@ async function loadState(statePath, cleanupToken) {
     config.manifestHash !== state.manifestHash ||
     config.roots?.contract?.path !== state.contractRoot ||
     config.roots?.staging?.path !== state.stagingRoot ||
+    config.sandbox?.path !== state.sandboxRoot ||
+    config.audit?.logicalStagingPath !== state.logicalStagingPath ||
+    config.confinement?.executable?.path !== state.executablePath ||
+    config.confinement?.executable?.sha256 !== state.expectedExecutableSha256 ||
+    config.confinement?.launcher?.path !== launcherPath ||
+    config.confinement?.launcher?.sha256 !== state.expectedLauncherSha256 ||
     !identitiesEqual(config.roots.contract.identity, await identity(state.contractRoot)) ||
     !identitiesEqual(config.roots.staging.identity, await identity(state.stagingRoot)) ||
     config.tokenHash !== computeSandboxTokenHash(serverToken)
@@ -484,12 +535,21 @@ async function loadState(statePath, cleanupToken) {
   if (canonicalJson(config.confinement?.sources) !== canonicalJson(expectedSources)) {
     fail("STATE_INVALID", "launcher trusted source attestation changed");
   }
+  if (
+    await hashFile(state.configPath) !== state.configSha256 ||
+    await hashFile(serverPath) !== state.expectedServerSha256 ||
+    await hashFile(state.executablePath) !== state.expectedExecutableSha256 ||
+    await hashFile(launcherPath) !== state.expectedLauncherSha256
+  ) {
+    fail("STATE_INVALID", "launcher config or expected executable hash changed");
+  }
   return {
     statePath: absolute,
     state,
     cleanupToken,
     serverToken,
     serverTokenPath,
+    config,
   };
 }
 
@@ -524,6 +584,7 @@ export async function prepareSandbox(options = {}) {
   }
   await mkdir(path.dirname(cleanupTokenPath), { recursive: true });
   await assertPlainPath(path.dirname(cleanupTokenPath), "cleanup capability directory");
+  const auditPath = `${statePath}.audit.jsonl`;
   const sandboxParent = path.resolve(
     options.sandboxParent ?? process.env.SEMANTIC_CORPUS_SANDBOX_PARENT ?? os.tmpdir(),
   );
@@ -533,6 +594,7 @@ export async function prepareSandbox(options = {}) {
     statePath,
     `${statePath}.server-token`,
     cleanupTokenPath,
+    auditPath,
   ]);
   let sandboxRoot;
   try {
@@ -578,11 +640,18 @@ export async function prepareSandbox(options = {}) {
       fail("LAUNCH_CONFIG_INVALID", "lock stale interval must exceed its wait interval");
     }
     const sources = await attestTrustedSources();
+    const executablePath = await realpath(process.execPath);
+    const expectedExecutableSha256 = await hashFile(executablePath);
+    const expectedLauncherSha256 = await hashFile(launcherPath);
     const config = {
       version: 2,
       tokenHash: computeSandboxTokenHash(serverToken),
       requestHash: request.requestHash,
       manifestHash,
+      sandbox: {
+        path: sandboxRoot,
+        identity: await identity(sandboxRoot),
+      },
       roots: {
         contract: {
           path: contractRoot,
@@ -595,6 +664,17 @@ export async function prepareSandbox(options = {}) {
           identity: await identity(stagingRoot),
         },
       },
+      audit: {
+        candidateRoot: sandboxRoot,
+        logicalStagingPath: `staging/${request.runId}.json`,
+        runId: request.runId,
+        blockId: request.generator.blockId,
+        armId: request.generator.armId,
+        sessionId:
+          options.workerSessionId ??
+          process.env.SEMANTIC_CORPUS_WORKER_SESSION_ID ??
+          `${request.runId}-worker`,
+      },
       lock,
       confinement: {
         provider: "trusted-launcher-v1",
@@ -602,11 +682,29 @@ export async function prepareSandbox(options = {}) {
         permissionModel: true,
         filesystemPolicy: "node-permission-allowlist",
         networkPolicy: "trusted-source-no-network-imports",
-        deniedReadRoot: canonicalRepo,
+        repository: {
+          path: canonicalRepo,
+          identity: await identity(canonicalRepo),
+          sourceHash: sha256(canonicalJson(sources)),
+        },
+        deniedReadRoots: [canonicalRepo],
+        executable: {
+          path: executablePath,
+          sha256: expectedExecutableSha256,
+        },
+        launcher: {
+          path: launcherPath,
+          sha256: expectedLauncherSha256,
+        },
         sources,
       },
     };
-    await writePrivateFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    const configBytes = Buffer.from(`${JSON.stringify(config, null, 2)}\n`, "utf8");
+    const configSha256 = sha256(configBytes);
+    const expectedServerSha256 = sources.find(
+      (source) => source.path === serverPath,
+    ).sha256;
+    await writePrivateFile(configPath, configBytes);
     await applyAccessPolicy(contractRoot, stagingRoot, configPath);
     verifyAccessProbe(requestPath, stagingRoot, configPath);
 
@@ -620,6 +718,13 @@ export async function prepareSandbox(options = {}) {
         stagingRoot,
         configPath,
         stagingPath: path.join(stagingRoot, `${request.runId}.json`),
+        logicalStagingPath: `staging/${request.runId}.json`,
+        auditPath,
+        configSha256,
+        expectedServerSha256,
+        expectedExecutableSha256,
+        executablePath,
+        expectedLauncherSha256,
         requestHash: request.requestHash,
         manifestHash,
         lock,
@@ -638,11 +743,7 @@ export async function prepareSandbox(options = {}) {
       serverToken,
       cleanupToken,
       cleanupTokenPath,
-      env: {
-        ...process.env,
-        SEMANTIC_CORPUS_SANDBOX_CONFIG: configPath,
-        SEMANTIC_CORPUS_SANDBOX_TOKEN: serverToken,
-      },
+      auditPath,
     };
   } catch (error) {
     if (sandboxRoot) {
@@ -658,6 +759,9 @@ function permissionArguments(prepared) {
   return [
     "--permission",
     ...trustedSources.map((source) => `--allow-fs-read=${source}`),
+    `--allow-fs-read=${prepared.state.executablePath}`,
+    `--allow-fs-read=${launcherPath}`,
+    `--allow-fs-read=${prepared.state.sandboxRoot}`,
     `--allow-fs-read=${prepared.state.configPath}`,
     `--allow-fs-read=${prepared.state.contractRoot}`,
     `--allow-fs-read=${prepared.state.stagingRoot}`,
@@ -666,17 +770,52 @@ function permissionArguments(prepared) {
   ];
 }
 
+export function createPreparedBootPayload(prepared, options = {}) {
+  const boot = createLauncherBootEnvelope({
+    configPath: prepared.state.configPath,
+    configSha256: prepared.state.configSha256,
+    config: prepared.config,
+    serverToken: prepared.serverToken,
+    expectedServerPath: serverPath,
+    expectedServerSha256: prepared.state.expectedServerSha256,
+    expectedExecutablePath: prepared.state.executablePath,
+    expectedExecutableSha256: prepared.state.expectedExecutableSha256,
+    expectedLauncherPath: launcherPath,
+    expectedLauncherSha256: prepared.state.expectedLauncherSha256,
+    stagingRoot: prepared.state.stagingRoot,
+    lifetimeMs: options.lifetimeMs,
+    now: options.now,
+  });
+  writeFileSync(
+    boot.payload.replayPath,
+    boot.payload.replayToken,
+    { encoding: "utf8", flag: "wx", mode: 0o600 },
+  );
+  return boot;
+}
+
 export function spawnPreparedServer(prepared, stdio = ["pipe", "pipe", "pipe"]) {
-  return spawn(process.execPath, permissionArguments(prepared), {
+  const boot = createPreparedBootPayload(prepared);
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("SEMANTIC_CORPUS_")) delete env[key];
+  }
+  const child = spawn(process.execPath, permissionArguments(prepared), {
     cwd: prepared.state.sandboxRoot,
-    env: {
-      ...process.env,
-      SEMANTIC_CORPUS_SANDBOX_CONFIG: prepared.state.configPath,
-      SEMANTIC_CORPUS_SANDBOX_TOKEN: prepared.serverToken,
-    },
-    stdio,
+    env,
+    stdio: [...stdio.slice(0, 3), "pipe", "pipe", "pipe"],
     windowsHide: true,
   });
+  child.stdio[3].end(boot.bytes);
+  child.stdio[4].end(boot.publicKeyBytes);
+  const auditStream = createWriteStream(prepared.state.auditPath, { flags: "a" });
+  child.stdio[5].pipe(auditStream);
+  child.auditDone = new Promise((resolve, reject) => {
+    auditStream.once("finish", resolve);
+    auditStream.once("error", reject);
+  });
+  child.bootEnvelope = boot;
+  return child;
 }
 
 async function processIsAlive(pid) {
@@ -1004,20 +1143,15 @@ export async function verifyStagingState(
     ...assessment.submissionErrors,
     ...assessment.cases.flatMap((entry) => entry.errors),
   ];
-  if (
-    assessment.submittedCases !== 60 ||
-    assessment.promotableCases !== 60 ||
-    errors.length !== 0
-  ) {
-    fail("STAGING_INVALID", "merged benchmark validator rejected the staging payload");
+  if (assessment.submittedCases > 60) {
+    fail("STAGING_INVALID", "staging payload exceeds the registered 60-slot target");
   }
   return {
-    stagingPath: `corpus-staging/${request.runId}.json`,
+    stagingPath: loaded.state.logicalStagingPath,
     payloadSha256: actualHash,
-    count: assessment.submittedCases,
-    status: "SUCCESS",
-    requestHash: request.requestHash,
-    manifestHash: request.manifestHash,
+    submittedCases: assessment.submittedCases,
+    promotableCases: assessment.promotableCases,
+    errorCount: errors.length,
   };
 }
 
@@ -1066,6 +1200,7 @@ export async function disposePreparedSandbox(prepared) {
     rm(prepared.statePath, { force: true }),
     rm(`${prepared.statePath}.server-token`, { force: true }),
     rm(prepared.cleanupTokenPath, { force: true }),
+    rm(prepared.auditPath, { force: true }),
   ]);
 }
 
@@ -1096,6 +1231,7 @@ async function launch(prepared) {
     child.once("error", reject);
     child.once("exit", (exitCode) => resolve(exitCode ?? 1));
   });
+  await child.auditDone;
   if (forcedTermination) clearTimeout(forcedTermination);
   process.exitCode = code;
 }
@@ -1128,6 +1264,7 @@ async function main() {
       statePath: loaded.statePath,
       state: loaded.state,
       serverToken: loaded.serverToken,
+      config: loaded.config,
     });
     return;
   }

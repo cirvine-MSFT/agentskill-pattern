@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import {
   mkdir,
   mkdtemp,
@@ -12,16 +14,20 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   disposePreparedSandbox,
   prepareSandbox,
+  verifyStagingState,
 } from "../../tools/semantic-corpus-mcp/launcher.mjs";
 import {
   atomicWriteNewBytes,
   canonicalJsonBytes,
   computeRequestHash,
+  CorpusService,
   validateRequestDocument,
 } from "../../tools/semantic-corpus-mcp/lib.mjs";
+import { verifyLauncherBootEnvelope } from "../../tools/semantic-corpus-mcp/attestation.mjs";
 import {
   createRun,
   scenario,
@@ -59,7 +65,7 @@ test("merged schema dialect accepts metadata, schema-valued additionalProperties
   });
 });
 
-test("strict composed schemas reject unknown fields and invalid dynamic-property values", async (t) => {
+test("invalid observed slots are preserved for later per-case promotion", async (t) => {
   const run = await createRun();
   const service = await run.open();
   t.after(async () => {
@@ -87,9 +93,13 @@ test("strict composed schemas reject unknown fields and invalid dynamic-property
       },
     },
   ];
-  for (const attack of attacks) {
-    await expectCode(() => service.writeScenario({ scenario: attack }), "SCHEMA_ERROR");
+  for (const [index, attack] of attacks.entries()) {
+    assert.equal((await service.writeScenario({ scenario: attack })).count, index + 1);
   }
+  const summary = await service.finalizeStaging({});
+  assert.equal(summary.submittedCases, attacks.length);
+  assert.equal(summary.promotableCases, 0);
+  assert(summary.errorCount >= attacks.length);
 });
 
 test("generic request validator accepts only the documented 40 and 60 boundaries", async (t) => {
@@ -125,8 +135,14 @@ test("trusted launcher writes verifiable confinement rather than accepting sandb
   assert.equal(Object.hasOwn(run.config, "sandboxKind"), false);
   assert.equal(run.config.confinement.provider, "trusted-launcher-v1");
   assert.equal(run.config.confinement.permissionModel, true);
-  assert.equal(run.config.confinement.deniedReadRoot.includes(run.state.sandboxRoot), false);
-  assert.equal(run.config.confinement.sources.length, 3);
+  assert.deepEqual(run.config.confinement.deniedReadRoots, [
+    path.resolve(fileURLToPath(new URL("../..", import.meta.url))),
+  ]);
+  assert.equal(run.config.audit.candidateRoot, run.state.sandboxRoot);
+  assert.match(run.config.confinement.repository.sourceHash, /^[a-f0-9]{64}$/);
+  assert.match(run.config.confinement.executable.sha256, /^[a-f0-9]{64}$/);
+  assert.match(run.config.confinement.launcher.sha256, /^[a-f0-9]{64}$/);
+  assert.equal(run.config.confinement.sources.length, 5);
 
   for (const target of [
     run.configPath,
@@ -138,6 +154,98 @@ test("trusted launcher writes verifiable confinement rather than accepting sandb
       await handle.close();
     }, (error) => ["EACCES", "EPERM", "EROFS"].includes(error.code));
   }
+});
+
+test("direct env forge, path tampering, expiry, replay, and executable mismatch fail closed", async (t) => {
+  const run = await createRun();
+  t.after(() => run.cleanup());
+  const server = fileURLToPath(
+    new URL("../../tools/semantic-corpus-mcp/server.mjs", import.meta.url),
+  );
+  const direct = spawn(process.execPath, [server], {
+    env: {
+      ...process.env,
+      SEMANTIC_CORPUS_SANDBOX_CONFIG: run.configPath,
+      SEMANTIC_CORPUS_SANDBOX_TOKEN: run.serverToken,
+    },
+    stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true,
+  });
+  let directError = "";
+  direct.stderr.setEncoding("utf8");
+  direct.stderr.on("data", (chunk) => {
+    directError += chunk;
+  });
+  direct.stdin.end();
+  assert.equal((await once(direct, "exit"))[0], 78);
+  assert.match(directError, /LAUNCH_ATTESTATION_REQUIRED/);
+
+  const pathBoot = run.bootEnvelope();
+  const tampered = structuredClone(pathBoot.envelope);
+  tampered.payload.configPath = path.join(run.parent, "forged-config.json");
+  assert.throws(
+    () => verifyLauncherBootEnvelope(
+      Buffer.from(JSON.stringify(tampered)),
+      pathBoot.publicKeyBytes,
+      { requireParent: false },
+    ),
+    (error) => error.code === "LAUNCH_SIGNATURE_INVALID",
+  );
+  const substitutedKey = run.bootEnvelope();
+  assert.throws(
+    () => verifyLauncherBootEnvelope(
+      pathBoot.bytes,
+      substitutedKey.publicKeyBytes,
+      { requireParent: false },
+    ),
+    (error) => error.code === "LAUNCH_SIGNATURE_INVALID",
+  );
+
+  const expired = run.bootEnvelope({
+    now: Date.now() - 10_000,
+    lifetimeMs: 1_000,
+  });
+  assert.throws(
+    () => verifyLauncherBootEnvelope(
+      expired.bytes,
+      expired.publicKeyBytes,
+      { requireParent: false },
+    ),
+    (error) => error.code === "LAUNCH_ATTESTATION_EXPIRED",
+  );
+  await expectCode(
+    () => CorpusService.create({
+      boot: expired.payload,
+      enforceProcessConfinement: false,
+    }),
+    "LAUNCH_ATTESTATION_EXPIRED",
+  );
+
+  const replay = run.bootEnvelope();
+  const first = await CorpusService.create({
+    boot: replay.payload,
+    enforceProcessConfinement: false,
+  });
+  await first.close();
+  await expectCode(
+    () => CorpusService.create({
+      boot: replay.payload,
+      enforceProcessConfinement: false,
+    }),
+    "LAUNCH_REPLAYED",
+  );
+
+  const mismatch = run.bootEnvelope();
+  await expectCode(
+    () => CorpusService.create({
+      boot: {
+        ...mismatch.payload,
+        expectedExecutableSha256: "0".repeat(64),
+      },
+      enforceProcessConfinement: false,
+    }),
+    "LAUNCH_EXECUTABLE_MISMATCH",
+  );
 });
 
 test("concurrent preparation reserves runtime state without deleting the winning launch", async (t) => {
@@ -200,7 +308,7 @@ test("contract reads reject traversal, absolute paths, separators, Unicode, and 
   for (const attack of attacks) {
     await assert.rejects(
       () => service.readContractFile({ path: attack }),
-      (error) => /^(CASE_MISMATCH|INVALID_PATH|PATH_ESCAPE)$/.test(error.code),
+      (error) => /^(CASE_MISMATCH|INVALID_PATH|PATH_ESCAPE|NOT_FOUND)$/.test(error.code),
     );
   }
 });
@@ -235,26 +343,76 @@ test("staging junctions cannot redirect scenario writes outside the sandbox", as
   assert.deepEqual(await readdir(outside), []);
 });
 
-test("finalization is exact-count, canonical, source-only, and write-once", async (t) => {
-  const run = await createRun();
-  const service = await run.open();
-  t.after(async () => {
-    await service.close();
-    await run.cleanup();
-  });
-  await expectCode(() => service.finalizeStaging({}), "SCHEMA_ERROR");
-  for (let index = 0; index < 60; index += 1) {
-    await service.writeScenario({ scenario: scenario(index) });
+test("finalization publishes observed 0, 59, malformed mixed, and 60-valid submissions once", async (t) => {
+  const cases = [
+    { name: "zero", submissions: [], promoted: 0, errors: 0 },
+    {
+      name: "fifty-nine",
+      submissions: Array.from({ length: 59 }, (_, index) => ({ scenario: scenario(index) })),
+      promoted: 59,
+      errors: 0,
+    },
+    {
+      name: "mixed",
+      submissions: [
+        { scenario: scenario(0) },
+        { scenario: {} },
+        { scenario: null },
+        {},
+      ],
+      promoted: 1,
+      errors: null,
+    },
+    {
+      name: "sixty",
+      submissions: Array.from({ length: 60 }, (_, index) => ({ scenario: scenario(index) })),
+      promoted: 60,
+      errors: 0,
+    },
+  ];
+  for (const fixture of cases) {
+    const run = await createRun({ runId: `B01-A4-${fixture.name}` });
+    const service = await run.open();
+    t.after(async () => {
+      await service.close().catch(() => {});
+      await run.cleanup();
+    });
+    for (const submission of fixture.submissions) {
+      await service.writeScenario(submission);
+    }
+    const result = await service.finalizeStaging({});
+    const payloadBytes = await readFile(run.state.stagingPath);
+    const payload = JSON.parse(payloadBytes);
+    assert.ok(payloadBytes.equals(canonicalJsonBytes(payload)));
+    assert.equal(payload.cases.length, fixture.submissions.length);
+    assert.equal(result.stagingPath, `staging/${run.request.runId}.json`);
+    assert.equal(result.submittedCases, fixture.submissions.length);
+    assert.equal(result.promotableCases, fixture.promoted);
+    if (fixture.errors === null) assert(result.errorCount > 0);
+    else assert.equal(result.errorCount, fixture.errors);
+    assert.deepEqual(Object.keys(result).sort(), [
+      "errorCount",
+      "payloadSha256",
+      "promotableCases",
+      "stagingPath",
+      "submittedCases",
+    ]);
+    assert.deepEqual(
+      await verifyStagingState(
+        run.statePath,
+        result.payloadSha256,
+        run.cleanupToken,
+      ),
+      result,
+    );
+    assert.equal(JSON.stringify(payload).includes('"expected"'), false);
+    await expectCode(() => service.finalizeStaging({}), "STAGING_FINALIZED");
+    await expectCode(
+      () => service.writeScenario({ scenario: scenario(0) }),
+      "STAGING_FINALIZED",
+    );
+    assert.ok((await readFile(run.state.stagingPath)).equals(payloadBytes));
   }
-  const result = await service.finalizeStaging({});
-  const payloadBytes = await readFile(run.state.stagingPath);
-  const payload = JSON.parse(payloadBytes);
-  assert.ok(payloadBytes.equals(canonicalJsonBytes(payload)));
-  assert.equal(payload.cases.length, 60);
-  assert.equal(JSON.stringify(payload).includes('"expected"'), false);
-  await expectCode(() => service.finalizeStaging({}), "STAGING_FINALIZED");
-  await expectCode(() => service.writeScenario({ scenario: scenario(0) }), "STAGING_FINALIZED");
-  assert.match(result.payloadSha256, /^[a-f0-9]{64}$/);
 });
 
 test("atomic byte publication never replaces an existing artifact", async (t) => {

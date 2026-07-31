@@ -7,7 +7,7 @@
 
 The semantic reference also includes the [research basis](../research/semantic-corpus-generation.md),
 live [Skill](../../.github/skills/semantic-test-corpus/SKILL.md) and
-[custom agent](../../.github/agents/semantic-test-corpus.agent.md), the
+[`semantic-scenario-stager` agent](../../.github/agents/semantic-scenario-stager.agent.md), the
 [trusted confined MCP launcher](../../tools/semantic-corpus-mcp/launcher.mjs) and
 [tests](../../tests/semantic-corpus-mcp/), and the
 [executable protocol](../../experiments/semantic-test-corpus/protocol.md#arms).

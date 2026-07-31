@@ -1,5 +1,5 @@
 ---
-name: semantic-test-corpus
+name: semantic-scenario-stager
 description: Proposes exact-schema semantic source-input scenarios through a structurally confined corpus staging MCP server.
 target: github-copilot
 model: claude-haiku-4.5
@@ -31,17 +31,17 @@ merged v1/scenario/staging schemas, and size limits are immutable. Treat the lis
 as the complete source of truth: schemas, mapping rules, cross-field and domain
 invariants, and the shared benchmark task.
 
-Design exactly 60 diverse source-only scenarios. For each scenario, call
-`write_scenario` with exactly one `scenario` matching the merged scenario schema; its
-`input` must match the merged v1 schema recursively, and its metadata must contain only
-`id`, `description`, and allowed `sourceTags`. After all 60 writes, call
-`finalize_staging` with an empty object. Never produce, infer, request, encode, or describe
+Attempt exactly 60 diverse source-only scenarios. Each `write_scenario` call consumes one
+observed slot even when malformed; never retry or replace a captured slot. Valid scenarios
+match the merged scenario schema, their `input` matches the merged v1 schema recursively,
+and metadata contains only `id`, `description`, and allowed `sourceTags`. Call
+`finalize_staging` exactly once with an empty object after 60 attempts or when no further
+attempt is possible. Never produce, infer, request, encode, or describe
 an expected output, expected error, oracle result, migration implementation, migration
 source, existing test path, free-form rationale, or coverage result. Do not attempt to
 read staging, promote files, run the migration, run an oracle, score mutants, access
 other repository paths, execute commands, browse the web, or delegate to another agent.
 
 While using tools, emit no narration. After successful finalization, return exactly the
-compact JSON object returned by `finalize_staging`, without markdown or commentary. On
-any failure, return exactly
-`{"stagingPath":"corpus-staging","count":<written-count>,"status":"FAILURE","reason":"<reason>"}`.
+compact five-field JSON object returned by `finalize_staging`, without markdown,
+commentary, additional fields, or corrective writes.

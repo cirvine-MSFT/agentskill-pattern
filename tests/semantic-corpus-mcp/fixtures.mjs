@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  createPreparedBootPayload,
   disposePreparedSandbox,
   prepareSandbox,
   spawnPreparedServer,
@@ -46,6 +47,7 @@ export async function createRun(options = {}) {
     waitTimeoutMs: options.waitTimeoutMs ?? 100,
     staleAfterMs: options.staleAfterMs ?? 1000,
   });
+  const auditEvents = [];
 
   return {
     ...prepared,
@@ -57,24 +59,24 @@ export async function createRun(options = {}) {
     request: prepared.request,
     requestHash: prepared.request.requestHash,
     manifestHash: prepared.request.manifestHash,
-    environment: {
-      configPath: prepared.state.configPath,
-      token: prepared.serverToken,
-    },
-    env: prepared.env,
     async open(serviceOptions = {}) {
       return CorpusService.create({
-        environment: {
-          configPath: prepared.state.configPath,
-          token: prepared.serverToken,
-        },
+        boot: createPreparedBootPayload(
+          prepared,
+          serviceOptions.bootOptions,
+        ).payload,
         enforceProcessConfinement: false,
+        audit: async (event) => auditEvents.push(event),
         ...serviceOptions,
       });
     },
     spawnServer(stdio) {
       return spawnPreparedServer(prepared, stdio);
     },
+    bootEnvelope(options = {}) {
+      return createPreparedBootPayload(prepared, options);
+    },
+    auditEvents,
     async cleanup() {
       await disposePreparedSandbox(prepared).catch(() => {});
       await rm(parent, { recursive: true, force: true });

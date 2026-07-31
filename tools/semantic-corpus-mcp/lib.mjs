@@ -7,16 +7,21 @@ import {
   open,
   readdir,
   realpath,
+  rename,
   rm,
 } from "node:fs/promises";
+import { realpathSync } from "node:fs";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readLauncherBootDescriptor } from "./attestation.mjs";
+import { assessObservedStaging } from "./assessment.mjs";
 
 const INTERNAL = Symbol("verified sandbox");
 const CONFIG_BYTES = 64 * 1024;
 const REQUEST_BYTES = 1024 * 1024;
+const SOURCE_BYTES = 256 * 1024;
 const RUNTIME_LIMITS = Object.freeze({
   contractFiles: 200,
   contractDepth: 12,
@@ -28,10 +33,15 @@ const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 const SOURCE_IMPORT_PATTERN =
   /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["']node:(?:net|http|https|http2|tls|dgram|dns|child_process|worker_threads|cluster|vm)["']|\b(?:fetch|WebSocket|EventSource)\s*\(|process\.binding\s*\(/u;
 const MODULE_PATHS = Object.freeze([
+  fileURLToPath(new URL("./assessment.mjs", import.meta.url)),
+  fileURLToPath(new URL("./attestation.mjs", import.meta.url)),
   fileURLToPath(import.meta.url),
   fileURLToPath(new URL("./protocol.mjs", import.meta.url)),
   fileURLToPath(new URL("./server.mjs", import.meta.url)),
 ]);
+const LAUNCHER_PATH = fileURLToPath(new URL("./launcher.mjs", import.meta.url));
+const SOURCE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const EXECUTABLE_PATH = realpathSync.native(process.execPath);
 
 export class CorpusError extends Error {
   constructor(code, message) {
@@ -734,24 +744,62 @@ function composeScenarioSchema(request) {
 
 export function validateStagingPayload(request, payload) {
   validateRequestDocument(request);
-  validateSchemaValue(payload, composeStagingSchema(request), "staging");
-  const ids = new Set();
-  for (const [index, scenario] of payload.cases.entries()) {
-    if (ids.has(scenario.id)) {
-      fail("SCHEMA_ERROR", `staging.cases[${index}].id must be unique`);
-    }
-    ids.add(scenario.id);
+  assertExactKeys(
+    payload,
+    new Set(["formatVersion", "generator", "cases"]),
+    new Set(["formatVersion", "generator", "cases"]),
+    "staging",
+  );
+  if (payload.formatVersion !== 1) {
+    fail("SCHEMA_ERROR", "staging.formatVersion must be 1");
+  }
+  if (!Array.isArray(payload.cases) || payload.cases.length > request.targetCount) {
+    fail(
+      "SCHEMA_ERROR",
+      `staging.cases must contain from 0 through ${request.targetCount} observed slots`,
+    );
   }
   if (!valuesEqual(payload.generator, request.generator)) {
     fail("SCHEMA_ERROR", "staging.generator must exactly match the launcher request");
   }
+  if (containsAcceptanceContent(payload.cases)) {
+    fail("SCHEMA_ERROR", "staging cannot retain acceptance-only content");
+  }
   return payload;
+}
+
+function containsAcceptanceContent(value) {
+  if (Array.isArray(value)) return value.some(containsAcceptanceContent);
+  if (value === null || typeof value !== "object") return false;
+  return Object.entries(value).some(
+    ([key, child]) =>
+      ["expected", "trace", "diagnostics"].includes(key) ||
+      DANGEROUS_KEYS.has(key) ||
+      containsAcceptanceContent(child),
+  );
+}
+
+function isJsonValue(value, seen = new Set()) {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object" || seen.has(value)) return false;
+  seen.add(value);
+  const valid = Array.isArray(value)
+    ? value.every((entry) => isJsonValue(entry, seen))
+    : [Object.prototype, null].includes(Object.getPrototypeOf(value)) &&
+      Object.values(value).every((entry) => isJsonValue(entry, seen));
+  seen.delete(value);
+  return valid;
 }
 
 function composeStagingSchema(request) {
   const schema = cloneJson(request.stagingSchema);
-  schema.properties.cases.minItems = request.targetCount;
-  schema.properties.cases.maxItems = request.targetCount;
   schema.properties.cases.items = composeScenarioSchema(request);
   return schema;
 }
@@ -854,7 +902,9 @@ function parseSandboxConfig(value) {
       "tokenHash",
       "requestHash",
       "manifestHash",
+      "sandbox",
       "roots",
+      "audit",
       "lock",
       "confinement",
     ]),
@@ -863,7 +913,9 @@ function parseSandboxConfig(value) {
       "tokenHash",
       "requestHash",
       "manifestHash",
+      "sandbox",
       "roots",
+      "audit",
       "lock",
       "confinement",
     ]),
@@ -875,6 +927,20 @@ function parseSandboxConfig(value) {
   assertString(value.tokenHash, "sandbox config tokenHash", 71, 71, /^sha256:[a-f0-9]{64}$/);
   assertString(value.requestHash, "sandbox config requestHash", 64, 64, /^[a-f0-9]{64}$/);
   assertString(value.manifestHash, "sandbox config manifestHash", 64, 64, /^[a-f0-9]{64}$/);
+  assertExactKeys(
+    value.sandbox,
+    new Set(["path", "identity"]),
+    new Set(["path", "identity"]),
+    "sandbox config sandbox",
+  );
+  assertString(value.sandbox.path, "sandbox config sandbox.path", 3, 1024);
+  if (
+    !path.isAbsolute(value.sandbox.path) ||
+    path.resolve(value.sandbox.path) !== value.sandbox.path
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "sandbox root path must be absolute and normalized");
+  }
+  validateIdentity(value.sandbox.identity, "sandbox config sandbox.identity");
   assertExactKeys(
     value.roots,
     new Set(["contract", "staging"]),
@@ -905,6 +971,47 @@ function parseSandboxConfig(value) {
   ) {
     fail("SANDBOX_CONFIG_INVALID", "contract and staging roots must be distinct and disjoint");
   }
+  if (
+    value.roots.contract.path !== path.join(value.sandbox.path, "corpus-contract") ||
+    value.roots.staging.path !== path.join(value.sandbox.path, "corpus-staging")
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "sandbox roots must use the fixed launcher layout");
+  }
+  assertExactKeys(
+    value.audit,
+    new Set([
+      "candidateRoot",
+      "logicalStagingPath",
+      "runId",
+      "blockId",
+      "armId",
+      "sessionId",
+    ]),
+    new Set([
+      "candidateRoot",
+      "logicalStagingPath",
+      "runId",
+      "blockId",
+      "armId",
+      "sessionId",
+    ]),
+    "sandbox config audit",
+  );
+  for (const key of ["candidateRoot", "runId", "blockId", "sessionId"]) {
+    assertString(value.audit[key], `sandbox config audit.${key}`, 1, 1024);
+  }
+  if (
+    !path.isAbsolute(value.audit.candidateRoot) ||
+    path.resolve(value.audit.candidateRoot) !== value.audit.candidateRoot
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "audit candidateRoot must be absolute and normalized");
+  }
+  validateRunId(value.audit.runId, "sandbox config audit.runId");
+  validateRunId(value.audit.blockId, "sandbox config audit.blockId");
+  assertInteger(value.audit.armId, "sandbox config audit.armId", 0, 4);
+  if (value.audit.logicalStagingPath !== `staging/${value.audit.runId}.json`) {
+    fail("SANDBOX_CONFIG_INVALID", "audit logical staging path is not canonical");
+  }
   assertExactKeys(
     value.lock,
     new Set(["waitTimeoutMs", "staleAfterMs"]),
@@ -924,7 +1031,10 @@ function parseSandboxConfig(value) {
       "permissionModel",
       "filesystemPolicy",
       "networkPolicy",
-      "deniedReadRoot",
+      "repository",
+      "deniedReadRoots",
+      "executable",
+      "launcher",
       "sources",
     ]),
     new Set([
@@ -933,7 +1043,10 @@ function parseSandboxConfig(value) {
       "permissionModel",
       "filesystemPolicy",
       "networkPolicy",
-      "deniedReadRoot",
+      "repository",
+      "deniedReadRoots",
+      "executable",
+      "launcher",
       "sources",
     ]),
     "sandbox config confinement",
@@ -947,17 +1060,82 @@ function parseSandboxConfig(value) {
   ) {
     fail("SANDBOX_CONFIG_INVALID", "launcher confinement policy is not supported");
   }
+  assertExactKeys(
+    value.confinement.repository,
+    new Set(["path", "identity", "sourceHash"]),
+    new Set(["path", "identity", "sourceHash"]),
+    "sandbox config confinement.repository",
+  );
   assertString(
-    value.confinement.deniedReadRoot,
-    "sandbox config confinement.deniedReadRoot",
+    value.confinement.repository.path,
+    "sandbox config confinement.repository.path",
     3,
     1024,
   );
   if (
-    !path.isAbsolute(value.confinement.deniedReadRoot) ||
-    path.resolve(value.confinement.deniedReadRoot) !== value.confinement.deniedReadRoot
+    !path.isAbsolute(value.confinement.repository.path) ||
+    path.resolve(value.confinement.repository.path) !==
+      value.confinement.repository.path ||
+    path.resolve(value.confinement.repository.path) !== SOURCE_ROOT
   ) {
-    fail("SANDBOX_CONFIG_INVALID", "deniedReadRoot must be absolute and normalized");
+    fail("SANDBOX_CONFIG_INVALID", "repository identity must match the fixed source root");
+  }
+  assertString(
+    value.confinement.repository.sourceHash,
+    "sandbox config confinement.repository.sourceHash",
+    64,
+    64,
+    /^[a-f0-9]{64}$/u,
+  );
+  validateIdentity(
+    value.confinement.repository.identity,
+    "sandbox config confinement.repository.identity",
+  );
+  if (
+    !Array.isArray(value.confinement.deniedReadRoots) ||
+    value.confinement.deniedReadRoots.length === 0 ||
+    new Set(value.confinement.deniedReadRoots).size !==
+      value.confinement.deniedReadRoots.length
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "deniedReadRoots must be a unique non-empty array");
+  }
+  for (const [index, denied] of value.confinement.deniedReadRoots.entries()) {
+    assertString(denied, `sandbox config confinement.deniedReadRoots[${index}]`, 3, 1024);
+    if (!path.isAbsolute(denied) || path.resolve(denied) !== denied) {
+      fail("SANDBOX_CONFIG_INVALID", "deniedReadRoots must be absolute and normalized");
+    }
+  }
+  if (
+    value.confinement.deniedReadRoots.length !== 1 ||
+    path.resolve(value.confinement.deniedReadRoots[0]) !== SOURCE_ROOT
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "source repository must be the fixed denied root");
+  }
+  if (path.resolve(value.audit.candidateRoot) !== path.resolve(value.sandbox.path)) {
+    fail("SANDBOX_CONFIG_INVALID", "audit candidate root must match the sandbox root");
+  }
+  for (const [name, expectedPath] of [
+    ["executable", EXECUTABLE_PATH],
+    ["launcher", LAUNCHER_PATH],
+  ]) {
+    const executable = value.confinement[name];
+    assertExactKeys(
+      executable,
+      new Set(["path", "sha256"]),
+      new Set(["path", "sha256"]),
+      `sandbox config confinement.${name}`,
+    );
+    assertString(executable.path, `sandbox config confinement.${name}.path`, 3, 1024);
+    assertString(
+      executable.sha256,
+      `sandbox config confinement.${name}.sha256`,
+      64,
+      64,
+      /^[a-f0-9]{64}$/u,
+    );
+    if (path.resolve(executable.path) !== path.resolve(expectedPath)) {
+      fail("SANDBOX_CONFIG_INVALID", `${name} path does not match the trusted layout`);
+    }
   }
   if (
     !Array.isArray(value.confinement.sources) ||
@@ -988,6 +1166,12 @@ function parseSandboxConfig(value) {
   if (expectedSources.size !== 0) {
     fail("SANDBOX_CONFIG_INVALID", "trusted source attestation is incomplete");
   }
+  if (
+    value.confinement.repository.sourceHash !==
+    sha256(canonicalJson(value.confinement.sources))
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "trusted source repository hash is invalid");
+  }
   return value;
 }
 
@@ -1002,7 +1186,11 @@ async function verifyProcessConfinement(config, configPath) {
     ["fs.write", config.roots.staging.path, true],
     ["fs.write", config.roots.contract.path, false],
     ["fs.write", configPath, false],
-    ["fs.read", config.confinement.deniedReadRoot, false],
+    ...config.confinement.deniedReadRoots.map((denied) => [
+      "fs.read",
+      denied,
+      false,
+    ]),
   ];
   for (const [scope, target, expected] of checks) {
     if (process.permission.has(scope, target) !== expected) {
@@ -1015,7 +1203,7 @@ async function verifyProcessConfinement(config, configPath) {
     }
   }
   for (const source of config.confinement.sources) {
-    const loaded = await readStandaloneFile(source.path, CONFIG_BYTES, "trusted MCP source");
+    const loaded = await readStandaloneFile(source.path, SOURCE_BYTES, "trusted MCP source");
     if (loaded.digest !== source.sha256) {
       fail("SANDBOX_UNVERIFIED", "trusted MCP source hash changed before startup");
     }
@@ -1023,20 +1211,38 @@ async function verifyProcessConfinement(config, configPath) {
       fail("SANDBOX_UNVERIFIED", "trusted MCP source imports a network or execution module");
     }
   }
+  for (const [label, executable] of [
+    ["Node executable", config.confinement.executable],
+    ["trusted launcher", config.confinement.launcher],
+  ]) {
+    const loaded = await readStandaloneFile(executable.path, 128 * 1024 * 1024, label);
+    if (loaded.digest !== executable.sha256) {
+      fail("SANDBOX_UNVERIFIED", `${label} hash changed before startup`);
+    }
+  }
 }
 
 async function loadSandboxContext(options) {
-  const environment = options.environment ?? process.env;
-  const configPath =
-    environment.configPath ?? environment.SEMANTIC_CORPUS_SANDBOX_CONFIG;
-  const token =
-    environment.token ?? environment.SEMANTIC_CORPUS_SANDBOX_TOKEN;
-  if (!configPath || !token) {
-    fail(
-      "SANDBOX_REQUIRED",
-      "SEMANTIC_CORPUS_SANDBOX_CONFIG and SEMANTIC_CORPUS_SANDBOX_TOKEN are required",
-    );
+  let boot = options.boot;
+  if (!boot) {
+    try {
+      boot = await readLauncherBootDescriptor(3, 4);
+    } catch (error) {
+      fail(error?.code ?? "LAUNCH_ATTESTATION_REQUIRED", error?.message ?? "trusted launcher required");
+    }
   }
+  const issuedAt = Date.parse(boot.issuedAt);
+  const expiresAt = Date.parse(boot.expiresAt);
+  if (
+    !Number.isFinite(issuedAt) ||
+    !Number.isFinite(expiresAt) ||
+    Date.now() < issuedAt - 5000 ||
+    Date.now() > expiresAt
+  ) {
+    fail("LAUNCH_ATTESTATION_EXPIRED", "launcher boot attestation is outside its lifetime");
+  }
+  const configPath = boot.configPath;
+  const token = boot.serverToken;
   assertString(token, "sandbox token", 32, 256, /^[\x21-\x7e]+$/);
   const normalizedConfigPath = path.resolve(configPath);
   if (normalizedConfigPath !== configPath) {
@@ -1047,8 +1253,15 @@ async function loadSandboxContext(options) {
     CONFIG_BYTES,
     "sandbox config",
   );
+  if (configFile.digest !== boot.configSha256) {
+    fail("LAUNCH_SIGNATURE_INVALID", "signed config digest does not match launcher state");
+  }
   await assertWriteDenied(normalizedConfigPath, "sandbox config");
-  const config = parseSandboxConfig(parseJson(configFile.content, "sandbox config"));
+  const diskConfig = parseJson(configFile.content, "sandbox config");
+  if (canonicalJson(diskConfig) !== canonicalJson(boot.config)) {
+    fail("LAUNCH_SIGNATURE_INVALID", "signed config does not match the immutable config file");
+  }
+  const config = parseSandboxConfig(boot.config);
   const actualHash = Buffer.from(computeSandboxTokenHash(token), "utf8");
   const expectedHash = Buffer.from(config.tokenHash, "utf8");
   if (
@@ -1057,6 +1270,11 @@ async function loadSandboxContext(options) {
   ) {
     fail("SANDBOX_TOKEN_MISMATCH", "sandbox token does not match launcher config");
   }
+  await assertRoot(
+    config.sandbox.path,
+    config.sandbox.identity,
+    "sandbox",
+  );
   await assertRoot(
     config.roots.contract.path,
     config.roots.contract.identity,
@@ -1067,10 +1285,57 @@ async function loadSandboxContext(options) {
     config.roots.staging.identity,
     "corpus-staging",
   );
-  if (options.enforceProcessConfinement ?? options.environment === undefined) {
+  const expectedServerPath = fileURLToPath(new URL("./server.mjs", import.meta.url));
+  const serverSource = config.confinement.sources.find(
+    (source) => path.resolve(source.path) === path.resolve(expectedServerPath),
+  );
+  if (
+    path.resolve(boot.expectedServerPath) !== path.resolve(expectedServerPath) ||
+    boot.expectedServerSha256 !== serverSource?.sha256 ||
+    path.resolve(boot.expectedExecutablePath) !== path.resolve(EXECUTABLE_PATH) ||
+    boot.expectedExecutableSha256 !== config.confinement.executable.sha256 ||
+    path.resolve(boot.expectedLauncherPath) !== path.resolve(LAUNCHER_PATH) ||
+    boot.expectedLauncherSha256 !== config.confinement.launcher.sha256
+  ) {
+    fail("LAUNCH_EXECUTABLE_MISMATCH", "signed server executable identity does not match");
+  }
+  if (
+    path.dirname(normalizedConfigPath) !== config.sandbox.path ||
+    boot.replayPath !==
+      path.join(config.roots.staging.path, `.launch-${boot.nonce}.cap`)
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "signed launcher paths do not match the fixed layout");
+  }
+  if (options.enforceProcessConfinement ?? options.boot === undefined) {
     await verifyProcessConfinement(config, normalizedConfigPath);
   }
+  const replay = await readStandaloneFile(
+    boot.replayPath,
+    CONFIG_BYTES,
+    "launcher replay capability",
+  ).catch((error) => {
+    if (error?.code === "ENOENT") {
+      fail("LAUNCH_REPLAYED", "launcher boot attestation was already consumed");
+    }
+    throw error;
+  });
+  if (replay.content.toString("utf8") !== boot.replayToken) {
+    fail("LAUNCH_SIGNATURE_INVALID", "launcher replay capability does not match");
+  }
+  const consumedPath = path.join(
+    config.roots.staging.path,
+    `.launch-${boot.nonce}.used`,
+  );
+  try {
+    await rename(boot.replayPath, consumedPath);
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "EEXIST") {
+      fail("LAUNCH_REPLAYED", "launcher boot attestation was already consumed");
+    }
+    throw error;
+  }
   return {
+    boot,
     config,
     configPath: normalizedConfigPath,
     configIdentity: configFile.identity,
@@ -1186,6 +1451,8 @@ export class CorpusService {
     this.stagingRoot = sandbox.config.roots.staging.path;
     this.stagingIdentity = sandbox.config.roots.staging.identity;
     this.lockConfig = sandbox.config.lock;
+    this.auditConfig = sandbox.config.audit;
+    this.audit = options.audit ?? (async () => {});
     this.hooks = options.hooks ?? {};
     this.request = undefined;
     this.requestIdentity = undefined;
@@ -1193,6 +1460,93 @@ export class CorpusService {
     this.lock = undefined;
     this.operationTail = Promise.resolve();
     this.closed = false;
+  }
+
+  auditDefinitions(name, args) {
+    const candidate = this.auditConfig.candidateRoot;
+    const staging = path.resolve(candidate, this.auditConfig.logicalStagingPath);
+    switch (name) {
+      case "read_request":
+        return [{
+          toolName: "file.read",
+          path: path.join(this.contractRoot, "request.json"),
+        }];
+      case "list_contract_files":
+        return [{
+          toolName: "file.read",
+          path: this.contractRoot,
+        }];
+      case "read_contract_file":
+        return [{
+          toolName: "file.read",
+          path: path.resolve(this.contractRoot, ...(args.path ?? "").split("/")),
+        }];
+      case "write_scenario":
+        return [{ toolName: "file.write", path: staging }];
+      case "finalize_staging":
+        return [
+          { toolName: "file.write", path: staging },
+          { toolName: "staging.validate", path: staging },
+        ];
+      default:
+        return [];
+    }
+  }
+
+  async callWithAudit(name, args, action) {
+    const definitions = this.auditDefinitions(name, args);
+    const calls = definitions.map((definition) => ({
+      ...definition,
+      callId: randomBytes(16).toString("hex"),
+    }));
+    for (const call of calls) {
+      const base = {
+        timestamp: new Date().toISOString(),
+        sessionId: this.auditConfig.sessionId,
+        runId: this.auditConfig.runId,
+        blockId: this.auditConfig.blockId,
+        armId: this.auditConfig.armId,
+        role: "worker",
+        actor: "worker",
+        callId: call.callId,
+      };
+      await this.audit({
+        ...base,
+        eventId: `${call.callId}-called`,
+        type: "tool.called",
+        toolName: call.toolName,
+        ...(call.path ? { path: call.path } : {}),
+      });
+      if (call.toolName === "file.read" || call.toolName === "file.write") {
+        await this.audit({
+          ...base,
+          eventId: `${call.callId}-access`,
+          type: "fs.access",
+          path: call.path,
+          operation: call.toolName === "file.write" ? "write" : "read",
+          decision: "allow",
+        });
+      }
+    }
+    try {
+      return await action();
+    } finally {
+      for (const call of calls) {
+        await this.audit({
+          eventId: `${call.callId}-result`,
+          type: "tool.result",
+          timestamp: new Date().toISOString(),
+          sessionId: this.auditConfig.sessionId,
+          runId: this.auditConfig.runId,
+          blockId: this.auditConfig.blockId,
+          armId: this.auditConfig.armId,
+          role: "worker",
+          actor: "worker",
+          callId: call.callId,
+          toolName: call.toolName,
+        });
+      }
+    }
   }
 
   get toolDefinitions() {
@@ -1222,19 +1576,21 @@ export class CorpusService {
       },
       {
         name: "write_scenario",
-        description: "Write one source-only scenario matching the benchmark scenario and v1 schemas.",
+        description:
+          "Capture one bounded observed source-scenario slot; malformed safe attempts remain measurable.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
           required: ["scenario"],
           properties: {
-            scenario: composeScenarioSchema(this.request),
+            scenario: {},
           },
         },
       },
       {
         name: "finalize_staging",
-        description: "Validate and publish the exact canonical benchmark staging artifact.",
+        description:
+          "Publish the canonical observed 0-60 slot artifact once and return its validation summary.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
@@ -1606,13 +1962,12 @@ export class CorpusService {
     for (const entry of entries) {
       const absolute = path.join(directory.path, entry.name);
       const stats = await assertNoReparse(absolute, this.stagingRoot, "staging scenario");
-      const match = /^(\d{3})-([A-Z][A-Z0-9-]{2,63})\.json$/.exec(entry.name);
+      const match = /^(\d{3})\.json$/.exec(entry.name);
       if (!match || !stats.isFile()) {
         fail("STAGING_INVALID", "corpus-staging/scenarios contains an unexpected entry");
       }
       files.push({
         index: Number(match[1]),
-        id: match[2],
         relative: `scenarios/${entry.name}`,
       });
     }
@@ -1634,8 +1989,6 @@ export class CorpusService {
 
   async readStagedScenariosUnlocked(request) {
     const files = await this.scenarioFilesUnlocked(request);
-    const scenarioSchema = composeScenarioSchema(request);
-    const ids = new Set();
     const scenarios = [];
     const snapshot = [];
     for (const file of files) {
@@ -1647,14 +2000,6 @@ export class CorpusService {
         "staging scenario",
       );
       const scenario = parseJson(loaded.content, file.relative);
-      validateSchemaValue(scenario, scenarioSchema, `staging scenario ${file.index}`);
-      if (scenario.id !== file.id) {
-        fail("STAGING_INVALID", `${file.relative} does not match its scenario ID`);
-      }
-      if (ids.has(scenario.id)) {
-        fail("SCHEMA_ERROR", `duplicate scenario ID "${scenario.id}"`);
-      }
-      ids.add(scenario.id);
       scenarios.push(scenario);
       snapshot.push({
         relative: file.relative,
@@ -1684,24 +2029,49 @@ export class CorpusService {
   }
 
   async writeScenario(args) {
-    assertExactKeys(args, new Set(["scenario"]), new Set(["scenario"]), "arguments");
     return this.withOperation(async (request) => {
-      validateSchemaValue(args.scenario, composeScenarioSchema(request), "scenario");
-      const scenarioBytes = canonicalJsonBytes(args.scenario);
-      if (scenarioBytes.length > request.maxSizes.scenarioBytes) {
-        fail("LIMIT_EXCEEDED", `scenario exceeds ${request.maxSizes.scenarioBytes} bytes`);
-      }
       await this.assertStagingOpenUnlocked();
       const existing = await this.readStagedScenariosUnlocked(request);
       if (existing.scenarios.length >= request.targetCount) {
-        fail("LIMIT_EXCEEDED", `staging already contains the exact target of ${request.targetCount}`);
+        fail("LIMIT_EXCEEDED", `staging already contains ${request.targetCount} observed slots`);
       }
-      if (existing.scenarios.some((scenario) => scenario.id === args.scenario.id)) {
-        fail("SCHEMA_ERROR", `duplicate scenario ID "${args.scenario.id}"`);
+      const slot = existing.scenarios.length + 1;
+      let observed;
+      try {
+        assertExactKeys(args, new Set(["scenario"]), new Set(["scenario"]), "arguments");
+        if (!isJsonValue(args.scenario)) {
+          fail("SCHEMA_ERROR", "scenario must be a bounded JSON value");
+        }
+        const candidateBytes = canonicalJsonBytes(args.scenario);
+        if (candidateBytes.length > request.maxSizes.scenarioBytes) {
+          observed = {
+            invalid: true,
+            reason: "observed scenario exceeded the bounded slot size",
+            slot,
+          };
+        } else if (containsAcceptanceContent(args.scenario)) {
+          observed = {
+            invalid: true,
+            reason: "acceptance-only content was omitted from the observed slot",
+            slot,
+          };
+        } else {
+          observed = args.scenario;
+        }
+      } catch (error) {
+        observed = {
+          invalid: true,
+          reason:
+            error instanceof CorpusError
+              ? error.message
+              : "observed scenario arguments were not serializable",
+          slot,
+        };
       }
+      const scenarioBytes = canonicalJsonBytes(observed);
       const directory = await this.scenarioDirectoryUnlocked();
-      const sequence = String(existing.scenarios.length + 1).padStart(3, "0");
-      const fileName = `${sequence}-${args.scenario.id}.json`;
+      const sequence = String(slot).padStart(3, "0");
+      const fileName = `${sequence}.json`;
       const target = path.join(directory.path, fileName);
       const bytes = await atomicWriteNewBytes(target, scenarioBytes, {
         maximumBytes: request.maxSizes.scenarioBytes,
@@ -1714,11 +2084,10 @@ export class CorpusService {
         },
       });
       return {
-        path: `corpus-staging/scenarios/${fileName}`,
-        scenarioId: args.scenario.id,
-        count: existing.scenarios.length + 1,
+        slot,
+        count: slot,
         bytes,
-        status: "written",
+        status: "captured",
       };
     });
   }
@@ -1728,9 +2097,6 @@ export class CorpusService {
     return this.withOperation(async (request) => {
       await this.assertStagingOpenUnlocked();
       const staged = await this.readStagedScenariosUnlocked(request);
-      if (staged.scenarios.length !== request.targetCount) {
-        fail("SCHEMA_ERROR", `staging must contain exactly ${request.targetCount} scenarios`);
-      }
       if (this.hooks.beforeManifestPublish) {
         await this.hooks.beforeManifestPublish();
       }
@@ -1742,37 +2108,52 @@ export class CorpusService {
       };
       validateStagingPayload(request, payload);
       const payloadBytes = canonicalJsonBytes(payload);
+      if (payloadBytes.length > request.maxSizes.stagingBytes) {
+        fail("LIMIT_EXCEEDED", "canonical staging artifact exceeds its byte limit");
+      }
       const outputName = `${request.runId}.json`;
       const target = path.join(this.stagingRoot, outputName);
       await atomicWriteNewBytes(target, payloadBytes, {
         maximumBytes: request.maxSizes.stagingBytes,
       });
+      const assessment = assessObservedStaging(payload, {
+        stagingSchema: request.stagingSchema,
+        scenarioSchema: request.scenarioSchema,
+        v1ConfigSchema: request.v1ConfigSchema,
+      });
+      const errorCount =
+        assessment.submissionErrors.length +
+        assessment.cases.reduce(
+          (total, scenario) => total + scenario.errors.length,
+          0,
+        );
       return {
-        stagingPath: `corpus-staging/${outputName}`,
+        stagingPath: this.auditConfig.logicalStagingPath,
         payloadSha256: sha256(payloadBytes),
-        count: request.targetCount,
-        status: "SUCCESS",
-        requestHash: request.requestHash,
-        manifestHash: request.manifestHash,
+        submittedCases: assessment.submittedCases,
+        promotableCases: assessment.promotableCases,
+        errorCount,
       };
     });
   }
 }
 
 export async function callTool(service, name, args = {}) {
-  switch (name) {
-    case "read_request":
-      return service.readRequest(args);
-    case "list_contract_files":
-      assertExactKeys(args, new Set(), new Set(), "arguments");
-      return service.listContractFiles();
-    case "read_contract_file":
-      return service.readContractFile(args);
-    case "write_scenario":
-      return service.writeScenario(args);
-    case "finalize_staging":
-      return service.finalizeStaging(args);
-    default:
-      fail("TOOL_NOT_FOUND", `unknown tool "${name}"`);
-  }
+  return service.callWithAudit(name, args, async () => {
+    switch (name) {
+      case "read_request":
+        return service.readRequest(args);
+      case "list_contract_files":
+        assertExactKeys(args, new Set(), new Set(), "arguments");
+        return service.listContractFiles();
+      case "read_contract_file":
+        return service.readContractFile(args);
+      case "write_scenario":
+        return service.writeScenario(args);
+      case "finalize_staging":
+        return service.finalizeStaging(args);
+      default:
+        fail("TOOL_NOT_FOUND", `unknown tool "${name}"`);
+    }
+  });
 }

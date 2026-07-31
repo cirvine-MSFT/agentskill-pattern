@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const agentPath = fileURLToPath(
-  new URL("../../.github/agents/semantic-test-corpus.agent.md", import.meta.url),
+  new URL("../../.github/agents/semantic-scenario-stager.agent.md", import.meta.url),
 );
 const skillPath = fileURLToPath(
   new URL("../../.github/skills/semantic-test-corpus/SKILL.md", import.meta.url),
@@ -13,7 +13,7 @@ const skillPath = fileURLToPath(
 test("custom-agent frontmatter exposes only request-bound MCP tools", async () => {
   const text = await readFile(agentPath, "utf8");
   const frontmatter = text.split("---")[1];
-  assert.match(frontmatter, /^name: semantic-test-corpus$/m);
+  assert.match(frontmatter, /^name: semantic-scenario-stager$/m);
   assert.match(frontmatter, /^target: github-copilot$/m);
   assert.match(frontmatter, /^model: claude-haiku-4\.5$/m);
   assert.match(frontmatter, /^user-invocable: false$/m);
@@ -49,13 +49,18 @@ test("agent and Skill preserve deterministic parent ownership and no fallback", 
   assert.match(agent, /Never produce, infer, request, encode, or\s*describe\s+an expected output/);
   assert.match(agent, /Do not\s+attempt to\s+.*delegate to another agent/s);
   assert.match(agent, /self-hash, contract-manifest hash/);
-  assert.match(agent, /Design exactly 60 diverse source-only scenarios/);
-  assert.match(agent, /compact JSON object returned by `finalize_staging`/);
+  assert.match(agent, /Attempt exactly 60 diverse source-only scenarios/);
+  assert.match(agent, /compact five-field JSON object returned by `finalize_staging`/);
+  assert.match(skill, /Invoke the `semantic-scenario-stager` custom agent/);
   assert.match(skill, /never\s+generate scenarios inline/i);
   assert.match(skill, /Invoke only the trusted launcher, never the server directly/i);
   assert.match(skill, /caller-provided sandbox-kind label is not evidence/i);
   assert.match(skill, /fails before MCP initialization/i);
   assert.match(skill, /parent invokes the launcher verifier/i);
+  assert.match(
+    skill,
+    /stagingPath.*payloadSha256.*submittedCases.*promotableCases.*errorCount/is,
+  );
   assert.match(skill, /trusted oracle/i);
   assert.match(skill, /mutant scoring/i);
   assert.match(skill, /Stale lifetime locks are never stolen/i);

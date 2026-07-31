@@ -20,7 +20,7 @@ examples below describe the ASCII art reference unless noted otherwise.
 | Reference | Components | Evidence status |
 | --- | --- | --- |
 | **ASCII art** | [Implementation notes](reference-implementations/ascii-art.md), [`ascii-art` Skill](../.github/skills/ascii-art/SKILL.md), [custom agent](../.github/agents/ascii-art.agent.md) | The [completed case study](../experiments/ascii-art-powershell-cli/) tests the small-task cost/quality hypothesis. Its incomplete dataset supports descriptive results only. |
-| **Semantic test corpus** | [Research](research/semantic-corpus-generation.md), [implementation notes](reference-implementations/semantic-test-corpus.md), [`semantic-test-corpus` Skill](../.github/skills/semantic-test-corpus/SKILL.md), [custom agent](../.github/agents/semantic-test-corpus.agent.md) | The [preregistered executable design](../experiments/semantic-test-corpus/README.md) has a checked deterministic foundation. No AI trials have run, so there are no AI benchmark results. |
+| **Semantic test corpus** | [Research](research/semantic-corpus-generation.md), [implementation notes](reference-implementations/semantic-test-corpus.md), [`semantic-test-corpus` Skill](../.github/skills/semantic-test-corpus/SKILL.md), [`semantic-scenario-stager` agent](../.github/agents/semantic-scenario-stager.agent.md) | The [preregistered executable design](../experiments/semantic-test-corpus/README.md) has a checked deterministic foundation. No AI trials have run, so there are no AI benchmark results. |
 
 The semantic reference keeps the migration and expected-output oracle deterministic;
 AI may only propose semantic v1 source scenarios. Its writes go to isolated staging

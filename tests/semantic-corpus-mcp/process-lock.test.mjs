@@ -24,11 +24,13 @@ const launcher = fileURLToPath(
 );
 
 function startHelper(run) {
+  const boot = run.bootEnvelope();
   const child = spawn(process.execPath, [helper], {
-    env: run.env,
-    stdio: ["pipe", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe", "pipe", "pipe"],
     windowsHide: true,
   });
+  child.stdio[3].end(boot.bytes);
+  child.stdio[4].end(boot.publicKeyBytes);
   const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
   let stderr = "";
   child.stderr.setEncoding("utf8");

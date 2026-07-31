@@ -71,7 +71,7 @@ descriptions of both diagrams.
 | Reference | Live components | Status |
 | --- | --- | --- |
 | **ASCII art** | [`ascii-art` Skill](.github/skills/ascii-art/SKILL.md), [custom agent](.github/agents/ascii-art.agent.md), and [implementation notes](docs/reference-implementations/ascii-art.md) | Implemented; the [completed case study](experiments/ascii-art-powershell-cli) tests the pattern's small-task cost/quality hypothesis. |
-| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [custom agent](.github/agents/semantic-test-corpus.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [five-arm preregistered design](experiments/semantic-test-corpus/README.md) has a deterministic foundation, but no AI trials or AI benchmark results yet. |
+| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [`semantic-scenario-stager` agent](.github/agents/semantic-scenario-stager.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [five-arm preregistered design](experiments/semantic-test-corpus/README.md) has a deterministic foundation, but no AI trials or AI benchmark results yet. |
 
 In the semantic reference, migration and expected-output oracle behavior remain
 deterministic. AI is limited to proposing semantic v1 source scenarios, with staged

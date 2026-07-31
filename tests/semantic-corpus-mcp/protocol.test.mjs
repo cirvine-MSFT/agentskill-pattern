@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import {
   chmod,
@@ -15,6 +16,7 @@ import { createInterface } from "node:readline";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { verifyStagingState } from "../../tools/semantic-corpus-mcp/launcher.mjs";
+import { evaluateIsolationEvidence } from "../../experiments/semantic-test-corpus/scripts/verify-isolation-evidence.mjs";
 import { scenario } from "./fixtures.mjs";
 
 const launcher = fileURLToPath(
@@ -105,7 +107,10 @@ test("direct server and unconfigured launcher both fail closed before MCP startu
     child.stdin.end();
     const [code] = await once(child, "exit");
     assert.equal(code, 78);
-    assert.match(stderr, executable === server ? /SANDBOX_REQUIRED/ : /LAUNCH_CONFIG_INVALID/);
+    assert.match(
+      stderr,
+      executable === server ? /LAUNCH_ATTESTATION_REQUIRED/ : /LAUNCH_CONFIG_INVALID/,
+    );
     assert.equal(child.stdout.read(), null);
   }
 });
@@ -199,13 +204,7 @@ test("trusted launcher serves full MCP flow and publishes verified canonical ben
     ],
   );
   const writeTool = listed.result.tools.find((tool) => tool.name === "write_scenario");
-  const inputSchema = writeTool.inputSchema.properties.scenario.properties.input;
-  assert.equal(inputSchema.$id, "v1-config.schema.json");
-  assert.equal(inputSchema.additionalProperties, false);
-  assert.deepEqual(
-    inputSchema.properties.features.properties.flags.additionalProperties,
-    { type: "boolean" },
-  );
+  assert.deepEqual(writeTool.inputSchema.properties.scenario, {});
 
   const pinned = await client.request("tools/call", {
     name: "read_request",
@@ -215,6 +214,10 @@ test("trusted launcher serves full MCP flow and publishes verified canonical ben
   assert.equal(request.targetCount, 60);
   assert.equal(request.runId, "B01-A4");
   assert.equal(request.v1ConfigSchema.$schema, "https://json-schema.org/draft/2020-12/schema");
+  assert.deepEqual(
+    request.v1ConfigSchema.properties.features.properties.flags.additionalProperties,
+    { type: "boolean" },
+  );
   assert.equal(request.requestHash, pinned.result.structuredContent.requestHash);
 
   const contract = await client.request("tools/call", {
@@ -223,33 +226,26 @@ test("trusted launcher serves full MCP flow and publishes verified canonical ben
   });
   const paths = contract.result.structuredContent.files.map((entry) => entry.path);
   assert.deepEqual(paths, [
-    "arm-contract.json",
-    "candidate-manifest.json",
+    "contract/mapping-spec.json",
     "contract-manifest.json",
-    "mapping-spec.json",
     "request.json",
     "schemas/scenario.schema.json",
     "schemas/staging.schema.json",
     "schemas/v1-config.schema.json",
+    "scripts/validate-staging.mjs",
+    "task/delegated-worker-skill.md",
     "task/shared-task-prompt.txt",
+    "validators/json-schema.mjs",
+    "validators/staging.mjs",
   ]);
-  const armContract = await client.request("tools/call", {
+  const delegatedSkill = await client.request("tools/call", {
     name: "read_contract_file",
-    arguments: { path: "arm-contract.json" },
+    arguments: { path: "task/delegated-worker-skill.md" },
   });
-  assert.equal(JSON.parse(armContract.result.structuredContent.content).commonContract.caseCount, 60);
-
-  const invalid = await client.request("tools/call", {
-    name: "write_scenario",
-    arguments: {
-      scenario: {
-        ...scenario(0),
-        input: { ...scenario(0).input, expected: { status: "ok" } },
-      },
-    },
-  });
-  assert.equal(invalid.error.code, -32602);
-  assert.equal(invalid.error.data.code, "SCHEMA_ERROR");
+  assert.match(
+    delegatedSkill.result.structuredContent.content,
+    /name: semantic-scenario-stager/,
+  );
 
   for (let index = 0; index < 60; index += 1) {
     const written = await client.request("tools/call", {
@@ -266,17 +262,17 @@ test("trusted launcher serves full MCP flow and publishes verified canonical ben
   assert.deepEqual(
     Object.keys(summary).sort(),
     [
-      "count",
-      "manifestHash",
+      "errorCount",
       "payloadSha256",
-      "requestHash",
+      "promotableCases",
       "stagingPath",
-      "status",
+      "submittedCases",
     ],
   );
-  assert.equal(summary.count, 60);
-  assert.equal(summary.status, "SUCCESS");
-  assert.equal(summary.stagingPath, "corpus-staging/B01-A4.json");
+  assert.equal(summary.submittedCases, 60);
+  assert.equal(summary.promotableCases, 60);
+  assert.equal(summary.errorCount, 0);
+  assert.equal(summary.stagingPath, "staging/B01-A4.json");
 
   const cleanupToken = await readFile(client.cleanupTokenPath, "utf8");
   await assert.rejects(
@@ -300,4 +296,136 @@ test("trusted launcher serves full MCP flow and publishes verified canonical ben
   const [code] = await once(client.child, "exit");
   assert.equal(code, 0, stderr);
   assert.equal(stderr, "");
+
+  const emitted = (await readFile(state.auditPath, "utf8"))
+    .trim()
+    .split(/\r?\n/u)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  assert.deepEqual(
+    [...new Set(emitted.filter((event) => event.type === "tool.called")
+      .map((event) => event.toolName))].sort(),
+    ["file.read", "file.write", "staging.validate"],
+  );
+  const firstAt = Date.parse(emitted[0].timestamp);
+  const lastAt = Date.parse(emitted.at(-1).timestamp);
+  const iso = (milliseconds) => new Date(milliseconds).toISOString();
+  const runId = "B01-A4";
+  const blockId = "B01";
+  const armId = 4;
+  const parentSessionId = `${runId}-parent`;
+  const workerSessionId = `${runId}-worker`;
+  const candidateRoot = state.sandboxRoot;
+  const evaluatorRoot = fileURLToPath(
+    new URL("../../experiments/semantic-test-corpus/evaluator", import.meta.url),
+  );
+  const stagingPath = path.resolve(candidateRoot, summary.stagingPath);
+  const baseAt = firstAt - 120_000;
+  const completedAt = lastAt + 120_000;
+  const roleEvents = ["parent", "worker"].flatMap((role) => {
+    const sessionId = role === "parent" ? parentSessionId : workerSessionId;
+    return [
+      {
+        eventId: `${role}-audit-start`, type: "audit.started",
+        timestamp: iso(baseAt + 1_000), sessionId, runId, blockId, armId, role,
+      },
+      {
+        eventId: `${role}-policy`, type: "sandbox.policy.applied",
+        timestamp: iso(baseAt + 2_000), sessionId, runId, blockId, armId, role,
+        candidateRoot, deniedRoots: [evaluatorRoot],
+        filesystemMode: "candidate-root-only", networkMode: "deny",
+      },
+      {
+        eventId: `${role}-created`, type: "session.created",
+        timestamp: iso(baseAt + 3_000), sessionId, runId, blockId, armId, role,
+        ...(role === "worker" ? { parentSessionId } : {}),
+      },
+      {
+        eventId: `${role}-bound`, type: "model.bound",
+        timestamp: iso(baseAt + 4_000), sessionId, runId, blockId, armId, role,
+        modelId: "claude-haiku-4.5", atomic: true,
+      },
+      {
+        eventId: `${role}-audit-complete`, type: "audit.completed",
+        timestamp: iso(completedAt + 2_000), sessionId, runId, blockId, armId, role,
+        filesystemComplete: true, networkComplete: true,
+      },
+      {
+        eventId: `${role}-usage`, type: "usage.reported",
+        timestamp: iso(completedAt + 3_000), sessionId, runId, blockId, armId, role,
+        totalTokens: 100, intervalStart: iso(baseAt + 4_000),
+        intervalEnd: iso(completedAt + 1_000),
+      },
+    ];
+  });
+  const schedule = JSON.parse(await readFile(
+    fileURLToPath(new URL(
+      "../../experiments/semantic-test-corpus/design/schedule.json",
+      import.meta.url,
+    )),
+    "utf8",
+  ));
+  const starts = schedule.runs.filter((run) => run.blockId === blockId).map((run) => ({
+    eventId: `${run.runId}-started`,
+    type: "run.started",
+    timestamp: iso(baseAt + 10_000 + run.order),
+    sessionId: run.runId === runId ? parentSessionId : `${run.runId}-process`,
+    processId: `${run.runId}-process`,
+    runId: run.runId,
+    blockId,
+    armId: run.armId,
+    role: run.armId === 0 ? "baseline" : "parent",
+    sequence: run.order,
+  }));
+  const skillBytes = await readFile(
+    fileURLToPath(new URL(
+      "../../experiments/semantic-test-corpus/design/delegated-worker-skill.md",
+      import.meta.url,
+    )),
+  );
+  const evidence = {
+    formatVersion: 1,
+    provider: "github-copilot-platform",
+    exportId: "semantic-mcp-integration",
+    exportedAt: iso(completedAt + 10_000),
+    capturedAt: iso(completedAt + 9_000),
+    events: [
+      ...roleEvents,
+      ...starts,
+      {
+        eventId: "delegation-invoked", type: "delegation.invoked",
+        timestamp: iso(baseAt + 20_000), sessionId: parentSessionId,
+        runId, blockId, armId, role: "parent", callId: "delegation",
+        workerSessionId, skillName: "semantic-scenario-stager",
+        skillSha256: createHash("sha256").update(skillBytes).digest("hex"),
+      },
+      ...emitted,
+      {
+        eventId: "delegation-completed", type: "delegation.completed",
+        timestamp: iso(completedAt - 1_000), sessionId: parentSessionId,
+        runId, blockId, armId, role: "parent", callId: "delegation",
+        returnFields: Object.keys(summary),
+      },
+      {
+        eventId: "run-completed", type: "run.completed",
+        timestamp: iso(completedAt), sessionId: parentSessionId,
+        runId, blockId, armId, role: "parent",
+      },
+      {
+        eventId: "unblinded", type: "outcomes.unblinded",
+        timestamp: iso(completedAt + 4_000), sessionId: parentSessionId,
+        runId, blockId, armId, role: "parent",
+      },
+      {
+        eventId: "outcome-access", type: "outcome.accessed",
+        timestamp: iso(completedAt + 5_000), sessionId: parentSessionId,
+        runId, blockId, armId, role: "parent",
+      },
+    ],
+  };
+  const isolation = evaluateIsolationEvidence(
+    { payload: evidence, authentication: { status: "verified" } },
+    { armId, runId, candidateRoot, evaluatorRoot, stagingPath },
+  );
+  assert.equal(isolation.status, "compliant", isolation.violations.join("\n"));
 });
