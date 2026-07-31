@@ -134,8 +134,18 @@ function snapshotManifest(stagingRoot, request) {
   if (!existsSync(path)) return null;
   const bytes = readExactFile(stagingRoot, "manifest.json", request.maxSizes.manifestBytes);
   const manifest = JSON.parse(bytes);
-  if (manifest.requestHash !== request.requestHash) {
-    throw new Error("Staged manifest requestHash differs from the immutable request");
+  const expected = {
+    version: 1,
+    kind: "semantic-source-scenarios",
+    requestHash: request.requestHash,
+    scenarioCount: request.targetCount,
+    scenarios: request.scenarios.map(({ scenarioId, category }) => ({
+      scenarioId,
+      category
+    }))
+  };
+  if (canonicalJson(manifest) !== canonicalJson(expected)) {
+    throw new Error("Staged manifest content differs from the immutable request");
   }
   return {
     path: "corpus-staging/manifest.json",
@@ -219,10 +229,14 @@ function verifyAuthenticatedWrites({ cases, manifest, events, runId, request }) 
   const scenarioCalls = successfulCalls.filter((event) =>
     event.toolName === "semantic-corpus/write_scenario_input");
   const casesById = new Map(cases.map((scenario) => [scenario.id, scenario]));
+  const calledIds = new Set(scenarioCalls.map((call) => call.scenarioId));
   if (scenarioCalls.length !== cases.length
+    || calledIds.size !== scenarioCalls.length
+    || cases.some((scenario) => !calledIds.has(scenario.id))
     || scenarioCalls.some((call) => !casesById.has(call.scenarioId))) {
     throw new Error("Staged scenario IDs differ from authenticated successful writes");
   }
+
   for (const call of scenarioCalls) {
     const scenario = casesById.get(call.scenarioId);
     if (call.argumentsSha256 !== argumentsSha256({
@@ -232,6 +246,7 @@ function verifyAuthenticatedWrites({ cases, manifest, events, runId, request }) 
       throw new Error(`Staged scenario differs from authenticated arguments: ${call.scenarioId}`);
     }
   }
+
   const manifestCalls = successfulCalls.filter((event) =>
     event.toolName === "semantic-corpus/write_scenario_manifest");
   if (manifestCalls.length !== (manifest ? 1 : 0)) {
@@ -241,6 +256,56 @@ function verifyAuthenticatedWrites({ cases, manifest, events, runId, request }) 
     && manifestCalls[0].argumentsSha256 !== argumentsSha256({ scenarios: request.scenarios })) {
     throw new Error("Staged manifest differs from authenticated arguments");
   }
+}
+
+function verifyLocalWrites({ cases, manifest, successfulWrites, request }) {
+  const scenarioWrites = successfulWrites.filter((write) =>
+    write.toolName === "semantic-corpus/write_scenario_input");
+  const casesById = new Map(cases.map((scenario) => [scenario.id, scenario]));
+  const writtenIds = new Set(scenarioWrites.map((write) => write.scenarioId));
+  if (scenarioWrites.length !== cases.length
+    || writtenIds.size !== scenarioWrites.length
+    || cases.some((scenario) => !writtenIds.has(scenario.id))
+    || scenarioWrites.some((write) => !casesById.has(write.scenarioId))) {
+    throw new Error("Staged scenario IDs differ from local successful writes");
+  }
+
+  for (const write of scenarioWrites) {
+    const scenario = casesById.get(write.scenarioId);
+    if (write.argumentsSha256 !== argumentsSha256({
+      scenarioId: write.scenarioId,
+      config: scenario.input
+    })) {
+      throw new Error(`Staged scenario differs from local write arguments: ${write.scenarioId}`);
+    }
+  }
+  const manifestWrites = successfulWrites.filter((write) =>
+    write.toolName === "semantic-corpus/write_scenario_manifest");
+  if (manifestWrites.length !== (manifest ? 1 : 0)) {
+    throw new Error("Staged manifest differs from local successful writes");
+  }
+  if (manifestWrites.length === 1
+    && manifestWrites[0].argumentsSha256 !== argumentsSha256({
+      scenarios: request.scenarios
+    })) {
+    throw new Error("Staged manifest differs from local write arguments");
+  }
+}
+
+export function verifyLocalSnapshotWrites(snapshotBytes, localEvidence) {
+  const snapshot = JSON.parse(snapshotBytes);
+  if (!canonicalStagingBytes(snapshot).equals(snapshotBytes)) {
+    throw new Error("Local snapshot is not canonical staging bytes");
+  }
+  if (snapshot.adapter?.requestHash !== frozenRequest.requestHash) {
+    throw new Error("Local snapshot request hash differs from the immutable request");
+  }
+  verifyLocalWrites({
+    cases: snapshot.cases,
+    manifest: snapshot.adapter?.manifest ?? null,
+    successfulWrites: localEvidence.successfulWrites,
+    request: frozenRequest
+  });
 }
 
 export function snapshotCorpusStaging({
@@ -339,6 +404,7 @@ export function snapshotLocalCorpusStaging({
   localEvidenceBytes,
   modelPreflight,
   sourceArtifactRoot,
+  sourceCandidateRoot,
   outputPath
 }) {
   const evidenceErrors = validateJsonSchema(localEvidence, localEvidenceSchema, {
@@ -354,7 +420,8 @@ export function snapshotLocalCorpusStaging({
     throw new Error(`Local model preflight is invalid: ${preflightErrors[0].path} ${preflightErrors[0].message}`);
   }
   const localEvidenceErrors = validateLocalEvidence(localEvidence, {
-    artifactRoot: sourceArtifactRoot
+    artifactRoot: sourceArtifactRoot,
+    candidateRoot: sourceCandidateRoot
   });
   if (localEvidenceErrors.length > 0) {
     throw new Error(`Local evidence source validation failed: ${localEvidenceErrors[0]}`);
@@ -394,6 +461,12 @@ export function snapshotLocalCorpusStaging({
   }
   const cases = snapshotCases(stagingRoot, request);
   const manifest = snapshotManifest(stagingRoot, request);
+  verifyLocalWrites({
+    cases,
+    manifest,
+    successfulWrites: localEvidence.successfulWrites,
+    request
+  });
   const staging = {
     formatVersion: 1,
     generator: {
@@ -417,6 +490,7 @@ export function snapshotLocalCorpusStaging({
     throw new Error(`Local adapter produced invalid benchmark staging: ${JSON.stringify(errors)}`);
   }
   const bytes = canonicalStagingBytes(staging);
+  verifyLocalSnapshotWrites(bytes, localEvidence);
   const target = resolve(outputPath);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, bytes, { flag: "wx" });

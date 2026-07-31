@@ -473,7 +473,7 @@ export function analyzeBaselineComparisons(observations, options = {}) {
     else incompleteBlocks.push({ blockId, reasons });
   }
   const unavailableAiRuns = schedule.runs
-    .filter((run) => run.armId !== 0)
+    .filter((run) => AI_ARM_IDS.includes(run.armId))
     .filter((run) => bindingRuns.get(run.runId)?.status !== "available")
     .map((run) => run.runId);
   const unavailableIsolationRuns = observations

@@ -47,6 +47,9 @@ export function preflightLocalModel(evidence, evidenceBytes) {
   } else if (evidence.availability.session.status !== "available") {
     status = "unavailable";
     reasons.push(...evidence.availability.session.reasons);
+  } else if (missingReasons.length > 0) {
+    status = "unavailable";
+    reasons.push(...missingReasons, ...evidence.availability.model.reasons);
   } else if (mismatchReasons.length > 0
     && attemptNumber === 1
     && evidence.attempt.retryCount === 0) {
@@ -56,7 +59,7 @@ export function preflightLocalModel(evidence, evidenceBytes) {
   } else if (mismatchReasons.length > 0) {
     status = "unavailable";
     reasons.push("model mismatch persisted after the single permitted retry", ...mismatchReasons);
-  } else if (missingReasons.length > 0 || evidence.availability.model.status !== "available") {
+  } else if (evidence.availability.model.status !== "available") {
     status = "unavailable";
     reasons.push(...missingReasons, ...evidence.availability.model.reasons);
   }

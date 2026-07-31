@@ -22,7 +22,11 @@ For every AI attempt, make one atomic `create_session` call with:
 
 An idle session followed by `send_session_message` is not a measured attempt.
 Record the app project session ID returned by creation and the internal CLI
-session ID from the resulting `session.start` event.
+session ID from the resulting `session.start` event. Persist a canonical
+`session-creation.json` containing the complete create request/response: project,
+local execution, no parent coordination, candidate commit, and the full kickoff
+object including exact prompt bytes, mode, model, agent, context tier, and
+reasoning effort, plus the returned app project session metadata.
 
 After generation ends, copy the complete local `events.jsonl` into the immutable
 attempt artifact directory and export usage:
@@ -31,16 +35,19 @@ attempt artifact directory and export usage:
 node scripts/export-local-usage.mjs --database <session-store.db> \
   --cli-session-id <id> --out <attempt>/usage.json
 node scripts/collect-local-evidence.mjs --events <attempt>/events.jsonl \
-  --usage <attempt>/usage.json --candidate-boundary <attempt>/candidate-boundary.json \
+  --usage <attempt>/usage.json --session-creation <attempt>/session-creation.json \
+  --candidate-boundary <attempt>/candidate-boundary.json --candidate-root <candidate> \
   --run-manifest <attempt>/manifest.json --run-attempt <attempt>/attempt.json \
   --out <attempt>/local-evidence.json
 node scripts/preflight-local-model.mjs --evidence <attempt>/local-evidence.json \
   --out <attempt>/model-preflight.json
-node scripts/validate-local-evidence.mjs --in <attempt>/local-evidence.json
+node scripts/validate-local-evidence.mjs --in <attempt>/local-evidence.json \
+  --candidate-root <candidate>
 node scripts/validate-execution-records.mjs --manifest <attempt>/manifest.json
 node evaluator/local-adapter-v2.mjs --corpus-contract <corpus-contract> \
   --corpus-staging <corpus-staging> --local-evidence <attempt>/local-evidence.json \
-  --model-preflight <attempt>/model-preflight.json --out <attempt>/staging.json
+  --model-preflight <attempt>/model-preflight.json --candidate-root <candidate> \
+  --out <attempt>/staging.json
 ```
 
 For a second attempt, add `--retry <attempt>/retry.json` to collection and retain
@@ -54,3 +61,13 @@ new atomic attempt; preserve the first attempt and a `retry.schema.json` record.
 
 Only evaluator code may read `corpus-staging/` after model completion. The parent
 stores the worker's compact terminal return but never the full staged corpus.
+
+After all eligible snapshots and metrics are frozen, create a
+`descriptive-artifacts.schema.json` manifest containing only run identities and
+paths to deterministic execution, snapshot, metrics, local-evidence, and final
+preflight artifacts. Add an evaluator-owned `evaluation-record.schema.json`
+artifact binding the final eligible attempt ID (or null for arm 0) and exact
+snapshot/metrics paths and SHA-256 values. Run
+`npm run analyze -- --in <manifest> --out <summary>`.
+The analyzer reconstructs every measurement and rejects caller-supplied outcomes
+or reused app/CLI session IDs.

@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
+import {
+  kickoffBytesForArm,
+  kickoffSha256ForArm,
+  sharedTaskSha256
+} from "./execution-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
@@ -12,8 +18,15 @@ const usageSchema = JSON.parse(readFileSync(resolve(schemaRoot, "local-usage-exp
 const manifestSchema = JSON.parse(readFileSync(resolve(schemaRoot, "run-manifest.schema.json"), "utf8"));
 const attemptSchema = JSON.parse(readFileSync(resolve(schemaRoot, "run-attempt.schema.json"), "utf8"));
 const retrySchema = JSON.parse(readFileSync(resolve(schemaRoot, "retry.schema.json"), "utf8"));
+const sessionCreationSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "session-creation.schema.json"), "utf8")
+);
 const contract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
 const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const candidateManifest = JSON.parse(
+  readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8")
+);
+const repositoryRoot = resolve(root, "..", "..");
 const MCP_TOOLS = new Set(contract.commonContract.toolSurface);
 
 function argument(args, name) {
@@ -23,6 +36,32 @@ function argument(args, name) {
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+function git(candidateRoot, args) {
+  const result = spawnSync("git", args, {
+    cwd: candidateRoot,
+    encoding: "utf8"
+  });
+  if (result.status !== 0) {
+    throw new Error(`Candidate git ${args.join(" ")} failed: ${result.stderr.trim()}`);
+  }
+
+  return result.stdout;
+}
+
+function committedSourceBytes(sourcePath) {
+  const repositoryPath = relative(repositoryRoot, resolve(root, sourcePath))
+    .replaceAll("\\", "/");
+  const result = spawnSync("git", ["show", `HEAD:${repositoryPath}`], {
+    cwd: repositoryRoot,
+    encoding: null,
+    maxBuffer: 16 * 1024 * 1024
+  });
+  if (result.status !== 0) {
+    throw new Error(`Cannot read committed treatment source ${repositoryPath}: ${result.stderr}`);
+  }
+  return result.stdout;
 }
 
 function canonicalJson(value) {
@@ -130,8 +169,10 @@ function contractToolName(event) {
 }
 
 function timing(events, parentRows, workerRows, delegated) {
-  const starts = events.filter((event) => event.type === "assistant.turn_start");
-  const ends = events.filter((event) => event.type === "assistant.turn_end");
+  const starts = events.filter((event) =>
+    event.type === "assistant.turn_start" && !event.agentId);
+  const ends = events.filter((event) =>
+    event.type === "assistant.turn_end" && !event.agentId);
   const startedAt = starts[0]?.timestamp ?? null;
   const endedAt = ends.at(-1)?.timestamp ?? null;
   const wall = startedAt && endedAt ? Date.parse(endedAt) - Date.parse(startedAt) : Number.NaN;
@@ -157,8 +198,11 @@ export function collectLocalEvidence({
   eventsPath,
   usageBytes,
   usagePath,
+  sessionCreationBytes,
+  sessionCreationPath,
   candidateBoundaryBytes,
   candidateBoundaryPath,
+  candidateRoot,
   runManifest,
   runManifestBytes,
   runManifestPath,
@@ -170,9 +214,18 @@ export function collectLocalEvidence({
   retryPath = null
 }) {
   const usageExport = JSON.parse(usageBytes);
+  const sessionCreation = JSON.parse(sessionCreationBytes);
   const usageErrors = validateJsonSchema(usageExport, usageSchema, { schemaDir: schemaRoot });
   if (usageErrors.length > 0) {
     throw new Error(`Usage export is invalid: ${usageErrors[0].path} ${usageErrors[0].message}`);
+  }
+  const sessionCreationErrors = validateJsonSchema(
+    sessionCreation,
+    sessionCreationSchema,
+    { schemaDir: schemaRoot }
+  );
+  if (sessionCreationErrors.length > 0) {
+    throw new Error(`Session creation capture is invalid: ${sessionCreationErrors[0].path} ${sessionCreationErrors[0].message}`);
   }
   const manifestErrors = validateJsonSchema(runManifest, manifestSchema, { schemaDir: schemaRoot });
   if (manifestErrors.length > 0) {
@@ -201,6 +254,42 @@ export function collectLocalEvidence({
     || boundary.files.length === 0) {
     throw new Error("Candidate boundary is not the frozen v2 materialization format");
   }
+  const expectedCandidateFiles = candidateManifest.files.map((entry) => ({
+    path: entry.destination.replaceAll("\\", "/"),
+    sha256: sha256(committedSourceBytes(entry.source))
+  })).sort((left, right) => left.path.localeCompare(right.path));
+  const observedCandidateFiles = [...boundary.files]
+    .sort((left, right) => left.path.localeCompare(right.path));
+  if (JSON.stringify(observedCandidateFiles) !== JSON.stringify(expectedCandidateFiles)) {
+    throw new Error("Candidate boundary differs from the exact candidate manifest file tree");
+  }
+  const liveCandidateRoot = resolve(candidateRoot);
+  const liveBoundaryBytes = readFileSync(resolve(liveCandidateRoot, ".benchmark-boundary.json"));
+  if (!liveBoundaryBytes.equals(candidateBoundaryBytes)) {
+    throw new Error("Candidate boundary bytes differ from the executed checkout");
+  }
+  const status = git(liveCandidateRoot, ["status", "--porcelain=v1"]);
+  if (status !== "") throw new Error("Candidate worktree is not clean at evidence collection");
+  const head = git(liveCandidateRoot, ["rev-parse", "HEAD"]).trim();
+  if (head !== runManifest.terminalCommit) {
+    throw new Error("Executed candidate HEAD differs from the terminal commit");
+  }
+  const expectedTreePaths = [
+    ...expectedCandidateFiles.map((file) => file.path),
+    ".benchmark-boundary.json"
+  ].sort();
+  const observedTreePaths = git(liveCandidateRoot, ["ls-tree", "-r", "--name-only", "HEAD"])
+    .split(/\r?\n/u)
+    .filter(Boolean)
+    .sort();
+  if (JSON.stringify(observedTreePaths) !== JSON.stringify(expectedTreePaths)) {
+    throw new Error("Candidate commit tree contains missing or extra treatment files");
+  }
+  for (const file of expectedCandidateFiles) {
+    if (sha256(readFileSync(resolve(liveCandidateRoot, file.path))) !== file.sha256) {
+      throw new Error(`Candidate checkout file differs from frozen treatment: ${file.path}`);
+    }
+  }
   if (sha256(candidateBoundaryBytes) !== runManifest.candidateSnapshotSha256) {
     throw new Error("Candidate boundary SHA-256 differs from the run manifest");
   }
@@ -217,12 +306,14 @@ export function collectLocalEvidence({
   }
   const taskFile = boundary.files.find((file) => file.path === contract.commonContract.taskArtifact);
   if (!taskFile
+    || taskFile.sha256 !== sharedTaskSha256()
     || runAttempt.treatment.blockId !== runManifest.blockId
     || runAttempt.treatment.armId !== runManifest.armId
     || runAttempt.treatment.seed !== runManifest.seed
     || runAttempt.treatment.terminalCommit !== runManifest.terminalCommit
     || runAttempt.treatment.candidateSnapshotSha256 !== runManifest.candidateSnapshotSha256
     || runAttempt.treatment.sharedTaskSha256 !== taskFile.sha256
+    || runAttempt.treatment.kickoffSha256 !== kickoffSha256ForArm(runManifest.armId)
     || runAttempt.treatment.wallLimitMs !== contract.commonContract.wallClockMinutes * 60_000
     || runAttempt.treatment.toolCallLimit !== contract.commonContract.maximumToolCalls
     || runAttempt.treatment.modelTokenLimit !== contract.commonContract.maximumTotalModelTokens) {
@@ -258,6 +349,21 @@ export function collectLocalEvidence({
   const cliSessionId = runManifest.cliSessionId;
   const sessionReasons = [];
   if (starts.length !== 1) sessionReasons.push(`expected one session.start event; found ${starts.length}`);
+  const capturedKickoffBytes = Buffer.from(sessionCreation.request.kickoff.prompt, "utf8");
+  if (sessionCreation.response.project_session_id !== runManifest.appProjectSessionId
+    || sessionCreation.response.project_id !== sessionCreation.request.project_id
+    || sessionCreation.response.execution_location !== contract.commonContract.executionLocation
+    || sessionCreation.response.kickoff_mode !== contract.commonContract.kickoffMode
+    || sessionCreation.response.kickoff_model !== arm.model
+    || sessionCreation.request.execution_location !== contract.commonContract.executionLocation
+    || sessionCreation.request.kickoff.mode !== contract.commonContract.kickoffMode
+    || sessionCreation.request.kickoff.model !== arm.model
+    || sessionCreation.request.kickoff.agent !== null
+    || sessionCreation.request.candidate_commit !== runManifest.terminalCommit
+    || sha256(capturedKickoffBytes) !== runAttempt.treatment.kickoffSha256
+    || !capturedKickoffBytes.equals(kickoffBytesForArm(runManifest.armId))) {
+    sessionReasons.push("captured atomic create_session request/response differs from the frozen attempt");
+  }
   if (starts[0]?.data?.sessionId !== cliSessionId) sessionReasons.push("session.start CLI session ID differs from the run manifest");
   if (starts[0]?.data?.context?.headCommit !== runManifest.terminalCommit) {
     sessionReasons.push("session.start head commit differs from the terminal candidate commit");
@@ -265,6 +371,22 @@ export function collectLocalEvidence({
   if (usageExport.source.cliSessionId !== cliSessionId) sessionReasons.push("usage export CLI session ID differs from the run manifest");
   if (usageExport.rows.some((row) => row.session_id !== cliSessionId)) {
     sessionReasons.push("usage export includes another CLI session");
+  }
+  const topLevelTurnStarts = events.filter((event) =>
+    event.type === "assistant.turn_start" && !event.agentId);
+  const topLevelTurnEnds = events.filter((event) =>
+    event.type === "assistant.turn_end" && !event.agentId);
+  const topLevelUserMessages = events.filter((event) =>
+    event.type === "user.message" && !event.agentId);
+  if (topLevelTurnStarts.length !== 1 || topLevelTurnEnds.length !== 1) {
+    sessionReasons.push("attempt must contain exactly one top-level assistant kickoff turn");
+  }
+  if (topLevelUserMessages.length > 1) {
+    sessionReasons.push("attempt contains follow-up user steering after atomic kickoff");
+  }
+  if (topLevelUserMessages.length === 1
+    && topLevelUserMessages[0]?.data?.content !== sessionCreation.request.kickoff.prompt) {
+    sessionReasons.push("captured user kickoff differs from the atomic create_session prompt");
   }
 
   const parentRows = usageExport.rows.filter((row) => roleForUsage(row) === "parent");
@@ -326,6 +448,11 @@ export function collectLocalEvidence({
     if (taskCalls.length !== 1
       || taskCalls[0]?.data?.arguments?.agent_type !== expectedAgent) {
       mechanismReasons.push(`delegated arm requires one exact ${expectedAgent} task invocation`);
+    }
+    const observedWorkerPrompt = taskCalls[0]?.data?.arguments?.prompt;
+    if (typeof observedWorkerPrompt !== "string"
+      || sha256(Buffer.from(observedWorkerPrompt, "utf8")) !== taskFile.sha256) {
+      mechanismReasons.push("delegated task prompt differs from the byte-exact shared task");
     }
     if ([2, 4].includes(runManifest.armId)) {
       if (skillCalls.length !== 1
@@ -391,6 +518,25 @@ export function collectLocalEvidence({
       };
     })
     .filter(Boolean);
+  const successfulWrites = toolCompletes
+    .filter((event) => event.data?.success === true)
+    .map((event) => {
+      const start = toolStartsById.get(event.data?.toolCallId);
+      const name = start ? contractToolName(start) : null;
+      if (!start || ![
+        "semantic-corpus/write_scenario_input",
+        "semantic-corpus/write_scenario_manifest"
+      ].includes(name)) return null;
+      return {
+        callId: event.data.toolCallId,
+        toolName: name,
+        argumentsSha256: sha256(Buffer.from(canonicalJson(start.data?.arguments ?? {}), "utf8")),
+        ...(typeof start.data?.arguments?.scenarioId === "string"
+          ? { scenarioId: start.data.arguments.scenarioId }
+          : {})
+      };
+    })
+    .filter(Boolean);
   const compact = subagentCompletes[0]?.data?.result
     ?? subagentCompletes[0]?.data?.response
     ?? null;
@@ -402,6 +548,46 @@ export function collectLocalEvidence({
   const observedTerminal = arm.delegated ? compactReturn : inlineTerminal;
   if (runAttempt.terminalReturn !== observedTerminal) {
     mechanismReasons.push("attempt terminal return differs from the observed compact delegation return");
+  }
+  const scenarioWriteStarts = semanticCalls.filter((event) =>
+    contractToolName(event) === "semantic-corpus/write_scenario_input");
+  const scenarioWriteIds = scenarioWriteStarts
+    .map((event) => event.data?.arguments?.scenarioId)
+    .filter((scenarioId) => typeof scenarioId === "string");
+  if (new Set(scenarioWriteIds).size !== scenarioWriteIds.length) {
+    mechanismReasons.push("scenario write was retried or duplicated");
+  }
+  const semanticErrors = toolCompletes.filter((event) => {
+    const start = toolStartsById.get(event.data?.toolCallId);
+    return event.data?.success === false && start && MCP_TOOLS.has(contractToolName(start));
+  });
+  const successfulScenarioWrites = successfulWrites.filter((write) =>
+    write.toolName === "semantic-corpus/write_scenario_input");
+  const successfulManifestWrites = successfulWrites.filter((write) =>
+    write.toolName === "semantic-corpus/write_scenario_manifest");
+  const successTerminal = /^corpus-staging\/manifest\.json - (\d+) scenarios - SUCCESS$/u
+    .exec(observedTerminal ?? "");
+  const failureTerminal = /^corpus-staging - (\d+) scenarios - FAILURE: (.+)$/u
+    .exec(observedTerminal ?? "");
+  if (!successTerminal && !failureTerminal) {
+    mechanismReasons.push("terminal return does not match the exact success/failure contract");
+  } else if (successTerminal) {
+    if (Number(successTerminal[1]) !== 60
+      || successfulScenarioWrites.length !== 60
+      || successfulManifestWrites.length !== 1
+      || semanticErrors.length !== 0) {
+      mechanismReasons.push("successful terminal return differs from observed write calls");
+    }
+  } else {
+    const failureAt = semanticErrors.length === 1
+      ? Date.parse(semanticErrors[0].timestamp)
+      : Number.NaN;
+    if (Number(failureTerminal[1]) !== successfulScenarioWrites.length
+      || successfulManifestWrites.length !== 0
+      || semanticErrors.length !== 1
+      || semanticCalls.some((event) => Date.parse(event.timestamp) > failureAt)) {
+      mechanismReasons.push("failure terminal return does not represent one final failed MCP call");
+    }
   }
   const total = totalUsage(parentUsage, workerUsage);
   const budgetReasons = [];
@@ -445,6 +631,11 @@ export function collectLocalEvidence({
         path: basename(usagePath),
         sha256: sha256(usageBytes),
         bytes: usageBytes.length
+      },
+      sessionCreation: {
+        path: basename(sessionCreationPath),
+        sha256: sha256(sessionCreationBytes),
+        bytes: sessionCreationBytes.length
       },
       candidateBoundary: {
         path: basename(candidateBoundaryPath),
@@ -514,6 +705,7 @@ export function collectLocalEvidence({
       resultCount: toolCompletes.length,
       resultBytes
     },
+    successfulWrites,
     toolErrors,
     delegation: {
       invoked: subagentStarts.length > 0,
@@ -559,13 +751,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = process.argv.slice(2);
   const eventsPath = argument(args, "--events");
   const usagePath = argument(args, "--usage");
+  const sessionCreationPath = argument(args, "--session-creation");
   const manifestPath = argument(args, "--run-manifest");
   const attemptPath = argument(args, "--run-attempt");
   const candidateBoundaryPath = argument(args, "--candidate-boundary");
+  const candidateRoot = argument(args, "--candidate-root");
   const retryPath = argument(args, "--retry");
   const outputPath = argument(args, "--out");
-  if (!eventsPath || !usagePath || !manifestPath || !attemptPath || !candidateBoundaryPath || !outputPath) {
-    throw new Error("Usage: node scripts/collect-local-evidence.mjs --events <events.jsonl> --usage <usage.json> --candidate-boundary <boundary.json> --run-manifest <manifest.json> --run-attempt <attempt.json> [--retry <retry.json>] --out <local-evidence.json>");
+  if (!eventsPath || !usagePath || !sessionCreationPath || !manifestPath || !attemptPath || !candidateBoundaryPath || !candidateRoot || !outputPath) {
+    throw new Error("Usage: node scripts/collect-local-evidence.mjs --events <events.jsonl> --usage <usage.json> --session-creation <create-session.json> --candidate-boundary <boundary.json> --candidate-root <clean-candidate-repository> --run-manifest <manifest.json> --run-attempt <attempt.json> [--retry <retry.json>] --out <local-evidence.json>");
   }
   const runManifestBytes = readFileSync(resolve(manifestPath));
   const runAttemptBytes = readFileSync(resolve(attemptPath));
@@ -575,8 +769,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     eventsPath,
     usageBytes: readFileSync(resolve(usagePath)),
     usagePath,
+    sessionCreationBytes: readFileSync(resolve(sessionCreationPath)),
+    sessionCreationPath,
     candidateBoundaryBytes: readFileSync(resolve(candidateBoundaryPath)),
     candidateBoundaryPath,
+    candidateRoot,
     runManifest: JSON.parse(runManifestBytes),
     runManifestBytes,
     runManifestPath: manifestPath,

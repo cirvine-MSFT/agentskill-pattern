@@ -44,7 +44,7 @@
       "type": "object",
       "required": [
         "blockId", "armId", "seed", "terminalCommit", "candidateSnapshotSha256",
-        "sharedTaskSha256", "wallLimitMs", "toolCallLimit", "modelTokenLimit"
+        "sharedTaskSha256", "kickoffSha256", "wallLimitMs", "toolCallLimit", "modelTokenLimit"
       ],
       "additionalProperties": false,
       "properties": {
@@ -54,6 +54,7 @@
         "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
         "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "sharedTaskSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "kickoffSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "wallLimitMs": {"const": 1800000},
         "toolCallLimit": {"const": 120},
         "modelTokenLimit": {"const": 100000}

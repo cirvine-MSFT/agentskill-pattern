@@ -2,13 +2,61 @@
   "formatVersion": 2,
   "protocolId": "semantic-test-corpus-execution-v2",
   "manifestVersion": 2,
-  "candidateRoot": "X:\\candidate",
+  "candidateRoot": ".",
   "networkPolicy": "deny",
   "filesystemPolicy": "semantic-corpus-launcher-required",
   "files": [
     {
+      "path": "package.json",
+      "sha256": "63fc1adda5171634f544ae60eee8f654d2fc7857355f4a2e68cf0f487bf4f6d9"
+    },
+    {
+      "path": "contract/mapping-spec.json",
+      "sha256": "d75f087df2b1256a0d6f92a0958424e575e3c009a70a90c35377254f51a99578"
+    },
+    {
+      "path": "contract/request.json",
+      "sha256": "122c026ad00bb9b3800efecb53f75d8bd1a4344ab8ab9e79319a5ddf7be375c9"
+    },
+    {
+      "path": "schemas/v1-config.schema.json",
+      "sha256": "9c9eed772f23dc9bb86f69970e54506f5f1b5ca18036270b17013eb703959cec"
+    },
+    {
+      "path": "schemas/scenario.schema.json",
+      "sha256": "2740f3894b0256d4c156d5f3422ce38192e44d81a1421adf859b0cd63136e65e"
+    },
+    {
+      "path": "schemas/staging.schema.json",
+      "sha256": "251f652dc3ed8a622faae86994f9a826380eb5f3a0f049b163c29d43237ce12c"
+    },
+    {
       "path": "task/shared-task-prompt.txt",
-      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      "sha256": "0e8f3d4976a3d77d6e0cca689f9c9d7f382c5ca86598a6410f0e966af5771000"
+    },
+    {
+      "path": ".github/agents/semantic-test-corpus.agent.md",
+      "sha256": "ab556e226e3dda4cbd939fdf7de69cf328b06a5516deaf1c905ef497ccadd2f1"
+    },
+    {
+      "path": ".github/agents/semantic-test-corpus-haiku.agent.md",
+      "sha256": "8975388d6c386ddccf47e7997d17618b03260218832e2b88d27fd8a64906ebd6"
+    },
+    {
+      "path": ".github/skills/semantic-test-corpus/SKILL.md",
+      "sha256": "ce2a9d6af353fef1b1c41d8a0b0419df1e7e42463a6a3ce2893697f096df2cf8"
+    },
+    {
+      "path": "tools/semantic-corpus-mcp/server.mjs",
+      "sha256": "7f7bf0865a970d9af1f28a82cc56cb861f9257e0db0e744287c13dc375910aab"
+    },
+    {
+      "path": "tools/semantic-corpus-mcp/protocol.mjs",
+      "sha256": "707f3df5f8133ea647abd3e833420b775703df771e8265a969da0e52da979abe"
+    },
+    {
+      "path": "tools/semantic-corpus-mcp/lib.mjs",
+      "sha256": "4d3a85c9ff89bd24c97fc12cc1c6d05dfedca28df64586f58ca7537e7345cc80"
     }
   ]
 }

@@ -316,7 +316,9 @@ export function evaluateStartOrder(payload, blockId) {
   const starts = payload.events.filter((event) =>
     event.type === "run.started" && event.blockId === blockId);
   const plannedStarts = schedule.runs.filter((run) => run.blockId === blockId);
-  if (starts.length !== 5) violations.push(`block ${blockId} requires exactly five signed run starts`);
+  if (starts.length !== plannedStarts.length) {
+    violations.push(`block ${blockId} requires exactly ${plannedStarts.length} signed run starts`);
+  }
   if (new Set(starts.map((event) => event.sessionId)).size !== starts.length
     || new Set(starts.map((event) => event.processId)).size !== starts.length) {
     violations.push(`block ${blockId} run starts require unique session/process boundaries`);

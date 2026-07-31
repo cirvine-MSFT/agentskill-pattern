@@ -14,7 +14,7 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-export function validateLocalEvidence(evidence, { artifactRoot } = {}) {
+export function validateLocalEvidence(evidence, { artifactRoot, candidateRoot } = {}) {
   const errors = validateJsonSchema(evidence, schema, { schemaDir: schemaRoot })
     .map((error) => `${error.path} ${error.message}`);
   if (evidence?.trust?.signed !== false || evidence?.trust?.complianceProof !== false) {
@@ -50,8 +50,11 @@ export function validateLocalEvidence(evidence, { artifactRoot } = {}) {
         eventsPath: evidence.source.events.path,
         usageBytes: readSource("usage"),
         usagePath: evidence.source.usage.path,
+        sessionCreationBytes: readSource("sessionCreation"),
+        sessionCreationPath: evidence.source.sessionCreation.path,
         candidateBoundaryBytes: readSource("candidateBoundary"),
         candidateBoundaryPath: evidence.source.candidateBoundary.path,
+        candidateRoot,
         runManifest: JSON.parse(manifestBytes),
         runManifestBytes: manifestBytes,
         runManifestPath: evidence.source.runManifest.path,
@@ -78,8 +81,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     throw new Error("Usage: node scripts/validate-local-evidence.mjs --in <local-evidence.json>");
   }
   const inputPath = resolve(process.argv[index + 1]);
+  const candidateIndex = process.argv.indexOf("--candidate-root");
+  if (candidateIndex < 0 || !process.argv[candidateIndex + 1]) {
+    throw new Error("Usage: node scripts/validate-local-evidence.mjs --in <local-evidence.json> --candidate-root <clean-candidate-repository>");
+  }
   const evidence = JSON.parse(readFileSync(inputPath, "utf8"));
-  const errors = validateLocalEvidence(evidence, { artifactRoot: dirname(inputPath) });
+  const errors = validateLocalEvidence(evidence, {
+    artifactRoot: dirname(inputPath),
+    candidateRoot: process.argv[candidateIndex + 1]
+  });
   if (errors.length > 0) throw new Error(`Local evidence validation failed: ${errors[0]}`);
   process.stdout.write(`${evidence.runId}: valid descriptive local evidence; signed=false complianceProof=false\n`);
 }

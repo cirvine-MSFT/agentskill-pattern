@@ -5,7 +5,7 @@
   "required": [
     "formatVersion", "protocolId", "evidenceTier", "runId", "blockId", "armId",
     "identity", "source", "trust", "availability", "models", "attempt", "usage",
-    "parentContext", "tools", "toolErrors", "delegation", "timing", "budgets", "events", "deviations"
+    "parentContext", "tools", "successfulWrites", "toolErrors", "delegation", "timing", "budgets", "events", "deviations"
   ],
   "additionalProperties": false,
   "properties": {
@@ -31,11 +31,12 @@
     },
     "source": {
       "type": "object",
-      "required": ["events", "usage", "candidateBoundary", "runManifest", "runAttempt", "retry"],
+      "required": ["events", "usage", "sessionCreation", "candidateBoundary", "runManifest", "runAttempt", "retry"],
       "additionalProperties": false,
       "properties": {
         "events": {"$ref": "local-file-source.schema.json"},
         "usage": {"$ref": "local-file-source.schema.json"},
+        "sessionCreation": {"$ref": "local-file-source.schema.json"},
         "candidateBoundary": {"$ref": "local-file-source.schema.json"},
         "runManifest": {"$ref": "local-file-source.schema.json"},
         "runAttempt": {"$ref": "local-file-source.schema.json"},
@@ -165,6 +166,27 @@
           "scenarioId": {"type": "string"},
           "code": {"type": "string", "minLength": 1},
           "message": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "successfulWrites": {
+      "type": "array",
+      "maxItems": 61,
+      "items": {
+        "type": "object",
+        "required": ["callId", "toolName", "argumentsSha256"],
+        "additionalProperties": false,
+        "properties": {
+          "callId": {"type": "string", "minLength": 1},
+          "toolName": {
+            "type": "string",
+            "enum": [
+              "semantic-corpus/write_scenario_input",
+              "semantic-corpus/write_scenario_manifest"
+            ]
+          },
+          "argumentsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "scenarioId": {"type": "string"}
         }
       }
     },

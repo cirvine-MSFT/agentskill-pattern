@@ -15,9 +15,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const stagingRoot = argument(args, "--corpus-staging");
   const evidencePath = argument(args, "--local-evidence");
   const preflightPath = argument(args, "--model-preflight");
+  const candidateRoot = argument(args, "--candidate-root");
   const outputPath = argument(args, "--out");
-  if (!contractRoot || !stagingRoot || !evidencePath || !preflightPath || !outputPath) {
-    throw new Error("Usage: node evaluator/local-adapter-v2.mjs --corpus-contract <root> --corpus-staging <root> --local-evidence <evidence.json> --model-preflight <preflight.json> --out <staging.json>");
+  if (!contractRoot || !stagingRoot || !evidencePath || !preflightPath || !candidateRoot || !outputPath) {
+    throw new Error("Usage: node evaluator/local-adapter-v2.mjs --corpus-contract <root> --corpus-staging <root> --local-evidence <evidence.json> --model-preflight <preflight.json> --candidate-root <clean-candidate-repository> --out <staging.json>");
   }
   const localEvidenceBytes = readFileSync(resolve(evidencePath));
   const result = snapshotLocalCorpusStaging({
@@ -27,6 +28,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     localEvidenceBytes,
     modelPreflight: JSON.parse(readFileSync(resolve(preflightPath), "utf8")),
     sourceArtifactRoot: dirname(resolve(evidencePath)),
+    sourceCandidateRoot: candidateRoot,
     outputPath
   });
   process.stdout.write(`${result.staging.generator.blockId}-A${result.staging.generator.armId}: ${result.submittedCases}/60 staged cases snapshotted\n`);

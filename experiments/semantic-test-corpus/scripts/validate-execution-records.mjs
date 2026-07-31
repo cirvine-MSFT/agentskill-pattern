@@ -107,6 +107,20 @@ export function validateExecutionRecords({
     if (manifest.preflights[index] !== attempts[index]?.modelPreflightPath) {
       errors.push(`manifest preflight ${index + 1} path differs from the attempt`);
     }
+    if (preflight.status !== "pass" && attempts[index]?.evaluatorSnapshotPath !== null) {
+      errors.push(`attempt ${index + 1} has a snapshot before a passing model preflight`);
+    }
+  }
+  const finalAttempt = sorted.at(-1);
+  const finalPreflight = preflights.at(-1);
+  if (finalPreflight?.status === "pass") {
+    if (finalAttempt?.status === "excluded") {
+      errors.push("passing final model preflight cannot have an excluded attempt");
+    }
+  } else if (finalAttempt?.status !== "excluded"
+    || finalAttempt?.evaluatorSnapshotPath !== null
+    || finalAttempt?.outcomesOpenedAt !== null) {
+    errors.push("unavailable final preflight requires an excluded attempt with no snapshot or outcome access");
   }
   if (manifest.appProjectSessionId !== sorted.at(-1)?.appProjectSessionId
     || manifest.cliSessionId !== sorted.at(-1)?.cliSessionId) {

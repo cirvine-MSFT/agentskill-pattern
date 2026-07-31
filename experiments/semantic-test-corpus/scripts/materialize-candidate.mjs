@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import {
-  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -37,9 +36,25 @@ function samePath(left, right) {
     : resolve(left) === resolve(right);
 }
 
-function runGit(destination, args) {
-  const result = spawnSync("git", args, { cwd: destination, encoding: "utf8" });
+function runGit(destination, args, extra = {}) {
+  const result = spawnSync("git", args, {
+    cwd: destination,
+    encoding: "utf8",
+    ...extra
+  });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout;
+}
+
+function committedBlob(repositoryPath) {
+  const result = spawnSync("git", ["show", `HEAD:${repositoryPath}`], {
+    cwd: repositoryRoot,
+    encoding: null,
+    maxBuffer: 16 * 1024 * 1024
+  });
+  if (result.status !== 0) {
+    throw new Error(`Cannot read committed candidate source ${repositoryPath}: ${result.stderr}`);
+  }
   return result.stdout;
 }
 
@@ -110,15 +125,17 @@ export function materializeCandidate(destination, { allowTestDestination = false
     if (!within(target, output)) throw new Error(`Manifest destination escapes candidate root: ${entry.destination}`);
     mkdirSync(dirname(output), { recursive: true });
     rejectReparseComponents(dirname(output));
-    copyFileSync(source, output);
-    files.push({ path: entry.destination.replaceAll("\\", "/"), sha256: hash(readFileSync(output)) });
+    const repositoryPath = relative(repositoryRoot, canonicalSource).replaceAll("\\", "/");
+    const bytes = committedBlob(repositoryPath);
+    writeFileSync(output, bytes);
+    files.push({ path: entry.destination.replaceAll("\\", "/"), sha256: hash(bytes) });
   }
 
   const boundary = {
     formatVersion: 2,
     protocolId: "semantic-test-corpus-execution-v2",
     manifestVersion: manifest.manifestVersion,
-    candidateRoot: materializedReal,
+    candidateRoot: ".",
     networkPolicy: "deny",
     filesystemPolicy: "semantic-corpus-launcher-required",
     files
@@ -131,9 +148,16 @@ export function materializeCandidate(destination, { allowTestDestination = false
     "-c", "user.name=Semantic Benchmark Coordinator",
     "-c", "user.email=benchmark.invalid",
     "commit", "--quiet", "-m", "Materialize isolated semantic corpus candidate"
-  ]);
+  ], {
+    env: {
+      ...process.env,
+      GIT_AUTHOR_DATE: "2000-01-01T00:00:00Z",
+      GIT_COMMITTER_DATE: "2000-01-01T00:00:00Z"
+    }
+  });
   return {
     ...boundary,
+    materializedRoot: materializedReal,
     boundarySha256: hash(boundaryBytes),
     terminalCommit: runGit(target, ["rev-parse", "HEAD"]).trim()
   };

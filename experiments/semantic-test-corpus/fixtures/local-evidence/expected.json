@@ -8,34 +8,39 @@
   "identity": {
     "appProjectSessionId": "fixture-app-project-session",
     "cliSessionId": "fixture-cli-session",
-    "terminalCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "candidateSnapshotSha256": "c059c65c044b07ba0dadf35396390262aca416f116b517985348d725898d69cf"
+    "terminalCommit": "b19f703563ae17ed52e7a7d251ef3b51263a8e9b",
+    "candidateSnapshotSha256": "57e9436fec6281bd755965bd0379c882fccf8264be939589eb834f0f238d0f08"
   },
   "source": {
     "events": {
       "path": "captured.events.jsonl",
-      "sha256": "90d56c77a23912597fd9ec0bdda22b37246348ae2f820c1ac886b9c6387e7a46",
-      "bytes": 4271
+      "sha256": "91ca7f3061b019073aa14d260abbd6ea082833d1ae1e132e7e1473ef5b9e1d5b",
+      "bytes": 5280
     },
     "usage": {
       "path": "captured.usage.json",
       "sha256": "9abe7da7c9288fff100f177ae6fb38a50449463b31d62565c952e87e3ee4e155",
       "bytes": 2309
     },
+    "sessionCreation": {
+      "path": "session-creation.json",
+      "sha256": "f45bcbbb3730a3de67744a0b9854c9143fdf7471b3f91eef459b32d01f154e55",
+      "bytes": 2014
+    },
     "candidateBoundary": {
       "path": "candidate-boundary.json",
-      "sha256": "c059c65c044b07ba0dadf35396390262aca416f116b517985348d725898d69cf",
-      "bytes": 382
+      "sha256": "57e9436fec6281bd755965bd0379c882fccf8264be939589eb834f0f238d0f08",
+      "bytes": 2126
     },
     "runManifest": {
       "path": "run-manifest.json",
-      "sha256": "e4baec72374b35c5985c29430db3daa6eaee7a515cbebaa33caa6e6698037c6d",
+      "sha256": "c9094f268345d5011c6b87dfd4bf3a6c9735d7f1c4fe1c37b03eec9c79dd80b1",
       "bytes": 652
     },
     "runAttempt": {
       "path": "attempt-1.json",
-      "sha256": "d3993b27d0784a8b386a3e8dd4b39be7565bfcfc1db52fe8a62e8b08940f56b4",
-      "bytes": 1115
+      "sha256": "5e91f2750efcc5e0702db00ecbf94d0fa00a05b7fde3d747d4af4cbcdeb1df16",
+      "bytes": 1204
     },
     "retry": null
   },
@@ -59,8 +64,10 @@
       "reasons": []
     },
     "mechanism": {
-      "status": "available",
-      "reasons": []
+      "status": "unavailable",
+      "reasons": [
+        "successful terminal return differs from observed write calls"
+      ]
     },
     "fields": {
       "premiumRequests": {
@@ -183,6 +190,7 @@
     "resultCount": 3,
     "resultBytes": 171
   },
+  "successfulWrites": [],
   "toolErrors": [],
   "delegation": {
     "invoked": true,
@@ -216,5 +224,7 @@
     "count": 12,
     "completionCount": 2
   },
-  "deviations": []
+  "deviations": [
+    "successful terminal return differs from observed write calls"
+  ]
 }

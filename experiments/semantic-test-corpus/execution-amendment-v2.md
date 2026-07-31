@@ -47,7 +47,8 @@ Copilot CLI 1.0.71 does not provide the detached signed audit, sandbox, run,
 adapter, and metrics envelope required by v1. Strict confirmatory compliance
 therefore remains unavailable. This execution uses `descriptive-local-v1` evidence:
 
-- exact app project session ID and internal CLI `session.start.data.sessionId`;
+- exact app `create_session` request/response, project session ID, and internal
+  CLI `session.start.data.sessionId`;
 - byte-exact local immutable `events.jsonl` and an exact
   `assistant_usage_events` SQLite export, each SHA-256 bound;
 - exact terminal candidate commit and candidate boundary snapshot SHA-256;
@@ -125,9 +126,12 @@ p-values, confidence intervals, bootstrap intervals, noninferiority tests,
 equivalence claims, superiority claims, adjusted hypotheses, or factorial
 inferential claims from these 72 units.
 
-`npm run analyze -- --in <input> --out <summary>` invokes only the v2 six-arm
-descriptive analyzer. The historical v1 signed analysis source remains preserved
-for provenance but has no package entry point and is not valid for this execution.
+`npm run analyze -- --in <artifact-manifest> --out <summary>` invokes only the
+v2 six-arm descriptive analyzer. It accepts paths, not caller-authored endpoint
+values, rederives every metrics artifact from its exact snapshot, validates local
+evidence/preflight/retry records, and rejects reused app or CLI session IDs. The
+historical v1 signed analysis source remains preserved for provenance but has no
+package entry point and is not valid for this execution.
 
 Objective evaluator artifacts remain trustworthy to the extent established by
 their exact source snapshot, oracle, evaluator, mutant catalog, and reproducible

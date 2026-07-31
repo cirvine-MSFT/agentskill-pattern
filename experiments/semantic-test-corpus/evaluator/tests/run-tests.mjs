@@ -33,7 +33,7 @@ import {
   snapshotCorpusStaging,
   snapshotLocalCorpusStaging
 } from "../adapter.mjs";
-import { analyzeDescriptiveInput, summarizeDescriptive } from "../descriptive-v2.mjs";
+import { buildDescriptiveRuns, summarizeDescriptive } from "../descriptive-v2.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
 import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
@@ -57,6 +57,15 @@ const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluato
 const frozenSchedule = readRootJson("design", "schedule.json");
 const frozenContract = readRootJson("design", "arm-contract.json");
 const tests = [];
+const evidenceCandidateRoot = resolve(root, ".test-work", "evidence-candidate");
+
+function ensureEvidenceCandidate() {
+  if (!existsSync(resolve(evidenceCandidateRoot, ".git"))) {
+    rmSync(evidenceCandidateRoot, { recursive: true, force: true });
+    materializeCandidate(evidenceCandidateRoot, { allowTestDestination: true });
+  }
+  return evidenceCandidateRoot;
+}
 
 function test(name, action) {
   tests.push({ name, action });
@@ -478,11 +487,136 @@ test("v2 analyzer emits six-arm point estimates and pairs without inference", ()
     pair.armId === 5 && pair.endpoint === "promotionRate").mean, 0.5);
   assert.doesNotMatch(JSON.stringify(summary),
     /pValue|confidenceInterval|noninferior|bootstrap|holm/i);
-  assert.equal(analyzeDescriptiveInput({
-    formatVersion: 1,
-    protocolId: "semantic-test-corpus-execution-v2",
-    runs
-  }).observedRuns, 72);
+});
+
+test("v2 analyzer derives measurements only from exact evaluator artifacts", () => {
+  const temporary = resolve(root, ".test-work", "descriptive-v2");
+  rmSync(temporary, { recursive: true, force: true });
+  mkdirSync(temporary, { recursive: true });
+  try {
+    const baseline = runDeterministicBlock("B01");
+    const baselineSnapshotPath = resolve(temporary, "B01-A0.json");
+    const baselineExecutionPath = resolve(temporary, "B01-A0.execution.json");
+    const baselineMetricsPath = resolve(temporary, "B01-A0.metrics.json");
+    const baselineEvaluationPath = resolve(temporary, "B01-A0.evaluation.json");
+    writeFileSync(baselineSnapshotPath, baseline.bytes);
+    writeFileSync(baselineExecutionPath, `${JSON.stringify(baseline.execution, null, 2)}\n`);
+    const baselineMetrics = deriveMetricsArtifact(baseline.bytes, {
+      runId: "B01-A0",
+      blockId: "B01",
+      armId: 0
+    });
+    const baselineMetricsBytes = canonicalMetricsBytes(baselineMetrics);
+    writeFileSync(baselineMetricsPath, baselineMetricsBytes);
+    writeFileSync(baselineEvaluationPath, `${JSON.stringify({
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      runId: "B01-A0",
+      blockId: "B01",
+      armId: 0,
+      attemptId: null,
+      snapshotPath: baselineSnapshotPath,
+      snapshotSha256: createHash("sha256").update(baseline.bytes).digest("hex"),
+      metricsPath: baselineMetricsPath,
+      metricsSha256: createHash("sha256").update(baselineMetricsBytes).digest("hex"),
+      executionSha256: createHash("sha256")
+        .update(readFileSync(baselineExecutionPath)).digest("hex"),
+      localEvidenceSha256: null,
+      modelPreflightSha256: null,
+      createdAt: "2026-07-31T08:00:00.000Z"
+    }, null, 2)}\n`);
+
+    const aiSnapshot = {
+      formatVersion: 1,
+      generator: { armId: 2, blockId: "B01", seed: 1812433253 },
+      adapter: {
+        version: 1,
+        requestHash: readRootJson("design", "corpus-request.json").requestHash,
+        sourceRoot: "corpus-staging/",
+        successfulWrites: 0,
+        toolErrorCount: 0,
+        manifest: null
+      },
+      cases: [],
+      toolErrors: []
+    };
+    const aiSnapshotBytes = canonicalStagingBytes(aiSnapshot);
+    const aiSnapshotPath = resolve(temporary, "B01-A2.json");
+    const aiMetricsPath = resolve(temporary, "B01-A2.metrics.json");
+    const aiEvaluationPath = resolve(temporary, "B01-A2.evaluation.json");
+    writeFileSync(aiSnapshotPath, aiSnapshotBytes);
+    const aiMetrics = deriveMetricsArtifact(aiSnapshotBytes, {
+      runId: "B01-A2",
+      blockId: "B01",
+      armId: 2
+    });
+    const aiMetricsBytes = canonicalMetricsBytes(aiMetrics);
+    writeFileSync(aiMetricsPath, aiMetricsBytes);
+    const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+    const fixtureEvidenceBytes = readFileSync(resolve(fixtureRoot, "expected.json"));
+    const fixturePreflightBytes = readFileSync(resolve(fixtureRoot, "model-preflight.json"));
+    const aiEvaluation = {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      runId: "B01-A2",
+      blockId: "B01",
+      armId: 2,
+      attemptId: "B01-A2-attempt-1",
+      snapshotPath: aiSnapshotPath,
+      snapshotSha256: createHash("sha256").update(aiSnapshotBytes).digest("hex"),
+      metricsPath: aiMetricsPath,
+      metricsSha256: createHash("sha256").update(aiMetricsBytes).digest("hex"),
+      executionSha256: null,
+      localEvidenceSha256: createHash("sha256").update(fixtureEvidenceBytes).digest("hex"),
+      modelPreflightSha256: createHash("sha256").update(fixturePreflightBytes).digest("hex"),
+      createdAt: "2026-07-31T08:00:00.000Z"
+    };
+    writeFileSync(aiEvaluationPath, `${JSON.stringify(aiEvaluation, null, 2)}\n`);
+    const definitions = {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      runs: [
+        {
+          runId: "B01-A0",
+          blockId: "B01",
+          armId: 0,
+          snapshotPath: baselineSnapshotPath,
+          metricsPath: baselineMetricsPath,
+          executionPath: baselineExecutionPath,
+          localEvidencePath: null,
+          modelPreflightPath: null,
+          candidateRoot: null,
+          evaluationPath: baselineEvaluationPath
+        },
+        {
+          runId: "B01-A2",
+          blockId: "B01",
+          armId: 2,
+          snapshotPath: aiSnapshotPath,
+          metricsPath: aiMetricsPath,
+          executionPath: null,
+          localEvidencePath: resolve(fixtureRoot, "expected.json"),
+          modelPreflightPath: resolve(fixtureRoot, "model-preflight.json"),
+          candidateRoot: ensureEvidenceCandidate(),
+          evaluationPath: aiEvaluationPath
+        }
+      ]
+    };
+    const runs = buildDescriptiveRuns(definitions, temporary);
+    assert.equal(runs.length, 2);
+    assert.equal(runs.find((run) => run.armId === 0).endpoints.totalModelTokens, 0);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.totalModelTokens, 1850);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.modelEvidenceAvailable, 1);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 0);
+
+    const tampered = structuredClone(aiMetrics);
+    tampered.metrics.promotion.promotionRate = -1;
+    writeFileSync(aiMetricsPath, canonicalMetricsBytes(tampered));
+    assert.throws(() => buildDescriptiveRuns(definitions, temporary),
+      /Evaluation record|not exact deterministic output/);
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
 });
 
 test("deterministic runner executes every frozen baseline block", () => {
@@ -503,13 +637,16 @@ test("deterministic runner executes every frozen baseline block", () => {
 
 test("captured local evidence is reproducible, fail-closed, and model-bound", () => {
   const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+  const candidateRoot = ensureEvidenceCandidate();
   const eventsPath = resolve(fixtureRoot, "captured.events.jsonl");
   const usagePath = resolve(fixtureRoot, "captured.usage.json");
+  const sessionCreationPath = resolve(fixtureRoot, "session-creation.json");
   const candidateBoundaryPath = resolve(fixtureRoot, "candidate-boundary.json");
   const runManifestPath = resolve(fixtureRoot, "run-manifest.json");
   const runAttemptPath = resolve(fixtureRoot, "attempt-1.json");
   const eventsBytes = readFileSync(eventsPath);
   const usageBytes = readFileSync(usagePath);
+  const sessionCreationBytes = readFileSync(sessionCreationPath);
   const candidateBoundaryBytes = readFileSync(candidateBoundaryPath);
   const runManifestBytes = readFileSync(runManifestPath);
   const runAttemptBytes = readFileSync(runAttemptPath);
@@ -519,8 +656,11 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     eventsPath,
     usageBytes,
     usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
+    candidateRoot,
     runManifest: manifest,
     runManifestBytes,
     runManifestPath,
@@ -530,7 +670,10 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
   });
 
   assert.deepEqual(evidence, readRootJson("fixtures", "local-evidence", "expected.json"));
-  assert.deepEqual(validateLocalEvidence(evidence, { artifactRoot: fixtureRoot }), []);
+  assert.deepEqual(validateLocalEvidence(evidence, {
+    artifactRoot: fixtureRoot,
+    candidateRoot
+  }), []);
   assert.equal(evidence.trust.signed, false);
   assert.equal(evidence.trust.complianceProof, false);
   assert.equal(evidence.availability.fields.premiumRequests.status, "unavailable");
@@ -556,8 +699,11 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     eventsPath,
     usageBytes: mismatchBytes,
     usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
+    candidateRoot,
     runManifest: manifest,
     runManifestBytes,
     runManifestPath,
@@ -604,8 +750,11 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     eventsPath,
     usageBytes,
     usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
+    candidateRoot,
     runManifest: manifest,
     runManifestBytes,
     runManifestPath,
@@ -626,8 +775,11 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     eventsPath,
     usageBytes,
     usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
     candidateBoundaryBytes,
     candidateBoundaryPath,
+    candidateRoot,
     runManifest: wrongBoundaryManifest,
     runManifestBytes: Buffer.from(`${JSON.stringify(wrongBoundaryManifest, null, 2)}\n`),
     runManifestPath,
@@ -639,6 +791,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
 
 test("local evaluator adapter snapshots only after passing model preflight", () => {
   const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+  const candidateRoot = ensureEvidenceCandidate();
   const evidenceBytes = readFileSync(resolve(fixtureRoot, "expected.json"));
   const evidence = JSON.parse(evidenceBytes);
   const preflight = preflightLocalModel(evidence, evidenceBytes);
@@ -654,6 +807,17 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
       readFileSync(resolve(root, "design", "corpus-request.json")));
     writeFileSync(resolve(stagingRoot, "scenarios", "scenario-001.json"),
       `${JSON.stringify(generateBaseline().cases[0].input, null, 2)}\n`);
+    assert.throws(() => snapshotLocalCorpusStaging({
+      corpusContractRoot: contractRoot,
+      corpusStagingRoot: stagingRoot,
+      localEvidence: evidence,
+      localEvidenceBytes: evidenceBytes,
+      modelPreflight: preflight,
+      sourceArtifactRoot: fixtureRoot,
+      sourceCandidateRoot: candidateRoot,
+      outputPath
+    }), /local successful writes/);
+    rmSync(resolve(stagingRoot, "scenarios", "scenario-001.json"));
     const snapshot = snapshotLocalCorpusStaging({
       corpusContractRoot: contractRoot,
       corpusStagingRoot: stagingRoot,
@@ -661,12 +825,13 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
       localEvidenceBytes: evidenceBytes,
       modelPreflight: preflight,
       sourceArtifactRoot: fixtureRoot,
+      sourceCandidateRoot: candidateRoot,
       outputPath
     });
     assert.equal(snapshot.evidenceTier, "descriptive-local-v1");
-    assert.equal(snapshot.submittedCases, 1);
+    assert.equal(snapshot.submittedCases, 0);
     assert.equal(snapshot.staging.generator.armId, 2);
-    assert.equal(snapshot.staging.adapter.successfulWrites, 1);
+    assert.equal(snapshot.staging.adapter.successfulWrites, 0);
     assert.deepEqual(snapshot.bytes, canonicalStagingBytes(snapshot.staging));
 
     const retryRequired = { ...preflight, status: "retry-required", retryEligible: true };
@@ -677,6 +842,7 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
       localEvidenceBytes: evidenceBytes,
       modelPreflight: retryRequired,
       sourceArtifactRoot: fixtureRoot,
+      sourceCandidateRoot: candidateRoot,
       outputPath: resolve(temporary, "snapshot", "rejected.json")
     }), /passing pre-outcome model evidence/);
   } finally {
@@ -722,6 +888,7 @@ test("local usage export and execution record schemas reject cross-session ambig
         terminalCommit: "a".repeat(40),
         candidateSnapshotSha256: "b".repeat(64),
         sharedTaskSha256: "c".repeat(64),
+        kickoffSha256: "d".repeat(64),
         wallLimitMs: 1800000,
         toolCallLimit: 120,
         modelTokenLimit: 100000
@@ -1222,7 +1389,7 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
           blockId: "B01",
           armId: 0,
           role: "baseline",
-          sequence: 5
+          sequence: 6
         },
         {
           eventId: "baseline-completed",
@@ -2253,7 +2420,7 @@ test("candidate materialization excludes evaluator assets in an external reposit
     assert.throws(() => materializeCandidate(
       resolve(root, "..", "semantic-candidate-sibling")
     ), /outside the source repository/);
-    assert.equal(materializeCandidate(repositorySibling).candidateRoot, repositorySibling);
+    assert.equal(materializeCandidate(repositorySibling).materializedRoot, repositorySibling);
     assert.throws(() => materializeCandidate(resolve(repositoryRoot, "..")),
       /cannot contain the source repository/);
 
