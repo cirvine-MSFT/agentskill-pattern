@@ -32,7 +32,7 @@ export function taskBytesForSeed(seed) {
   if (!Number.isSafeInteger(seed)) throw new Error("A safe-integer block seed is required");
   return Buffer.concat([
     sharedTaskBytes,
-    Buffer.from(`\nBenchmark block seed: ${seed}\n`, "utf8")
+    Buffer.from(`\nBenchmark block seed: ${seed}`, "utf8")
   ]);
 }
 

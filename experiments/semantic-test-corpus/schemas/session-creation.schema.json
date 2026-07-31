@@ -41,7 +41,8 @@
       "type": "object",
       "required": [
         "project_session_id", "project_id", "execution_location",
-        "kickoff_mode", "kickoff_model"
+        "kickoff_mode", "kickoff_model", "kickoff_consumed",
+        "kickoff_prompt_sha256"
       ],
       "additionalProperties": false,
       "properties": {
@@ -50,6 +51,8 @@
         "execution_location": {"const": "local"},
         "kickoff_mode": {"const": "autopilot"},
         "kickoff_model": {"type": "string", "minLength": 1}
+        ,"kickoff_consumed": {"const": true}
+        ,"kickoff_prompt_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       }
     }
   }

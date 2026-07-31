@@ -1,7 +1,30 @@
 {
   "protocolId": "semantic-test-corpus-execution-v2",
-  "version": 1,
-  "policy": "Point estimates and within-block values only; no p-values, intervals, or noninferiority claims.",
+  "version": 2,
+  "policy": "Point estimates and all twelve within-block values only; no inferential labels or claims.",
+  "targetArmDecisionRule": {
+    "armId": 5,
+    "label": "descriptive practical point-estimate signal",
+    "qualityFloorsAgainstArm": 0,
+    "qualityFloors": {
+      "promotionRateDifferenceMinimum": -0.05,
+      "pathCoverageDifferenceMinimum": -0.03,
+      "mutantKillRateDifferenceMinimum": -0.05
+    },
+    "positiveEfficiencySignalAgainstArm": 1,
+    "positiveEfficiencySignalRequires": {
+      "allQualityFloors": true,
+      "parentCumulativeInputTokensRatioMaximum": 0.85,
+      "totalNanoAiuRatioMaximum": 0.9,
+      "totalAiCreditsRatioMaximum": 0.9
+    },
+    "requiredCostReporting": ["totalNanoAiu", "totalAiCredits"],
+    "secondaryWallTarget": {
+      "endpoint": "wallMs",
+      "ratioMaximum": 0.8,
+      "requiredForPositiveEfficiencySignal": false
+    }
+  },
   "contrasts": [
     {"id": "script-vs-gpt-inline", "label": "GPT inline - script", "coefficients": {"0": -1, "1": 1}},
     {"id": "script-vs-gpt-gpt", "label": "GPT->GPT - script", "coefficients": {"0": -1, "2": 1}},

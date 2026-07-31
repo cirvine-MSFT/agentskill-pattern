@@ -20,15 +20,41 @@ if (args[0] === "benchmark-capabilities") {
     promptFile: true,
     parentModel: true,
     customAgent: true,
-    workerModelOverride: true,
+    fixedModelCustomAgent: true,
     rawEvents: true,
-    usageExport: true
+    usageExport: true,
+    preSessionFailureReceipt: true,
+    zeroUsageReceipt: true
+  })}\n`);
+  process.exit(0);
+}
+
+if (args[0] === "benchmark-preflight-arm5") {
+  process.stdout.write(`${JSON.stringify({
+    atomicKickoff: args.includes("--atomic-kickoff"),
+    selectedAgent: value("--agent"),
+    observedWorkerModel: value("--worker-model"),
+    workerSessionId: "fake-arm5-preflight-worker"
   })}\n`);
   process.exit(0);
 }
 
 if (args[0] !== "create-session") throw new Error("Unsupported fake CLI command");
 if (process.env.FAKE_COPILOT_CREATE_FAILURE === "1") {
+  process.stdout.write(`${JSON.stringify({
+    receiptKind: "authoritative-pre-session-failure",
+    receiptId: "fixture-create-failure",
+    phase: "create_session",
+    kickoffStarted: false,
+    sessionCreated: false,
+    usage: {
+      aiCredits: 0,
+      premiumRequests: null,
+      nanoAiu: 0,
+      modelTokens: 0,
+      completionCount: 0
+    }
+  })}\n`);
   process.stderr.write("fixture pre-session creation failure\n");
   process.exit(23);
 }
@@ -39,12 +65,13 @@ const taskPath = resolve(value("--task-file"));
 const eventsPath = resolve(value("--events-out"));
 const usagePath = resolve(value("--usage-out"));
 const parentModel = value("--model");
-const workerModel = value("--worker-model") ?? parentModel;
 const projectId = value("--project-id");
 const armId = Number(runId.slice(-1));
+const workerModel = armId === 5 ? "claude-haiku-4.5" : parentModel;
 const cliSessionId = `fake-cli-${runId}`;
 const appSessionId = `fake-app-${runId}`;
 const workerCallId = `fake-worker-${runId}`;
+const agentName = armId === 5 ? "semantic-test-corpus-haiku" : "semantic-test-corpus";
 const terminal = "corpus-staging - 0 scenarios - FAILURE: SCHEMA_ERROR";
 const taskPrompt = readFileSync(taskPath, "utf8");
 const start = Date.parse("2026-07-31T21:00:00.000Z") + Number(value("--global-order")) * 60_000;
@@ -66,6 +93,13 @@ const events = [
     data: { turnId: "0", model: parentModel },
     id: `${runId}-turn-start`,
     timestamp: timestamp(1000),
+    parentId: `${runId}-session`
+  },
+  {
+    type: "user.message",
+    data: { content: readFileSync(promptPath, "utf8") },
+    id: `${runId}-kickoff`,
+    timestamp: timestamp(500),
     parentId: `${runId}-session`
   },
   {
@@ -102,10 +136,9 @@ const events = [
       toolCallId: workerCallId,
       toolName: "task",
       arguments: {
-        agent_type: "semantic-test-corpus",
+        agent_type: agentName,
         mode: "sync",
-        prompt: taskPrompt,
-        ...(armId === 5 ? { model: workerModel } : {})
+        prompt: taskPrompt
       },
       model: parentModel
     },
@@ -116,7 +149,7 @@ const events = [
     type: "subagent.started",
     data: {
       toolCallId: workerCallId,
-      agentName: "semantic-test-corpus",
+      agentName,
       model: workerModel
     },
     agentId: workerCallId,
@@ -183,7 +216,7 @@ const events = [
     type: "subagent.completed",
     data: {
       toolCallId: workerCallId,
-      agentName: "semantic-test-corpus",
+      agentName,
       model: workerModel,
       result: terminal
     },
@@ -263,6 +296,7 @@ process.stdout.write(`${JSON.stringify({
   started_at: timestamp(0),
   ended_at: timestamp(2200),
   terminal_return: terminal,
+  kickoff_consumed: true,
   prompt_sha256_echo: value("--prompt-sha256"),
   prompt_bytes: readFileSync(promptPath).length
 })}\n`);

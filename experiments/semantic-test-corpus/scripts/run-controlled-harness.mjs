@@ -7,6 +7,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   renameSync,
   statSync,
   writeFileSync
@@ -119,11 +120,133 @@ function storeStart(indexPath, index, capture) {
   writeFileSync(pending, jsonBytes(next), { flag: "wx" });
   if (existsSync(indexPath)) chmodSync(indexPath, 0o666);
   renameSync(pending, indexPath);
-  return next;
+  let finalization = null;
+  if (next.captures.length === 72) {
+    const bytes = readFileSync(indexPath);
+    const shaPath = `${indexPath}.sha256`;
+    writeOnce(shaPath, Buffer.from(`${sha256(bytes)}\n`, "utf8"));
+    immutable(indexPath);
+    immutable(shaPath);
+    finalization = { indexPath, shaPath, sha256: sha256(bytes) };
+  }
+  return { index: next, finalization };
+}
+
+function reserveStart(plan) {
+  const path = `${plan.startIndexPath}.slot-${String(plan.globalOrder).padStart(2, "0")}.lock`;
+  writeOnce(path, jsonBytes({
+    protocolId: plan.protocolId,
+    runId: plan.runId,
+    globalOrder: plan.globalOrder,
+    reservedAt: new Date().toISOString()
+  }));
+  immutable(path);
+  return path;
+}
+
+function releaseReservation(path) {
+  chmodSync(path, 0o666);
+  rmSync(path);
+}
+
+function nextRecordedAt(index) {
+  const previous = Date.parse(index.captures.at(-1)?.recordedAt ?? "");
+  const now = Date.now();
+  return new Date(Number.isFinite(previous) ? Math.max(now, previous + 1) : now).toISOString();
+}
+
+function orderCapture(plan, sourcePath, sourceBytes, disposition, recordedAt) {
+  return {
+    runId: plan.runId,
+    blockId: plan.blockId,
+    armId: plan.armId,
+    sequence: plan.globalOrder,
+    disposition,
+    recordedAt,
+    startedAt: disposition === "started" ? recordedAt : null,
+    sourcePath: relative(dirname(plan.startIndexPath), sourcePath).replaceAll("\\", "/"),
+    sourceSha256: sha256(sourceBytes)
+  };
 }
 
 function immutable(path) {
   chmodSync(path, 0o444);
+}
+
+function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes) {
+  const disposition = {
+    formatVersion: 1,
+    protocolId: contract.protocolId,
+    runId: plan.runId,
+    blockId: plan.blockId,
+    armId: plan.armId,
+    status,
+    reason,
+    sourcePath: relative(plan.artifactRoot, sourcePath).replaceAll("\\", "/"),
+    sourceSha256: sha256(sourceBytes)
+  };
+  const dispositionPath = resolve(plan.artifactRoot, "unit-disposition.json");
+  writeOnce(dispositionPath, jsonBytes(disposition));
+  immutable(dispositionPath);
+  return { disposition, dispositionPath };
+}
+
+function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reason) {
+  const current = existsSync(plan.startIndexPath)
+    ? JSON.parse(readFileSync(plan.startIndexPath, "utf8"))
+    : startIndex;
+  if (current.captures.length === plan.globalOrder - 1) {
+    storeStart(
+      plan.startIndexPath,
+      current,
+      orderCapture(
+        plan,
+        lifecyclePath,
+        lifecycleBytes,
+        "started",
+        JSON.parse(lifecycleBytes.toString("utf8")).recordedAt
+      )
+    );
+  } else if (current.captures.at(-1)?.runId !== plan.runId) {
+    throw new Error("Cannot preserve uncertain attempt because global order advanced unexpectedly");
+  }
+  const filesBeforeRecord = readdirSync(plan.artifactRoot)
+    .map((name) => resolve(plan.artifactRoot, name))
+    .filter((path) => statSync(path).isFile());
+  const uncertainty = {
+    formatVersion: 1,
+    protocolId: contract.protocolId,
+    runId: plan.runId,
+    blockId: plan.blockId,
+    armId: plan.armId,
+    status: "started-uncertain",
+    reason,
+    lifecycleSha256: sha256(lifecycleBytes),
+    preservedFiles: filesBeforeRecord.map((path) => {
+      const bytes = readFileSync(path);
+      return {
+        path: basename(path),
+        bytes: bytes.length,
+        sha256: sha256(bytes)
+      };
+    })
+  };
+  const uncertaintyPath = resolve(plan.artifactRoot, "uncertainty.json");
+  const uncertaintyBytes = jsonBytes(uncertainty);
+  if (!existsSync(uncertaintyPath)) writeOnce(uncertaintyPath, uncertaintyBytes);
+  const disposition = existsSync(resolve(plan.artifactRoot, "unit-disposition.json"))
+    ? null
+    : writeUnitDisposition(
+      plan, "unavailable", reason, uncertaintyPath, uncertaintyBytes
+    );
+  for (const path of [...filesBeforeRecord, uncertaintyPath]) immutable(path);
+  return {
+    status: "started-uncertain",
+    plan,
+    uncertainty,
+    uncertaintyPath,
+    ...disposition
+  };
 }
 
 export function buildHarnessPlan({
@@ -138,6 +261,14 @@ export function buildHarnessPlan({
   const planned = schedule.runs.find((run) => run.blockId === blockId && run.armId === armId);
   if (!planned) throw new Error("Run is not present in the frozen schedule");
   const arm = contract.arms.find((item) => item.id === armId);
+  const generatedTaskSha256 = taskSha256ForSeed(planned.seed);
+  const generatedKickoffSha256 = armId === 0
+    ? null
+    : kickoffSha256ForRun(armId, planned.seed);
+  if (planned.taskSha256 !== generatedTaskSha256
+    || planned.kickoffSha256 !== generatedKickoffSha256) {
+    throw new Error("Generated task/kickoff bytes differ from the frozen planned SHA-256");
+  }
   const kickoffPath = resolve(artifactRoot, "kickoff.txt");
   const args = armId === 0 ? [] : [
     "create-session",
@@ -146,16 +277,14 @@ export function buildHarnessPlan({
     "--mode", "autopilot",
     "--model", arm.model,
     "--prompt-file", kickoffPath,
-    "--prompt-sha256", kickoffSha256ForRun(armId, planned.seed),
+    "--prompt-sha256", planned.kickoffSha256,
     "--task-file", resolve(candidateRoot, contract.commonContract.taskArtifact),
     "--run-id", planned.runId,
     "--global-order", String(planned.globalOrder),
     "--candidate-commit", "<materialized-terminal-commit>",
     "--sandbox-config", resolve(candidateRoot, ".benchmark-runtime", "corpus-sandbox.json"),
     "--events-out", resolve(artifactRoot, "captured.events.jsonl"),
-    "--usage-out", resolve(artifactRoot, "captured.usage.json"),
-    ...(arm.delegated ? ["--agent", "semantic-test-corpus"] : []),
-    ...(armId === 5 ? ["--worker-model", arm.workerModelOverride] : [])
+    "--usage-out", resolve(artifactRoot, "captured.usage.json")
   ];
   return {
     protocolId: contract.protocolId,
@@ -165,6 +294,8 @@ export function buildHarnessPlan({
     seed: planned.seed,
     scheduleOrder: planned.order,
     globalOrder: planned.globalOrder,
+    taskSha256: planned.taskSha256,
+    kickoffSha256: planned.kickoffSha256,
     sourcePin,
     candidateRoot: resolve(candidateRoot),
     artifactRoot: resolve(artifactRoot),
@@ -179,14 +310,61 @@ export function runControlledHarness(options) {
   const arm = contract.arms.find((item) => item.id === plan.armId);
   const preflight = preflightExecution(options.cli, options.capturedAt);
   const armPreflight = preflight.arms.find((item) => item.armId === plan.armId);
-  if (armPreflight.status !== "available") {
-    return { status: "unavailable", plan, preflight, reasons: armPreflight.reasons };
-  }
   if (options.dryRun) return { status: "dry-run", plan, preflight };
   if (existsSync(plan.artifactRoot) && readdirSync(plan.artifactRoot).length > 0) {
     throw new Error("Artifact root must be absent or empty");
   }
   mkdirSync(plan.artifactRoot, { recursive: true });
+  const startIndex = nextStart(plan.startIndexPath, planned);
+  const reservationPath = reserveStart(plan);
+  const preflightPath = resolve(plan.artifactRoot, "execution-preflight.json");
+  const preflightBytes = jsonBytes(preflight);
+  writeOnce(preflightPath, preflightBytes);
+  immutable(preflightPath);
+  if (armPreflight.status !== "available") {
+    const recordedAt = nextRecordedAt(startIndex);
+    const unavailable = {
+      formatVersion: 1,
+      protocolId: contract.protocolId,
+      runId: plan.runId,
+      blockId: plan.blockId,
+      armId: plan.armId,
+      seed: plan.seed,
+      scheduleOrder: plan.scheduleOrder,
+      globalOrder: plan.globalOrder,
+      disposition: "unavailable",
+      recordedAt,
+      startedAt: null,
+      preflightSha256: sha256(preflightBytes),
+      reasons: armPreflight.reasons
+    };
+    const unavailablePath = resolve(plan.artifactRoot, "order-record.json");
+    const unavailableBytes = jsonBytes(unavailable);
+    writeOnce(unavailablePath, unavailableBytes);
+    immutable(unavailablePath);
+    const disposition = writeUnitDisposition(
+      plan,
+      "unavailable",
+      armPreflight.reasons.join("; "),
+      unavailablePath,
+      unavailableBytes
+    );
+    const stored = storeStart(
+      plan.startIndexPath,
+      startIndex,
+      orderCapture(plan, unavailablePath, unavailableBytes, "unavailable", recordedAt)
+    );
+    releaseReservation(reservationPath);
+    return {
+      status: "unavailable",
+      plan,
+      preflight,
+      reasons: armPreflight.reasons,
+      orderRecord: unavailable,
+      ...disposition,
+      startFinalization: stored.finalization
+    };
+  }
   const preSessionFailures = [];
   if (options.preSessionFailurePath) {
     const sourceBytes = readFileSync(resolve(options.preSessionFailurePath));
@@ -205,15 +383,43 @@ export function runControlledHarness(options) {
     immutable(target);
     preSessionFailures.push({ path: target, bytes: sourceBytes, record });
   }
-  const startIndex = nextStart(plan.startIndexPath, planned);
   if (plan.armId === 0) {
-    const startedAt = new Date().toISOString();
-    const result = runDeterministicBlock(plan.blockId);
+    const recordedAt = nextRecordedAt(startIndex);
+    const lifecycle = {
+      formatVersion: 1,
+      protocolId: contract.protocolId,
+      runId: plan.runId,
+      blockId: plan.blockId,
+      armId: 0,
+      seed: plan.seed,
+      scheduleOrder: plan.scheduleOrder,
+      globalOrder: plan.globalOrder,
+      disposition: "started",
+      recordedAt,
+      startedAt: recordedAt,
+      taskSha256: plan.taskSha256,
+      kickoffSha256: null
+    };
+    const lifecyclePath = resolve(plan.artifactRoot, "lifecycle-start.json");
+    const lifecycleBytes = jsonBytes(lifecycle);
+    writeOnce(lifecyclePath, lifecycleBytes);
+    immutable(lifecyclePath);
+    const startCapture = orderCapture(
+      plan, lifecyclePath, lifecycleBytes, "started", recordedAt
+    );
+    const startStored = storeStart(plan.startIndexPath, startIndex, startCapture);
+    releaseReservation(reservationPath);
+    const result = runDeterministicBlock(plan.blockId, { startEvidence: lifecycle });
     const snapshotPath = resolve(plan.artifactRoot, "staging.json");
     const executionPath = resolve(plan.artifactRoot, "execution.json");
+    const completionPath = resolve(plan.artifactRoot, "lifecycle-end.json");
     const metricsPath = resolve(plan.artifactRoot, "metrics.json");
     const evaluationPath = resolve(plan.artifactRoot, "evaluation.json");
     const executionBytes = jsonBytes(result.execution);
+    if (!result.startBytes.equals(lifecycleBytes)) {
+      throw new Error("Deterministic runner start evidence differs from durable lifecycle marker");
+    }
+    writeOnce(completionPath, result.endBytes);
     const metrics = deriveMetricsArtifact(result.bytes, {
       runId: plan.runId,
       blockId: plan.blockId,
@@ -242,27 +448,14 @@ export function runControlledHarness(options) {
       [metricsPath, metricsBytes],
       [evaluationPath, jsonBytes(evaluation)]
     ]) writeOnce(path, bytes);
-    const baselineStartPath = resolve(plan.artifactRoot, "baseline-start.json");
-    const baselineStartBytes = jsonBytes({
-      runId: plan.runId,
-      sequence: plan.globalOrder,
-      startedAt
-    });
-    writeOnce(baselineStartPath, baselineStartBytes);
-    const startCapture = {
-      runId: plan.runId,
-      blockId: plan.blockId,
-      armId: 0,
-      sequence: plan.globalOrder,
-      startedAt,
-      sourcePath: relative(dirname(plan.startIndexPath), baselineStartPath).replaceAll("\\", "/"),
-      sourceSha256: sha256(baselineStartBytes)
-    };
     const capturePath = resolve(plan.artifactRoot, "start-capture.json");
     writeOnce(capturePath, jsonBytes(startCapture));
-    storeStart(plan.startIndexPath, startIndex, startCapture);
     const files = [
-      snapshotPath, executionPath, metricsPath, evaluationPath, baselineStartPath, capturePath
+      preflightPath, lifecyclePath, completionPath, snapshotPath, executionPath,
+      metricsPath, evaluationPath, capturePath,
+      ...(startStored.finalization
+        ? [startStored.finalization.indexPath, startStored.finalization.shaPath]
+        : [])
     ];
     const provenance = {
       formatVersion: 1,
@@ -287,13 +480,47 @@ export function runControlledHarness(options) {
   const boundary = materializeCandidate(plan.candidateRoot, { blockId: plan.blockId });
   const sandbox = createSandbox(plan.candidateRoot);
   const kickoffBytes = kickoffBytesForRun(plan.armId, plan.seed);
+  const taskBytes = readFileSync(resolve(plan.candidateRoot, contract.commonContract.taskArtifact));
+  if (sha256(taskBytes) !== plan.taskSha256
+    || sha256(kickoffBytes) !== plan.kickoffSha256
+    || boundary.taskSha256 !== plan.taskSha256) {
+    throw new Error("Materialized task/kickoff bytes differ from the frozen planned SHA-256");
+  }
   const kickoffPath = resolve(plan.artifactRoot, "kickoff.txt");
   writeOnce(kickoffPath, kickoffBytes);
+  immutable(kickoffPath);
   const eventsPath = resolve(plan.artifactRoot, "captured.events.jsonl");
   const usagePath = resolve(plan.artifactRoot, "captured.usage.json");
+  const recordedAt = nextRecordedAt(startIndex);
+  const lifecycle = {
+    formatVersion: 1,
+    protocolId: contract.protocolId,
+    runId: plan.runId,
+    blockId: plan.blockId,
+    armId: plan.armId,
+    seed: plan.seed,
+    scheduleOrder: plan.scheduleOrder,
+    globalOrder: plan.globalOrder,
+    disposition: "started",
+    recordedAt,
+    startedAt: recordedAt,
+    state: "atomic-kickoff-planned",
+    taskSha256: plan.taskSha256,
+    kickoffSha256: plan.kickoffSha256,
+    candidateSnapshotSha256: boundary.boundarySha256,
+    terminalCommit: boundary.terminalCommit
+  };
+  const lifecyclePath = resolve(plan.artifactRoot, "lifecycle-start.json");
+  const lifecycleBytes = jsonBytes(lifecycle);
+  writeOnce(lifecyclePath, lifecycleBytes);
+  immutable(lifecyclePath);
+  const plannedStartCapture = orderCapture(
+    plan, lifecyclePath, lifecycleBytes, "started", recordedAt
+  );
   const commandArgs = plan.atomicCommand.args.map((item) =>
     item === "<materialized-terminal-commit>" ? boundary.terminalCommit : item);
   const [executable, ...prefix] = commandParts(options.cli);
+  const completeAiRun = () => {
   const execution = spawnSync(executable, [...prefix, ...commandArgs], {
     cwd: plan.candidateRoot,
     encoding: "utf8",
@@ -303,36 +530,92 @@ export function runControlledHarness(options) {
       SEMANTIC_CORPUS_SANDBOX_CONFIG: sandbox.configPath,
       SEMANTIC_CORPUS_SANDBOX_TOKEN: sandbox.token
     },
-    maxBuffer: 64 * 1024 * 1024
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: contract.commonContract.wallClockMinutes * 60_000,
+    killSignal: "SIGTERM"
   });
+  const stdoutPath = resolve(plan.artifactRoot, "process-stdout.txt");
+  const stderrPath = resolve(plan.artifactRoot, "process-stderr.txt");
+  writeOnce(stdoutPath, Buffer.from(execution.stdout ?? "", "utf8"));
+  writeOnce(stderrPath, Buffer.from(execution.stderr ?? "", "utf8"));
+  if (execution.error && execution.status === null) throw execution.error;
   if (execution.status !== 0) {
-    if (preSessionFailures.length > 0) {
-      throw new Error("The single permitted pre-session retry also failed");
-    }
     if (existsSync(eventsPath) || existsSync(usagePath)) {
-      throw new Error("Failed create-session emitted run evidence; it is not a pre-session failure");
+      throw new Error("Failed create-session emitted run evidence after the durable kickoff marker");
     }
+    let receipt;
+    try {
+      receipt = JSON.parse(execution.stdout);
+    } catch {
+      throw new Error("Create-session failure lacks an authoritative failure receipt");
+    }
+    if (!preflight.capabilities.preSessionFailureReceipt
+      || !preflight.capabilities.zeroUsageReceipt
+      || receipt.receiptKind !== "authoritative-pre-session-failure"
+      || receipt.kickoffStarted !== false
+      || receipt.sessionCreated !== false
+      || receipt.usage?.modelTokens !== 0
+      || receipt.usage?.completionCount !== 0) {
+      throw new Error("Create-session failure receipt does not prove pre-kickoff zero usage");
+    }
+    const receiptBytes = Buffer.from(execution.stdout, "utf8");
     const failure = {
       formatVersion: 1,
       protocolId: contract.protocolId,
-      failureId: `${plan.runId}-pre-session-1`,
+      failureId: `${plan.runId}-pre-session-${preSessionFailures.length + 1}`,
       runId: plan.runId,
       attemptedAt: new Date().toISOString(),
       phase: "create_session",
       kickoffStarted: false,
       sessionCreated: false,
       reason: execution.stderr.trim() || `create-session exited ${execution.status}`,
-      usage: {
-        aiCredits: 0,
-        premiumRequests: null,
-        nanoAiu: 0,
-        modelTokens: 0,
-        completionCount: 0
-      }
+      receipt: {
+        receiptKind: receipt.receiptKind,
+        receiptId: receipt.receiptId,
+        sha256: sha256(receiptBytes)
+      },
+      usage: receipt.usage
     };
     const failurePath = resolve(plan.artifactRoot, `${failure.failureId}.json`);
     writeOnce(failurePath, jsonBytes(failure));
-    immutable(failurePath);
+    for (const path of [stdoutPath, stderrPath, failurePath]) immutable(path);
+    if (preSessionFailures.length > 0) {
+      const unavailableRecordedAt = nextRecordedAt(startIndex);
+      const unavailable = {
+        formatVersion: 1,
+        protocolId: contract.protocolId,
+        runId: plan.runId,
+        blockId: plan.blockId,
+        armId: plan.armId,
+        disposition: "unavailable",
+        recordedAt: unavailableRecordedAt,
+        startedAt: null,
+        reason: "single positive pre-session retry was exhausted",
+        failures: [...preSessionFailures.map((item) => basename(item.path)), basename(failurePath)]
+      };
+      const unavailablePath = resolve(plan.artifactRoot, "order-record.json");
+      const unavailableBytes = jsonBytes(unavailable);
+      writeOnce(unavailablePath, unavailableBytes);
+      immutable(unavailablePath);
+      const stored = storeStart(
+        plan.startIndexPath,
+        startIndex,
+        orderCapture(
+          plan, unavailablePath, unavailableBytes, "unavailable", unavailableRecordedAt
+        )
+      );
+      releaseReservation(reservationPath);
+      return {
+        status: "unavailable",
+        plan,
+        preflight,
+        failure,
+        orderRecord: unavailable,
+        ...disposition,
+        startFinalization: stored.finalization
+      };
+    }
+    releaseReservation(reservationPath);
     return {
       status: "pre-session-failure",
       plan,
@@ -349,17 +632,9 @@ export function runControlledHarness(options) {
     throw new Error("CLI response and captured session.start ID differ");
   }
   const capturePath = resolve(plan.artifactRoot, "start-capture.json");
-  const startCapture = {
-    runId: plan.runId,
-    blockId: plan.blockId,
-    armId: plan.armId,
-    sequence: plan.globalOrder,
-    startedAt: sessionStart.timestamp,
-    sourcePath: relative(dirname(plan.startIndexPath), eventsPath).replaceAll("\\", "/"),
-    sourceSha256: sha256(eventsBytes)
-  };
-  writeOnce(capturePath, jsonBytes(startCapture));
-  storeStart(plan.startIndexPath, startIndex, startCapture);
+  writeOnce(capturePath, jsonBytes(plannedStartCapture));
+  const startStored = storeStart(plan.startIndexPath, startIndex, plannedStartCapture);
+  releaseReservation(reservationPath);
 
   const boundaryPath = resolve(plan.artifactRoot, "candidate-boundary.json");
   const boundaryBytes = readFileSync(resolve(plan.candidateRoot, ".benchmark-boundary.json"));
@@ -387,7 +662,9 @@ export function runControlledHarness(options) {
       project_id: response.project_id,
       execution_location: response.execution_location,
       kickoff_mode: response.kickoff_mode,
-      kickoff_model: response.kickoff_model
+      kickoff_model: response.kickoff_model,
+      kickoff_consumed: response.kickoff_consumed === true,
+      kickoff_prompt_sha256: response.prompt_sha256_echo
     }
   };
   const sessionCreationPath = resolve(plan.artifactRoot, "session-creation.json");
@@ -494,7 +771,8 @@ export function runControlledHarness(options) {
       runManifestPath: manifestPath,
       runAttempt: attempt,
       runAttemptBytes: attemptBytes,
-      runAttemptPath: attemptPath
+      runAttemptPath: attemptPath,
+      preSessionFailures
     });
     evidenceBytes = jsonBytes(evidence);
     modelPreflight = preflightLocalModel(evidence, evidenceBytes);
@@ -510,9 +788,23 @@ export function runControlledHarness(options) {
 
   const produced = [
     ...preSessionFailures.map((item) => item.path),
-    kickoffPath, eventsPath, usagePath, capturePath, boundaryPath,
-    sessionCreationPath, attemptPath, manifestPath, evidencePath, modelPreflightPath
+    preflightPath, kickoffPath, lifecyclePath, stdoutPath, stderrPath,
+    eventsPath, usagePath, capturePath, boundaryPath,
+    sessionCreationPath, attemptPath, manifestPath, evidencePath, modelPreflightPath,
+    ...(startStored.finalization
+      ? [startStored.finalization.indexPath, startStored.finalization.shaPath]
+      : [])
   ];
+  const disposition = modelPreflight.status === "pass"
+    ? null
+    : writeUnitDisposition(
+      plan,
+      "excluded",
+      modelPreflight.reasons.join("; ") || "local model/mechanism preflight failed",
+      modelPreflightPath,
+      modelPreflightBytes
+    );
+  if (disposition) produced.push(disposition.dispositionPath);
   let evaluation = null;
   if (modelPreflight.status === "pass") {
     const snapshotPath = resolve(plan.artifactRoot, "staging.json");
@@ -585,8 +877,24 @@ export function runControlledHarness(options) {
     evidence,
     modelPreflight,
     evaluation,
-    provenance
+    provenance,
+    ...disposition
   };
+  };
+  try {
+    return completeAiRun();
+  } catch (error) {
+    return {
+      ...persistUncertain(
+        plan,
+        startIndex,
+        lifecyclePath,
+        lifecycleBytes,
+        error instanceof Error ? error.message : String(error)
+      ),
+      preflight
+    };
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

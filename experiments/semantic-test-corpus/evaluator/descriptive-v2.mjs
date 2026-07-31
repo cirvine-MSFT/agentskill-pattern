@@ -23,6 +23,9 @@ const deterministicSchema = JSON.parse(
 const evaluationSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "evaluation-record.schema.json"), "utf8")
 );
+const dispositionSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "unit-disposition.schema.json"), "utf8")
+);
 const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
 const contrastContract = JSON.parse(
   readFileSync(resolve(root, "design", "descriptive-contrasts.json"), "utf8")
@@ -87,6 +90,88 @@ function registeredContrasts(runs, endpointNames) {
       };
     })
   );
+}
+
+function targetDecisionRule(runs) {
+  const rule = contrastContract.targetArmDecisionRule;
+  const meanFor = (armId, endpoint) => point(
+    runs.filter((run) => run.armId === armId)
+      .map((run) => run.endpoints[endpoint])
+      .filter(Number.isFinite)
+  ).mean;
+  const difference = (endpoint, referenceArm) => {
+    const target = meanFor(rule.armId, endpoint);
+    const reference = meanFor(referenceArm, endpoint);
+    return Number.isFinite(target) && Number.isFinite(reference)
+      ? target - reference
+      : null;
+  };
+  const ratio = (endpoint, referenceArm) => {
+    const target = meanFor(rule.armId, endpoint);
+    const reference = meanFor(referenceArm, endpoint);
+    return Number.isFinite(target) && Number.isFinite(reference) && reference > 0
+      ? target / reference
+      : null;
+  };
+  const quality = {
+    promotionRateDifference: difference("promotionRate", rule.qualityFloorsAgainstArm),
+    pathCoverageDifference: difference("pathCoverage", rule.qualityFloorsAgainstArm),
+    mutantKillRateDifference: difference("mutantKillRate", rule.qualityFloorsAgainstArm)
+  };
+  const qualityPasses = {
+    promotionRate: Number.isFinite(quality.promotionRateDifference)
+      && quality.promotionRateDifference
+        >= rule.qualityFloors.promotionRateDifferenceMinimum,
+    pathCoverage: Number.isFinite(quality.pathCoverageDifference)
+      && quality.pathCoverageDifference
+        >= rule.qualityFloors.pathCoverageDifferenceMinimum,
+    mutantKillRate: Number.isFinite(quality.mutantKillRateDifference)
+      && quality.mutantKillRateDifference
+        >= rule.qualityFloors.mutantKillRateDifferenceMinimum
+  };
+  const efficiency = {
+    parentCumulativeInputTokensRatio: ratio(
+      "parentCumulativeInputTokens",
+      rule.positiveEfficiencySignalAgainstArm
+    ),
+    totalNanoAiuRatio: ratio(
+      "totalNanoAiu",
+      rule.positiveEfficiencySignalAgainstArm
+    ),
+    totalAiCreditsRatio: ratio(
+      "totalAiCredits",
+      rule.positiveEfficiencySignalAgainstArm
+    )
+  };
+  const efficiencyPasses = {
+    parentCumulativeInputTokens: Number.isFinite(efficiency.parentCumulativeInputTokensRatio)
+      && efficiency.parentCumulativeInputTokensRatio
+        <= rule.positiveEfficiencySignalRequires.parentCumulativeInputTokensRatioMaximum,
+    totalNanoAiu: Number.isFinite(efficiency.totalNanoAiuRatio)
+      && efficiency.totalNanoAiuRatio
+        <= rule.positiveEfficiencySignalRequires.totalNanoAiuRatioMaximum,
+    totalAiCredits: Number.isFinite(efficiency.totalAiCreditsRatio)
+      && efficiency.totalAiCreditsRatio
+        <= rule.positiveEfficiencySignalRequires.totalAiCreditsRatioMaximum
+  };
+  const wallRatio = ratio(
+    rule.secondaryWallTarget.endpoint,
+    rule.positiveEfficiencySignalAgainstArm
+  );
+  return {
+    preregisteredRule: rule,
+    quality,
+    qualityPasses,
+    efficiency,
+    efficiencyPasses,
+    positiveEfficiencySignal: Object.values(qualityPasses).every(Boolean)
+      && Object.values(efficiencyPasses).every(Boolean),
+    secondaryWallTarget: {
+      ratio: wallRatio,
+      met: Number.isFinite(wallRatio)
+        && wallRatio <= rule.secondaryWallTarget.ratioMaximum
+    }
+  };
 }
 
 function emptyEndpoints() {
@@ -174,9 +259,57 @@ export function buildDescriptiveRuns(input, artifactRoot) {
   if (errors.length > 0) {
     throw new Error(`Descriptive artifact manifest is invalid: ${errors[0].path} ${errors[0].message}`);
   }
+  const seenUnits = new Set();
+  const unitRecords = input.runs.map((definition) => {
+    const planned = schedule.runs.find((run) => run.runId === definition.runId);
+    if (!planned
+      || planned.blockId !== definition.blockId
+      || planned.armId !== definition.armId
+      || seenUnits.has(definition.runId)) {
+      throw new Error(`Unit identity is duplicate or differs from the frozen schedule: ${definition.runId}`);
+    }
+    seenUnits.add(definition.runId);
+    if (definition.status === "eligible") {
+      return {
+        runId: definition.runId,
+        blockId: definition.blockId,
+        armId: definition.armId,
+        status: "eligible",
+        reason: null
+      };
+    }
+    const dispositionPath = resolve(artifactRoot, definition.dispositionPath);
+    const dispositionBytes = readFileSync(dispositionPath);
+    const disposition = JSON.parse(dispositionBytes);
+    const dispositionErrors = validateJsonSchema(disposition, dispositionSchema, {
+      schemaDir: schemaRoot
+    });
+    const sourceBytes = dispositionErrors.length === 0
+      ? readFileSync(resolve(dirname(dispositionPath), disposition.sourcePath))
+      : Buffer.alloc(0);
+    if (dispositionErrors.length > 0
+      || disposition.runId !== definition.runId
+      || disposition.blockId !== definition.blockId
+      || disposition.armId !== definition.armId
+      || disposition.status !== definition.status
+      || disposition.sourceSha256 !== sha256(sourceBytes)) {
+      throw new Error(`Unavailable/excluded unit lacks exact evidence binding: ${definition.runId}`);
+    }
+    return {
+      runId: definition.runId,
+      blockId: definition.blockId,
+      armId: definition.armId,
+      status: definition.status,
+      reason: disposition.reason
+    };
+  });
+  if (seenUnits.size !== schedule.runs.length) {
+    throw new Error("Exactly 72 unique frozen unit records are required");
+  }
   const appSessions = new Set();
   const cliSessions = new Set();
-  const runs = input.runs.map((definition) => {
+  const runs = input.runs.filter((definition) => definition.status === "eligible")
+    .map((definition) => {
     const planned = schedule.runs.find((run) => run.runId === definition.runId);
     if (!planned
       || planned.blockId !== definition.blockId
@@ -215,14 +348,37 @@ export function buildDescriptiveRuns(input, artifactRoot) {
     if (definition.armId === 0) {
       const executionBytes = readFileSync(resolve(artifactRoot, definition.executionPath));
       const execution = JSON.parse(executionBytes);
+      const startBytes = readFileSync(resolve(artifactRoot, definition.startEvidencePath));
+      const endBytes = readFileSync(resolve(artifactRoot, definition.endEvidencePath));
+      const startEvidence = JSON.parse(startBytes);
+      const endEvidence = JSON.parse(endBytes);
       const executionErrors = validateJsonSchema(execution, deterministicSchema, {
         schemaDir: schemaRoot
       });
       if (executionErrors.length > 0
         || execution.runId !== definition.runId
         || execution.blockId !== definition.blockId
+        || execution.armId !== planned.armId
+        || execution.seed !== planned.seed
+        || execution.scheduleOrder !== planned.order
+        || execution.globalOrder !== planned.globalOrder
         || evaluation.executionSha256 !== sha256(executionBytes)
         || execution.stagingSha256 !== metrics.snapshotSha256
+        || execution.startEvidenceSha256 !== sha256(startBytes)
+        || execution.endEvidenceSha256 !== sha256(endBytes)
+        || startEvidence.runId !== planned.runId
+        || startEvidence.blockId !== planned.blockId
+        || startEvidence.armId !== planned.armId
+        || startEvidence.seed !== planned.seed
+        || startEvidence.scheduleOrder !== planned.order
+        || startEvidence.globalOrder !== planned.globalOrder
+        || startEvidence.startedAt !== execution.startedAt
+        || endEvidence.runId !== planned.runId
+        || endEvidence.blockId !== planned.blockId
+        || endEvidence.armId !== planned.armId
+        || endEvidence.endedAt !== execution.endedAt
+        || execution.wallMs !== Date.parse(endEvidence.endedAt)
+          - Date.parse(startEvidence.startedAt)
         || !canonicalStagingBytes(JSON.parse(snapshotBytes)).equals(snapshotBytes)) {
         throw new Error(`Deterministic execution is not bound to its exact snapshot: ${definition.runId}; ${JSON.stringify({
           executionErrors,
@@ -242,6 +398,9 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         parentAiCredits: 0,
         workerAiCredits: 0,
         totalAiCredits: 0,
+        parentPremiumRequests: 0,
+        workerPremiumRequests: 0,
+        totalPremiumRequests: 0,
         parentNanoAiu: 0,
         workerNanoAiu: 0,
         totalNanoAiu: 0,
@@ -266,11 +425,33 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         parentCompletionCount: 0,
         workerCompletionCount: 0,
         totalCompletionCount: 0,
+        parentReasoningTokens: 0,
+        workerReasoningTokens: 0,
+        totalReasoningTokens: 0,
+        parentRequestMultiplier: 0,
+        workerRequestMultiplier: 0,
+        totalRequestMultiplier: 0,
+        parentDurationMs: 0,
+        workerDurationMs: 0,
+        totalDurationMs: 0,
+        parentMeanTimeToFirstTokenMs: 0,
+        workerMeanTimeToFirstTokenMs: 0,
+        totalMeanTimeToFirstTokenMs: 0,
+        parentMeanInterTokenLatencyMs: 0,
+        workerMeanInterTokenLatencyMs: 0,
+        totalMeanInterTokenLatencyMs: 0,
+        operationalTotalAiCredits: 0,
+        operationalTotalNanoAiu: 0,
+        operationalTotalModelTokens: 0,
+        operationalTotalCompletionCount: 0,
         parentCumulativeInputTokens: 0,
         parentPeakInputTokens: 0,
+        toolSchemaCount: 0,
         toolCallCount: 0,
         toolResultCount: 0,
         toolResultBytes: 0,
+        compactReturnBytes: 0,
+        compactionCount: 0,
         wallMs: execution.wallMs,
         parentActiveMs: 0,
         workerActiveMs: 0,
@@ -380,10 +561,33 @@ export function buildDescriptiveRuns(input, artifactRoot) {
   if (internalErrors.length > 0) {
     throw new Error(`Evaluator-built descriptive input is invalid: ${internalErrors[0].path} ${internalErrors[0].message}`);
   }
+  Object.defineProperty(runs, "unitRecords", {
+    value: unitRecords,
+    enumerable: false
+  });
   return runs;
 }
 
 export function summarizeDescriptive(runs) {
+  const units = runs.unitRecords ?? runs.map((run) => ({
+    runId: run.runId,
+    blockId: run.blockId,
+    armId: run.armId,
+    status: "eligible",
+    reason: null
+  }));
+  if (units.length !== schedule.runs.length) {
+    throw new Error("Exactly 72 validated unit records are required; omissions are invalid");
+  }
+  for (const [index, unit] of units.entries()) {
+    const planned = schedule.runs[index];
+    if (unit.runId !== planned.runId
+      || unit.blockId !== planned.blockId
+      || unit.armId !== planned.armId
+      || !["eligible", "unavailable", "excluded"].includes(unit.status)) {
+      throw new Error(`Unit record ${index + 1} differs from the frozen schedule`);
+    }
+  }
   const seen = new Set();
   for (const run of runs) {
     const planned = schedule.runs.find((item) => item.runId === run.runId);
@@ -448,23 +652,31 @@ export function summarizeDescriptive(runs) {
     protocolId: "semantic-test-corpus-execution-v2",
     analysis: "descriptive-point-estimates-and-within-block-pairs-only",
     plannedRuns: 72,
+    validatedUnits: units.length,
     observedRuns: runs.length,
-    unavailableRuns: schedule.runs
-      .filter((planned) => !seen.has(planned.runId))
-      .map((planned) => ({
-        runId: planned.runId,
-        blockId: planned.blockId,
-        armId: planned.armId,
-        reason: "No exact eligible artifact was supplied; unavailable runs are excluded"
-      })),
+    unavailableRuns: units.filter((unit) => unit.status !== "eligible"),
     armPoints,
     pairs,
-    registeredContrasts: registeredContrasts(runs, endpointNames)
+    registeredContrasts: registeredContrasts(runs, endpointNames),
+    targetArmDecisionRule: targetDecisionRule(runs)
   };
 }
 
 export function analyzeDescriptiveArtifacts(input, artifactRoot) {
-  return summarizeDescriptive(buildDescriptiveRuns(input, artifactRoot));
+  const runs = buildDescriptiveRuns(input, artifactRoot);
+  const summary = summarizeDescriptive(runs);
+  summary.fieldAvailabilityByRun = input.runs
+    .filter((definition) => definition.status === "eligible" && definition.armId !== 0)
+    .map((definition) => {
+      const evidence = JSON.parse(
+        readFileSync(resolve(artifactRoot, definition.localEvidencePath), "utf8")
+      );
+      return {
+        runId: definition.runId,
+        fields: evidence.availability.fields
+      };
+    });
+  return summary;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

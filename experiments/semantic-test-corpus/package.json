@@ -18,7 +18,7 @@
     "harness": "node scripts/run-controlled-harness.mjs",
     "validate-starts": "node scripts/validate-start-order.mjs",
     "randomize": "node scripts/randomize.mjs --out design/schedule.json",
-    "reproduce": "node evaluator/reproduce.mjs && node scripts/reproduce-local-evidence.mjs",
-    "test": "node baseline/assert-public-only.mjs && node evaluator/tests/run-tests.mjs && node --test ../../tests/semantic-corpus-mcp/agent-config.test.mjs"
+    "reproduce": "node scripts/generate-haiku-agent-profile.mjs && node evaluator/reproduce.mjs && node scripts/reproduce-local-evidence.mjs",
+    "test": "node scripts/generate-haiku-agent-profile.mjs && node baseline/assert-public-only.mjs && node evaluator/tests/run-tests.mjs && node --test ../../tests/semantic-corpus-mcp/agent-config.test.mjs"
   }
 }

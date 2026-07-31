@@ -29,9 +29,9 @@ export function validateStartOrder(index, { requireComplete = true, baseDir = nu
       errors.push(`capture ${position + 1} differs from the frozen global start sequence`);
       continue;
     }
-    const timestamp = Date.parse(capture.startedAt);
+    const timestamp = Date.parse(capture.recordedAt);
     if (!Number.isFinite(timestamp) || timestamp <= previousTimestamp) {
-      errors.push(`capture ${capture.runId} does not have a strictly increasing start timestamp`);
+      errors.push(`capture ${capture.runId} does not have a strictly increasing order timestamp`);
     }
     previousTimestamp = timestamp;
     if (baseDir) {
@@ -41,16 +41,17 @@ export function validateStartOrder(index, { requireComplete = true, baseDir = nu
         if (digest !== capture.sourceSha256) {
           errors.push(`capture ${capture.runId} source SHA-256 differs`);
         }
-        const text = bytes.toString("utf8");
-        const observed = capture.armId === 0
-          ? JSON.parse(text).startedAt
-          : text.split(/\r?\n/u).filter(Boolean).map(JSON.parse)
-            .filter((event) => event.type === "session.start")
-            .map((event) => event.timestamp);
-        if (capture.armId === 0
-          ? observed !== capture.startedAt
-          : observed.length !== 1 || observed[0] !== capture.startedAt) {
-          errors.push(`capture ${capture.runId} timestamp is not derived from its raw source`);
+        const source = JSON.parse(bytes);
+        if (!source
+          || source.runId !== capture.runId
+          || source.disposition !== capture.disposition
+          || source.recordedAt !== capture.recordedAt
+          || (capture.disposition === "started"
+            && (capture.startedAt !== capture.recordedAt
+              || source.startedAt !== capture.startedAt))
+          || (capture.disposition === "unavailable"
+            && capture.startedAt !== null)) {
+          errors.push(`capture ${capture.runId} disposition/timestamp is not derived from its raw source`);
         }
       } catch (error) {
         errors.push(`capture ${capture.runId} source cannot be verified: ${error.message}`);

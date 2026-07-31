@@ -10,7 +10,8 @@ const schemaRoot = resolve(root, "schemas");
 const schema = JSON.parse(readFileSync(resolve(schemaRoot, "execution-preflight.schema.json"), "utf8"));
 const capabilityNames = [
   "atomicCreateSession", "localExecution", "promptFile", "parentModel",
-  "customAgent", "workerModelOverride", "rawEvents", "usageExport"
+  "customAgent", "fixedModelCustomAgent", "rawEvents", "usageExport",
+  "preSessionFailureReceipt", "zeroUsageReceipt"
 ];
 
 function commandParts(command) {
@@ -30,6 +31,13 @@ function invoke(command, args) {
 export function preflightExecution(command, capturedAt = new Date().toISOString()) {
   const versionRun = invoke(command, ["--version"]);
   const capabilityRun = invoke(command, ["benchmark-capabilities", "--json"]);
+  const arm5ProbeRun = invoke(command, [
+    "benchmark-preflight-arm5",
+    "--agent", "semantic-test-corpus-haiku",
+    "--worker-model", "claude-haiku-4.5",
+    "--atomic-kickoff",
+    "--json"
+  ]);
   let raw = {};
   if (capabilityRun.status === 0) {
     try {
@@ -42,19 +50,49 @@ export function preflightExecution(command, capturedAt = new Date().toISOString(
     name,
     raw[name] === true
   ]));
+  let rawArm5Probe = {};
+  if (arm5ProbeRun.status === 0) {
+    try {
+      rawArm5Probe = JSON.parse(arm5ProbeRun.stdout);
+    } catch {
+      rawArm5Probe = {};
+    }
+  }
+  const arm5Probe = {
+    exitCode: Number.isInteger(arm5ProbeRun.status) ? arm5ProbeRun.status : null,
+    atomicKickoff: rawArm5Probe.atomicKickoff === true,
+    selectedAgent: typeof rawArm5Probe.selectedAgent === "string"
+      ? rawArm5Probe.selectedAgent
+      : null,
+    observedWorkerModel: typeof rawArm5Probe.observedWorkerModel === "string"
+      ? rawArm5Probe.observedWorkerModel
+      : null,
+    workerSessionId: typeof rawArm5Probe.workerSessionId === "string"
+      ? rawArm5Probe.workerSessionId
+      : null
+  };
   const arms = Array.from({ length: 6 }, (_, armId) => {
     const required = armId === 0
       ? []
       : [
           "atomicCreateSession", "localExecution", "promptFile", "parentModel",
-          "rawEvents", "usageExport",
+          "rawEvents", "usageExport", "preSessionFailureReceipt", "zeroUsageReceipt",
           ...([2, 4, 5].includes(armId) ? ["customAgent"] : [])
         ];
     const reasons = required
       .filter((name) => !capabilities[name])
       .map((name) => `CLI did not prove ${name}`);
-    if (armId === 5 && !capabilities.workerModelOverride) {
-      reasons.push("CLI did not prove same-invocation custom-agent worker model override");
+    if (armId === 5 && !capabilities.fixedModelCustomAgent) {
+      reasons.push("CLI did not prove fixed-model custom-agent selection");
+    }
+    if (armId === 5 && (
+      arm5Probe.exitCode !== 0
+      || arm5Probe.atomicKickoff !== true
+      || arm5Probe.selectedAgent !== "semantic-test-corpus-haiku"
+      || arm5Probe.observedWorkerModel !== "claude-haiku-4.5"
+      || !arm5Probe.workerSessionId
+    )) {
+      reasons.push("real atomic probe did not observe semantic-test-corpus-haiku on claude-haiku-4.5");
     }
     return {
       armId,
@@ -72,6 +110,7 @@ export function preflightExecution(command, capturedAt = new Date().toISOString(
       capabilityExitCode: Number.isInteger(capabilityRun.status) ? capabilityRun.status : null
     },
     capabilities,
+    arm5Probe,
     arms
   };
   const errors = validateJsonSchema(output, schema, { schemaDir: schemaRoot });

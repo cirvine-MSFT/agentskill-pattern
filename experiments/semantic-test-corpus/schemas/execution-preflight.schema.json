@@ -3,7 +3,7 @@
   "$id": "execution-preflight.schema.json",
   "type": "object",
   "required": [
-    "formatVersion", "protocolId", "capturedAt", "cli", "capabilities", "arms"
+    "formatVersion", "protocolId", "capturedAt", "cli", "capabilities", "arm5Probe", "arms"
   ],
   "additionalProperties": false,
   "properties": {
@@ -24,7 +24,8 @@
       "type": "object",
       "required": [
         "atomicCreateSession", "localExecution", "promptFile", "parentModel",
-        "customAgent", "workerModelOverride", "rawEvents", "usageExport"
+        "customAgent", "fixedModelCustomAgent", "rawEvents", "usageExport",
+        "preSessionFailureReceipt", "zeroUsageReceipt"
       ],
       "additionalProperties": false,
       "properties": {
@@ -33,9 +34,26 @@
         "promptFile": {"type": "boolean"},
         "parentModel": {"type": "boolean"},
         "customAgent": {"type": "boolean"},
-        "workerModelOverride": {"type": "boolean"},
+        "fixedModelCustomAgent": {"type": "boolean"},
         "rawEvents": {"type": "boolean"},
-        "usageExport": {"type": "boolean"}
+        "usageExport": {"type": "boolean"},
+        "preSessionFailureReceipt": {"type": "boolean"},
+        "zeroUsageReceipt": {"type": "boolean"}
+      }
+    },
+    "arm5Probe": {
+      "type": "object",
+      "required": [
+        "exitCode", "atomicKickoff", "selectedAgent", "observedWorkerModel",
+        "workerSessionId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "exitCode": {"type": ["integer", "null"]},
+        "atomicKickoff": {"type": "boolean"},
+        "selectedAgent": {"type": ["string", "null"]},
+        "observedWorkerModel": {"type": ["string", "null"]},
+        "workerSessionId": {"type": ["string", "null"]}
       }
     },
     "arms": {

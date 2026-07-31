@@ -864,7 +864,7 @@ export function evaluateIsolationEvidence(authenticated, {
         violations.push("delegation invocation does not bind the authenticated parent and worker");
       }
       if (invocation.skillName !== armContract.delegationContract.invocation
-        || invocation.agentName !== armContract.delegationContract.agentName) {
+        || invocation.agentName !== arm.agentName) {
         violations.push("delegated arm used the wrong semantic-test-corpus identity");
       }
       if (invocation.skillPath !== armContract.delegationContract.registeredPath) {
@@ -879,7 +879,7 @@ export function evaluateIsolationEvidence(authenticated, {
       if (completion.sessionId !== roleSessions.parent) {
         violations.push("delegation completion was not received by the authenticated parent");
       }
-      if (completion.agentName !== armContract.delegationContract.agentName
+      if (completion.agentName !== arm.agentName
         || !terminalLineIsValid(completion.returnText)) {
         violations.push("delegated arm returned a noncanonical semantic-test-corpus terminal line");
       }

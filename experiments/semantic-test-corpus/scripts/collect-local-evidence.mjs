@@ -101,10 +101,13 @@ function available(status, ...reasons) {
   return { status, reasons: reasons.filter(Boolean) };
 }
 
-function safeSum(rows, field) {
-  if (rows.some((row) => !Number.isSafeInteger(row[field]) || row[field] < 0)) return null;
+function safeSum(rows, field, { integer = true } = {}) {
+  const valid = integer
+    ? (value) => Number.isSafeInteger(value) && value >= 0
+    : (value) => typeof value === "number" && Number.isFinite(value) && value >= 0;
+  if (rows.some((row) => !valid(row[field]))) return null;
   const total = rows.reduce((sum, row) => sum + row[field], 0);
-  return Number.isSafeInteger(total) ? total : null;
+  return valid(total) ? total : null;
 }
 
 function safeAverage(rows, field) {
@@ -137,14 +140,14 @@ function usageFor(rows, required) {
     };
   }
   const fields = {
-    nanoAiu: safeSum(rows, "total_nano_aiu"),
+    nanoAiu: safeSum(rows, "total_nano_aiu", { integer: false }),
     inputTokens: safeSum(rows, "input_tokens"),
     outputTokens: safeSum(rows, "output_tokens"),
     cacheReadTokens: safeSum(rows, "cache_read_tokens"),
     cacheWriteTokens: safeSum(rows, "cache_write_tokens"),
     reasoningTokens: safeSum(rows, "reasoning_tokens"),
-    requestMultiplier: safeSum(rows, "request_multiplier"),
-    durationMs: safeSum(rows, "duration_ms"),
+    requestMultiplier: safeSum(rows, "request_multiplier", { integer: false }),
+    durationMs: safeSum(rows, "duration_ms", { integer: false }),
     meanTimeToFirstTokenMs: safeAverage(rows, "time_to_first_token_ms"),
     meanInterTokenLatencyMs: safeAverage(rows, "inter_token_latency_ms")
   };
@@ -216,8 +219,8 @@ function timing(events, parentRows, workerRows, delegated) {
   const startedAt = starts[0]?.timestamp ?? null;
   const endedAt = ends.at(-1)?.timestamp ?? null;
   const wall = startedAt && endedAt ? Date.parse(endedAt) - Date.parse(startedAt) : Number.NaN;
-  const parentActiveMs = safeSum(parentRows, "duration_ms");
-  const workerActiveMs = safeSum(workerRows, "duration_ms");
+  const parentActiveMs = safeSum(parentRows, "duration_ms", { integer: false });
+  const workerActiveMs = safeSum(workerRows, "duration_ms", { integer: false });
   const delegatedStarts = events.filter((event) => event.type === "subagent.started");
   const delegatedEnds = events.filter((event) => event.type === "subagent.completed");
   const wait = delegated && delegatedStarts.length === 1 && delegatedEnds.length === 1
@@ -283,7 +286,12 @@ export function collectLocalEvidence({
     || planned.armId !== runManifest.armId
     || planned.seed !== runManifest.seed
     || planned.order !== runManifest.scheduleOrder
-    || planned.globalOrder !== runManifest.globalOrder) {
+    || planned.globalOrder !== runManifest.globalOrder
+    || planned.taskSha256 !== taskSha256ForSeed(runManifest.seed)
+    || planned.kickoffSha256 !== kickoffSha256ForRun(
+      runManifest.armId,
+      runManifest.seed
+    )) {
     throw new Error("Run manifest differs from the frozen schedule");
   }
   const boundary = JSON.parse(candidateBoundaryBytes);
@@ -409,6 +417,9 @@ export function collectLocalEvidence({
     || sessionCreation.response.execution_location !== contract.commonContract.executionLocation
     || sessionCreation.response.kickoff_mode !== contract.commonContract.kickoffMode
     || sessionCreation.response.kickoff_model !== arm.model
+    || sessionCreation.response.kickoff_consumed !== true
+    || sessionCreation.response.kickoff_prompt_sha256
+      !== runAttempt.treatment.kickoffSha256
     || sessionCreation.request.execution_location !== contract.commonContract.executionLocation
     || sessionCreation.request.kickoff.mode !== contract.commonContract.kickoffMode
     || sessionCreation.request.kickoff.model !== arm.model
@@ -438,11 +449,16 @@ export function collectLocalEvidence({
     sessionReasons.push("attempt must contain exactly one top-level assistant kickoff turn");
   }
   if (topLevelUserMessages.length > 1) {
-    sessionReasons.push("attempt contains follow-up user steering after atomic kickoff");
-  }
-  if (topLevelUserMessages.length === 1
-    && topLevelUserMessages[0]?.data?.content !== sessionCreation.request.kickoff.prompt) {
+    sessionReasons.push("attempt contains follow-up user steering after kickoff");
+  } else if (topLevelUserMessages.length === 1
+    && topLevelUserMessages[0]?.data?.content
+    !== sessionCreation.request.kickoff.prompt) {
     sessionReasons.push("captured user kickoff differs from the atomic create_session prompt");
+  } else if (topLevelUserMessages.length === 0
+    && (sessionCreation.response.kickoff_consumed !== true
+      || sessionCreation.response.kickoff_prompt_sha256
+        !== runAttempt.treatment.kickoffSha256)) {
+    sessionReasons.push("attempt lacks captured kickoff consumption evidence");
   }
 
   const toolStarts = events.filter((event) => event.type === "tool.execution_start");
@@ -454,7 +470,7 @@ export function collectLocalEvidence({
   const skillInvocations = events.filter((event) => event.type === "skill.invoked");
   const skillCalls = toolStarts.filter((event) => event.data?.toolName === "skill");
   const taskCalls = toolStarts.filter((event) => event.data?.toolName === "task");
-  const expectedAgent = contract.delegationContract.agentName;
+  const expectedAgent = arm.agentName;
   const workerCallId = arm.delegated && taskCalls.length === 1
     ? taskCalls[0].data?.toolCallId
     : null;
@@ -530,11 +546,7 @@ export function collectLocalEvidence({
       mechanismReasons.push("worker lifecycle/name/usage is not cross-bound to the exact worker model");
     }
     const observedOverride = taskCalls[0]?.data?.arguments?.model;
-    if (runManifest.armId === 5) {
-      if (observedOverride !== arm.workerModelOverride) {
-        mechanismReasons.push("arm 5 lacks the exact claude-haiku-4.5 worker model override");
-      }
-    } else if (observedOverride !== undefined) {
+    if (observedOverride !== undefined) {
       mechanismReasons.push("inherited delegated arm unexpectedly overrides the worker model");
     }
     const observedWorkerPrompt = taskCalls[0]?.data?.arguments?.prompt;

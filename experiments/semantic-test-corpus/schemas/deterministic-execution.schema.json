@@ -5,7 +5,7 @@
   "required": [
     "formatVersion", "protocolId", "runId", "blockId", "armId", "seed",
     "scheduleOrder", "globalOrder", "startedAt", "endedAt", "cases", "wallMs",
-    "stagingSha256"
+    "stagingSha256", "startEvidenceSha256", "endEvidenceSha256"
   ],
   "additionalProperties": false,
   "properties": {
@@ -22,5 +22,7 @@
     "cases": {"const": 60},
     "wallMs": {"type": "integer", "minimum": 0, "maximum": 1800000},
     "stagingSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    ,"startEvidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    ,"endEvidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
   }
 }

@@ -22,7 +22,11 @@
     "acceptanceBoundary": "external-evaluator-not-mounted",
     "expectedOutputPolicy": "oracle-after-promotion-only",
     "taskArtifact": "task/shared-task-prompt.txt",
-    "agentName": "semantic-test-corpus",
+    "agentName": "condition-selected-by-skill",
+    "agentProfiles": [
+      "semantic-test-corpus",
+      "semantic-test-corpus-haiku"
+    ],
     "mcpServer": "semantic-corpus",
     "toolSurface": [
       "semantic-corpus/list_contract_files",
@@ -78,7 +82,10 @@
     "artifact": ".github/skills/semantic-test-corpus/SKILL.md",
     "registeredPath": ".github/skills/semantic-test-corpus/SKILL.md",
     "invocation": "semantic-test-corpus",
-    "agentName": "semantic-test-corpus",
+    "agentNames": [
+      "semantic-test-corpus",
+      "semantic-test-corpus-haiku"
+    ],
     "workspaceOwnership": "actual-caller-confined-staging",
     "successReturn": "corpus-staging/manifest.json - <count> scenarios - SUCCESS",
     "failureReturn": "corpus-staging - <written-count> scenarios - FAILURE: <reason>",
@@ -92,11 +99,11 @@
     ]
   },
   "arms": [
-    {"id": 0, "name": "general deterministic script", "modelTier": "none", "delegated": false, "model": null, "generator": "baseline/general-generate.mjs"},
+    {"id": 0, "name": "general deterministic script", "modelTier": "none", "delegated": false, "model": null, "generator": "scripts/run-controlled-harness.mjs#arm0", "pinnedImplementation": "baseline/general-generate.mjs"},
     {"id": 1, "name": "frontier inline", "modelTier": "frontier", "delegated": false, "model": "gpt-5.6-sol"},
-    {"id": 2, "name": "frontier same-model delegated", "modelTier": "frontier", "delegated": true, "model": "gpt-5.6-sol", "workerModel": "gpt-5.6-sol", "delegationContract": "delegationContract"},
+    {"id": 2, "name": "frontier same-model delegated", "modelTier": "frontier", "delegated": true, "model": "gpt-5.6-sol", "workerModel": "gpt-5.6-sol", "agentName": "semantic-test-corpus", "delegationContract": "delegationContract"},
     {"id": 3, "name": "cheap inline", "modelTier": "cheap", "delegated": false, "model": "claude-haiku-4.5"},
-    {"id": 4, "name": "cheap delegated via Skill/agent", "modelTier": "cheap", "delegated": true, "model": "claude-haiku-4.5", "workerModel": "claude-haiku-4.5", "delegationContract": "delegationContract"},
+    {"id": 4, "name": "cheap delegated via Skill/agent", "modelTier": "cheap", "delegated": true, "model": "claude-haiku-4.5", "workerModel": "claude-haiku-4.5", "agentName": "semantic-test-corpus", "delegationContract": "delegationContract"},
     {
       "id": 5,
       "name": "frontier parent to cheap same-agent worker",
@@ -105,9 +112,9 @@
       "model": "gpt-5.6-sol",
       "workerModel": "claude-haiku-4.5",
       "delegationContract": "delegationContract",
-      "agentName": "semantic-test-corpus",
-      "workerModelOverride": "claude-haiku-4.5",
-      "unavailablePolicy": "If the same semantic-test-corpus invocation cannot accept or authenticate this worker model override, the run is unavailable; no alternate agent or mechanism is permitted."
+      "agentName": "semantic-test-corpus-haiku",
+      "profileModel": "claude-haiku-4.5",
+      "unavailablePolicy": "If real atomic preflight cannot select semantic-test-corpus-haiku and observe claude-haiku-4.5, the run is unavailable; no alternate agent or mechanism is permitted."
     }
   ]
 }

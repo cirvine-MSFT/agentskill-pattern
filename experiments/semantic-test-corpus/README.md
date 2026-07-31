@@ -13,13 +13,13 @@ is unavailable for execution or inference.
 | 1 | GPT-5.6 Sol inline |
 | 2 | GPT-5.6 Sol → registered `semantic-test-corpus` agent, inherited GPT |
 | 3 | Claude Haiku 4.5 inline |
-| 4 | Claude Haiku 4.5 → the same registered agent, inherited Haiku |
-| 5 | GPT-5.6 Sol → the same registered agent with only its invocation model overridden to Haiku |
+| 4 | Claude Haiku 4.5 → registered `semantic-test-corpus`, inherited Haiku |
+| 5 | GPT-5.6 Sol → registered `semantic-test-corpus-haiku`, profile-fixed Haiku |
 
-Arms 2, 4, and 5 use the same Skill, agent name/profile, invocation, four MCP tools,
-worker task bytes, staging behavior, and compact return. Arm 5 is unavailable before
-kickoff unless real preflight proves same-invocation custom-agent model override.
-There is no alternate fixed-model profile.
+Arms 2, 4, and 5 use the same Skill route, four MCP tools, instructions, worker task
+bytes, staging behavior, and compact return. The Haiku profile is generated
+byte-identically from the registered profile except name/model. Arm 5 is unavailable
+unless real atomic preflight observes that profile and `claude-haiku-4.5`.
 
 ## Validate and reproduce
 
@@ -44,7 +44,8 @@ npm run randomize
 
 ## Real preflight
 
-Preflight performs no generation and starts no model session:
+Preflight performs no corpus generation. Arm 5 availability requires an atomic custom
+agent selection probe with observed agent/session/model evidence:
 
 ```powershell
 node .\scripts\preflight-execution.mjs `
@@ -55,8 +56,8 @@ node .\scripts\preflight-execution.mjs `
 The command fails closed with exit code 2 unless the CLI/adapter proves atomic local
 session creation, prompt-file/model binding, exact raw event and usage export, and
 the mechanisms needed by each arm. Stock CLI builds that do not expose the explicit
-capability contract mark AI arms unavailable. In particular, missing worker-model
-override support marks arm 5 unavailable before kickoff.
+capability contract mark AI arms unavailable. In particular, missing fixed-model custom-agent selection or observed probe evidence
+marks arm 5 unavailable before benchmark kickoff.
 
 ## Dry-run and execute
 
@@ -87,7 +88,9 @@ hand-authored:
 - attempt, manifest, local evidence, model preflight, snapshot, metrics, evaluation,
   start capture, and capture provenance artifacts.
 
-Raw artifacts are created once, hashed, and made read-only. They remain unsigned,
+Generated task and kickoff bytes must match each frozen schedule SHA before launch and
+again at collection. A write-once lifecycle marker is durable before every kickoff or
+deterministic process. Raw artifacts are created once, hashed, and made read-only. They remain unsigned,
 local, descriptive evidence—not signed audit, sandbox compliance, or causal proof.
 
 Validate the complete captured start sequence:
@@ -97,15 +100,17 @@ node .\scripts\validate-start-order.mjs `
   --in C:\benchmark-artifacts\start-index.json
 ```
 
-All 72 timestamps must derive from immutable raw captures and increase in the frozen
-global sequence. A started wrong model, agent, Skill, tool surface, role binding, or
-budget is unavailable and is never retried. Only a recorded failure before session
-creation/kickoff may be retried; all operational attempts and the selected measured
-attempt are reported separately.
+All 72 ordered records must derive from immutable sources and increase in the frozen
+global sequence. Preflight-unavailable slots are recorded and advance it. Anything
+after the lifecycle marker is started/uncertain, preserves partial files and costs, and
+is never retried. A single retry requires an authoritative no-kickoff, no-session,
+zero-usage receipt.
 
 ## Descriptive analysis
 
-Only runs with observed exact session, parent/worker model, Skill/agent mechanism,
+The analyzer requires exactly 72 validated unit records. Each is either an eligible
+artifact or an evidence-bound unavailable/excluded record; omission fails. Eligible
+runs require observed exact session, parent/worker model, Skill/agent mechanism,
 tool/role lifecycle, budget, source, terminal commit, and candidate hash evidence
 are eligible. Unavailable units are explicit and excluded.
 
@@ -118,8 +123,13 @@ npm run analyze -- `
 The frozen contrasts are script versus each AI arm; GPT inline versus GPT→GPT;
 GPT→GPT versus GPT→Haiku; Haiku inline versus Haiku→Haiku; GPT inline versus the
 GPT→Haiku target; and the complete 2×2 model/delegation contrasts. Outputs contain
-only per-arm/block point values and within-block differences—no p-values, intervals,
-bootstrap, equivalence, noninferiority, or superiority claims.
+only per-arm/block point values and all available within-block differences.
+
+The target-arm practical rule uses point estimates: promotion must be at least baseline
+minus 5 percentage points, path coverage baseline minus 3 points, and mutant kill rate
+baseline minus 5 points. A positive efficiency signal additionally requires parent
+cumulative input at most 85% of GPT inline and both total nano-AIU and total credits at
+most 90% of GPT inline; report both costs. Wall time at most 80% is secondary.
 
 Comparable telemetry includes compact-return bytes, compaction availability,
 completion counts, cached/reasoning tokens, TTFT/inter-token latency, request

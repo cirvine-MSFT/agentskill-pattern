@@ -13,7 +13,7 @@
       "items": {
         "type": "object",
         "required": [
-          "runId", "blockId", "armId", "sequence", "startedAt",
+          "runId", "blockId", "armId", "sequence", "disposition", "recordedAt",
           "sourcePath", "sourceSha256"
         ],
         "additionalProperties": false,
@@ -22,7 +22,9 @@
           "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
           "armId": {"type": "integer", "minimum": 0, "maximum": 5},
           "sequence": {"type": "integer", "minimum": 1, "maximum": 72},
-          "startedAt": {"type": "string"},
+          "disposition": {"type": "string", "enum": ["started", "unavailable"]},
+          "recordedAt": {"type": "string"},
+          "startedAt": {"type": ["string", "null"]},
           "sourcePath": {"type": "string", "minLength": 1},
           "sourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
         }

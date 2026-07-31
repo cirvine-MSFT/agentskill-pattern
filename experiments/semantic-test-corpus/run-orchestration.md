@@ -13,15 +13,17 @@ Do not hand-author session, attempt, manifest, evidence, usage, or evaluation JS
    `design/schedule.json`.
 4. Review a harness `--dry-run`.
 
-Preflight starts no model session. Arm 5 is unavailable unless the exact same
-`semantic-test-corpus` Skill/agent invocation supports and reports the
-`claude-haiku-4.5` worker override. There is no alternate profile.
+Arm 5 is unavailable unless real atomic preflight observes the
+`semantic-test-corpus-haiku` profile and `claude-haiku-4.5` worker. That profile is
+generated from the inherited-model profile except name/model; both use the same Skill.
 
 The harness reads candidate files only from the immutable source commit/tree/blob
 IDs in `design/source-pin.json`. It transforms the pinned shared task by appending
 the block seed, and the resulting bytes are embedded exactly in kickoff. It creates
 the read-only `corpus-contract`, writable `corpus-staging`, sandbox config, and MCP
 config before one atomic local/autopilot create-session command.
+Generated task/kickoff bytes must equal the frozen planned SHA before launch and
+collector access. A write-once lifecycle marker is published before launch.
 
 ## Capture and eligibility
 
@@ -39,17 +41,18 @@ Eligibility requires observed exact:
 - wall/tool/model-token budgets;
 - source commit/tree/blobs, candidate boundary hash, and terminal commit.
 
-Missing, ambiguous, mismatched, or exceeded evidence makes the run unavailable and
-excludes it from analysis. A started wrong model or mechanism is never retried.
-Only a failure before session creation/kickoff may have one retry; it must record
-zero model usage. Selected-attempt and all-attempt operational costs remain separate.
+Missing, crashed, ambiguous, mismatched, or exceeded evidence after the marker is
+started/uncertain, preserves partial artifacts and every cost, and is never retried.
+Only authoritative positive evidence of no kickoff, no session, and zero usage permits
+one retry. Selected-attempt and all-attempt operational costs remain separate.
 
 ## Order and analysis
 
-Each deterministic start or AI `session.start` produces a raw-bound start capture.
-`scripts/validate-start-order.mjs` requires all 72 captures, sequence 1..72, and
-strictly increasing raw-derived timestamps.
+Every planned slot produces one ordered record. Preflight-unavailable records advance
+the sequence; started records bind the durable lifecycle marker.
+`scripts/validate-start-order.mjs` requires all 72 records and sequence 1..72.
 
 After snapshots and metrics are immutable, `npm run analyze` reports only the
-registered descriptive arm/block values and contrasts. Unavailable runs are listed
-and excluded. Inferential statistics and v1 execution are unavailable.
+registered descriptive arm/block values and contrasts. Exactly 72 eligible or
+evidence-bound unavailable/excluded units are mandatory; omission fails. V1 execution
+is unavailable.

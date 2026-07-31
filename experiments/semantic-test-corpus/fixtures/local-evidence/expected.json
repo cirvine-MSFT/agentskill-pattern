@@ -8,16 +8,20 @@
   "identity": {
     "appProjectSessionId": "fixture-app-project-session",
     "cliSessionId": "fixture-cli-session",
-    "sourceCommit": "a4adf743e593aae3aee901efac63e4e6fcbeadbf",
-    "sourceTree": "03684bfb1d0c2c1e6733e4ef83f0cd0bfb6c6deb",
+    "sourceCommit": "9b18d0d134ebfd8e4251e42596cd8bc659852e8c",
+    "sourceTree": "8e7987ea01de85a0b8656b1cb647cca2ad1cfc93",
     "sourceBlobs": [
+      {
+        "path": ".github/agents/semantic-test-corpus-haiku.agent.md",
+        "blob": "6ed9d31fe036c39abdb87e961ae6f71c4a705adb"
+      },
       {
         "path": ".github/agents/semantic-test-corpus.agent.md",
         "blob": "9a3068268d5223a94af800ce7b3aa6cafa252a5c"
       },
       {
         "path": ".github/skills/semantic-test-corpus/SKILL.md",
-        "blob": "95c53117bb4520fa38fee7ab8df975fc76e12b20"
+        "blob": "f743251e2230e3d9b3760c45e8dd65ae823c70ca"
       },
       {
         "path": "experiments/semantic-test-corpus/candidate-template/package.json",
@@ -37,7 +41,7 @@
       },
       {
         "path": "experiments/semantic-test-corpus/schemas/scenario.schema.json",
-        "blob": "96cd02f89b3d81ecd93b80eb18073596a9dec1ae"
+        "blob": "fe43959704eebd4aa2c092f6c723c57cf5387389"
       },
       {
         "path": "experiments/semantic-test-corpus/schemas/staging.schema.json",
@@ -60,13 +64,13 @@
         "blob": "ac9baf5ee9fb0666185069bd653daec2ea1eb296"
       }
     ],
-    "terminalCommit": "19cdcccf84cdcc8fbdf370f1ffc3f2e846cb0bf3",
-    "candidateSnapshotSha256": "64d08674457f668c4d95931ce4b48674c41e4af212c098d25d4a6ffbba943ef6"
+    "terminalCommit": "8f8a2a667675a995b720ff3e23ecff4303967f6e",
+    "candidateSnapshotSha256": "645aa00fc222d520631d7697660af8d8b4caf17db8bbc5e285fb6eb4d7c97663"
   },
   "source": {
     "events": {
       "path": "captured.events.jsonl",
-      "sha256": "5ab4eed286cc4f5e61743a672e9fc6e274472544e0acafbb734da1898ddb2db5",
+      "sha256": "2908a5d33a63f3aa814cc2c7e8ca5ea203473307c6b3db40f4d7bf3b749f80fa",
       "bytes": 6212
     },
     "usage": {
@@ -76,22 +80,22 @@
     },
     "sessionCreation": {
       "path": "session-creation.json",
-      "sha256": "26120aaf46226bf6fca8463528feb9544ba7832f8f790821e7a75fa476a1ef67",
-      "bytes": 2050
+      "sha256": "2dcedd7a9cb685c5bfbc8db1bfc1a4e6538c5d1b849618d2f4912fd804ab9c59",
+      "bytes": 2177
     },
     "candidateBoundary": {
       "path": "candidate-boundary.json",
-      "sha256": "64d08674457f668c4d95931ce4b48674c41e4af212c098d25d4a6ffbba943ef6",
-      "bytes": 4221
+      "sha256": "645aa00fc222d520631d7697660af8d8b4caf17db8bbc5e285fb6eb4d7c97663",
+      "bytes": 4548
     },
     "runManifest": {
       "path": "run-manifest.json",
-      "sha256": "466c640f85eb1010863e9b17a8097d6321a60cdaa805f49176d682b6f220f0e4",
-      "bytes": 805
+      "sha256": "0644306e1d0bbc0b9a16c3c6d7f6b7e295d92a29e4bf508d460aac72db6369f0",
+      "bytes": 821
     },
     "runAttempt": {
       "path": "attempt-1.json",
-      "sha256": "54e118a7c6c850b5f2e6a635796caa899795ecb560cc031db6f7462df6ee8e0b",
+      "sha256": "1b1f248a1c1252a5e25ec7ebcb387a393add80e8ee0657d54ec089fffa467de3",
       "bytes": 1329
     },
     "preSessionFailures": []

@@ -4,7 +4,7 @@
   "type": "object",
   "required": [
     "formatVersion", "protocolId", "failureId", "runId", "attemptedAt",
-    "phase", "kickoffStarted", "sessionCreated", "reason", "usage"
+    "phase", "kickoffStarted", "sessionCreated", "reason", "receipt", "usage"
   ],
   "additionalProperties": false,
   "properties": {
@@ -17,6 +17,16 @@
     "kickoffStarted": {"const": false},
     "sessionCreated": {"const": false},
     "reason": {"type": "string", "minLength": 1},
+    "receipt": {
+      "type": "object",
+      "required": ["receiptKind", "receiptId", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "receiptKind": {"const": "authoritative-pre-session-failure"},
+        "receiptId": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
     "usage": {
       "type": "object",
       "required": ["aiCredits", "premiumRequests", "nanoAiu", "modelTokens", "completionCount"],

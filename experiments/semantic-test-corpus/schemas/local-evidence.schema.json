@@ -256,8 +256,8 @@
         "endedAt": {"type": ["string", "null"]},
         "globalOrder": {"type": "integer", "minimum": 1, "maximum": 72},
         "wallMs": {"type": ["integer", "null"], "minimum": 0},
-        "parentActiveMs": {"type": ["integer", "null"], "minimum": 0},
-        "workerActiveMs": {"type": ["integer", "null"], "minimum": 0},
+        "parentActiveMs": {"type": ["number", "null"], "minimum": 0},
+        "workerActiveMs": {"type": ["number", "null"], "minimum": 0},
         "parentWaitMs": {"type": ["integer", "null"], "minimum": 0}
       }
     },

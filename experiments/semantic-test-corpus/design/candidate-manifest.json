@@ -10,6 +10,7 @@
     {"source": "schemas/staging.schema.json", "destination": "schemas/staging.schema.json"},
     {"source": "design/shared-task-prompt.txt", "destination": "task/shared-task-prompt.txt", "transform": "append-block-seed"},
     {"source": "../../.github/agents/semantic-test-corpus.agent.md", "destination": ".github/agents/semantic-test-corpus.agent.md"},
+    {"source": "../../.github/agents/semantic-test-corpus-haiku.agent.md", "destination": ".github/agents/semantic-test-corpus-haiku.agent.md"},
     {"source": "../../.github/skills/semantic-test-corpus/SKILL.md", "destination": ".github/skills/semantic-test-corpus/SKILL.md"},
     {"source": "../../tools/semantic-corpus-mcp/server.mjs", "destination": "tools/semantic-corpus-mcp/server.mjs"},
     {"source": "../../tools/semantic-corpus-mcp/protocol.mjs", "destination": "tools/semantic-corpus-mcp/protocol.mjs"},
