@@ -12,9 +12,31 @@
     "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "provenance": {
       "type": "object",
-      "required": ["evaluator", "spec", "oracle", "mutants"],
+      "required": ["generator", "evaluator", "spec", "oracle", "mutants"],
       "additionalProperties": false,
       "properties": {
+        "generator": {
+          "type": "object",
+          "required": ["commitSha", "objectFormat", "files"],
+          "additionalProperties": false,
+          "properties": {
+            "commitSha": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+            "objectFormat": {"type": "string", "enum": ["sha1", "sha256"]},
+            "files": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["path", "blobSha"],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {"type": "string", "minLength": 1},
+                  "blobSha": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"}
+                }
+              }
+            }
+          }
+        },
         "evaluator": {"$ref": "hash-file-set.schema.json"},
         "spec": {
           "type": "object",

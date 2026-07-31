@@ -109,6 +109,10 @@ The run record binds both snapshot and metrics hashes. A signed
 oracle-code, and mutant-harness hashes. Statistics reloads the snapshot and
 deterministically rederives the artifact; callers cannot supply promotion,
 coverage, mutation, or diversity values.
+Arm 0 is regenerated from its frozen block seed and must match canonical bytes;
+the artifact also binds the generator commit and committed blob hashes. Metrics
+events bind a dedicated evaluator session/process distinct from all measured run
+identities, and signed boundaries—not caller latency—enforce baseline duration.
 
 For every measured AI run, bind its run record to the exact raw signed platform
 export and verify all required parent/worker sessions:

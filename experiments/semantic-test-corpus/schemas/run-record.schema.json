@@ -68,12 +68,15 @@
     },
     "metrics": {
       "type": "object",
-      "required": ["path", "sha256", "snapshotSha256"],
+      "required": ["path", "sha256", "snapshotSha256", "eventId", "evaluatorSessionId", "evaluatorProcessId"],
       "additionalProperties": false,
       "properties": {
         "path": {"type": "string"},
         "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "eventId": {"type": "string", "minLength": 1},
+        "evaluatorSessionId": {"type": "string", "minLength": 1},
+        "evaluatorProcessId": {"type": "string", "minLength": 1}
       }
     },
     "timing": {

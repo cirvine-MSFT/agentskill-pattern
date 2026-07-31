@@ -102,7 +102,7 @@
           },
           {
             "if": {"properties": {"type": {"const": "metrics.computed"}}},
-            "then": {"required": ["runId", "blockId", "armId", "role", "actor", "metricsPath", "metricsSha256", "snapshotSha256", "evaluatorCodeSha256", "specSha256", "oracleCodeSha256", "mutantCodeSha256"]}
+            "then": {"required": ["runId", "blockId", "armId", "role", "actor", "processId", "metricsPath", "metricsSha256", "snapshotSha256", "evaluatorCodeSha256", "specSha256", "oracleCodeSha256", "mutantCodeSha256"]}
           },
           {
             "if": {"properties": {"type": {"const": "usage.reported"}}},

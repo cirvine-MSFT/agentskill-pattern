@@ -101,6 +101,27 @@ function authenticatedRunMappings(payload) {
       });
     }
   }
+  for (const event of payload.events.filter((item) => item.type === "metrics.computed")) {
+    const planned = schedule.runs.find((run) => run.runId === event.runId);
+    if (planned
+      && event.blockId === planned.blockId
+      && event.armId === planned.armId
+      && event.role === "evaluator"
+      && event.actor === "evaluator"
+      && typeof event.sessionId === "string"
+      && event.sessionId.length > 0
+      && typeof event.processId === "string"
+      && event.processId.length > 0) {
+      mappings.push({
+        runId: planned.runId,
+        blockId: planned.blockId,
+        armId: planned.armId,
+        role: "evaluator",
+        sessionId: event.sessionId,
+        processId: event.processId
+      });
+    }
+  }
   return mappings;
 }
 
@@ -148,7 +169,8 @@ const GLOBAL_ATTRIBUTION_TYPES = new Set([
   "delegation.completed",
   "usage.reported",
   "run.completed",
-  "outcomes.unblinded"
+  "outcomes.unblinded",
+  "metrics.computed"
 ]);
 
 const BASELINE_FORBIDDEN_TYPES = new Set([
@@ -235,6 +257,11 @@ function evaluateBaselineEvidence(payload, mappings) {
       || completedAt > unblindedAt) {
       violations.push(`${runId} baseline boundaries are not strictly ordered`);
     }
+    if (Number.isFinite(startedAt)
+      && Number.isFinite(completedAt)
+      && completedAt - startedAt > 30 * 60 * 1000) {
+      violations.push(`${runId} baseline duration exceeds the 30-minute limit`);
+    }
     if (usage.length > 1) violations.push(`${runId} has duplicate baseline usage reports`);
     if (usage.length === 1) {
       const reportAt = Date.parse(usage[0].timestamp);
@@ -253,6 +280,35 @@ function evaluateBaselineEvidence(payload, mappings) {
     }
   }
   return { totalEvents, attributedEvents, violations };
+}
+
+function evaluateEvaluatorEvidence(payload, mappings) {
+  const violations = [];
+  const metricsEvents = payload.events.filter((event) => event.type === "metrics.computed");
+  const runSessions = new Set(payload.events
+    .filter((event) => event.type === "session.created" || event.type === "run.started")
+    .map((event) => event.sessionId));
+  const runProcesses = new Set(payload.events
+    .filter((event) => event.type === "run.started")
+    .map((event) => event.processId));
+  if (new Set(metricsEvents.map((event) => event.sessionId)).size !== metricsEvents.length
+    || new Set(metricsEvents.map((event) => event.processId)).size !== metricsEvents.length) {
+    violations.push("metrics evaluator sessions/processes must be unique per run");
+  }
+  for (const event of metricsEvents) {
+    const evaluatorMappings = mappings.filter((mapping) =>
+      mapping.role === "evaluator"
+      && mapping.runId === event.runId
+      && mapping.sessionId === event.sessionId
+      && mapping.processId === event.processId);
+    if (evaluatorMappings.length !== 1) {
+      violations.push(`metrics.computed ${event.eventId} lacks one signed evaluator session/process mapping`);
+    }
+    if (runSessions.has(event.sessionId) || runProcesses.has(event.processId)) {
+      violations.push(`metrics.computed ${event.eventId} impersonates an authenticated run identity`);
+    }
+  }
+  return violations;
 }
 
 export function evaluateStartOrder(payload, blockId) {
@@ -317,7 +373,12 @@ export function evaluateGlobalAttribution(authenticated) {
     GLOBAL_ATTRIBUTION_TYPES
   );
   const baseline = evaluateBaselineEvidence(authenticated.payload, mappings);
-  const violations = [...attribution.violations, ...baseline.violations];
+  const evaluatorViolations = evaluateEvaluatorEvidence(authenticated.payload, mappings);
+  const violations = [
+    ...attribution.violations,
+    ...baseline.violations,
+    ...evaluatorViolations
+  ];
   return {
     status: violations.length === 0 ? "compliant" : "noncompliant",
     totalEvents: attribution.totalEvents + baseline.totalEvents,
@@ -537,7 +598,8 @@ export function evaluateIsolationEvidence(authenticated, {
     const adapter = adapterEvents[0];
     if (adapter.role !== "evaluator"
       || adapter.actor !== "evaluator"
-      || allAuthenticatedMappings.some((mapping) => mapping.sessionId === adapter.sessionId)) {
+      || allAuthenticatedMappings.some((mapping) =>
+        mapping.role !== "evaluator" && mapping.sessionId === adapter.sessionId)) {
       violations.push("adapter snapshot must use an evaluator identity outside model sessions");
     }
     if (adapter.runId !== runId

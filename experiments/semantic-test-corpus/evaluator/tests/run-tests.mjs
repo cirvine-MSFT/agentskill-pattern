@@ -764,8 +764,7 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
   try {
     const snapshotPath = resolve(temporary, "B01-A0.json");
     const metricsPath = resolve(temporary, "B01-A0.metrics.json");
-    const baselineSnapshot = generateBaseline();
-    baselineSnapshot.generator = { armId: 0, blockId: "B01", seed: 1812433253 };
+    const baselineSnapshot = generateBaseline({ blockId: "B01", seed: 1812433253 });
     const snapshotBytes = Buffer.from(`${JSON.stringify(baselineSnapshot, null, 2)}\n`);
     writeFileSync(snapshotPath, snapshotBytes);
     const artifact = deriveMetricsArtifact(snapshotBytes, {
@@ -779,6 +778,17 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
     assert.equal(artifact.metrics.mutation.killed + artifact.metrics.mutation.survived, 33);
     assert.deepEqual(artifact.provenance.oracle.files.map((file) => file.path),
       ["evaluator/oracle/index.mjs"]);
+    assert.match(artifact.provenance.generator.commitSha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
+    assert(artifact.provenance.generator.files.some((file) =>
+      file.path === "baseline/generate.mjs"
+      && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(file.blobSha)));
+    const relabeledBaseline = generateBaseline();
+    relabeledBaseline.generator = { armId: 0, blockId: "B01", seed: 1812433253 };
+    assert.throws(() => deriveMetricsArtifact(canonicalStagingBytes(relabeledBaseline), {
+      runId: "B01-A0",
+      blockId: "B01",
+      armId: 0
+    }), /differs from the frozen seeded generator/);
     assert.throws(() => deriveMetricsArtifact(Buffer.concat([snapshotBytes, Buffer.from("\n")]), {
       runId: "B01-A0",
       blockId: "B01",
@@ -800,7 +810,10 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
       metrics: {
         path: metricsPath,
         sha256: metricsSha256,
-        snapshotSha256: artifact.snapshotSha256
+        snapshotSha256: artifact.snapshotSha256,
+        eventId: "baseline-metrics",
+        evaluatorSessionId: "evaluator-session",
+        evaluatorProcessId: "evaluator-process"
       }
     };
     const payload = {
@@ -847,6 +860,7 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
           type: "metrics.computed",
           timestamp: "2026-07-29T00:04:20Z",
           sessionId: "evaluator-session",
+          processId: "evaluator-process",
           runId: "B01-A0",
           blockId: "B01",
           armId: 0,
@@ -869,6 +883,33 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
       runRecord,
       authenticated
     }), artifact);
+    const validGlobal = evaluateGlobalAttribution(authenticated);
+    assert.equal(validGlobal.status, "compliant", validGlobal.violations.join("\n"));
+
+    const impersonatedPayload = structuredClone(payload);
+    const impersonatedEvent = impersonatedPayload.events.find((event) =>
+      event.type === "metrics.computed");
+    impersonatedEvent.sessionId = "baseline-session";
+    impersonatedEvent.processId = "baseline-process";
+    const impersonatedRecord = structuredClone(runRecord);
+    impersonatedRecord.metrics.evaluatorSessionId = "baseline-session";
+    impersonatedRecord.metrics.evaluatorProcessId = "baseline-process";
+    const impersonatedSigned = signedExport(impersonatedPayload);
+    const impersonatedAuthenticated = authenticateExport(
+      impersonatedSigned.bytes,
+      impersonatedSigned.signature,
+      impersonatedSigned.publicKey
+    );
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord: impersonatedRecord,
+      authenticated: impersonatedAuthenticated
+    }), /signed metrics event differs/);
+    const impersonatedGlobal = evaluateGlobalAttribution(impersonatedAuthenticated);
+    assert.equal(impersonatedGlobal.status, "noncompliant");
+    assert(impersonatedGlobal.violations.some((violation) =>
+      violation.includes("impersonates an authenticated run identity")));
+
     assert.throws(() => assertAuthenticatedRunCoverage(
       [],
       new Map([[runRecord.runId, { ...runRecord, phase: "excluded" }]]),
@@ -1419,10 +1460,10 @@ test("statistics accepts a full export containing authenticated baseline and AI 
   try {
     const baselineRun = frozenSchedule.runs.find((run) => run.runId === "B01-A0");
     const baselineSnapshotPath = resolve(ai.run.cwd, "benchmark-staging", "B01-A0.json");
-    const baselineSnapshot = {
-      ...generateBaseline(),
-      generator: { armId: 0, blockId: "B01", seed: baselineRun.seed }
-    };
+    const baselineSnapshot = generateBaseline({
+      blockId: "B01",
+      seed: baselineRun.seed
+    });
     const baselineSnapshotBytes = canonicalStagingBytes(baselineSnapshot);
     writeFileSync(baselineSnapshotPath, baselineSnapshotBytes);
     const definitions = [
@@ -1453,11 +1494,15 @@ test("statistics accepts a full export containing authenticated baseline and AI 
       definition.metricsSha256 = createHash("sha256")
         .update(definition.metricsBytes)
         .digest("hex");
+      definition.metricsEventId = `${definition.runId}-metrics`;
+      definition.evaluatorSessionId = `${definition.runId}-evaluator`;
+      definition.evaluatorProcessId = `${definition.runId}-evaluator-process`;
       payload.events.push({
-        eventId: `${definition.runId}-metrics`,
+        eventId: definition.metricsEventId,
         type: "metrics.computed",
         timestamp: definition.metricsTimestamp,
-        sessionId: `${definition.runId}-evaluator`,
+        sessionId: definition.evaluatorSessionId,
+        processId: definition.evaluatorProcessId,
         runId: definition.runId,
         blockId: definition.blockId,
         armId: definition.armId,
@@ -1496,7 +1541,10 @@ test("statistics accepts a full export containing authenticated baseline and AI 
       metrics: {
         path: definition.metricsPath,
         sha256: definition.metricsSha256,
-        snapshotSha256: definition.artifact.snapshotSha256
+        snapshotSha256: definition.artifact.snapshotSha256,
+        eventId: definition.metricsEventId,
+        evaluatorSessionId: definition.evaluatorSessionId,
+        evaluatorProcessId: definition.evaluatorProcessId
       },
       timing: {
         startedAt: "2026-07-29T00:00:54Z",
@@ -1589,6 +1637,36 @@ test("statistics accepts a full export containing authenticated baseline and AI 
       runs,
       runRecords: [baselineRecord, mismappedAiRecord]
     }, mismappedAuthenticated), /global event attribution failed/);
+
+    const overDurationPayload = structuredClone(payload);
+    overDurationPayload.exportedAt = "2026-07-29T01:00:00Z";
+    overDurationPayload.events.find((event) =>
+      event.eventId === "B01-A0-completed").timestamp = "2026-07-29T00:31:00Z";
+    overDurationPayload.events.find((event) =>
+      event.eventId === "B01-A0-unblinded").timestamp = "2026-07-29T00:31:05Z";
+    const baselineUsage = overDurationPayload.events.find((event) =>
+      event.eventId === "B01-A0-usage");
+    baselineUsage.timestamp = "2026-07-29T00:31:06Z";
+    baselineUsage.intervalEnd = "2026-07-29T00:31:05Z";
+    overDurationPayload.events.find((event) =>
+      event.eventId === "B01-A0-metrics").timestamp = "2026-07-29T00:31:10Z";
+    const overDurationSigned = signedExport(overDurationPayload);
+    const overDurationAuthenticated = authenticateExport(
+      overDurationSigned.bytes,
+      overDurationSigned.signature,
+      overDurationSigned.publicKey
+    );
+    const overDurationAiRecord = structuredClone(aiRecord);
+    Object.assign(overDurationAiRecord.modelEvidence, {
+      payloadSha256: overDurationAuthenticated.authentication.payloadSha256,
+      signatureSha256: overDurationAuthenticated.authentication.signatureSha256,
+      publicKeySha256: overDurationAuthenticated.authentication.publicKeySha256
+    });
+    assert(baselineRecord.timing.latencyMs < 30 * 60 * 1000);
+    assert.throws(() => analyzeAuthenticatedStatisticsInput({
+      runs,
+      runRecords: [baselineRecord, overDurationAiRecord]
+    }, overDurationAuthenticated), /baseline duration exceeds the 30-minute limit/);
   } finally {
     await ai.run.cleanup();
   }
@@ -1668,7 +1746,10 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
     metrics: {
       path: "metrics/B01-A1.json",
       sha256: "e".repeat(64),
-      snapshotSha256: "d".repeat(64)
+      snapshotSha256: "d".repeat(64),
+      eventId: "B01-A1-metrics",
+      evaluatorSessionId: "B01-A1-evaluator",
+      evaluatorProcessId: "B01-A1-evaluator-process"
     },
     tools: { surface: [], calls: [] },
     compliance: {

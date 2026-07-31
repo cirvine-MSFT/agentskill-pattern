@@ -153,11 +153,18 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
   }
   const event = computed[0];
   const modelSessions = new Set(events
-    .filter((item) => item.type === "session.created")
+    .filter((item) => item.type === "session.created" || item.type === "run.started")
     .map((item) => item.sessionId));
+  const runProcesses = new Set(events
+    .filter((item) => item.type === "run.started")
+    .map((item) => item.processId));
   if (event.role !== "evaluator"
     || event.actor !== "evaluator"
     || modelSessions.has(event.sessionId)
+    || runProcesses.has(event.processId)
+    || event.eventId !== runRecord.metrics.eventId
+    || event.sessionId !== runRecord.metrics.evaluatorSessionId
+    || event.processId !== runRecord.metrics.evaluatorProcessId
     || event.blockId !== runRecord.blockId
     || event.armId !== runRecord.armId
     || !samePath(event.metricsPath ?? "", metricsPath)
@@ -203,6 +210,9 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
       || Date.parse(item.timestamp) <= Date.parse(starts[0]?.timestamp)
       || Date.parse(event.timestamp) <= Date.parse(item.timestamp))) {
     throw new Error(`signed metrics event precedes completion/unblinding for ${runRecord.runId}`);
+  }
+  if (Date.parse(completion[0].timestamp) - Date.parse(starts[0].timestamp) > 1800000) {
+    throw new Error(`signed run duration exceeds the 30-minute limit for ${runRecord.runId}`);
   }
   return artifact;
 }

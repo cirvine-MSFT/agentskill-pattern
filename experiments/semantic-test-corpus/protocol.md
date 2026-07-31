@@ -296,8 +296,11 @@ Arm 0 is mapped separately from its exact scheduled `run.started` baseline role,
 unique session, and unique process boundary. Its completion, unblinding, and
 optional zero-token usage events must retain that mapping and ordered interval;
 baseline model sessions/bindings, MCP tools, filesystem/network events, sandbox
-audits, and delegation are forbidden. Evaluator adapter/metrics identities remain
-outside the baseline role mapping.
+audits, and delegation are forbidden. Signed start/completion timestamps derive
+the baseline duration and enforce the 30-minute ceiling independently of caller
+telemetry. Each `metrics.computed` event has a run-record-bound evaluator
+session/process mapping that is globally distinct from every AI and baseline
+identity.
 All model generation tools, results, filesystem/network activity, delegation,
 and staging writes must occur strictly before `run.completed`. Exactly one
 evaluator-role `adapter.snapshot` occurs afterward under a session outside the
@@ -357,7 +360,9 @@ All quality metrics are computed after opaque oracle promotion.
 For every run, `evaluator/metrics.mjs` consumes the exact canonical snapshot and
 emits canonical `metrics/<run-id>.json`. The artifact binds its snapshot SHA-256
 and exact evaluator-code, mapping-spec, independent-oracle-code, and full
-mutant-harness file hashes. The run
+mutant-harness file hashes. Arm 0 is regenerated from its frozen block seed and
+canonical-byte-compared; generator dependencies bind the Git commit and exact
+committed blob hashes, so relabeled baseline snapshots fail. The run
 record binds the metrics path/hash/snapshot hash, and one signed evaluator-role
 `metrics.computed` event repeats those bindings after completion and unblinding.
 `evaluator/statistics.mjs` validates canonical bytes and hashes, reloads the

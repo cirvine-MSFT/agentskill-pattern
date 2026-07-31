@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { canonicalStagingBytes } from "./adapter.mjs";
+import { generateBaseline } from "../baseline/generate.mjs";
 import { buildKillMatrix } from "./mutants/run.mjs";
 import { promoteSubmission } from "./promote.mjs";
 import { buildReport } from "./report.mjs";
@@ -17,7 +19,19 @@ const metricsSchema = JSON.parse(
 );
 const mappingSpecPath = resolve(root, "fixture", "spec", "mapping-spec.json");
 const mappingSpec = JSON.parse(readFileSync(mappingSpecPath, "utf8"));
+const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const seeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
+const GENERATOR_FILES = [
+  "baseline/finite-domain-solver.mjs",
+  "baseline/generate.mjs",
+  "baseline/pairwise.mjs",
+  "design/schedule.json",
+  "design/seeds.json"
+];
 const EVALUATOR_FILES = [
+  "baseline/finite-domain-solver.mjs",
+  "baseline/generate.mjs",
+  "baseline/pairwise.mjs",
   "evaluator/adapter.mjs",
   "evaluator/metrics.mjs",
   "evaluator/promote.mjs",
@@ -58,12 +72,49 @@ function fileSet(paths) {
   return { sha256: sha256(Buffer.from(aggregate, "utf8")), files };
 }
 
+function gitValue(args, label) {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`Cannot bind ${label}: ${result.stderr.trim()}`);
+  return result.stdout.trim();
+}
+
+function gitBlobHash(bytes, objectFormat) {
+  return createHash(objectFormat)
+    .update(Buffer.from(`blob ${bytes.length}\0`, "utf8"))
+    .update(bytes)
+    .digest("hex");
+}
+
+function generatorProvenance() {
+  const commitSha = gitValue(["rev-parse", "HEAD"], "generator commit");
+  const repositoryRoot = gitValue(["rev-parse", "--show-toplevel"], "repository root");
+  const objectFormat = gitValue(["rev-parse", "--show-object-format"], "Git object format");
+  if (!["sha1", "sha256"].includes(objectFormat)) {
+    throw new Error(`Unsupported Git object format: ${objectFormat}`);
+  }
+  const files = GENERATOR_FILES.map((path) => {
+    const absolutePath = resolve(root, path);
+    const repositoryPath = relative(repositoryRoot, absolutePath).replaceAll("\\", "/");
+    const bytes = readFileSync(absolutePath);
+    const blobSha = gitValue(
+      ["rev-parse", `HEAD:${repositoryPath}`],
+      `committed generator blob ${path}`
+    );
+    if (gitBlobHash(bytes, objectFormat) !== blobSha) {
+      throw new Error(`Baseline generator dependency differs from committed blob: ${path}`);
+    }
+    return { path, blobSha };
+  });
+  return { commitSha, objectFormat, files };
+}
+
 export function canonicalMetricsBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
 export function metricsProvenance() {
   return {
+    generator: generatorProvenance(),
     evaluator: fileSet(EVALUATOR_FILES),
     spec: {
       path: "fixture/spec/mapping-spec.json",
@@ -82,6 +133,17 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
   }
   if (snapshot.generator?.blockId !== blockId || snapshot.generator?.armId !== armId) {
     throw new Error("Snapshot generator metadata differs from the metrics run");
+  }
+  if (armId === 0) {
+    const planned = schedule.runs.find((run) => run.runId === runId);
+    const seed = seeds.blocks.find((block) => block.id === blockId)?.seed;
+    if (!planned || planned.armId !== 0 || planned.blockId !== blockId || seed === undefined) {
+      throw new Error("Baseline metrics run differs from the frozen schedule");
+    }
+    const expected = canonicalStagingBytes(generateBaseline({ seed, blockId }));
+    if (!expected.equals(snapshotBytes)) {
+      throw new Error("Baseline snapshot differs from the frozen seeded generator");
+    }
   }
   const corpus = promoteSubmission(snapshotBytes, "1970-01-01T00:00:00.000Z");
   const matrix = buildKillMatrix(corpus);
