@@ -27,6 +27,12 @@ const evaluationSchema = JSON.parse(
 const dispositionSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "unit-disposition.schema.json"), "utf8")
 );
+const partialUsageSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "partial-usage.schema.json"), "utf8")
+);
+const usageExportSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "local-usage-export.schema.json"), "utf8")
+);
 const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
 const contrastContract = JSON.parse(
   readFileSync(resolve(root, "design", "descriptive-contrasts.json"), "utf8")
@@ -262,6 +268,107 @@ function usageEndpoints(evidence) {
   return output;
 }
 
+const operationalMetricNames = [
+  "aiCredits", "nanoAiu", "inputTokens", "outputTokens", "modelTokens",
+  "completionCount", "durationMs", "toolCallCount", "toolResultCount"
+];
+
+function operationalMeasurement(value, reason) {
+  return Number.isFinite(value) && value >= 0
+    ? { available: true, value, reason: null }
+    : { available: false, value: null, reason };
+}
+
+function fullOperationalMetrics(evidence) {
+  const total = evidence.operationalUsage.total;
+  return {
+    aiCredits: operationalMeasurement(total.aiCredits, "AI credits unavailable"),
+    nanoAiu: operationalMeasurement(total.nanoAiu, "nano-AIU unavailable"),
+    inputTokens: operationalMeasurement(total.inputTokens, "input tokens unavailable"),
+    outputTokens: operationalMeasurement(total.outputTokens, "output tokens unavailable"),
+    modelTokens: operationalMeasurement(total.modelTokens, "model tokens unavailable"),
+    completionCount: operationalMeasurement(
+      total.completionCount,
+      "completion count unavailable"
+    ),
+    durationMs: operationalMeasurement(total.durationMs, "duration unavailable"),
+    toolCallCount: operationalMeasurement(
+      evidence.tools.callCount,
+      "tool call count unavailable"
+    ),
+    toolResultCount: operationalMeasurement(
+      evidence.tools.resultCount,
+      "tool result count unavailable"
+    )
+  };
+}
+
+function recomputePartialMetrics(partialUsage, partialUsagePath) {
+  const unavailable = (reason) => operationalMeasurement(null, reason);
+  let rows = null;
+  const usageSource = partialUsage.sources.usage;
+  if (usageSource.available) {
+    const usageBytes = readFileSync(resolve(dirname(partialUsagePath), usageSource.path));
+    const usage = JSON.parse(usageBytes);
+    const errors = validateJsonSchema(usage, usageExportSchema, {
+      schemaDir: schemaRoot
+    });
+    if (errors.length > 0
+      || usage.rows.some((row) =>
+        row.session_id !== usage.source.cliSessionId)) {
+      throw new Error("Partial usage export is not valid single-session evidence");
+    }
+    rows = usage.rows;
+  }
+  const sum = (field) => {
+    if (!rows || rows.some((row) =>
+      !Number.isFinite(row[field]) || row[field] < 0)) {
+      return unavailable(
+        usageSource.reason ?? `usage export does not provide finite ${field}`
+      );
+    }
+    return operationalMeasurement(
+      rows.reduce((total, row) => total + row[field], 0),
+      null
+    );
+  };
+  const nanoAiu = sum("total_nano_aiu");
+  const inputTokens = sum("input_tokens");
+  const outputTokens = sum("output_tokens");
+  let events = null;
+  const eventsSource = partialUsage.sources.events;
+  if (eventsSource.available) {
+    events = readFileSync(resolve(dirname(partialUsagePath), eventsSource.path), "utf8")
+      .split(/\r?\n/u).filter(Boolean).map(JSON.parse);
+  }
+  return {
+    aiCredits: nanoAiu.available
+      ? operationalMeasurement(nanoAiu.value / 1e9, null)
+      : unavailable(usageSource.reason
+        ?? "usage export does not provide finite AI credits"),
+    nanoAiu,
+    inputTokens,
+    outputTokens,
+    modelTokens: inputTokens.available && outputTokens.available
+      ? operationalMeasurement(inputTokens.value + outputTokens.value, null)
+      : unavailable(usageSource.reason
+        ?? "usage export does not provide finite model tokens"),
+    completionCount: rows
+      ? operationalMeasurement(rows.length, null)
+      : unavailable(usageSource.reason
+        ?? "usage export does not provide finite completion count"),
+    durationMs: sum("duration_ms"),
+    toolCallCount: events
+      ? operationalMeasurement(events.filter((event) =>
+        event.type === "tool.execution_start").length, null)
+      : unavailable(eventsSource.reason ?? "tool call count unavailable"),
+    toolResultCount: events
+      ? operationalMeasurement(events.filter((event) =>
+        event.type === "tool.execution_complete").length, null)
+      : unavailable(eventsSource.reason ?? "tool result count unavailable")
+  };
+}
+
 function readExecutionRecords(evidence, evidencePath) {
   const artifactRoot = dirname(evidencePath);
   const manifestPath = resolve(artifactRoot, evidence.source.runManifest.path);
@@ -342,7 +449,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         armId: definition.armId,
         status: "eligible",
         reason: null,
-        operationalUsage: null
+        operationalMetrics: null
       };
     }
     const dispositionPath = resolve(artifactRoot, definition.dispositionPath);
@@ -379,6 +486,12 @@ export function buildDescriptiveRuns(input, artifactRoot) {
     if (!expectedKinds.includes(disposition.evidenceKind)) {
       throw new Error(`Unit disposition evidence kind is invalid: ${definition.runId}`);
     }
+    if (disposition.evidenceKind === "started-uncertain"
+      ? (!disposition.partialUsagePath || !disposition.partialUsageSha256)
+      : (disposition.partialUsagePath !== null
+        || disposition.partialUsageSha256 !== null)) {
+      throw new Error(`Unit disposition partial-usage binding is invalid: ${definition.runId}`);
+    }
     if (["preflight-unavailable", "retry-exhausted"].includes(disposition.evidenceKind)) {
       if (source.runId !== definition.runId
         || source.blockId !== definition.blockId
@@ -408,7 +521,72 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         }
       }
     }
-    let operationalUsage = null;
+    let operationalMetrics = null;
+    if (disposition.evidenceKind === "started-uncertain") {
+      const partialUsagePath = resolve(
+        dirname(dispositionPath),
+        disposition.partialUsagePath
+      );
+      const partialUsageBytes = readFileSync(partialUsagePath);
+      const partialUsage = JSON.parse(partialUsageBytes);
+      const partialErrors = validateJsonSchema(partialUsage, partialUsageSchema, {
+        schemaDir: schemaRoot
+      });
+      if (partialErrors.length > 0
+        || disposition.partialUsageSha256 !== sha256(partialUsageBytes)
+        || partialUsage.runId !== definition.runId
+        || partialUsage.blockId !== definition.blockId
+        || partialUsage.armId !== definition.armId
+        || partialUsage.lifecycle.sha256 !== disposition.orderSourceSha256
+        || partialUsage.lifecycle.path !== relative(
+          dirname(dispositionPath),
+          orderSourcePath
+        ).replaceAll("\\", "/")) {
+        throw new Error(`Started/uncertain partial usage is invalid: ${definition.runId}`);
+      }
+      for (const sourceDefinition of Object.values(partialUsage.sources)) {
+        if (!sourceDefinition.path) {
+          if (sourceDefinition.sha256 !== null) {
+            throw new Error(`Started/uncertain source binding is invalid: ${definition.runId}`);
+          }
+          continue;
+        }
+        const path = resolve(dirname(partialUsagePath), sourceDefinition.path);
+        if (!withinArtifactRoot(path)
+          || sha256(readFileSync(path)) !== sourceDefinition.sha256) {
+          throw new Error(`Started/uncertain usage source differs: ${definition.runId}`);
+        }
+      }
+      if (partialUsage.attempt.available) {
+        const attemptPath = resolve(
+          dirname(partialUsagePath),
+          partialUsage.attempt.path
+        );
+        const attemptBytes = readFileSync(attemptPath);
+        const attempt = JSON.parse(attemptBytes);
+        if (!withinArtifactRoot(attemptPath)
+          || sha256(attemptBytes) !== partialUsage.attempt.sha256
+          || attempt.attemptId !== partialUsage.attempt.attemptId
+          || attempt.runId !== definition.runId) {
+          throw new Error(`Started/uncertain attempt binding differs: ${definition.runId}`);
+        }
+      }
+      const preservedAttempt = source.preservedFiles.find((file) =>
+        file.path === "attempt-1.json");
+      if (Boolean(preservedAttempt) !== partialUsage.attempt.available
+        || (preservedAttempt
+          && preservedAttempt.sha256 !== partialUsage.attempt.sha256)) {
+        throw new Error(`Started/uncertain attempt availability differs: ${definition.runId}`);
+      }
+      const recomputedMetrics = recomputePartialMetrics(
+        partialUsage,
+        partialUsagePath
+      );
+      if (JSON.stringify(partialUsage.metrics) !== JSON.stringify(recomputedMetrics)) {
+        throw new Error(`Started/uncertain partial metrics differ: ${definition.runId}`);
+      }
+      operationalMetrics = recomputedMetrics;
+    }
     if (disposition.evidenceKind === "model-excluded") {
       const evidencePath = resolve(artifactRoot, definition.localEvidencePath);
       const evidenceBytes = readFileSync(evidencePath);
@@ -443,7 +621,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
           set.add(value);
         }
       }
-      operationalUsage = evidence.operationalUsage;
+      operationalMetrics = fullOperationalMetrics(evidence);
     }
     return {
       runId: definition.runId,
@@ -451,7 +629,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       armId: definition.armId,
       status: definition.status,
       reason: disposition.reason,
-      operationalUsage
+      operationalMetrics
     };
   });
   if (seenUnits.size !== schedule.runs.length) {
@@ -462,6 +640,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
     const planned = schedule.runs.find((run) => run.runId === definition.runId);
     const orderCapture = startIndex.captures.find((capture) =>
       capture.runId === definition.runId);
+    const unitRecord = unitRecords.find((unit) => unit.runId === definition.runId);
     if (!planned
       || planned.blockId !== definition.blockId
       || planned.armId !== definition.armId) {
@@ -613,6 +792,12 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         mechanismEvidenceAvailable: 0,
         deviationCount: 0
       });
+      unitRecord.operationalMetrics = Object.fromEntries(
+        operationalMetricNames.map((name) => [
+          name,
+          operationalMeasurement(0, null)
+        ])
+      );
     } else {
       const evidencePath = resolve(artifactRoot, definition.localEvidencePath);
       const evidenceBytes = readFileSync(evidencePath);
@@ -699,6 +884,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         mechanismEvidenceAvailable: evidence.availability.mechanism.status === "available" ? 1 : 0,
         deviationCount: evidence.deviations.length
       });
+      unitRecord.operationalMetrics = fullOperationalMetrics(evidence);
     }
     return {
       runId: definition.runId,
@@ -802,27 +988,30 @@ export function summarizeDescriptive(runs) {
       });
     }
   }
-  const excludedOperationalRuns = units
-    .filter((unit) => unit.status === "excluded" && unit.operationalUsage)
+  const operationalRuns = units
+    .filter((unit) => unit.armId !== 0 && unit.operationalMetrics)
     .map((unit) => ({
       runId: unit.runId,
       blockId: unit.blockId,
       armId: unit.armId,
-      usage: unit.operationalUsage
+      status: unit.status,
+      metrics: unit.operationalMetrics
     }));
-  const operationalFields = [
-    "aiCredits", "nanoAiu", "modelTokens", "completionCount"
-  ];
-  const excludedOperationalTotals = Object.fromEntries(
-    operationalFields.map((field) => {
-      const values = excludedOperationalRuns
-        .map((run) => run.usage.total[field]);
-      return [
-        field,
-        values.length > 0 && values.every(Number.isFinite)
-          ? values.reduce((sum, value) => sum + value, 0)
-          : null
-      ];
+  const operationalTotals = Object.fromEntries(
+    operationalMetricNames.map((name) => {
+      const available = operationalRuns
+        .filter((run) => run.metrics[name].available);
+      const unavailableRunIds = operationalRuns
+        .filter((run) => !run.metrics[name].available)
+        .map((run) => run.runId);
+      return [name, {
+        available: available.length > 0,
+        value: available.length > 0
+          ? available.reduce((sum, run) => sum + run.metrics[name].value, 0)
+          : null,
+        contributingRuns: available.length,
+        unavailableRunIds
+      }];
     })
   );
   return {
@@ -832,10 +1021,15 @@ export function summarizeDescriptive(runs) {
     plannedRuns: 72,
     validatedUnits: units.length,
     observedRuns: runs.length,
-    unavailableRuns: units.filter((unit) => unit.status !== "eligible"),
+    unavailableRuns: units
+      .filter((unit) => unit.status !== "eligible")
+      .map(({ operationalMetrics: _operationalMetrics, ...unit }) => unit),
+    allAttemptOperationalUsage: {
+      runs: operationalRuns,
+      totals: operationalTotals
+    },
     excludedOperationalUsage: {
-      runs: excludedOperationalRuns,
-      totals: excludedOperationalTotals
+      runs: operationalRuns.filter((run) => run.status === "excluded")
     },
     armPoints,
     pairs,

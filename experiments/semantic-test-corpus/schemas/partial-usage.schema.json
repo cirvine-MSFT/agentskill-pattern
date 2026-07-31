@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "partial-usage.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "blockId", "armId", "status",
+    "lifecycle", "attempt", "sources", "metrics"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+    "status": {"const": "started-uncertain"},
+    "lifecycle": {"$ref": "partial-usage-source.schema.json"},
+    "attempt": {
+      "type": "object",
+      "required": ["available", "attemptId", "path", "sha256", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "available": {"type": "boolean"},
+        "attemptId": {"type": ["string", "null"]},
+        "path": {"type": ["string", "null"]},
+        "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "reason": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"available": {"const": true}}},
+          "then": {
+            "properties": {
+              "attemptId": {"type": "string", "minLength": 1},
+              "path": {"type": "string", "minLength": 1},
+              "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+              "reason": {"type": "null"}
+            }
+          },
+          "else": {
+            "properties": {
+              "attemptId": {"type": "null"},
+              "path": {"type": "null"},
+              "sha256": {"type": "null"},
+              "reason": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      ]
+    },
+    "sources": {
+      "type": "object",
+      "required": ["events", "usage"],
+      "additionalProperties": false,
+      "properties": {
+        "events": {"$ref": "partial-usage-source.schema.json"},
+        "usage": {"$ref": "partial-usage-source.schema.json"}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "aiCredits", "nanoAiu", "inputTokens", "outputTokens", "modelTokens",
+        "completionCount", "durationMs", "toolCallCount", "toolResultCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "aiCredits": {"$ref": "partial-usage-measurement.schema.json"},
+        "nanoAiu": {"$ref": "partial-usage-measurement.schema.json"},
+        "inputTokens": {"$ref": "partial-usage-measurement.schema.json"},
+        "outputTokens": {"$ref": "partial-usage-measurement.schema.json"},
+        "modelTokens": {"$ref": "partial-usage-measurement.schema.json"},
+        "completionCount": {"$ref": "partial-usage-measurement.schema.json"},
+        "durationMs": {"$ref": "partial-usage-measurement.schema.json"},
+        "toolCallCount": {"$ref": "partial-usage-measurement.schema.json"},
+        "toolResultCount": {"$ref": "partial-usage-measurement.schema.json"}
+      }
+    }
+  }
+}

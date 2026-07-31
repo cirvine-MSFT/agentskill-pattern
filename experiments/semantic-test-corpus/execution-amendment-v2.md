@@ -173,5 +173,10 @@ and deterministic metrics do not upgrade local telemetry into signed compliance.
 
 Started excluded attempts keep their receipt-bound local evidence and all operational
 usage. The descriptive output reports those costs separately from eligible outcomes.
+Started-uncertain attempts preserve a typed partial-usage artifact bound to the
+lifecycle marker, available raw usage/events, and the attempt record when it exists.
+Every finite available credit, nano-AIU, token, completion, duration, and tool count
+contributes to all-attempt operational totals; unavailable fields stay null with a
+reason. These records are never selected quality outcomes.
 
 No AI trial or outcome artifact belongs in this amendment commit.

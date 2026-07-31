@@ -36,6 +36,15 @@ const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.js
 const preSessionFailureSchema = JSON.parse(
   readFileSync(resolve(root, "schemas", "pre-session-failure.schema.json"), "utf8")
 );
+const partialUsageSchema = JSON.parse(
+  readFileSync(resolve(root, "schemas", "partial-usage.schema.json"), "utf8")
+);
+const usageExportSchema = JSON.parse(
+  readFileSync(resolve(root, "schemas", "local-usage-export.schema.json"), "utf8")
+);
+const unitDispositionSchema = JSON.parse(
+  readFileSync(resolve(root, "schemas", "unit-disposition.schema.json"), "utf8")
+);
 
 function argument(args, name) {
   const index = args.indexOf(name);
@@ -173,10 +182,182 @@ function immutable(path) {
   chmodSync(path, 0o444);
 }
 
+function partialSource(plan, name, reason) {
+  const path = resolve(plan.artifactRoot, name);
+  if (!existsSync(path)) {
+    return {
+      source: { available: false, path: null, sha256: null, reason },
+      bytes: null
+    };
+  }
+  const bytes = readFileSync(path);
+  return {
+    source: {
+      available: true,
+      path: name,
+      sha256: sha256(bytes),
+      reason: null
+    },
+    bytes
+  };
+}
+
+function partialMeasurement(value, reason) {
+  return Number.isFinite(value) && value >= 0
+    ? { available: true, value, reason: null }
+    : { available: false, value: null, reason };
+}
+
+function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
+  const usageSource = partialSource(
+    plan,
+    "captured.usage.json",
+    "usage export was not produced before the attempt became uncertain"
+  );
+  const eventsSource = partialSource(
+    plan,
+    "captured.events.jsonl",
+    "raw events were not produced before the attempt became uncertain"
+  );
+  const attemptSource = partialSource(
+    plan,
+    "attempt-1.json",
+    "attempt record was not produced before the attempt became uncertain"
+  );
+  const unavailableUsage = (field) => partialMeasurement(
+    null,
+    usageSource.source.reason ?? `usage export does not provide finite ${field}`
+  );
+  let usageRows = null;
+  if (usageSource.bytes) {
+    try {
+      const usage = JSON.parse(usageSource.bytes);
+      const errors = validateJsonSchema(usage, usageExportSchema, {
+        schemaDir: resolve(root, "schemas")
+      });
+      if (errors.length === 0
+        && usage.source.cliSessionId
+        && usage.rows.every((row) =>
+          row.session_id === usage.source.cliSessionId)) {
+        usageRows = usage.rows;
+      } else {
+        usageSource.source.available = false;
+        usageSource.source.reason = errors.length > 0
+          ? `usage export is invalid: ${errors[0].path} ${errors[0].message}`
+          : "usage export rows are not bound to one CLI session";
+      }
+    } catch (error) {
+      usageSource.source.available = false;
+      usageSource.source.reason = `usage export is unreadable: ${error.message}`;
+    }
+  }
+  const sum = (field) => {
+    if (!usageRows
+      || usageRows.some((row) =>
+        !Number.isFinite(row[field]) || row[field] < 0)) {
+      return unavailableUsage(field);
+    }
+    return partialMeasurement(
+      usageRows.reduce((total, row) => total + row[field], 0),
+      null
+    );
+  };
+  const nanoAiu = sum("total_nano_aiu");
+  const inputTokens = sum("input_tokens");
+  const outputTokens = sum("output_tokens");
+  const modelTokens = inputTokens.available && outputTokens.available
+    ? partialMeasurement(inputTokens.value + outputTokens.value, null)
+    : unavailableUsage("model tokens");
+  let events = null;
+  if (eventsSource.bytes) {
+    try {
+      events = eventsSource.bytes.toString("utf8").split(/\r?\n/u)
+        .filter(Boolean).map(JSON.parse);
+    } catch (error) {
+      eventsSource.source.available = false;
+      eventsSource.source.reason = `raw events are unreadable: ${error.message}`;
+    }
+  }
+  let attempt = {
+    available: false,
+    attemptId: null,
+    path: null,
+    sha256: null,
+    reason: attemptSource.source.reason
+  };
+  if (attemptSource.bytes) {
+    try {
+      const record = JSON.parse(attemptSource.bytes);
+      if (record.runId === plan.runId && typeof record.attemptId === "string") {
+        attempt = {
+          available: true,
+          attemptId: record.attemptId,
+          path: attemptSource.source.path,
+          sha256: attemptSource.source.sha256,
+          reason: null
+        };
+      } else {
+        attempt.reason = "attempt record does not bind this run";
+      }
+    } catch (error) {
+      attempt.reason = `attempt record is unreadable: ${error.message}`;
+    }
+  }
+  const record = {
+    formatVersion: 1,
+    protocolId: contract.protocolId,
+    runId: plan.runId,
+    blockId: plan.blockId,
+    armId: plan.armId,
+    status: "started-uncertain",
+    lifecycle: {
+      available: true,
+      path: relative(plan.artifactRoot, lifecyclePath).replaceAll("\\", "/"),
+      sha256: sha256(lifecycleBytes),
+      reason: null
+    },
+    attempt,
+    sources: {
+      events: eventsSource.source,
+      usage: usageSource.source
+    },
+    metrics: {
+      aiCredits: nanoAiu.available
+        ? partialMeasurement(nanoAiu.value / 1e9, null)
+        : unavailableUsage("AI credits"),
+      nanoAiu,
+      inputTokens,
+      outputTokens,
+      modelTokens,
+      completionCount: usageRows
+        ? partialMeasurement(usageRows.length, null)
+        : unavailableUsage("completion count"),
+      durationMs: sum("duration_ms"),
+      toolCallCount: events
+        ? partialMeasurement(events.filter((event) =>
+          event.type === "tool.execution_start").length, null)
+        : partialMeasurement(null, eventsSource.source.reason),
+      toolResultCount: events
+        ? partialMeasurement(events.filter((event) =>
+          event.type === "tool.execution_complete").length, null)
+        : partialMeasurement(null, eventsSource.source.reason)
+    }
+  };
+  const errors = validateJsonSchema(record, partialUsageSchema, {
+    schemaDir: resolve(root, "schemas")
+  });
+  if (errors.length > 0) {
+    throw new Error(`Partial usage record is invalid: ${errors[0].path} ${errors[0].message}`);
+  }
+  return record;
+}
+
 function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes, {
   evidenceKind,
   orderSourcePath = sourcePath,
-  orderSourceBytes = sourceBytes
+  orderSourceBytes = sourceBytes,
+  partialUsagePath = null,
+  partialUsageBytes = null
 }) {
   const disposition = {
     formatVersion: 1,
@@ -193,8 +374,18 @@ function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes, {
       dirname(plan.startIndexPath),
       orderSourcePath
     ).replaceAll("\\", "/"),
-    orderSourceSha256: sha256(orderSourceBytes)
+    orderSourceSha256: sha256(orderSourceBytes),
+    partialUsagePath: partialUsagePath
+      ? relative(plan.artifactRoot, partialUsagePath).replaceAll("\\", "/")
+      : null,
+    partialUsageSha256: partialUsageBytes ? sha256(partialUsageBytes) : null
   };
+  const errors = validateJsonSchema(disposition, unitDispositionSchema, {
+    schemaDir: resolve(root, "schemas")
+  });
+  if (errors.length > 0) {
+    throw new Error(`Unit disposition is invalid: ${errors[0].path} ${errors[0].message}`);
+  }
   const dispositionPath = resolve(plan.artifactRoot, "unit-disposition.json");
   writeOnce(dispositionPath, jsonBytes(disposition));
   immutable(dispositionPath);
@@ -220,6 +411,11 @@ function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reaso
   } else if (current.captures.at(-1)?.runId !== plan.runId) {
     throw new Error("Cannot preserve uncertain attempt because global order advanced unexpectedly");
   }
+  const partialUsage = derivePartialUsage(plan, lifecyclePath, lifecycleBytes);
+  const partialUsagePath = resolve(plan.artifactRoot, "partial-usage.json");
+  const partialUsageBytes = jsonBytes(partialUsage);
+  if (!existsSync(partialUsagePath)) writeOnce(partialUsagePath, partialUsageBytes);
+  immutable(partialUsagePath);
   const filesBeforeRecord = readdirSync(plan.artifactRoot)
     .map((name) => resolve(plan.artifactRoot, name))
     .filter((path) => statSync(path).isFile());
@@ -250,7 +446,9 @@ function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reaso
       plan, "unavailable", reason, uncertaintyPath, uncertaintyBytes, {
         evidenceKind: "started-uncertain",
         orderSourcePath: lifecyclePath,
-        orderSourceBytes: lifecycleBytes
+        orderSourceBytes: lifecycleBytes,
+        partialUsagePath,
+        partialUsageBytes
       }
     );
   for (const path of [...filesBeforeRecord, uncertaintyPath]) immutable(path);
@@ -259,6 +457,8 @@ function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reaso
     plan,
     uncertainty,
     uncertaintyPath,
+    partialUsage,
+    partialUsagePath,
     ...disposition
   };
 }

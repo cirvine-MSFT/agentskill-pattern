@@ -74,7 +74,9 @@ const workerCallId = `fake-worker-${runId}`;
 const agentName = armId === 5 ? "semantic-test-corpus-haiku" : "semantic-test-corpus";
 const terminal = "corpus-staging - 0 scenarios - FAILURE: SCHEMA_ERROR";
 const taskPrompt = readFileSync(taskPath, "utf8");
-const start = Date.parse("2026-07-31T21:00:00.000Z") + Number(value("--global-order")) * 60_000;
+const start = Date.parse(
+  process.env.FAKE_COPILOT_START_ISO ?? "2026-07-31T21:00:00.000Z"
+) + Number(value("--global-order")) * 1000;
 const timestamp = (offset) => new Date(start + offset).toISOString();
 const events = [
   {
@@ -288,13 +290,27 @@ writeFileSync(eventsPath, `${events.map((event) => JSON.stringify(event)).join("
 if (process.env.FAKE_COPILOT_MISSING_USAGE !== "1") {
   writeFileSync(usagePath, `${JSON.stringify(usage, null, 2)}\n`, { flag: "wx" });
 }
+if (process.env.FAKE_COPILOT_UNEXPECTED_STAGING === "1") {
+  const sandbox = JSON.parse(
+    readFileSync(process.env.SEMANTIC_CORPUS_SANDBOX_CONFIG, "utf8")
+  );
+  const scenarios = resolve(sandbox.roots.staging.path, "scenarios");
+  mkdirSync(scenarios, { recursive: true });
+  writeFileSync(
+    resolve(scenarios, "unexpected.json"),
+    `${JSON.stringify({ unexpected: true })}\n`,
+    { flag: "wx" }
+  );
+}
 process.stdout.write(`${JSON.stringify({
   project_session_id: appSessionId,
   project_id: projectId,
   execution_location: "local",
   kickoff_mode: "autopilot",
   kickoff_model: parentModel,
-  cli_session_id: cliSessionId,
+  cli_session_id: process.env.FAKE_COPILOT_RESPONSE_SESSION_MISMATCH === "1"
+    ? `${cliSessionId}-mismatch`
+    : cliSessionId,
   started_at: timestamp(0),
   ended_at: timestamp(2200),
   terminal_return: terminal,

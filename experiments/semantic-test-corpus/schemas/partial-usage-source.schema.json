@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "partial-usage-source.schema.json",
+  "type": "object",
+  "required": ["available", "path", "sha256", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "available": {"type": "boolean"},
+    "path": {"type": ["string", "null"]},
+    "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "reason": {"type": ["string", "null"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"available": {"const": true}}},
+      "then": {
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "reason": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "path": {"type": "null"},
+          "sha256": {"type": "null"},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  ]
+}

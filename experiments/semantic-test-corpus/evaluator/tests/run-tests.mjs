@@ -527,6 +527,8 @@ test("captured timestamps enforce the strict 72-run global start order", () => {
       .some((error) => error.includes("strictly increasing")
         || error.includes("not derived")));
   } finally {
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
     rmSync(temporary, { recursive: true, force: true });
   }
 });
@@ -756,9 +758,47 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       readFileSync(resolve(uncertainRoot, "start-index.json"), "utf8")
     );
     assert.equal(uncertainIndex.captures[0].disposition, "started");
+    assert.equal(uncertain.partialUsage.metrics.aiCredits.available, false);
+    assert.equal(uncertain.partialUsage.metrics.nanoAiu.available, false);
+    assert.equal(uncertain.partialUsage.metrics.modelTokens.available, false);
+    assert.equal(uncertain.partialUsage.metrics.completionCount.available, false);
+    assert.equal(uncertain.partialUsage.metrics.durationMs.available, false);
+    assert.equal(uncertain.partialUsage.metrics.toolCallCount.available, true);
+    assert.equal(uncertain.partialUsage.attempt.available, false);
+    assert.equal(
+      uncertain.disposition.partialUsageSha256,
+      createHash("sha256")
+        .update(readFileSync(uncertain.partialUsagePath)).digest("hex")
+    );
+    process.env.FAKE_COPILOT_UNEXPECTED_STAGING = "1";
+    const partialRoot = resolve(temporary, "started-uncertain-partial");
+    const partial = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(partialRoot, "candidate"),
+      artifactRoot: resolve(partialRoot, "artifacts"),
+      startIndexPath: resolve(partialRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    assert.equal(partial.status, "started-uncertain");
+    assert.equal(partial.partialUsage.metrics.aiCredits.value, 2);
+    assert.equal(partial.partialUsage.metrics.nanoAiu.value, 2_000_000_000);
+    assert.equal(partial.partialUsage.metrics.inputTokens.value, 300);
+    assert.equal(partial.partialUsage.metrics.outputTokens.value, 30);
+    assert.equal(partial.partialUsage.metrics.modelTokens.value, 330);
+    assert.equal(partial.partialUsage.metrics.completionCount.value, 2);
+    assert.equal(partial.partialUsage.metrics.durationMs.value, 1000);
+    assert.equal(partial.partialUsage.metrics.toolCallCount.value, 4);
+    assert.equal(partial.partialUsage.metrics.toolResultCount.value, 4);
+    assert.equal(partial.partialUsage.attempt.available, true);
+    assert.equal(partial.partialUsage.attempt.attemptId, "B01-A4-attempt-1");
   } finally {
     delete process.env.FAKE_COPILOT_CREATE_FAILURE;
     delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
     rmSync(temporary, { recursive: true, force: true });
   }
 });
@@ -859,8 +899,76 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
   rmSync(temporary, { recursive: true, force: true });
   mkdirSync(temporary, { recursive: true });
   try {
-    const orderBaseMs = Date.now() - 15_000;
-    const baselineStartedAt = new Date(orderBaseMs + 5_000).toISOString();
+    const fakeCli = resolve(root, "fixtures", "fake-copilot-cli.mjs");
+    const partialIndexPath = resolve(temporary, "partial-start-index.json");
+    process.env.FAKE_COPILOT_START_ISO = new Date(Date.now() - 30_000)
+      .toISOString();
+    process.env.FAKE_COPILOT_UNEXPECTED_STAGING = "1";
+    const partialUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "partial-candidate"),
+      artifactRoot: resolve(temporary, "partial-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    process.env.FAKE_COPILOT_MISSING_USAGE = "1";
+    const noUsageUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "no-usage-candidate"),
+      artifactRoot: resolve(temporary, "no-usage-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 1,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    delete process.env.FAKE_COPILOT_START_ISO;
+    assert.equal(partialUncertain.status, "started-uncertain");
+    assert.equal(noUsageUncertain.status, "started-uncertain");
+    const partialCaptures = JSON.parse(
+      readFileSync(partialIndexPath, "utf8")
+    ).captures;
+    const uncertainDefinitions = new Map([
+      ["B01-A4", {
+        runId: "B01-A4",
+        blockId: "B01",
+        armId: 4,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: partialUncertain.dispositionPath
+      }],
+      ["B01-A1", {
+        runId: "B01-A1",
+        blockId: "B01",
+        armId: 1,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: noUsageUncertain.dispositionPath
+      }]
+    ]);
+    const orderBaseMs = Date.parse(partialCaptures.at(-1).recordedAt) - 1;
+    const baselineStartedAt = new Date(orderBaseMs + 5).toISOString();
     const baselinePlan = frozenSchedule.runs.find((run) => run.runId === "B01-A0");
     const baseline = runDeterministicBlock("B01", {
       startEvidence: {
@@ -994,8 +1102,13 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     ]);
     const captures = [];
     const unitDefinitions = frozenSchedule.runs.map((planned, index) => {
+      if (uncertainDefinitions.has(planned.runId)) {
+        captures.push(partialCaptures.find((capture) =>
+          capture.runId === planned.runId));
+        return uncertainDefinitions.get(planned.runId);
+      }
       const recordedAt = new Date(
-        orderBaseMs + index * 1000
+        orderBaseMs + index
       ).toISOString();
       const eligible = eligibleDefinitions.get(planned.runId);
       const disposition = eligible ? "started" : "unavailable";
@@ -1040,7 +1153,9 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
        sourcePath: sourcePath.slice(temporary.length + 1),
        sourceSha256: createHash("sha256").update(sourceBytes).digest("hex"),
        orderSourcePath: sourcePath.slice(temporary.length + 1),
-       orderSourceSha256: createHash("sha256").update(sourceBytes).digest("hex")
+       orderSourceSha256: createHash("sha256").update(sourceBytes).digest("hex"),
+       partialUsagePath: null,
+       partialUsageSha256: null
       }, null, 2)}\n`);
       return {
        runId: planned.runId,
@@ -1090,9 +1205,32 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     assert.equal(runs.find((run) => run.armId === 2).endpoints.totalModelTokens, 1850);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.modelEvidenceAvailable, 1);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 1);
+    const operationalSummary = summarizeDescriptive(runs)
+      .allAttemptOperationalUsage;
+    assert.equal(operationalSummary.totals.aiCredits.value, 8);
+    assert.equal(operationalSummary.totals.nanoAiu.value, 8_000_000_000);
+    assert.equal(operationalSummary.totals.inputTokens.value, 2000);
+    assert.equal(operationalSummary.totals.outputTokens.value, 180);
+    assert.equal(operationalSummary.totals.modelTokens.value, 2180);
+    assert.equal(operationalSummary.totals.completionCount.value, 4);
+    assert.equal(operationalSummary.totals.durationMs.value, 6200);
+    assert.equal(operationalSummary.totals.toolCallCount.value, 12);
+    assert.equal(operationalSummary.totals.toolResultCount.value, 12);
+    assert.deepEqual(
+      operationalSummary.totals.aiCredits.unavailableRunIds,
+      ["B01-A1"]
+    );
+    const partialRun = operationalSummary.runs.find((run) =>
+      run.runId === "B01-A4");
+    const noUsageRun = operationalSummary.runs.find((run) =>
+      run.runId === "B01-A1");
+    assert.equal(partialRun.metrics.aiCredits.available, true);
+    assert.equal(noUsageRun.metrics.aiCredits.available, false);
+    assert.match(noUsageRun.metrics.aiCredits.reason, /usage export was not produced/);
 
     const unavailableDefinition = definitions.runs.find((run) =>
-      run.status === "unavailable");
+      run.status === "unavailable"
+      && !["B01-A4", "B01-A1"].includes(run.runId));
     const dispositionBytes = readFileSync(unavailableDefinition.dispositionPath);
     const forgedDisposition = JSON.parse(dispositionBytes);
     forgedDisposition.orderSourceSha256 = "0".repeat(64);
@@ -1115,6 +1253,9 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     }, temporary),
       /exactly 72|Descriptive artifact manifest/i);
   } finally {
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    delete process.env.FAKE_COPILOT_START_ISO;
     rmSync(temporary, { recursive: true, force: true });
   }
 });

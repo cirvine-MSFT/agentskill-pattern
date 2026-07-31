@@ -144,3 +144,8 @@ attempt usage, and all-attempt operational usage. Unsupported fields are explici
 `null` with availability reasons.
 Started excluded units retain validated local evidence and are reported separately in
 excluded operational-usage totals; they never enter eligible quality estimates.
+Started-uncertain units also publish a typed, hash-bound partial-usage record. Available
+credits, nano-AIU, input/output/model tokens, completions, duration, and tool
+call/result counts contribute to all-attempt operational totals. Missing usage or event
+fields remain explicit unavailable measurements with reasons. Partial attempts never
+enter selected quality outcomes.

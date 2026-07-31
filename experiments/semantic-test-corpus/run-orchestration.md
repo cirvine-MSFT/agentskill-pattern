@@ -43,6 +43,10 @@ Eligibility requires observed exact:
 
 Missing, crashed, ambiguous, mismatched, or exceeded evidence after the marker is
 started/uncertain, preserves partial artifacts and every cost, and is never retried.
+The harness derives a typed partial-usage artifact from any raw usage/events already
+exported, binds it to the disposition and attempt when present, and records unavailable
+fields explicitly. The analyzer includes available finite values only in all-attempt
+operational totals, never selected quality outcomes.
 Only authoritative positive evidence of no kickoff, no session, and zero usage permits
 one retry. The raw authoritative receipt is preserved, hashed, and revalidated before
 retry. Selected-attempt and all-attempt operational costs remain separate.

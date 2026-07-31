@@ -5,7 +5,8 @@
   "required": [
     "formatVersion", "protocolId", "runId", "blockId", "armId", "status",
     "reason", "evidenceKind", "sourcePath", "sourceSha256",
-    "orderSourcePath", "orderSourceSha256"
+    "orderSourcePath", "orderSourceSha256", "partialUsagePath",
+    "partialUsageSha256"
   ],
   "additionalProperties": false,
   "properties": {
@@ -26,6 +27,11 @@
     "sourcePath": {"type": "string", "minLength": 1},
     "sourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "orderSourcePath": {"type": "string", "minLength": 1},
-    "orderSourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    "orderSourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "partialUsagePath": {"type": ["string", "null"]},
+    "partialUsageSha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    }
   }
 }
