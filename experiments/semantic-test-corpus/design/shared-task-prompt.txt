@@ -1,3 +1,15 @@
-Generate exactly 60 high-value v1 configuration migration scenarios.
+Generate the immutable request's 60 high-value v1 configuration migration scenarios.
 
-Read the supplied mapping contract and public schemas. Write only the staging JSON file named by the coordinator. Every case needs a unique ID, a concise description, a structurally valid v1 input, and one or more allowed sourceTags. Do not execute the migration, derive expected v2 output, add diagnostics, or inspect acceptance-only paths. Optimize semantic decisions, boundaries, cross-field interactions, and nonredundant path coverage within the fixed budget.
+Use `semantic-corpus/list_contract_files`, then
+`semantic-corpus/read_contract_file` for `request.json` and every listed contract file.
+For each request-defined ID, call `semantic-corpus/write_scenario_input` exactly once
+with only `scenarioId` and a closed-schema `config`. Do not retry rejected or failed
+calls. If all 60 writes succeed, call `semantic-corpus/write_scenario_manifest` exactly
+once with the request-defined ID/category pairs.
+
+Do not read staging, execute the migration, derive expected v2 output, add diagnostics,
+inspect acceptance-only paths, validate, package, copy, or return corpus content.
+Optimize semantic decisions, boundaries, cross-field interactions, and nonredundant path
+coverage within the fixed budget. Return exactly
+`corpus-staging/manifest.json - <count> scenarios - SUCCESS` after manifest success, or
+`corpus-staging - <written-count> scenarios - FAILURE: <reason>` after the first failure.

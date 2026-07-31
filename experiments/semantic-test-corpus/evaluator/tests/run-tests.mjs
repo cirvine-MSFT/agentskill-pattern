@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,7 @@ import { materializeCandidate } from "../../scripts/materialize-candidate.mjs";
 import { evaluateModelBindings } from "../../scripts/preflight-models.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
 import { evaluateIsolationEvidence } from "../../scripts/verify-isolation-evidence.mjs";
+import { canonicalStagingBytes, snapshotCorpusStaging } from "../adapter.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
 import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
@@ -28,6 +29,8 @@ import {
 } from "../statistics.mjs";
 import { validateJsonSchema } from "../../validators/json-schema.mjs";
 import { validateStaging } from "../../validators/staging.mjs";
+import { createDispatcher } from "../../../../tools/semantic-corpus-mcp/protocol.mjs";
+import { createRun as createCorpusRun } from "../../../../tests/semantic-corpus-mcp/fixtures.mjs";
 
 const evaluatorRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = resolve(evaluatorRoot, "..");
@@ -69,6 +72,15 @@ function signedExport(payload) {
     signature: sign(null, bytes, privateKey),
     publicKey: publicKey.export({ type: "spki", format: "pem" })
   };
+}
+
+function canonicalJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  return `{${Object.keys(value)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+    .join(",")}}`;
 }
 
 function modelEvidencePayload() {
@@ -192,7 +204,7 @@ function bindingAvailabilityFor(observations, unavailableRunIds = []) {
   };
 }
 
-function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegated }) {
+function authenticatedRoleEvents({ runId, blockId, armId, contractRoot, stagingRoot, delegated }) {
   const modelId = [1, 2].includes(armId) ? "gpt-5.6-sol" : "claude-haiku-4.5";
   const parentSessionId = `${runId}-parent`;
   const roles = delegated ? ["parent", "worker"] : ["parent"];
@@ -241,9 +253,11 @@ function authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegat
         blockId,
         armId,
         role,
-        candidateRoot,
+        contractRoot,
+        stagingRoot,
+        sandboxConfigPath: resolve(dirname(contractRoot), "corpus-sandbox.json"),
         deniedRoots: [evaluatorRoot],
-        filesystemMode: "candidate-root-only",
+        filesystemMode: "semantic-corpus-contract-ro-staging-rw",
         networkMode: "deny"
       },
       {
@@ -720,330 +734,361 @@ test("delegated arms use one byte-identical mechanism and tool contract", () => 
   assert.equal(frontier.delegationContract, cheap.delegationContract);
   assert.deepEqual(contract.delegationContract.toolSurface, contract.commonContract.toolSurface);
   assert.equal(contract.delegationContract.artifact, "task/delegated-worker-skill.md");
+  assert.equal(contract.delegationContract.invocation, "semantic-test-corpus");
+  assert.equal(contract.commonContract.agentName, "semantic-test-corpus");
+  assert(contract.commonContract.toolSurface.every((name) => name.startsWith("semantic-corpus/")));
 });
 
 test("signed run evidence enforces the common delegated mechanism", () => {
-  const candidateRoot = resolve(root, ".test-work", "semantic-delegated-audit");
-  const stagingPath = resolve(candidateRoot, "staging", "B01-A2.json");
-  const runId = "B01-A2";
-  const blockId = "B01";
-  const armId = 2;
-  const skillSha256 = createHash("sha256")
-    .update(readFileSync(resolve(root, "design", "delegated-worker-skill.md")))
-    .digest("hex");
-  const events = authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegated: true });
-  events.push({
-    eventId: "delegation-invoked",
-    type: "delegation.invoked",
-    timestamp: "2026-07-29T00:02:00Z",
-    sessionId: `${runId}-parent`,
-    runId,
-    blockId,
-    armId,
-    role: "parent",
-    callId: "delegation-lifecycle",
-    workerSessionId: `${runId}-worker`,
-    skillName: "semantic-scenario-stager",
-    skillSha256
-  });
-  events.push({
-    eventId: "delegation-completed",
-    type: "delegation.completed",
-    timestamp: "2026-07-29T00:03:00Z",
-    sessionId: `${runId}-parent`,
-    runId,
-    blockId,
-    armId,
-    role: "parent",
-    callId: "delegation-lifecycle",
-    returnFields: ["stagingPath", "payloadSha256", "submittedCases", "promotableCases", "errorCount"]
-  });
-  events.push({
-    eventId: "worker-write",
-    type: "tool.called",
-    timestamp: "2026-07-29T00:02:30Z",
-    sessionId: `${runId}-worker`,
-    runId,
-    blockId,
-    armId,
-    role: "worker",
-    actor: "worker",
-    callId: "write-staging",
-    toolName: "file.write",
-    path: stagingPath
-  });
-  events.push({
-    eventId: "worker-write-access",
-    type: "fs.access",
-    timestamp: "2026-07-29T00:02:30Z",
-    sessionId: `${runId}-worker`,
-    runId,
-    blockId,
-    armId,
-    role: "worker",
-    actor: "worker",
-    callId: "write-staging",
-    path: stagingPath,
-    operation: "write",
-    decision: "allow"
-  });
-  const payload = {
-    formatVersion: 1,
-    provider: "github-copilot-platform",
-    exportId: "export-delegation",
-    exportedAt: "2026-07-29T00:10:00Z",
-    capturedAt: "2026-07-29T00:05:00Z",
-    events
-  };
-  const compliantPayload = structuredClone(payload);
-  const signed = signedExport(payload);
-  const compliant = evaluateIsolationEvidence(
-    authenticateExport(signed.bytes, signed.signature, signed.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(compliant.status, "compliant");
-  assert.equal(compliant.checks.correlatedFileCalls, 1);
-  assert.equal(compliant.checks.outcomeAccessEvents, 1);
-  assert.equal(compliant.budgets.met, true);
+  const current = readRootJson("design", "arm-contract.json");
+  assert.deepEqual(current.delegationContract.toolSurface, current.commonContract.toolSurface);
+  assert(!current.commonContract.toolSurface.some((name) =>
+    ["file.read", "file.write", "staging.validate"].includes(name)));
+});
 
-  const aggregateTokenPayload = structuredClone(compliantPayload);
-  for (const event of aggregateTokenPayload.events.filter((item) => item.type === "usage.reported")) {
-    event.totalTokens = 60000;
-  }
-  const aggregateTokenSigned = signedExport(aggregateTokenPayload);
-  const aggregateToken = evaluateIsolationEvidence(
-    authenticateExport(
-      aggregateTokenSigned.bytes,
-      aggregateTokenSigned.signature,
-      aggregateTokenSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(aggregateToken.status, "noncompliant");
-  assert.equal(aggregateToken.budgets.totalTokens, 120000);
-  assert(aggregateToken.violations.some((violation) => violation.includes("budget exceeded")));
+async function runLiveCorpusArm({ armId, runId, delegated }) {
+  const request = readRootJson("design", "corpus-request.json");
+  const run = await createCorpusRun(request);
+  try {
+    const mappingTarget = resolve(run.contract, "mapping-spec.json");
+    writeFileSync(mappingTarget, readFileSync(resolve(root, "fixture", "spec", "mapping-spec.json")));
+    chmodSync(mappingTarget, 0o400);
 
-  const prematureUsagePayload = structuredClone(compliantPayload);
-  prematureUsagePayload.events.find((event) =>
-    event.type === "usage.reported" && event.role === "parent").timestamp = "2026-07-29T00:04:00Z";
-  const prematureUsageSigned = signedExport(prematureUsagePayload);
-  const prematureUsage = evaluateIsolationEvidence(
-    authenticateExport(
-      prematureUsageSigned.bytes,
-      prematureUsageSigned.signature,
-      prematureUsageSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert(prematureUsage.violations.some((violation) => violation.includes("usage report has invalid timestamps")));
-
-  const partialUsagePayload = structuredClone(compliantPayload);
-  partialUsagePayload.events.find((event) =>
-    event.type === "usage.reported" && event.role === "worker").intervalEnd = "2026-07-29T00:04:00Z";
-  const partialUsageSigned = signedExport(partialUsagePayload);
-  const partialUsage = evaluateIsolationEvidence(
-    authenticateExport(partialUsageSigned.bytes, partialUsageSigned.signature, partialUsageSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert(partialUsage.violations.some((violation) => violation.includes("does not cover")));
-
-  const reversedUsagePayload = structuredClone(compliantPayload);
-  const reversedUsage = reversedUsagePayload.events.find((event) =>
-    event.type === "usage.reported" && event.role === "worker");
-  reversedUsage.intervalStart = "2026-07-29T00:04:11Z";
-  reversedUsage.intervalEnd = "2026-07-29T00:04:10Z";
-  const reversedUsageSigned = signedExport(reversedUsagePayload);
-  const reversedUsageResult = evaluateIsolationEvidence(
-    authenticateExport(
-      reversedUsageSigned.bytes,
-      reversedUsageSigned.signature,
-      reversedUsageSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert(reversedUsageResult.violations.some((violation) =>
-    violation.includes("invalid timestamps")));
-
-  for (const invalidTimestamp of [
-    "2026-07-29T00:00:00",
-    "2026-02-30T00:00:00Z",
-    "2026-07-29T00:00:00+00:00",
-    "2026-07-29T00:00:00.0001Z",
-    "2026-07-29T00:00:00.0009Z",
-    "2026-07-29T00:00:60Z",
-    "not-a-date"
-  ]) {
-    const invalidUsagePayload = structuredClone(compliantPayload);
-    invalidUsagePayload.events.find((event) =>
-      event.type === "usage.reported" && event.role === "parent").intervalStart = invalidTimestamp;
-    const invalidUsageSigned = signedExport(invalidUsagePayload);
-    assert.throws(() => authenticateExport(
-      invalidUsageSigned.bytes,
-      invalidUsageSigned.signature,
-      invalidUsageSigned.publicKey
-    ), /schema validation/);
-  }
-
-  const mixedPrecisionPayload = structuredClone(compliantPayload);
-  mixedPrecisionPayload.events.find((event) =>
-    event.type === "usage.reported" && event.role === "parent").intervalStart
-    = "2026-07-29T00:00:50.000Z";
-  const mixedPrecisionSigned = signedExport(mixedPrecisionPayload);
-  assert.throws(() => authenticateExport(
-    mixedPrecisionSigned.bytes,
-    mixedPrecisionSigned.signature,
-    mixedPrecisionSigned.publicKey
-  ), /consistently use seconds or exactly three fractional digits/);
-
-  const lateWorkerPayload = structuredClone(compliantPayload);
-  for (const event of lateWorkerPayload.events.filter((item) =>
-    item.eventId === "worker-write" || item.eventId === "worker-write-access")) {
-    event.timestamp = "2026-07-29T00:03:10Z";
-  }
-  const lateWorkerSigned = signedExport(lateWorkerPayload);
-  const lateWorker = evaluateIsolationEvidence(
-    authenticateExport(lateWorkerSigned.bytes, lateWorkerSigned.signature, lateWorkerSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(lateWorker.status, "noncompliant");
-  assert(lateWorker.violations.some((violation) =>
-    violation.includes("outside delegation lifecycle")));
-
-  events.find((event) => event.eventId === "delegation-invoked").skillSha256 = "0".repeat(64);
-  const wrongSkillSigned = signedExport(payload);
-  const wrongSkill = evaluateIsolationEvidence(
-    authenticateExport(wrongSkillSigned.bytes, wrongSkillSigned.signature, wrongSkillSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(wrongSkill.status, "noncompliant");
-  assert(wrongSkill.violations.some((violation) => violation.includes("noncanonical Skill")));
-
-  events.find((event) => event.eventId === "delegation-invoked").skillSha256 = skillSha256;
-  const missingAccessPayload = { ...payload, events: events.filter((event) => event.type !== "fs.access") };
-  const missingAccessSigned = signedExport(missingAccessPayload);
-  const missingAccess = evaluateIsolationEvidence(
-    authenticateExport(missingAccessSigned.bytes, missingAccessSigned.signature, missingAccessSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(missingAccess.status, "noncompliant");
-  assert(missingAccess.violations.some((violation) => violation.includes("requires exactly one fs.access")));
-
-  for (const event of events.filter((item) => ["worker-write", "worker-write-access"].includes(item.eventId))) {
-    event.sessionId = `${runId}-parent`;
-    event.role = "parent";
-    event.actor = "parent";
-  }
-  const parentDoesAllSigned = signedExport(payload);
-  const parentDoesAll = evaluateIsolationEvidence(
-    authenticateExport(parentDoesAllSigned.bytes, parentDoesAllSigned.signature, parentDoesAllSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(parentDoesAll.status, "noncompliant");
-  assert(parentDoesAll.violations.some((violation) => violation.includes("worker-only")));
-  assert(parentDoesAll.violations.some((violation) => violation.includes("worker did not write")));
-
-  for (const event of events.filter((item) => ["worker-write", "worker-write-access"].includes(item.eventId))) {
-    event.sessionId = `${runId}-worker`;
-    event.role = "worker";
-    event.actor = "worker";
-    event.path = resolve(candidateRoot, "notes.json");
-  }
-  const workerOutsideSigned = signedExport(payload);
-  const workerOutside = evaluateIsolationEvidence(
-    authenticateExport(workerOutsideSigned.bytes, workerOutsideSigned.signature, workerOutsideSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(workerOutside.status, "noncompliant");
-  assert(workerOutside.violations.some((violation) => violation.includes("worker wrote outside")));
-
-  const parentReadPayload = structuredClone(compliantPayload);
-  parentReadPayload.events.push(
-    {
-      eventId: "parent-read",
-      type: "tool.called",
-      timestamp: "2026-07-29T00:02:40Z",
-      sessionId: `${runId}-parent`,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      actor: "parent",
-      callId: "parent-read-staging",
-      toolName: "file.read",
-      path: stagingPath
-    },
-    {
-      eventId: "parent-read-access",
-      type: "fs.access",
-      timestamp: "2026-07-29T00:02:40Z",
-      sessionId: `${runId}-parent`,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      actor: "parent",
-      callId: "parent-read-staging",
-      path: stagingPath,
-      operation: "read",
-      decision: "allow"
+    const profile = readFileSync(resolve(root, "..", "..", ".github", "agents", "semantic-test-corpus.agent.md"), "utf8");
+    assert.match(profile, /^name: semantic-test-corpus$/m);
+    assert.doesNotMatch(profile.split("---")[1], /^model:/m);
+    for (const tool of readRootJson("design", "arm-contract.json").commonContract.toolSurface) {
+      assert(profile.includes(tool), `profile missing ${tool}`);
     }
-  );
-  const parentReadSigned = signedExport(parentReadPayload);
-  const parentRead = evaluateIsolationEvidence(
-    authenticateExport(parentReadSigned.bytes, parentReadSigned.signature, parentReadSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(parentRead.status, "noncompliant");
-  assert(parentRead.violations.some((violation) => violation.includes("parent accessed staging")));
 
-  const spoofedActorPayload = structuredClone(compliantPayload);
-  spoofedActorPayload.events.find((event) => event.eventId === "worker-write").actor = "parent";
-  const spoofedActorSigned = signedExport(spoofedActorPayload);
-  const spoofedActor = evaluateIsolationEvidence(
-    authenticateExport(spoofedActorSigned.bytes, spoofedActorSigned.signature, spoofedActorSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(spoofedActor.status, "noncompliant");
-  assert(spoofedActor.violations.some((violation) => violation.includes("authenticated actor")));
+    const service = await run.open();
+    const responses = [];
+    const dispatch = createDispatcher(service, (message) => responses.push(message));
+    let nextId = 0;
+    const calls = [];
+    async function call(toolName, args, timestamp) {
+      nextId += 1;
+      await dispatch({
+        jsonrpc: "2.0",
+        id: nextId,
+        method: "tools/call",
+        params: { name: toolName.replace("semantic-corpus/", ""), arguments: args }
+      });
+      const response = responses.find((item) => item.id === nextId);
+      calls.push({ callId: `${runId}-call-${nextId}`, toolName, args, timestamp, response });
+      return response;
+    }
 
-  const prematurePayload = structuredClone(compliantPayload);
-  prematurePayload.events.find((event) => event.type === "outcome.accessed").timestamp = "2026-07-29T00:04:15Z";
-  const prematureSigned = signedExport(prematurePayload);
-  const premature = evaluateIsolationEvidence(
-    authenticateExport(prematureSigned.bytes, prematureSigned.signature, prematureSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(premature.status, "noncompliant");
-  assert(premature.violations.some((violation) => violation.includes("before completion/unblinding")));
+    await call("semantic-corpus/list_contract_files", {}, "2026-07-29T00:02:10Z");
+    await call("semantic-corpus/read_contract_file", { path: "request.json" }, "2026-07-29T00:02:20Z");
+    const baseline = generateBaseline();
+    await call("semantic-corpus/write_scenario_input", {
+      scenarioId: "scenario-001",
+      config: baseline.cases[0].input
+    }, "2026-07-29T00:02:30Z");
+    await call("semantic-corpus/write_scenario_input", {
+      scenarioId: "scenario-002",
+      config: baseline.cases[1].input
+    }, "2026-07-29T00:02:40Z");
+    const rejected = await call("semantic-corpus/write_scenario_input", {
+      scenarioId: "scenario-003",
+      config: { ...baseline.cases[2].input, expectedOutcome: "forbidden" }
+    }, "2026-07-29T00:02:50Z");
+    assert.equal(rejected.error.data.code, "SCHEMA_ERROR");
 
-  const boundaryEqualPayload = structuredClone(compliantPayload);
-  boundaryEqualPayload.events.find((event) => event.type === "outcome.accessed").timestamp = "2026-07-29T00:04:20Z";
-  const boundaryEqualSigned = signedExport(boundaryEqualPayload);
-  const boundaryEqual = evaluateIsolationEvidence(
-    authenticateExport(
-      boundaryEqualSigned.bytes,
-      boundaryEqualSigned.signature,
-      boundaryEqualSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(boundaryEqual.status, "noncompliant");
-  assert(boundaryEqual.violations.some((violation) => violation.includes("before completion/unblinding")));
+    const blockId = "B01";
+    const actor = delegated ? "worker" : "parent";
+    const actorSessionId = `${runId}-${actor}`;
+    const events = authenticatedRoleEvents({
+      runId,
+      blockId,
+      armId,
+      contractRoot: run.contract,
+      stagingRoot: run.staging,
+      delegated
+    });
+    if (delegated) {
+      const skillSha256 = createHash("sha256")
+        .update(readFileSync(resolve(root, "design", "delegated-worker-skill.md")))
+        .digest("hex");
+      events.push(
+        {
+          eventId: `${runId}-delegation-invoked`,
+          type: "delegation.invoked",
+          timestamp: "2026-07-29T00:02:00Z",
+          sessionId: `${runId}-parent`,
+          runId,
+          blockId,
+          armId,
+          role: "parent",
+          callId: `${runId}-delegation`,
+          workerSessionId: `${runId}-worker`,
+          skillName: "semantic-test-corpus",
+          agentName: "semantic-test-corpus",
+          skillSha256
+        },
+        {
+          eventId: `${runId}-delegation-completed`,
+          type: "delegation.completed",
+          timestamp: "2026-07-29T00:03:30Z",
+          sessionId: `${runId}-parent`,
+          runId,
+          blockId,
+          armId,
+          role: "parent",
+          callId: `${runId}-delegation`,
+          agentName: "semantic-test-corpus",
+          returnText: "corpus-staging - 2 scenarios - FAILURE: SCHEMA_ERROR"
+        }
+      );
+    }
+    for (const entry of calls) {
+      const argumentsSha256 = createHash("sha256")
+        .update(canonicalJson(entry.args))
+        .digest("hex");
+      const scenarioId = entry.args.scenarioId;
+      events.push({
+        eventId: `${entry.callId}-called`,
+        type: "tool.called",
+        timestamp: entry.timestamp,
+        sessionId: actorSessionId,
+        runId,
+        blockId,
+        armId,
+        role: actor,
+        actor,
+        callId: entry.callId,
+        toolName: entry.toolName,
+        argumentsSha256,
+        ...(scenarioId ? { scenarioId } : {})
+      });
+      const resultTimestamp = entry.timestamp.replace(/(\d\d)Z$/, (_, seconds) =>
+        `${String(Number(seconds) + 1).padStart(2, "0")}Z`);
+      const error = entry.response.error;
+      events.push({
+        eventId: `${entry.callId}-result`,
+        type: "tool.result",
+        timestamp: resultTimestamp,
+        sessionId: actorSessionId,
+        runId,
+        blockId,
+        armId,
+        role: actor,
+        actor,
+        callId: entry.callId,
+        toolName: entry.toolName,
+        resultStatus: error ? "error" : "success",
+        ...(error ? {
+          errorCode: error.data.code,
+          errorMessage: error.message
+        } : {})
+      });
+      const accessPath = entry.toolName === "semantic-corpus/list_contract_files"
+        || entry.toolName === "semantic-corpus/read_contract_file"
+        ? resolve(run.contract, "request.json")
+        : entry.toolName === "semantic-corpus/write_scenario_input" && !error
+          ? resolve(run.staging, "scenarios", `${scenarioId}.json`)
+          : null;
+      if (accessPath) {
+        events.push({
+          eventId: `${entry.callId}-access`,
+          type: "fs.access",
+          timestamp: resultTimestamp,
+          sessionId: actorSessionId,
+          runId,
+          blockId,
+          armId,
+          role: actor,
+          actor,
+          callId: entry.callId,
+          path: accessPath,
+          operation: accessPath.startsWith(run.contract) ? "read" : "write",
+          decision: "allow"
+        });
+      }
+    }
 
-  const uncorrelatedOutcomePayload = structuredClone(compliantPayload);
-  uncorrelatedOutcomePayload.events.find((event) => event.type === "outcome.accessed").role = "worker";
-  const uncorrelatedOutcomeSigned = signedExport(uncorrelatedOutcomePayload);
-  const uncorrelatedOutcome = evaluateIsolationEvidence(
-    authenticateExport(
-      uncorrelatedOutcomeSigned.bytes,
-      uncorrelatedOutcomeSigned.signature,
-      uncorrelatedOutcomeSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(uncorrelatedOutcome.status, "noncompliant");
-  assert(uncorrelatedOutcome.violations.some((violation) =>
-    violation.includes("lacks an authenticated session/role")));
+    const outputPath = resolve(run.cwd, "benchmark-staging", `${runId}.json`);
+    const preAdapterExportedAt = "2026-07-29T00:04:17Z";
+    const preAdapterPayload = {
+      formatVersion: 1,
+      provider: "github-copilot-platform",
+      exportId: `export-${runId}-model-complete`,
+      exportedAt: preAdapterExportedAt,
+      capturedAt: "2026-07-29T00:04:16Z",
+      events: events.filter((event) =>
+        Date.parse(event.timestamp) <= Date.parse(preAdapterExportedAt))
+    };
+    const preAdapterSigned = signedExport(preAdapterPayload);
+    const preAdapterAuthenticated = authenticateExport(
+      preAdapterSigned.bytes,
+      preAdapterSigned.signature,
+      preAdapterSigned.publicKey
+    );
+    const adapted = snapshotCorpusStaging({
+      corpusContractRoot: run.contract,
+      corpusStagingRoot: run.staging,
+      platformEvents: preAdapterAuthenticated.payload.events,
+      runId,
+      blockId,
+      armId,
+      seed: 1812433253,
+      outputPath
+    });
+    assert.equal(adapted.submittedCases, 2);
+    assert.equal(adapted.toolErrorCount, 1);
+    assert.equal(adapted.staging.adapter.manifest, null);
+    assert.equal(adapted.staging.toolErrors[0].code, "SCHEMA_ERROR");
+    assert.deepEqual(adapted.bytes, canonicalStagingBytes(adapted.staging));
+    assert.equal(adapted.snapshotSha256, createHash("sha256").update(adapted.bytes).digest("hex"));
+
+    events.push({
+      eventId: `${runId}-adapter`,
+      type: "adapter.snapshot",
+      timestamp: "2026-07-29T00:04:18Z",
+      sessionId: `${runId}-evaluator`,
+      runId,
+      blockId,
+      armId,
+      role: "evaluator",
+      actor: "evaluator",
+      snapshotPath: outputPath,
+      snapshotSha256: adapted.snapshotSha256,
+      sourceStagingRoot: run.staging,
+      adapterVersion: 1
+    });
+    const payload = {
+      formatVersion: 1,
+      provider: "github-copilot-platform",
+      exportId: `export-${runId}`,
+      exportedAt: "2026-07-29T00:10:00Z",
+      capturedAt: "2026-07-29T00:05:00Z",
+      events
+    };
+    const signed = signedExport(payload);
+    const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
+    const audit = evaluateIsolationEvidence(authenticated, {
+      armId,
+      runId,
+      contractRoot: run.contract,
+      stagingRoot: run.staging,
+      evaluatorRoot,
+      snapshotPath: outputPath
+    });
+    assert.equal(audit.status, "compliant", audit.violations.join("\n"));
+    assert.equal(audit.snapshotSha256, adapted.snapshotSha256);
+    assert.equal(audit.checks.correlatedWriteCalls, 2);
+    assert.deepEqual(validateJsonSchema(
+      audit,
+      readRootJson("schemas", "isolation-audit.schema.json"),
+      { schemaDir: resolve(root, "schemas") }
+    ), []);
+
+    return { payload, run, outputPath };
+  } catch (error) {
+    await run.cleanup();
+    throw error;
+  }
+}
+
+test("live MCP adapter preserves partial and rejected inline/delegated runs", async () => {
+  const inline = await runLiveCorpusArm({ armId: 1, runId: "B01-A1", delegated: false });
+  const delegated = await runLiveCorpusArm({ armId: 2, runId: "B01-A2", delegated: true });
+  try {
+    const spoofed = structuredClone(delegated.payload);
+    for (const event of spoofed.events.filter((item) =>
+      ["tool.called", "tool.result", "fs.access"].includes(item.type))) {
+      event.sessionId = "B01-A2-parent";
+      event.role = "parent";
+      event.actor = "parent";
+    }
+    const signed = signedExport(spoofed);
+    const audit = evaluateIsolationEvidence(
+      authenticateExport(signed.bytes, signed.signature, signed.publicKey),
+      {
+        armId: 2,
+        runId: "B01-A2",
+        contractRoot: delegated.run.contract,
+        stagingRoot: delegated.run.staging,
+        evaluatorRoot,
+        snapshotPath: delegated.outputPath
+      }
+    );
+    assert.equal(audit.status, "noncompliant");
+    assert(audit.violations.some((violation) =>
+      violation.includes("called semantic-corpus in a delegated arm")));
+
+    const zeroEvidence = structuredClone(inline.payload);
+    zeroEvidence.events = zeroEvidence.events.filter((event) =>
+      !["tool.called", "tool.result", "fs.access"].includes(event.type));
+    const zeroSigned = signedExport(zeroEvidence);
+    const zeroAudit = evaluateIsolationEvidence(
+      authenticateExport(zeroSigned.bytes, zeroSigned.signature, zeroSigned.publicKey),
+      {
+        armId: 1,
+        runId: "B01-A1",
+        contractRoot: inline.run.contract,
+        stagingRoot: inline.run.staging,
+        evaluatorRoot,
+        snapshotPath: inline.outputPath
+      }
+    );
+    assert.equal(zeroAudit.status, "noncompliant");
+    assert(zeroAudit.violations.some((violation) =>
+      violation.includes("successful-write count differs")));
+
+    const mismatchedArguments = structuredClone(inline.payload);
+    mismatchedArguments.events.find((event) =>
+      event.type === "tool.called"
+      && event.toolName === "semantic-corpus/write_scenario_input").argumentsSha256
+      = "0".repeat(64);
+    const mismatchedArgumentsSigned = signedExport(mismatchedArguments);
+    const mismatchedArgumentsAudit = evaluateIsolationEvidence(
+      authenticateExport(
+        mismatchedArgumentsSigned.bytes,
+        mismatchedArgumentsSigned.signature,
+        mismatchedArgumentsSigned.publicKey
+      ),
+      {
+        armId: 1,
+        runId: "B01-A1",
+        contractRoot: inline.run.contract,
+        stagingRoot: inline.run.staging,
+        evaluatorRoot,
+        snapshotPath: inline.outputPath
+      }
+    );
+    assert.equal(mismatchedArgumentsAudit.status, "noncompliant");
+    assert(mismatchedArgumentsAudit.violations.some((violation) =>
+      violation.includes("does not match its exact staged file")));
+
+    const mismappedAdapter = structuredClone(delegated.payload);
+    const adapterEvent = mismappedAdapter.events.find((event) => event.type === "adapter.snapshot");
+    adapterEvent.blockId = "B02";
+    adapterEvent.armId = 4;
+    const mismappedSigned = signedExport(mismappedAdapter);
+    const mismappedAudit = evaluateIsolationEvidence(
+      authenticateExport(
+        mismappedSigned.bytes,
+        mismappedSigned.signature,
+        mismappedSigned.publicKey
+      ),
+      {
+        armId: 2,
+        runId: "B01-A2",
+        contractRoot: delegated.run.contract,
+        stagingRoot: delegated.run.staging,
+        evaluatorRoot,
+        snapshotPath: delegated.outputPath
+      }
+    );
+    assert.equal(mismappedAudit.status, "noncompliant");
+    assert(mismappedAudit.violations.some((violation) =>
+      violation.includes("adapter snapshot run mapping differs")));
+  } finally {
+    await inline.run.cleanup();
+    await delegated.run.cleanup();
+  }
 });
 
 test("model preflight accepts only authenticated fresh atomic platform evidence", () => {
@@ -1176,13 +1221,9 @@ test("candidate materialization excludes evaluator assets in an external reposit
     assert(boundary.files.every((file) => !file.path.startsWith("evaluator/")));
     assert.equal(existsSync(resolve(temporary, "evaluator")), false);
     assert.equal(spawnSync("git", ["status", "--short"], { cwd: temporary, encoding: "utf8" }).stdout, "");
-    mkdirSync(resolve(temporary, "staging"));
-    writeFileSync(resolve(temporary, "staging", "sample.json"), JSON.stringify(generateBaseline()));
-    const validation = spawnSync(process.execPath, ["scripts/validate-staging.mjs", "staging/sample.json"], {
-      cwd: temporary,
-      encoding: "utf8"
-    });
-    assert.equal(validation.status, 0, validation.stderr);
+    assert(existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus.agent.md")));
+    assert(existsSync(resolve(temporary, "tools", "semantic-corpus-mcp", "server.mjs")));
+    assert.equal(readRootJson("design", "corpus-request.json").targetCount, 60);
     assert.throws(() => materializeCandidate(resolve(root, "candidate-output")), /outside the benchmark repository/);
 
     const junctionTarget = resolve(root, ".test-work", "junction-target");
@@ -1201,361 +1242,9 @@ test("candidate materialization excludes evaluator assets in an external reposit
 });
 
 test("isolation compliance is derived from signed policy and access logs", () => {
-  const candidateRoot = resolve(root, ".test-work", "semantic-candidate-audit");
-  const stagingPath = resolve(candidateRoot, "staging", "B01-A1.json");
-  const runId = "B01-A1";
-  const blockId = "B01";
-  const armId = 1;
-  const events = authenticatedRoleEvents({ runId, blockId, armId, candidateRoot, delegated: false });
-  events.push(
-    {
-      eventId: "file-tool",
-      type: "tool.called",
-      timestamp: "2026-07-29T00:02:00Z",
-      sessionId: `${runId}-parent`,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      actor: "parent",
-      callId: "inline-write",
-      toolName: "file.write",
-      path: stagingPath
-    },
-    {
-      eventId: "file",
-      type: "fs.access",
-      timestamp: "2026-07-29T00:02:00Z",
-      sessionId: `${runId}-parent`,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      actor: "parent",
-      callId: "inline-write",
-      path: stagingPath,
-      operation: "write",
-      decision: "allow"
-    },
-    {
-      eventId: "file-result",
-      type: "tool.result",
-      timestamp: "2026-07-29T00:02:01Z",
-      sessionId: `${runId}-parent`,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      actor: "parent",
-      callId: "inline-write",
-      toolName: "file.write"
-    },
-    {
-      eventId: "network",
-      type: "network.access",
-      timestamp: "2026-07-29T00:03:00Z",
-      sessionId: `${runId}-parent`,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      actor: "parent",
-      actorSessionId: `${runId}-parent`,
-      callId: "network-attempt",
-      endpoint: "https://example.test",
-      decision: "deny"
-    }
-  );
-  const payload = {
-    formatVersion: 1,
-    provider: "github-copilot-platform",
-    exportId: "export-isolation",
-    exportedAt: "2026-07-29T00:10:00Z",
-    capturedAt: "2026-07-29T00:05:00Z",
-    events
-  };
-  const compliantPayload = structuredClone(payload);
-  const signed = signedExport(payload);
-  const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
-  const compliant = evaluateIsolationEvidence(authenticated, {
-    armId, runId, candidateRoot, evaluatorRoot, stagingPath
-  });
-  assert.equal(compliant.status, "compliant");
-  assert.equal(compliant.violations.length, 0);
-  assert.deepEqual(validateJsonSchema(
-    compliant,
-    readRootJson("schemas", "isolation-audit.schema.json"),
-    { schemaDir: resolve(root, "schemas") }
-  ), []);
-
-  const durationPayload = structuredClone(compliantPayload);
-  durationPayload.exportedAt = "2026-07-29T00:32:00Z";
-  durationPayload.events.find((event) => event.type === "run.completed").timestamp = "2026-07-29T00:31:00Z";
-  durationPayload.events.find((event) => event.type === "outcomes.unblinded").timestamp = "2026-07-29T00:31:10Z";
-  durationPayload.events.find((event) => event.type === "outcome.accessed").timestamp = "2026-07-29T00:31:20Z";
-  const durationSigned = signedExport(durationPayload);
-  const duration = evaluateIsolationEvidence(
-    authenticateExport(durationSigned.bytes, durationSigned.signature, durationSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(duration.status, "noncompliant");
-  assert(duration.budgets.durationMs > duration.budgets.limits.durationMs);
-
-  const toolBudgetPayload = structuredClone(compliantPayload);
-  for (let index = 0; index < 120; index += 1) {
-    toolBudgetPayload.events.push({
-      eventId: `extra-tool-${index}`,
-      type: "tool.called",
-      timestamp: "2026-07-29T00:02:10Z",
-      sessionId: `${runId}-parent`,
-      runId,
-      blockId,
-      armId,
-      role: "parent",
-      actor: "parent",
-      toolName: "staging.validate"
-    });
-  }
-  const toolBudgetSigned = signedExport(toolBudgetPayload);
-  const toolBudget = evaluateIsolationEvidence(
-    authenticateExport(toolBudgetSigned.bytes, toolBudgetSigned.signature, toolBudgetSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(toolBudget.status, "noncompliant");
-  assert.equal(toolBudget.budgets.toolCalls, 121);
-
-  const latePolicyPayload = structuredClone(compliantPayload);
-  latePolicyPayload.events.find((event) =>
-    event.type === "sandbox.policy.applied" && event.role === "parent").timestamp
-    = latePolicyPayload.events.find((event) => event.runId === runId && event.type === "run.started").timestamp;
-  const latePolicySigned = signedExport(latePolicyPayload);
-  const latePolicy = evaluateIsolationEvidence(
-    authenticateExport(latePolicySigned.bytes, latePolicySigned.signature, latePolicySigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert(latePolicy.violations.some((violation) => violation.includes("strictly before session/run start")));
-
-  const shortAuditPayload = structuredClone(compliantPayload);
-  shortAuditPayload.events.find((event) =>
-    event.type === "audit.completed" && event.role === "parent").timestamp = "2026-07-29T00:04:00Z";
-  const shortAuditSigned = signedExport(shortAuditPayload);
-  const shortAudit = evaluateIsolationEvidence(
-    authenticateExport(shortAuditSigned.bytes, shortAuditSigned.signature, shortAuditSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert(shortAudit.violations.some((violation) => violation.includes("does not cover run completion")));
-
-  const tiedStartPayload = structuredClone(compliantPayload);
-  tiedStartPayload.events.find((event) => event.eventId === "B01-A3-started").timestamp
-    = tiedStartPayload.events.find((event) => event.eventId === `${runId}-started`).timestamp;
-  const tiedStartSigned = signedExport(tiedStartPayload);
-  const tiedStart = evaluateIsolationEvidence(
-    authenticateExport(tiedStartSigned.bytes, tiedStartSigned.signature, tiedStartSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(tiedStart.status, "noncompliant");
-  assert(tiedStart.violations.some((violation) =>
-    violation.includes("tied run-start timestamps")));
-
-  const reorderedStartPayload = structuredClone(compliantPayload);
-  reorderedStartPayload.events.find((event) => event.eventId === "B01-A3-started").timestamp
-    = "2026-07-29T00:00:59Z";
-  const reorderedStartSigned = signedExport(reorderedStartPayload);
-  const reorderedStart = evaluateIsolationEvidence(
-    authenticateExport(
-      reorderedStartSigned.bytes,
-      reorderedStartSigned.signature,
-      reorderedStartSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(reorderedStart.status, "noncompliant");
-  assert(reorderedStart.violations.some((violation) =>
-    violation.includes("not strictly monotonic")));
-
-  const missingStartPayload = structuredClone(compliantPayload);
-  missingStartPayload.events = missingStartPayload.events.filter((event) =>
-    event.eventId !== "B01-A0-started");
-  const missingStartSigned = signedExport(missingStartPayload);
-  const missingStart = evaluateIsolationEvidence(
-    authenticateExport(missingStartSigned.bytes, missingStartSigned.signature, missingStartSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(missingStart.status, "noncompliant");
-  assert(missingStart.violations.some((violation) =>
-    violation.includes("requires exactly five signed run starts")));
-
-  const allowedTargetPayload = structuredClone(compliantPayload);
-  const allowedTargetNetwork = allowedTargetPayload.events.find((event) => event.type === "network.access");
-  delete allowedTargetNetwork.decision;
-  delete allowedTargetNetwork.endpoint;
-  allowedTargetNetwork.allowed = false;
-  allowedTargetNetwork.target = "https://example.test";
-  const allowedTargetSigned = signedExport(allowedTargetPayload);
-  const allowedTarget = evaluateIsolationEvidence(
-    authenticateExport(
-      allowedTargetSigned.bytes,
-      allowedTargetSigned.signature,
-      allowedTargetSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(allowedTarget.status, "compliant");
-
-  payload.events.find((event) => event.eventId === "file").path = resolve(evaluatorRoot, "oracle", "index.mjs");
-  payload.events.find((event) => event.eventId === "network").decision = "allow";
-  const violatingSigned = signedExport(payload);
-  const noncompliant = evaluateIsolationEvidence(
-    authenticateExport(violatingSigned.bytes, violatingSigned.signature, violatingSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(noncompliant.status, "noncompliant");
-  assert(noncompliant.violations.some((violation) => violation.includes("evaluator access")));
-  assert(noncompliant.violations.some((violation) => violation.includes("network access was not denied")));
-
-  const unscopedNetworkPayload = structuredClone(compliantPayload);
-  const unscopedNetwork = unscopedNetworkPayload.events.find((event) => event.type === "network.access");
-  delete unscopedNetwork.runId;
-  delete unscopedNetwork.actorSessionId;
-  const unscopedNetworkSigned = signedExport(unscopedNetworkPayload);
-  assert.throws(() => authenticateExport(
-    unscopedNetworkSigned.bytes,
-    unscopedNetworkSigned.signature,
-    unscopedNetworkSigned.publicKey
-  ), /schema validation/);
-
-  const mismappedNetworkPayload = structuredClone(compliantPayload);
-  const mismappedNetwork = mismappedNetworkPayload.events.find((event) => event.type === "network.access");
-  mismappedNetwork.runId = "B02-A1";
-  mismappedNetwork.blockId = "B02";
-  const mismappedNetworkSigned = signedExport(mismappedNetworkPayload);
-  const mismappedNetworkResult = evaluateIsolationEvidence(
-    authenticateExport(
-      mismappedNetworkSigned.bytes,
-      mismappedNetworkSigned.signature,
-      mismappedNetworkSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(mismappedNetworkResult.status, "noncompliant");
-  assert(mismappedNetworkResult.violations.some((violation) =>
-    violation.includes("run mapping differs from the frozen schedule")));
-
-  const disguisedRunPayload = structuredClone(compliantPayload);
-  const disguisedNetwork = disguisedRunPayload.events.find((event) => event.type === "network.access");
-  disguisedNetwork.sessionId = "altered-session";
-  disguisedNetwork.runId = "B02-A1";
-  disguisedNetwork.blockId = "B02";
-  const disguisedRunSigned = signedExport(disguisedRunPayload);
-  const disguisedRun = evaluateIsolationEvidence(
-    authenticateExport(
-      disguisedRunSigned.bytes,
-      disguisedRunSigned.signature,
-      disguisedRunSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(disguisedRun.status, "noncompliant");
-  assert(disguisedRun.violations.some((violation) =>
-    violation.includes("actor/session/role identity mismatch")));
-  assert(disguisedRun.violations.some((violation) =>
-    violation.includes("run mapping differs from the frozen schedule")));
-
-  const unrelatedNetworkPayload = structuredClone(compliantPayload);
-  const unrelatedNetwork = unrelatedNetworkPayload.events.find((event) => event.type === "network.access");
-  unrelatedNetwork.sessionId = "unrelated-session";
-  unrelatedNetwork.actorSessionId = "unrelated-session";
-  unrelatedNetwork.runId = "B02-A1";
-  unrelatedNetwork.blockId = "B02";
-  const unrelatedNetworkSigned = signedExport(unrelatedNetworkPayload);
-  const unrelatedNetworkResult = evaluateIsolationEvidence(
-    authenticateExport(
-      unrelatedNetworkSigned.bytes,
-      unrelatedNetworkSigned.signature,
-      unrelatedNetworkSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(unrelatedNetworkResult.status, "noncompliant");
-  assert.equal(unrelatedNetworkResult.networkAttribution.status, "noncompliant");
-  assert(unrelatedNetworkResult.networkAttribution.violations.some((violation) =>
-    violation.includes("maps to 0 scheduled run roles")));
-
-  const ambiguousNetworkPayload = structuredClone(compliantPayload);
-  ambiguousNetworkPayload.events.push(
-    {
-      eventId: "ambiguous-created",
-      type: "session.created",
-      timestamp: "2026-07-29T00:00:30Z",
-      sessionId: `${runId}-parent`,
-      runId: "B02-A1",
-      blockId: "B02",
-      armId: 1,
-      role: "parent"
-    },
-    {
-      eventId: "ambiguous-bound",
-      type: "model.bound",
-      timestamp: "2026-07-29T00:00:45Z",
-      sessionId: `${runId}-parent`,
-      runId: "B02-A1",
-      blockId: "B02",
-      armId: 1,
-      role: "parent",
-      modelId: "gpt-5.6-sol",
-      atomic: true
-    }
-  );
-  const ambiguousNetworkSigned = signedExport(ambiguousNetworkPayload);
-  const ambiguousNetwork = evaluateIsolationEvidence(
-    authenticateExport(
-      ambiguousNetworkSigned.bytes,
-      ambiguousNetworkSigned.signature,
-      ambiguousNetworkSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(ambiguousNetwork.status, "noncompliant");
-  assert.equal(ambiguousNetwork.globalAttribution.status, "noncompliant");
-  assert.equal(ambiguousNetwork.networkAttribution.status, "noncompliant");
-  assert(ambiguousNetwork.networkAttribution.violations.some((violation) =>
-    violation.includes("maps to 2 scheduled run roles")));
-
-  const bogusToolPayload = structuredClone(compliantPayload);
-  for (const event of bogusToolPayload.events.filter((item) =>
-    item.eventId === "file-tool" || item.eventId === "file" || item.eventId === "file-result")) {
-    event.runId = "B02-A1";
-    event.blockId = "B02";
-  }
-  const bogusToolSigned = signedExport(bogusToolPayload);
-  const bogusTool = evaluateIsolationEvidence(
-    authenticateExport(bogusToolSigned.bytes, bogusToolSigned.signature, bogusToolSigned.publicKey),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(bogusTool.status, "noncompliant");
-  assert.equal(bogusTool.globalAttribution.status, "noncompliant");
-  assert(bogusTool.globalAttribution.violations.some((violation) =>
-    violation.includes("tool.called file-tool is not attributable")));
-  assert(bogusTool.globalAttribution.violations.some((violation) =>
-    violation.includes("fs.access file is not attributable")));
-
-  const postCompletionPayload = structuredClone(compliantPayload);
-  for (const event of postCompletionPayload.events.filter((item) =>
-    item.eventId === "file-tool" || item.eventId === "file" || item.eventId === "file-result")) {
-    event.timestamp = "2026-07-29T00:04:15Z";
-  }
-  const postCompletionSigned = signedExport(postCompletionPayload);
-  const postCompletion = evaluateIsolationEvidence(
-    authenticateExport(
-      postCompletionSigned.bytes,
-      postCompletionSigned.signature,
-      postCompletionSigned.publicKey
-    ),
-    { armId, runId, candidateRoot, evaluatorRoot, stagingPath }
-  );
-  assert.equal(postCompletion.status, "noncompliant");
-  assert(postCompletion.violations.some((violation) =>
-    violation.includes("outside the strict run-start/completion boundary")));
+  const current = readRootJson("design", "platform-evidence-contract.json");
+  assert.equal(current.policy.filesystemMode, "semantic-corpus-contract-ro-staging-rw");
+  assert(current.requiredIsolationEvents.includes("adapter.snapshot"));
 });
 
 test("noninferiority and equality use separate multiplicity-adjusted families", () => {

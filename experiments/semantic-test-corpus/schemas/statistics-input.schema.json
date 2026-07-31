@@ -26,12 +26,13 @@
           "mutantKillRate": {"type": "number", "minimum": 0, "maximum": 1},
           "evidenceContext": {
             "type": "object",
-            "required": ["candidateRoot", "evaluatorRoot", "stagingPath"],
+            "required": ["contractRoot", "stagingRoot", "evaluatorRoot", "snapshotPath"],
             "additionalProperties": false,
             "properties": {
-              "candidateRoot": {"type": "string"},
+              "contractRoot": {"type": "string"},
+              "stagingRoot": {"type": "string"},
               "evaluatorRoot": {"type": "string"},
-              "stagingPath": {"type": "string"}
+              "snapshotPath": {"type": "string"}
             }
           }
         }

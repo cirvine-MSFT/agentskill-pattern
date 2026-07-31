@@ -8,9 +8,12 @@ import { readAuthenticatedExport } from "./authenticated-export.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const armContract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
 const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const seeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
+const frozenRequest = JSON.parse(readFileSync(resolve(root, "design", "corpus-request.json"), "utf8"));
 const delegatedSkillSha256 = createHash("sha256")
   .update(readFileSync(resolve(root, "design", "delegated-worker-skill.md")))
   .digest("hex");
+const MCP_TOOLS = new Set(armContract.commonContract.toolSurface);
 
 function argument(args, name) {
   const index = args.indexOf(name);
@@ -26,6 +29,19 @@ function samePath(left, right) {
   return process.platform === "win32"
     ? resolve(left).toLowerCase() === resolve(right).toLowerCase()
     : resolve(left) === resolve(right);
+}
+
+function canonicalJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  return `{${Object.keys(value)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+    .join(",")}}`;
+}
+
+function argumentsSha256(value) {
+  return createHash("sha256").update(Buffer.from(canonicalJson(value), "utf8")).digest("hex");
 }
 
 function expectedRoles(arm) {
@@ -61,7 +77,6 @@ function authenticatedRunMappings(payload) {
       });
     }
   }
-
   return mappings;
 }
 
@@ -71,8 +86,7 @@ function attributeEvents(payload, mappings, types) {
   const events = payload.events.filter((event) => types.has(event.type));
   for (const event of events) {
     const actorSessionId = event.type === "network.access" ? event.actorSessionId : event.sessionId;
-    const actorMappings = mappings.filter((mapping) =>
-      mapping.sessionId === actorSessionId);
+    const actorMappings = mappings.filter((mapping) => mapping.sessionId === actorSessionId);
     const matches = actorMappings.filter((mapping) =>
       mapping.runId === event.runId
       && mapping.blockId === event.blockId
@@ -168,12 +182,11 @@ export function evaluateStartOrder(payload, blockId) {
 }
 
 export function evaluateGlobalAttribution(authenticated) {
-  const result = attributeEvents(
+  return attributeEvents(
     authenticated.payload,
     authenticatedRunMappings(authenticated.payload),
     GLOBAL_ATTRIBUTION_TYPES
   );
-  return result;
 }
 
 export function evaluateNetworkAttribution(authenticated) {
@@ -184,29 +197,52 @@ export function evaluateNetworkAttribution(authenticated) {
   );
 }
 
+function expectedWritePath(tool, stagingRoot) {
+  if (tool.toolName === "semantic-corpus/write_scenario_input" && tool.scenarioId) {
+    return resolve(stagingRoot, "scenarios", `${tool.scenarioId}.json`);
+  }
+  if (tool.toolName === "semantic-corpus/write_scenario_manifest") {
+    return resolve(stagingRoot, "manifest.json");
+  }
+  return null;
+}
+
+function terminalLineIsValid(value) {
+  return /^corpus-staging\/manifest\.json - \d+ scenarios - SUCCESS$/.test(value)
+    || /^corpus-staging - \d+ scenarios - FAILURE: .+$/.test(value);
+}
+
 export function evaluateIsolationEvidence(authenticated, {
   armId,
   runId,
-  candidateRoot,
+  contractRoot,
+  stagingRoot,
   evaluatorRoot,
-  stagingPath
+  snapshotPath
 }) {
   const { payload, authentication } = authenticated;
   const arm = armContract.arms.find((item) => item.id === armId);
   const planned = schedule.runs.find((run) => run.runId === runId);
-  const candidate = resolve(candidateRoot);
+  const contract = resolve(contractRoot);
+  const staging = resolve(stagingRoot);
   const evaluator = resolve(evaluatorRoot);
-  const staging = resolve(stagingPath);
+  const snapshot = resolve(snapshotPath);
   const violations = [];
   const globalAttribution = evaluateGlobalAttribution(authenticated);
   violations.push(...globalAttribution.violations.map((violation) => `global: ${violation}`));
   const networkAttribution = evaluateNetworkAttribution(authenticated);
-  if (!arm || armId === 0) {
-    violations.push(`arm ${armId} is not a measured AI arm`);
-  }
+  if (!arm || armId === 0) violations.push(`arm ${armId} is not a measured AI arm`);
   if (!planned || planned.armId !== armId) violations.push("run/arm differs from the frozen schedule");
-  if (planned) violations.push(...evaluateStartOrder(payload, planned.blockId).map((violation) => `schedule: ${violation}`));
-  if (!within(candidate, staging)) violations.push("staging path is outside the candidate root");
+  if (planned) {
+    violations.push(...evaluateStartOrder(payload, planned.blockId)
+      .map((violation) => `schedule: ${violation}`));
+  }
+  if (within(contract, staging) || within(staging, contract)) {
+    violations.push("contract and staging roots must be disjoint");
+  }
+  if (within(contract, snapshot) || within(staging, snapshot)) {
+    violations.push("canonical adapter snapshot must be outside MCP roots");
+  }
 
   const runEvents = payload.events.filter((event) => event.runId === runId);
   const requiredRoles = arm ? expectedRoles(arm) : [];
@@ -240,7 +276,7 @@ export function evaluateIsolationEvidence(authenticated, {
   }
   const sessionRoles = new Map(Object.entries(roleSessions).map(([role, sessionId]) => [sessionId, role]));
 
-  const relevantTypes = new Set([
+  const modelTypes = new Set([
     "sandbox.policy.applied",
     "audit.started",
     "audit.completed",
@@ -266,7 +302,7 @@ export function evaluateIsolationEvidence(authenticated, {
     && (event.runId === runId || sessionRoles.has(event.sessionId)));
   const evidenceEvents = [
     ...runEvents.filter((event) =>
-      relevantTypes.has(event.type)
+      modelTypes.has(event.type)
       && event.type !== "network.access"
       && event.type !== "outcome.accessed"),
     ...scopedNetworkEvents,
@@ -309,6 +345,9 @@ export function evaluateIsolationEvidence(authenticated, {
   const completionEvents = evidenceEvents.filter((event) => event.type === "run.completed");
   const unblindingEvents = evidenceEvents.filter((event) => event.type === "outcomes.unblinded");
   const outcomeEvents = evidenceEvents.filter((event) => event.type === "outcome.accessed");
+  const adapterEvents = runEvents.filter((event) => event.type === "adapter.snapshot");
+  const allAuthenticatedMappings = authenticatedRunMappings(payload);
+  let snapshotDocument = null;
 
   if (startEvents.length !== 1
     || startEvents[0]?.sessionId !== roleSessions.parent
@@ -355,6 +394,40 @@ export function evaluateIsolationEvidence(authenticated, {
     }
   }
 
+  if (adapterEvents.length !== 1) {
+    violations.push("run requires exactly one signed evaluator adapter.snapshot event");
+  } else {
+    const adapter = adapterEvents[0];
+    if (adapter.role !== "evaluator"
+      || adapter.actor !== "evaluator"
+      || allAuthenticatedMappings.some((mapping) => mapping.sessionId === adapter.sessionId)) {
+      violations.push("adapter snapshot must use an evaluator identity outside model sessions");
+    }
+    if (adapter.runId !== runId
+      || adapter.blockId !== planned?.blockId
+      || adapter.armId !== armId) {
+      violations.push("adapter snapshot run mapping differs from the frozen schedule");
+    }
+    if (Date.parse(adapter.timestamp) <= completedAt) {
+      violations.push("adapter snapshot did not run after model completion");
+    }
+    if (!samePath(adapter.sourceStagingRoot ?? "", staging)
+      || !samePath(adapter.snapshotPath ?? "", snapshot)
+      || adapter.adapterVersion !== 1) {
+      violations.push("adapter snapshot paths/version differ from evaluator inputs");
+    }
+    const snapshotBytes = readFileSync(snapshot);
+    const actualSnapshotHash = createHash("sha256").update(snapshotBytes).digest("hex");
+    if (adapter.snapshotSha256 !== actualSnapshotHash) {
+      violations.push("adapter snapshot hash does not authenticate canonical staging bytes");
+    }
+    try {
+      snapshotDocument = JSON.parse(snapshotBytes);
+    } catch {
+      violations.push("adapter snapshot is not valid JSON");
+    }
+  }
+
   for (const [role, sessionId] of Object.entries(roleSessions)) {
     const creation = runEvents.find((event) =>
       event.type === "session.created" && event.sessionId === sessionId && event.role === role);
@@ -377,8 +450,15 @@ export function evaluateIsolationEvidence(authenticated, {
       || Date.parse(policy.timestamp) >= startedAt) {
       violations.push(`${role} sandbox policy was not applied strictly before session/run start`);
     }
-    if (!samePath(policy.candidateRoot ?? "", candidate)) violations.push(`${role} candidate root policy mismatch`);
-    if (policy.filesystemMode !== "candidate-root-only") violations.push(`${role} filesystem policy is not candidate-root-only`);
+    if (!samePath(policy.contractRoot ?? "", contract)) violations.push(`${role} contract root policy mismatch`);
+    if (!samePath(policy.stagingRoot ?? "", staging)) violations.push(`${role} staging root policy mismatch`);
+    const sandboxConfig = resolve(policy.sandboxConfigPath ?? "");
+    if (within(contract, sandboxConfig) || within(staging, sandboxConfig)) {
+      violations.push(`${role} sandbox config is not launcher-owned outside MCP roots`);
+    }
+    if (policy.filesystemMode !== "semantic-corpus-contract-ro-staging-rw") {
+      violations.push(`${role} filesystem policy is not the semantic corpus confinement policy`);
+    }
     if (policy.networkMode !== "deny") violations.push(`${role} network policy is not deny`);
     if (!(policy.deniedRoots ?? []).some((path) => samePath(path, evaluator))) {
       violations.push(`${role} evaluator root is not explicitly denied`);
@@ -404,44 +484,149 @@ export function evaluateIsolationEvidence(authenticated, {
     }
   }
 
-  const fileToolEvents = toolEvents.filter((event) =>
-    event.toolName === "file.read" || event.toolName === "file.write");
   const seenCallIds = new Set();
-  let correlatedFileCalls = 0;
-  for (const tool of fileToolEvents) {
+  let correlatedWriteCalls = 0;
+  const scenarioAttempts = new Set();
+  for (const tool of toolEvents) {
     const role = sessionRoles.get(tool.sessionId);
+    if (!MCP_TOOLS.has(tool.toolName)) {
+      violations.push(`${role ?? "unknown"} used forbidden or normalized tool ${tool.toolName}`);
+    }
     if (tool.actor !== role) {
-      violations.push(`file tool call ${tool.callId ?? "<missing>"} lacks its authenticated actor`);
+      violations.push(`MCP tool call ${tool.callId ?? "<missing>"} lacks its authenticated actor`);
     }
     if (!tool.callId || seenCallIds.has(tool.callId)) {
-      violations.push(`${role ?? "unknown"} file tool call requires a unique callId`);
+      violations.push(`${role ?? "unknown"} MCP tool call requires a unique callId`);
     }
     seenCallIds.add(tool.callId);
-    if (!tool.path) violations.push(`${role ?? "unknown"} file tool call ${tool.callId ?? "<missing>"} requires a path`);
-    const accesses = fileEvents.filter((event) => event.callId === tool.callId);
-    if (accesses.length !== 1) {
-      violations.push(`${role ?? "unknown"} file tool call ${tool.callId ?? "<missing>"} requires exactly one fs.access event`);
+    const results = toolResultEvents.filter((event) => event.callId === tool.callId);
+    if (results.length !== 1) {
+      violations.push(`MCP tool call ${tool.callId ?? "<missing>"} requires exactly one tool.result`);
       continue;
     }
-    const access = accesses[0];
-    const expectedOperation = tool.toolName === "file.write" ? "write" : "read";
-    if (access.sessionId !== tool.sessionId
-      || access.actor !== role
-      || tool.actor !== role
-      || access.operation !== expectedOperation
-      || !samePath(access.path ?? "", tool.path ?? "")
-      || access.decision !== "allow") {
-      violations.push(`file tool call ${tool.callId} does not match its fs.access event`);
-    } else {
-      correlatedFileCalls += 1;
+    const result = results[0];
+    if (result.sessionId !== tool.sessionId
+      || result.actor !== role
+      || result.toolName !== tool.toolName) {
+      violations.push(`MCP tool call ${tool.callId} does not match its tool.result actor/tool`);
+    }
+    if (result.resultStatus === "error" && (!result.errorCode || !result.errorMessage)) {
+      violations.push(`MCP tool error ${tool.callId} lacks its exact code/message`);
+    }
+    if (tool.toolName === "semantic-corpus/write_scenario_input") {
+      if (!tool.scenarioId) violations.push(`scenario write ${tool.callId} lacks scenarioId`);
+      if (scenarioAttempts.has(tool.scenarioId)) {
+        violations.push(`scenario ${tool.scenarioId} was retried`);
+      }
+      scenarioAttempts.add(tool.scenarioId);
+    }
+    const writePath = expectedWritePath(tool, staging);
+    const accesses = fileEvents.filter((event) => event.callId === tool.callId);
+    if (result.resultStatus === "success" && writePath) {
+      const writes = accesses.filter((event) =>
+        event.operation === "write" && samePath(event.path ?? "", writePath));
+      if (writes.length !== 1
+        || writes[0].sessionId !== tool.sessionId
+        || writes[0].actor !== role
+        || writes[0].decision !== "allow") {
+        violations.push(`successful MCP write ${tool.callId} lacks one caller-owned staging write`);
+      } else {
+        correlatedWriteCalls += 1;
+      }
+    }
+  }
+  for (const result of toolResultEvents) {
+    if (!result.callId || !toolEvents.some((tool) => tool.callId === result.callId)) {
+      violations.push(`tool.result ${result.eventId} has no corresponding MCP tool call`);
+    }
+  }
+  if (snapshotDocument) {
+    const callsById = new Map(toolEvents.map((event) => [event.callId, event]));
+    const expectedErrors = toolResultEvents
+      .filter((event) => event.resultStatus === "error" && MCP_TOOLS.has(event.toolName))
+      .map((event) => {
+        const call = callsById.get(event.callId);
+        return {
+          callId: event.callId,
+          toolName: event.toolName,
+          argumentsSha256: call?.argumentsSha256,
+          ...(call?.scenarioId ? { scenarioId: call.scenarioId } : {}),
+          code: event.errorCode,
+          message: event.errorMessage
+        };
+      });
+    if (JSON.stringify(snapshotDocument.toolErrors) !== JSON.stringify(expectedErrors)) {
+      violations.push("adapter snapshot does not preserve the authenticated MCP tool errors exactly");
+    }
+    const successfulScenarioWrites = toolEvents.filter((tool) =>
+      tool.toolName === "semantic-corpus/write_scenario_input"
+      && toolResultEvents.some((result) =>
+        result.callId === tool.callId && result.resultStatus === "success"));
+    const snapshotCases = new Map((snapshotDocument.cases ?? [])
+      .map((scenario) => [scenario.id, scenario]));
+    if (snapshotCases.size !== successfulScenarioWrites.length
+      || snapshotDocument.adapter?.successfulWrites !== successfulScenarioWrites.length
+      || successfulScenarioWrites.some((tool) => !snapshotCases.has(tool.scenarioId))) {
+      violations.push("adapter snapshot successful-write count differs from authenticated MCP results");
+    }
+    const expectedSeed = seeds.blocks.find((block) => block.id === planned?.blockId)?.seed;
+    const contractRequest = JSON.parse(readFileSync(resolve(contract, "request.json"), "utf8"));
+    if (snapshotDocument.generator?.armId !== armId
+      || snapshotDocument.generator?.blockId !== planned?.blockId
+      || snapshotDocument.generator?.seed !== expectedSeed
+      || snapshotDocument.adapter?.requestHash !== contractRequest.requestHash
+      || contractRequest.requestHash !== frozenRequest.requestHash) {
+      violations.push("adapter snapshot generator/request metadata differs from frozen evidence");
+    }
+    for (const scenario of snapshotDocument.cases ?? []) {
+      const source = scenario.stagingFile;
+      const expectedPath = `corpus-staging/scenarios/${scenario.id}.json`;
+      const sourcePath = resolve(staging, "scenarios", `${scenario.id}.json`);
+      if (source?.path !== expectedPath || !within(staging, sourcePath)) {
+        violations.push(`adapter scenario ${scenario.id ?? "<missing>"} has an invalid source path`);
+        continue;
+      }
+      const sourceBytes = readFileSync(sourcePath);
+      const writeCall = successfulScenarioWrites.find((tool) => tool.scenarioId === scenario.id);
+      if (source.bytes !== sourceBytes.length
+        || source.sha256 !== createHash("sha256").update(sourceBytes).digest("hex")
+        || JSON.stringify(scenario.input) !== JSON.stringify(JSON.parse(sourceBytes))
+        || writeCall?.argumentsSha256 !== argumentsSha256({
+          scenarioId: scenario.id,
+          config: scenario.input
+        })) {
+        violations.push(`adapter scenario ${scenario.id} does not match its exact staged file`);
+      }
+    }
+    const successfulManifestWrites = toolEvents.filter((tool) =>
+      tool.toolName === "semantic-corpus/write_scenario_manifest"
+      && toolResultEvents.some((result) =>
+        result.callId === tool.callId && result.resultStatus === "success"));
+    if (successfulManifestWrites.length !== (snapshotDocument.adapter?.manifest ? 1 : 0)
+      || successfulManifestWrites.some((tool) =>
+        tool.argumentsSha256 !== argumentsSha256({ scenarios: contractRequest.scenarios }))) {
+      violations.push("adapter manifest does not match authenticated MCP results/arguments");
     }
   }
   for (const access of fileEvents) {
-    if (!access.callId || !fileToolEvents.some((tool) => tool.callId === access.callId)) {
-      violations.push(`fs.access ${access.eventId} has no corresponding file tool call`);
+    const tool = toolEvents.find((event) => event.callId === access.callId);
+    if (!tool) {
+      violations.push(`fs.access ${access.eventId} has no corresponding MCP tool call`);
+      continue;
+    }
+    const role = sessionRoles.get(tool.sessionId);
+    if (access.sessionId !== tool.sessionId || access.actor !== role) {
+      violations.push(`fs.access ${access.eventId} is not owned by the actual MCP caller`);
     }
     const path = resolve(access.path ?? "");
-    if (!within(candidate, path)) violations.push(`${access.actor ?? "unknown"} attempted filesystem access outside candidate root`);
+    const inContract = within(contract, path);
+    const inStaging = within(staging, path);
+    if (!inContract && !inStaging) {
+      violations.push(`${access.actor ?? "unknown"} attempted filesystem access outside MCP roots`);
+    }
+    if (inContract && access.operation !== "read") {
+      violations.push(`${access.actor ?? "unknown"} attempted to write the immutable contract`);
+    }
     if (within(evaluator, path)) violations.push(`${access.actor ?? "unknown"} attempted evaluator access`);
   }
   for (const event of networkEvents) {
@@ -454,38 +639,15 @@ export function evaluateIsolationEvidence(authenticated, {
   }
 
   if (arm) {
-    const workerTools = new Set(armContract.commonContract.toolSurface);
-    const parentTools = new Set(arm.delegated
-      ? armContract.delegationContract.parentToolSurface
-      : armContract.commonContract.toolSurface);
     for (const event of toolEvents) {
       const role = sessionRoles.get(event.sessionId);
-      const allowed = role === "worker" ? workerTools : parentTools;
-      if (!allowed.has(event.toolName)) violations.push(`${role ?? "unknown"} used forbidden tool ${event.toolName}`);
+      const expectedCaller = arm.delegated ? "worker" : "parent";
+      if (role !== expectedCaller) {
+        violations.push(`${role ?? "unknown"} called semantic-corpus in a ${arm.delegated ? "delegated" : "inline"} arm`);
+      }
     }
-
-    const writes = fileToolEvents.filter((event) => event.toolName === "file.write");
-    const stagingWrites = writes.filter((event) => samePath(event.path ?? "", staging));
-    if (arm.delegated) {
-      if (stagingWrites.some((event) => sessionRoles.get(event.sessionId) !== "worker")) {
-        violations.push("delegated staging writes must be worker-only");
-      }
-      if (!stagingWrites.some((event) => sessionRoles.get(event.sessionId) === "worker")) {
-        violations.push("delegated worker did not write the staging corpus");
-      }
-      for (const event of writes.filter((item) => sessionRoles.get(item.sessionId) === "worker")) {
-        if (!samePath(event.path ?? "", staging)) violations.push("delegated worker wrote outside the staging file");
-      }
-      for (const event of fileToolEvents.filter((item) => sessionRoles.get(item.sessionId) === "parent")) {
-        if (samePath(event.path ?? "", staging)) {
-          violations.push("delegated parent accessed staging corpus contents");
-        }
-      }
-    } else {
-      if (roleSessions.worker) violations.push("inline arm has an authenticated worker role");
-      if (!stagingWrites.some((event) => sessionRoles.get(event.sessionId) === "parent")) {
-        violations.push("inline parent did not write the staging corpus");
-      }
+    if (!arm.delegated && roleSessions.worker) {
+      violations.push("inline arm has an authenticated worker role");
     }
   }
 
@@ -500,21 +662,22 @@ export function evaluateIsolationEvidence(authenticated, {
         || invocation.workerSessionId !== roleSessions.worker) {
         violations.push("delegation invocation does not bind the authenticated parent and worker");
       }
-      if (invocation.skillName !== armContract.delegationContract.invocation) {
-        violations.push("delegated arm used the wrong Skill invocation");
+      if (invocation.skillName !== armContract.delegationContract.invocation
+        || invocation.agentName !== armContract.delegationContract.agentName) {
+        violations.push("delegated arm used the wrong semantic-test-corpus identity");
       }
       if (invocation.skillSha256 !== delegatedSkillSha256) {
         violations.push("delegated arm used a noncanonical Skill artifact");
       }
     }
     if (completions.length === 1) {
-      if (completions[0].sessionId !== roleSessions.parent) {
+      const completion = completions[0];
+      if (completion.sessionId !== roleSessions.parent) {
         violations.push("delegation completion was not received by the authenticated parent");
       }
-      const actualFields = [...(completions[0].returnFields ?? [])].sort();
-      const expectedFields = [...armContract.delegationContract.returnFields].sort();
-      if (JSON.stringify(actualFields) !== JSON.stringify(expectedFields)) {
-        violations.push("delegated arm returned a noncanonical field set");
+      if (completion.agentName !== armContract.delegationContract.agentName
+        || !terminalLineIsValid(completion.returnText)) {
+        violations.push("delegated arm returned a noncanonical semantic-test-corpus terminal line");
       }
     }
     if (invocations.length === 1 && completions.length === 1) {
@@ -559,26 +722,31 @@ export function evaluateIsolationEvidence(authenticated, {
       }
     }
   }
+  const invocationCount = delegationEvents.filter((event) => event.type === "delegation.invoked").length;
+  const toolCallCount = toolEvents.length + invocationCount;
   const budgetMet = durationMs !== null
     && durationMs >= 0
     && durationMs <= 30 * 60 * 1000
-    && toolEvents.length <= 120
+    && toolCallCount <= 120
     && totalTokens <= 100000;
   if (!budgetMet) violations.push("authenticated duration/tool/token budget exceeded or unavailable");
 
+  const snapshotSha256 = createHash("sha256").update(readFileSync(snapshot)).digest("hex");
   return {
     exportId: payload.exportId,
     runId,
     armId,
     evidence: authentication,
-    candidateRoot: candidate,
-    stagingPath: staging,
+    contractRoot: contract,
+    stagingRoot: staging,
+    snapshotPath: snapshot,
+    snapshotSha256,
     roleSessions,
     globalAttribution,
     networkAttribution,
     budgets: {
       durationMs,
-      toolCalls: toolEvents.length,
+      toolCalls: toolCallCount,
       totalTokens,
       limits: { durationMs: 1800000, toolCalls: 120, totalTokens: 100000 },
       met: budgetMet
@@ -588,12 +756,13 @@ export function evaluateIsolationEvidence(authenticated, {
       policyEvents: policyEvents.length,
       auditEvents: auditEvents.length,
       auditStartEvents: auditStartEvents.length,
-      fileToolCalls: fileToolEvents.length,
+      mcpToolCalls: toolEvents.length,
       fileAccessEvents: fileEvents.length,
-      correlatedFileCalls,
+      correlatedWriteCalls,
       networkAccessEvents: networkEvents.length,
       toolCallEvents: toolEvents.length,
       toolResultEvents: toolResultEvents.length,
+      adapterEvents: adapterEvents.length,
       usageEvents: usageEvents.length,
       startEvents: startEvents.length,
       delegationEvents: delegationEvents.length,
@@ -609,10 +778,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = process.argv.slice(2);
   const required = [
     "--payload", "--signature", "--public-key", "--arm-id", "--run-id",
-    "--candidate-root", "--evaluator-root", "--staging-path", "--out"
+    "--contract-root", "--staging-root", "--evaluator-root", "--snapshot-path", "--out"
   ];
   if (required.some((name) => !argument(args, name))) {
-    throw new Error("Usage: node scripts/verify-isolation-evidence.mjs --payload <export.json> --signature <export.sig> --public-key <platform.pem> --arm-id <1-4> --run-id <run> --candidate-root <path> --evaluator-root <path> --staging-path <path> --out <audit.json>");
+    throw new Error("Usage: node scripts/verify-isolation-evidence.mjs --payload <export.json> --signature <export.sig> --public-key <platform.pem> --arm-id <1-4> --run-id <run> --contract-root <path> --staging-root <path> --evaluator-root <path> --snapshot-path <path> --out <audit.json>");
   }
   const authenticated = readAuthenticatedExport({
     payloadPath: argument(args, "--payload"),
@@ -622,9 +791,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const result = evaluateIsolationEvidence(authenticated, {
     armId: Number(argument(args, "--arm-id")),
     runId: argument(args, "--run-id"),
-    candidateRoot: argument(args, "--candidate-root"),
+    contractRoot: argument(args, "--contract-root"),
+    stagingRoot: argument(args, "--staging-root"),
     evaluatorRoot: argument(args, "--evaluator-root"),
-    stagingPath: argument(args, "--staging-path")
+    snapshotPath: argument(args, "--snapshot-path")
   });
   const target = resolve(argument(args, "--out"));
   mkdirSync(dirname(target), { recursive: true });

@@ -15,10 +15,12 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repositoryRoot = resolve(root, "..", "..");
 const evaluatorRoot = resolve(root, "evaluator");
 const testWorkRoot = resolve(root, ".test-work");
 const manifest = JSON.parse(readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8"));
 const canonicalRoot = realpathSync.native(root);
+const canonicalRepositoryRoot = realpathSync.native(repositoryRoot);
 const canonicalEvaluatorRoot = realpathSync.native(evaluatorRoot);
 
 function hash(bytes) {
@@ -94,7 +96,7 @@ export function materializeCandidate(destination, { allowTestDestination = false
     const source = resolve(root, entry.source);
     rejectReparseComponents(source);
     const canonicalSource = realpathSync.native(source);
-    if (!within(canonicalRoot, canonicalSource) || within(canonicalEvaluatorRoot, canonicalSource)) {
+    if (!within(canonicalRepositoryRoot, canonicalSource) || within(canonicalEvaluatorRoot, canonicalSource)) {
       throw new Error(`Manifest source crosses evaluator boundary: ${entry.source}`);
     }
     const output = resolve(target, entry.destination);
@@ -110,7 +112,7 @@ export function materializeCandidate(destination, { allowTestDestination = false
     manifestVersion: manifest.manifestVersion,
     candidateRoot: materializedReal,
     networkPolicy: "deny",
-    filesystemPolicy: "candidate-root-only",
+    filesystemPolicy: "semantic-corpus-launcher-required",
     files
   };
   writeFileSync(resolve(target, ".benchmark-boundary.json"), `${JSON.stringify(boundary, null, 2)}\n`);

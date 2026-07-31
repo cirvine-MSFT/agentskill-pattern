@@ -16,11 +16,63 @@
         "seed": {"type": "integer"}
       }
     },
+    "adapter": {
+      "type": "object",
+      "required": ["version", "requestHash", "sourceRoot", "successfulWrites", "toolErrorCount", "manifest"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"const": 1},
+        "requestHash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "sourceRoot": {"const": "corpus-staging/"},
+        "successfulWrites": {"type": "integer", "minimum": 0, "maximum": 60},
+        "toolErrorCount": {"type": "integer", "minimum": 0, "maximum": 120},
+        "manifest": {
+          "anyOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["path", "sha256", "bytes"],
+              "additionalProperties": false,
+              "properties": {
+                "path": {"const": "corpus-staging/manifest.json"},
+                "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                "bytes": {"type": "integer", "minimum": 1, "maximum": 262144}
+              }
+            }
+          ]
+        }
+      }
+    },
     "cases": {
       "type": "array",
       "minItems": 0,
       "maxItems": 60,
       "items": {}
+    },
+    "toolErrors": {
+      "type": "array",
+      "maxItems": 120,
+      "items": {
+        "type": "object",
+        "required": ["callId", "toolName", "argumentsSha256", "code", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "callId": {"type": "string", "minLength": 1},
+          "toolName": {
+            "type": "string",
+            "enum": [
+              "semantic-corpus/list_contract_files",
+              "semantic-corpus/read_contract_file",
+              "semantic-corpus/write_scenario_input",
+              "semantic-corpus/write_scenario_manifest"
+            ]
+          },
+          "argumentsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "scenarioId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
     }
   }
 }

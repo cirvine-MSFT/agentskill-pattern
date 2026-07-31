@@ -540,15 +540,19 @@ export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
     }
     if (observation.armId === 0) return { ...observation, isolationVerified: true };
     const context = observation.evidenceContext;
-    if (!context?.candidateRoot || !context?.evaluatorRoot || !context?.stagingPath) {
+    if (!context?.contractRoot
+      || !context?.stagingRoot
+      || !context?.evaluatorRoot
+      || !context?.snapshotPath) {
       throw new Error(`isolation evidence context is required for ${observation.runId}`);
     }
     const audit = evaluateIsolationEvidence(authenticated, {
       armId: observation.armId,
       runId: observation.runId,
-      candidateRoot: context.candidateRoot,
+      contractRoot: context.contractRoot,
+      stagingRoot: context.stagingRoot,
       evaluatorRoot: context.evaluatorRoot,
-      stagingPath: context.stagingPath
+      snapshotPath: context.snapshotPath
     });
     return {
       ...observation,

@@ -10,7 +10,7 @@ migration execution, the expected-output oracle, traces, and mutant scoring.
 | --- | --- |
 | Skill router | [`.github/skills/semantic-test-corpus/SKILL.md`](../../.github/skills/semantic-test-corpus/SKILL.md) |
 | Custom agent | [`.github/agents/semantic-test-corpus.agent.md`](../../.github/agents/semantic-test-corpus.agent.md) |
-| Model | `claude-haiku-4.5` |
+| Model | Inherited from the authenticated caller/session binding |
 | Agent tools | Four namespaced `semantic-corpus/*` MCP tools only |
 | MCP server | [`tools/semantic-corpus-mcp/server.mjs`](../../tools/semantic-corpus-mcp/server.mjs), dependency-free Node 20+ stdio |
 | Tests | [`tests/semantic-corpus-mcp/`](../../tests/semantic-corpus-mcp/) |
@@ -18,6 +18,11 @@ migration execution, the expected-output oracle, traces, and mutant scoring.
 The agent profile has no generic `read`, `edit`, `search`, `execute`, `web`, or `agent`
 tool. Omitting `agent` is the structural recursion guard. All filesystem capability
 comes from the local MCP process.
+
+The profile deliberately has no `model` field. Frontier and inexpensive runs use the
+same `semantic-test-corpus` identity and byte-identical tool/request/output contract;
+signed per-run platform evidence authenticates the model actually bound to each caller
+and, when delegated, worker.
 
 ## Mandatory launcher boundary
 
@@ -171,11 +176,16 @@ every scenario twice around the snapshot boundary.
 2. Write the closed request and contract; compute its canonical request hash.
 3. Record final root identities, write the read-only sandbox config, and launch with a
    fresh matching token.
-4. Invoke the `semantic-test-corpus` agent. There is no inline fallback.
-5. Independently validate staged v1 documents and promote only accepted inputs.
-6. Run the deterministic oracle, migration, traces, and hidden mutants outside the
+4. Invoke the `semantic-test-corpus` agent. There is no inline fallback in the reference
+   workflow. Controlled benchmarks may instead give an authenticated inline parent the
+   same four MCP tools directly; that is an experimental arm, not a fallback.
+5. Outside model context, deterministically snapshot exact staged files and authenticated
+   tool-error records when a benchmark requires a canonical aggregate artifact. The
+   model caller never packages, rereads, validates, or copies the corpus.
+6. Independently validate staged v1 documents and promote only accepted inputs.
+7. Run the deterministic oracle, migration, traces, and hidden mutants outside the
    agent/MCP identity.
-7. Destroy the disposable run, including any stale lock.
+8. Destroy the disposable run, including any stale lock.
 
 ## Validation
 

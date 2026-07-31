@@ -1,5 +1,5 @@
 {
-  "preregistrationVersion": "1.2.0",
+  "preregistrationVersion": "1.3.0",
   "fixedModels": {
     "frontier": "gpt-5.6-sol",
     "cheap": "claude-haiku-4.5"
@@ -15,16 +15,37 @@
     "acceptanceBoundary": "external-evaluator-not-mounted",
     "expectedOutputPolicy": "oracle-after-promotion-only",
     "taskArtifact": "task/shared-task-prompt.txt",
-    "toolSurface": ["file.read", "file.write", "staging.validate"]
+    "agentName": "semantic-test-corpus",
+    "mcpServer": "semantic-corpus",
+    "toolSurface": [
+      "semantic-corpus/list_contract_files",
+      "semantic-corpus/read_contract_file",
+      "semantic-corpus/write_scenario_input",
+      "semantic-corpus/write_scenario_manifest"
+    ],
+    "sourceOutput": "corpus-staging/",
+    "adapter": {
+      "role": "evaluator",
+      "artifact": "evaluator/adapter.mjs",
+      "runsAfterModelCompletion": true,
+      "snapshotHash": "sha256-canonical-staging-bytes"
+    }
   },
   "delegationContract": {
     "artifact": "task/delegated-worker-skill.md",
-    "invocation": "semantic-scenario-stager",
-    "workspaceOwnership": "worker-direct-staging",
-    "returnFields": ["stagingPath", "payloadSha256", "submittedCases", "promotableCases", "errorCount"],
+    "invocation": "semantic-test-corpus",
+    "agentName": "semantic-test-corpus",
+    "workspaceOwnership": "actual-caller-confined-staging",
+    "successReturn": "corpus-staging/manifest.json - <count> scenarios - SUCCESS",
+    "failureReturn": "corpus-staging - <written-count> scenarios - FAILURE: <reason>",
     "parentCorpusReadAllowed": false,
-    "parentToolSurface": ["staging.validate", "staging.promote"],
-    "toolSurface": ["file.read", "file.write", "staging.validate"]
+    "parentToolSurface": ["agent/semantic-test-corpus"],
+    "toolSurface": [
+      "semantic-corpus/list_contract_files",
+      "semantic-corpus/read_contract_file",
+      "semantic-corpus/write_scenario_input",
+      "semantic-corpus/write_scenario_manifest"
+    ]
   },
   "arms": [
     {"id": 0, "name": "strong deterministic baseline", "modelTier": "none", "delegated": false, "model": null},

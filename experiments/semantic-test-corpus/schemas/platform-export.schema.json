@@ -41,14 +41,38 @@
             "if": {
               "properties": {
                 "type": {"const": "tool.called"},
-                "toolName": {"enum": ["file.read", "file.write"]}
+                "toolName": {
+                  "enum": [
+                    "semantic-corpus/list_contract_files",
+                    "semantic-corpus/read_contract_file",
+                    "semantic-corpus/write_scenario_input",
+                    "semantic-corpus/write_scenario_manifest"
+                  ]
+                }
               }
             },
-            "then": {"required": ["callId", "path"]}
+            "then": {"required": ["callId", "argumentsSha256"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "tool.result"}}},
+            "then": {"required": ["resultStatus"]}
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {"const": "tool.result"},
+                "resultStatus": {"const": "error"}
+              }
+            },
+            "then": {"required": ["errorCode", "errorMessage"]}
           },
           {
             "if": {"properties": {"type": {"const": "fs.access"}}},
             "then": {"required": ["runId", "blockId", "armId", "role", "actor", "callId", "path", "operation", "decision"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "sandbox.policy.applied"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "contractRoot", "stagingRoot", "sandboxConfigPath", "deniedRoots", "filesystemMode", "networkMode"]}
           },
           {
             "if": {"properties": {"type": {"const": "network.access"}}},
@@ -62,7 +86,15 @@
           },
           {
             "if": {"properties": {"type": {"enum": ["delegation.invoked", "delegation.completed"]}}},
-            "then": {"required": ["runId", "blockId", "armId", "role", "callId"]}
+            "then": {"required": ["runId", "blockId", "armId", "role", "callId", "agentName"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "delegation.completed"}}},
+            "then": {"required": ["returnText"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "adapter.snapshot"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "snapshotPath", "snapshotSha256", "sourceStagingRoot", "adapterVersion"]}
           },
           {
             "if": {"properties": {"type": {"const": "usage.reported"}}},
@@ -73,14 +105,14 @@
           "eventId": {"type": "string", "minLength": 1},
           "type": {
             "type": "string",
-            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "usage.reported", "audit.started", "audit.completed"]
+            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "adapter.snapshot", "usage.reported", "audit.started", "audit.completed"]
           },
           "timestamp": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
           "sessionId": {"type": "string", "minLength": 1},
           "runId": {"type": "string"},
           "blockId": {"type": "string"},
           "armId": {"type": "integer", "minimum": 0, "maximum": 4},
-          "role": {"type": "string", "enum": ["baseline", "parent", "worker"]},
+          "role": {"type": "string", "enum": ["baseline", "parent", "worker", "evaluator"]},
           "sequence": {"type": "integer", "minimum": 1, "maximum": 5},
           "processId": {"type": "string", "minLength": 1},
           "parentSessionId": {"type": "string"},
@@ -88,17 +120,29 @@
           "modelId": {"type": "string"},
           "atomic": {"type": "boolean"},
           "skillName": {"type": "string"},
+          "agentName": {"type": "string"},
           "skillSha256": {"type": "string"},
-          "returnFields": {"type": "array", "items": {"type": "string"}},
+          "returnText": {"type": "string"},
           "toolName": {"type": "string"},
           "callId": {"type": "string", "minLength": 1},
-          "actor": {"type": "string", "enum": ["parent", "worker"]},
+          "actor": {"type": "string", "enum": ["parent", "worker", "evaluator"]},
           "actorSessionId": {"type": "string", "minLength": 1},
-          "candidateRoot": {"type": "string"},
+          "contractRoot": {"type": "string"},
+          "stagingRoot": {"type": "string"},
+          "sandboxConfigPath": {"type": "string"},
           "deniedRoots": {"type": "array", "items": {"type": "string"}},
           "filesystemMode": {"type": "string"},
           "networkMode": {"type": "string"},
           "path": {"type": "string"},
+          "scenarioId": {"type": "string"},
+          "argumentsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "resultStatus": {"type": "string", "enum": ["success", "error"]},
+          "errorCode": {"type": "string", "minLength": 1},
+          "errorMessage": {"type": "string", "minLength": 1},
+          "snapshotPath": {"type": "string"},
+          "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "sourceStagingRoot": {"type": "string"},
+          "adapterVersion": {"const": 1},
           "operation": {"type": "string", "enum": ["read", "write"]},
           "decision": {"type": "string", "enum": ["allow", "deny"]},
           "allowed": {"type": "boolean"},

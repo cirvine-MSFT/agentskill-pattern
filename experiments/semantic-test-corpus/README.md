@@ -71,6 +71,30 @@ Materialize a candidate repository outside this checkout:
 node .\scripts\materialize-candidate.mjs --out C:\benchmark-runs\B01-A1
 ```
 
+The materialized repository contains the real `semantic-test-corpus` profile,
+the dependency-free `semantic-corpus` MCP server, the immutable 60-slot request,
+and public contract. A trusted coordinator must copy these into a disposable
+non-repository run and establish the mandatory container/restricted-mount/ACL
+boundary before server initialization. There is no in-repository lifetime
+launcher or unsafe fallback.
+
+After signed model completion, run the evaluator-only adapter outside model
+context:
+
+```powershell
+node .\evaluator\adapter.mjs `
+  --corpus-contract C:\isolated-runs\B01-A1\corpus-contract `
+  --corpus-staging C:\isolated-runs\B01-A1\corpus-staging `
+  --payload .\raw\model-complete-export.json `
+  --signature .\raw\model-complete-export.sig `
+  --public-key C:\trusted\copilot-platform-ed25519.pem `
+  --run-id B01-A1 --block-id B01 --arm-id 1 --seed 1812433253 `
+  --out .\staging\B01-A1.json
+```
+
+Its compact stdout reports the canonical staging path/hash and observed counts.
+The full corpus remains evaluator-only.
+
 For every measured AI run, bind its run record to the exact raw signed platform
 export and verify all required parent/worker sessions:
 
@@ -125,9 +149,10 @@ node .\scripts\verify-isolation-evidence.mjs `
   --public-key C:\trusted\copilot-platform-ed25519.pem `
   --arm-id 1 `
   --run-id B01-A1 `
-  --candidate-root C:\benchmark-runs\B01-A1 `
+  --contract-root C:\isolated-runs\B01-A1\corpus-contract `
+  --staging-root C:\isolated-runs\B01-A1\corpus-staging `
   --evaluator-root (Join-Path $PWD evaluator) `
-  --staging-path C:\benchmark-runs\B01-A1\staging\B01-A1.json `
+  --snapshot-path (Join-Path $PWD staging\B01-A1.json) `
   --out .\raw\B01-A1-isolation.json
 ```
 
@@ -147,18 +172,20 @@ ambiguous, or cross-run identities before any per-run audit.
 | `protocol.md` | Immutable arms, budgets, isolation, metrics, thresholds, and analysis |
 | `fixture/spec/` | Executable public mapping and invariant program |
 | `fixture/migration/` | Candidate spec interpreter |
-| `schemas/`, `validators/` | Input, staging, promotion, telemetry contracts and validators |
+| `schemas/`, `validators/` | Input, adapter staging, promotion, telemetry contracts and validators |
 | `baseline/` | Decision, boundary, pairwise, grammar/property, and solver generator |
 | `candidate-template/`, `design/candidate-manifest.json` | External candidate materialization allowlist |
 | `evaluator/` | Isolated oracle, acceptance, mutants, statistics, goldens, artifacts, and evaluator tests |
-| `design/` | Shared prompt/Skill, evidence contract, fixed models, seeds, and schedule |
-| `staging/` | Inputs only; expected output is forbidden |
+| `design/` | Immutable MCP request, shared prompt/Skill, evidence contract, fixed models, seeds, and schedule |
+| `staging/` | Canonical evaluator snapshots; expected output is forbidden |
 
-Measured generators run only in external repositories created by the
-materializer; the evaluator directory is never copied or mounted. Signed
-platform policy/access exports prove candidate-root-only filesystem access and
-network denial. Both delegated arms invoke the same byte-identical materialized
-Skill and return only compact staging metadata; parents never read the corpus.
+Measured generators run only against disposable launcher-confined contract and
+staging roots; the evaluator directory and repository are inaccessible. Signed
+platform policy/access exports prove contract-read-only/staging-read-write
+access and network denial. Inline parents and delegated workers use the same
+four actual MCP tools. Both delegated arms invoke the same byte-identical
+materialized Skill and actual `semantic-test-corpus` agent, returning only its
+terminal success/failure line; parents never read the corpus.
 Dataset-wide attribution covers tool/results, filesystem, network, outcome,
 delegation, completion, and unblinding events; generation activity at or after
 completion fails closed.

@@ -20,6 +20,14 @@ documents for parent-defined IDs only; the manifest can repeat only immutable
 request-defined ID/category pairs. If preparation, confinement, or delegation is
 unavailable, report failure and stop; never generate scenarios inline.
 
-After return, the parent deterministically validates staged inputs, promotes only
-accepted source inputs, computes expected results with the trusted oracle, and runs
-trace and mutant scoring. Never delegate migration, oracle, promotion, or scoring work.
+The custom agent does not pin a model. It inherits the caller/session model so the same
+agent, MCP tools, request, output semantics, and confinement contract can be used under
+different authenticated model bindings. Never substitute a different agent identity or
+tool surface.
+
+After return, evaluator-only deterministic code may snapshot the confined files and
+authenticated tool-error records into a benchmark staging artifact. The parent must not
+read, package, validate, or copy the corpus. Trusted evaluator code validates and
+promotes accepted source inputs, computes expected results with the trusted oracle, and runs
+trace and mutant scoring. Never delegate the adapter, migration, oracle, promotion, or
+scoring work.

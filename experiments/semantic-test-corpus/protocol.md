@@ -20,7 +20,8 @@ configuration migration:
 4. Is each AI arm noninferior to a strong deterministic baseline, and does any
    arm provide a materially better quality/resource tradeoff?
 
-The experimental unit is one fresh session producing one 60-case staging file.
+The experimental unit is one fresh model run producing 0-60 confined scenario files,
+followed by one evaluator-only canonical staging snapshot.
 The primary run-level quality endpoints are promotion rate, instrumented semantic
 path coverage, and held-out mutant kill rate. Rule/invariant coverage, diagnostic
 category coverage, diversity, latency, usage, tool behavior, and compliance are
@@ -98,11 +99,13 @@ substituted.
 | 4 | Cheap | Yes | `claude-haiku-4.5` parent and worker through the common delegated Skill |
 
 Arms 1-4 form the complete 2x2 model-tier by delegation factorial. Arm 0 is the
-external baseline. All AI arms use the byte-identical shared task artifact and
-tool surface. Arms 2 and 4 use the same byte-identical
-`task/delegated-worker-skill.md`, invocation name, direct-staging ownership,
-return shape, and tool surface; only the bound parent/worker model IDs differ.
-Inline arms execute the same task contract directly.
+external baseline. All AI arms use the byte-identical shared task, immutable
+`design/corpus-request.json`, actual `semantic-corpus/*` MCP tools, and MCP
+request/output semantics. Arms 2 and 4 invoke the same `semantic-test-corpus`
+agent through byte-identical `task/delegated-worker-skill.md`; the agent profile
+has no fixed model and inherits the authenticated worker binding. Inline parents
+receive those same four MCP tools directly. Model tier and delegation are the
+only intended factors.
 
 ### Authenticated per-run model binding
 
@@ -150,9 +153,14 @@ replicates.
 Every run receives:
 
 - the shared prompt in `design/shared-task-prompt.txt`;
-- public v1/scenario/staging schemas and the public mapping contract;
-- a fresh workspace and a single coordinator-selected block seed;
-- a target of exactly 60 case slots and the same 0-60 submission schema;
+- the immutable self-hashed request, public bounded contract, and exact 60
+  request-defined ID/category slots;
+- a fresh mandatory launcher-confined `corpus-contract/` and `corpus-staging/`
+  pair and one coordinator-selected block seed;
+- the exact tools `semantic-corpus/list_contract_files`,
+  `semantic-corpus/read_contract_file`, `semantic-corpus/write_scenario_input`,
+  and `semantic-corpus/write_scenario_manifest`;
+- the same 0-60 successful-write and rejected-attempt measurement semantics;
 - 30 wall-clock minutes, at most 120 tool calls, and at most 100,000 total model
   tokens for AI arms;
 - no retry for semantic quality or low scores.
@@ -178,40 +186,47 @@ mixed precision, fractions beyond three digits, leap/invalid normalized dates,
 and values that fail canonical `Date` round-trip are rejected, making integer
 millisecond ordering lossless.
 
-Staging files contain inputs only. They must not contain expected output,
-diagnostics, or traces. The evaluator measures JSON parse errors, missing slots,
-and each malformed case rather than discarding the run. It validates every
-present slot independently, preserves indexed rejection reasons, and oracle-
-promotes only valid cases. `promotionRate = promotedCases / 60`, including zero
-and partial submissions. Expected outputs are created only by the independent
-oracle after each case passes promotion.
+MCP staging contains inputs only: write-once
+`corpus-staging/scenarios/<scenario-id>.json` files and, only after all 60
+writes, `corpus-staging/manifest.json`. It never contains expected output,
+diagnostics, traces, rationales, or generic benchmark packaging. A rejected
+write is not retried.
+
+After signed `run.completed`, evaluator-only `evaluator/adapter.mjs` reads the
+exact confined files and authenticated MCP tool-error records outside model
+context. It writes canonical `staging/<run-id>.json`, retaining each source
+file path/byte count/SHA-256 and each rejected call's actual call ID, namespaced
+tool name, argument hash, error code, and message. The signed
+`adapter.snapshot` event binds the canonical byte SHA-256. Partial 0-60 writes
+and malformed/rejected attempts therefore remain measured outcomes. The parent
+and worker never package, reread, validate, promote, or copy the full corpus.
+The evaluator validates every present slot independently and oracle-promotes
+only valid cases. `promotionRate = promotedCases / 60`; expected outputs are
+created only after promotion.
 
 ## Delegation and parent-context isolation
 
-Delegated workers write directly to the named staging file. They do not stream
-the corpus through the parent. The parent may receive only:
-
-- staging path and SHA-256;
-- case count and validator error count;
-- compact promotion/report summaries.
-
-The parent must not open or reread the full staging or promoted corpus into its
-context. It validates/promotes by command and records compact stdout. This keeps
-the larger parent migration task meaningful without turning parent context into
-an unmeasured corpus-review treatment.
+Delegated workers call the same confined MCP tools used by inline parents. The
+actual caller owns each authenticated MCP call and its correlated filesystem
+effects. Workers do not stream corpus content through the parent. The parent
+receives only the agent's terminal line:
+`corpus-staging/manifest.json - <count> scenarios - SUCCESS` or
+`corpus-staging - <written-count> scenarios - FAILURE: <reason>`.
 
 Signed role mappings are derived from each run's `session.created` and
-`model.bound` events. In delegated arms, only the authenticated worker may write
-the exact staging file; worker writes anywhere else fail compliance. The parent
-may only invoke delegation, call compact validation/promotion tools, and receive
-the frozen compact return fields. Any parent staging read/write, missing worker
-staging write, or parent-does-all trace fails compliance. Inline arms have no
-worker and require the authenticated parent to write staging directly.
+`model.bound` events. In delegated arms, only the authenticated worker may call
+the four MCP tools; the parent may only invoke `semantic-test-corpus` and receive
+the exact terminal line. Any parent MCP call, parent staging access, generic
+file-tool substitution, normalized tool name presented as an actual call, or
+parent-does-all trace fails compliance. Inline arms have no worker and require
+the authenticated parent to own all MCP calls. Zero successful writes remains a
+valid measured failure and does not by itself violate actor isolation.
 
 For both arms 2 and 4, invoke the single materialized
-`task/delegated-worker-skill.md` artifact using the same Skill name. The
-coordinator rejects any run whose signed tool/session evidence shows a different
-delegation mechanism, return surface, or worker access pattern.
+`task/delegated-worker-skill.md` artifact and actual agent name
+`semantic-test-corpus`. The coordinator rejects any run whose signed
+tool/session evidence shows a different agent identity, delegation mechanism,
+terminal line, or worker access pattern.
 
 ## Acceptance opacity and held-out provenance
 
@@ -228,18 +243,25 @@ Production materialization rejects symbolic-link, junction, and reparse
 components, canonicalizes existing parents and targets with `realpath`, and
 performs both directions of source/destination containment on canonical paths.
 
-Before session creation, the platform must enforce `candidate-root-only`
-filesystem access, explicitly deny the evaluator root, and deny network access.
+Before session creation, the trusted launcher must enforce the merged reference
+boundary: immutable contract and sandbox config, writable staging, no repository/
+parent/sibling/evaluator access, and denied network. The MCP server verifies
+launcher token/hash/root identity and write denial before initialization; these
+checks are defense in depth and do not replace container, restricted-mount, or
+dedicated-ACL confinement.
 Afterward, `scripts/verify-isolation-evidence.mjs` verifies the signed platform
 export and derives compliance from policy, file-access, network-access, and
 audit-completion events. Caller booleans are not accepted. An incomplete audit,
 outside-root/evaluator attempt, allowed network request, policy mismatch, or
 unexpected session is noncompliant.
-Every signed `file.read` or `file.write` tool call must carry a unique call ID,
-path, and authenticated actor and have exactly one matching `fs.access` event
-with the same call ID, actor/session, path, operation, and allowed decision.
-Orphan tool calls or filesystem events—including a staging write with no
-filesystem event—fail closed.
+Every signed MCP call carries a unique call ID, actual namespaced tool name,
+SHA-256 of recursively key-sorted canonical JSON arguments (original array
+order), and authenticated actor, with exactly one matching
+`tool.result`. Rejections retain exact code/message. Successful scenario and
+manifest writes require a matching caller-owned staging `fs.access`; every
+filesystem event must correlate to an actual MCP call and remain under the
+attested read-only contract or read-write staging root. Duplicate scenario write
+attempts are corrective retries and fail compliance.
 
 Each run also records signed `run.completed` and `outcomes.unblinded` events
 from the authenticated parent. Any signed `outcome.accessed` event must identify
@@ -259,9 +281,11 @@ identities fail the entire evidence dataset.
 The same dataset-wide attribution pass covers tool calls/results, filesystem
 access, outcome access, delegation, completion, and unblinding events. Every
 event must resolve to exactly one scheduled run and authenticated role/session.
-All generation tools, results, filesystem/network activity, delegation, and
-staging writes must occur strictly before `run.completed`; only outcome access
-strictly after both completion and unblinding is allowed.
+All model generation tools, results, filesystem/network activity, delegation,
+and staging writes must occur strictly before `run.completed`. Exactly one
+evaluator-role `adapter.snapshot` occurs afterward under a session outside the
+model role map and authenticates the canonical staging bytes. Only outcome
+access strictly after both completion and unblinding is allowed.
 Delegated runs additionally require exactly one call-ID-matched lifecycle:
 invocation precedes every worker generation/write event, completion follows
 them, and delegation completion precedes run completion.
@@ -324,8 +348,8 @@ All quality metrics are computed after opaque oracle promotion.
 | Semantic redundancy | Repeated signature of paths, invariant IDs, and diagnostic IDs |
 | Diversity | Unique semantic-signature rate and mean pairwise Jaccard distance over path/diagnostic sets |
 | Usage | Parent, worker, and total nano-AIU/credits plus input/output/total tokens |
-| Tool behavior | Distinct tool surface and calls by tool, parent, and worker |
-| Latency | Start-to-staging wall time; parent active, worker active, and authenticated parent wait where available |
+| Tool behavior | Actual namespaced MCP calls/results/errors by parent and worker; optional normalized semantic actions are derived labels only |
+| Latency | Start-to-model-completion plus separately recorded adapter latency; parent active, worker active, and authenticated parent wait where available |
 | Compliance | Derived signed model/policy/access/audit evidence plus budget and mechanism deviations |
 
 Semantic `status: invalid` is often an intentional negative case and is not a
@@ -447,15 +471,16 @@ deterministic endpoints.
 
 1. Run `npm test` and `npm run reproduce`.
 2. Generate/freeze `design/schedule.json`.
-3. Materialize external allowlisted candidate repositories and apply filesystem/
-   network policy.
+3. Materialize the allowlisted public contract/server/profile, then create a
+   disposable non-repository run with mandatory launcher confinement.
 4. In schedule order, create each run's fresh role sessions and verify/freeze its
    signed run/model binding before generation.
-5. Generate inputs directly to staging; collect call-correlated signed raw
-   telemetry/access logs.
-6. Verify the signed isolation audit, then validate each staging slot without
-   opening corpus content in parent context.
-7. Promote valid cases through the evaluator oracle and freeze hashes.
+5. Generate inputs through actual MCP calls; collect call-correlated signed raw
+   telemetry/access logs without corrective retries.
+6. End the model run, execute the evaluator-only canonical adapter, sign its
+   snapshot hash, and verify the complete isolation audit.
+7. Validate each canonical staging slot and promote valid cases through the
+   evaluator oracle without opening corpus content in parent/worker context.
 8. Run evaluator-only held-out acceptance, traces, mutation, and compact reporting under blinded
    run IDs.
 9. Freeze metric tables, then join arm labels and execute the registered analysis.

@@ -1,14 +1,15 @@
 ---
-name: semantic-scenario-stager
-description: Generate semantic migration scenario inputs directly into the coordinator-owned staging file.
+name: semantic-test-corpus
+description: Invoke the confined semantic-test-corpus agent with the common benchmark task.
 ---
 
-Use `task/shared-task-prompt.txt` without additions or omissions. Write only the
-60 scenario inputs to the exact staging path supplied by the coordinator. Do not
-return corpus content through the parent conversation and do not read outside
-the materialized candidate root. Run `node scripts/validate-staging.mjs <path>`.
-Return exactly one JSON object containing `stagingPath`, `payloadSha256`,
-`submittedCases`, `promotableCases`, and `errorCount`.
+Invoke the `semantic-test-corpus` custom agent exactly once with
+`task/shared-task-prompt.txt` without additions or omissions. The worker inherits the
+authenticated parent/session model binding. Its only tools are the four configured
+`semantic-corpus/*` MCP tools.
 
-The permitted tool surface is file read, file write, and the staging validator.
-Network access and evaluator paths are unavailable.
+Return only the agent's exact terminal line:
+`corpus-staging/manifest.json - <count> scenarios - SUCCESS` or
+`corpus-staging - <written-count> scenarios - FAILURE: <reason>`.
+Do not return corpus content or synthesized metadata through the parent conversation.
+The parent must not call the MCP tools, inspect staging, validate, promote, or retry.

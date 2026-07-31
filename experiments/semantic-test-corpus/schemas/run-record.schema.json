@@ -54,11 +54,15 @@
     },
     "staging": {
       "type": "object",
+      "required": ["path", "sha256", "sourceRoot", "submittedCases", "promotedCases", "toolErrorCount"],
+      "additionalProperties": false,
       "properties": {
         "path": {"type": "string"},
-        "sha256": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "sourceRoot": {"const": "corpus-staging/"},
         "submittedCases": {"type": "integer"},
-        "promotedCases": {"type": "integer"}
+        "promotedCases": {"type": "integer"},
+        "toolErrorCount": {"type": "integer", "minimum": 0, "maximum": 120}
       }
     },
     "timing": {

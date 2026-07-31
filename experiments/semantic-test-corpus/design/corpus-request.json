@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "targetCount": 60,
+  "scenarios": [
+    {"scenarioId": "scenario-001", "category": "mapping-rules"},
+    {"scenarioId": "scenario-002", "category": "mapping-rules"},
+    {"scenarioId": "scenario-003", "category": "mapping-rules"},
+    {"scenarioId": "scenario-004", "category": "mapping-rules"},
+    {"scenarioId": "scenario-005", "category": "mapping-rules"},
+    {"scenarioId": "scenario-006", "category": "mapping-rules"},
+    {"scenarioId": "scenario-007", "category": "mapping-rules"},
+    {"scenarioId": "scenario-008", "category": "mapping-rules"},
+    {"scenarioId": "scenario-009", "category": "mapping-rules"},
+    {"scenarioId": "scenario-010", "category": "mapping-rules"},
+    {"scenarioId": "scenario-011", "category": "mapping-rules"},
+    {"scenarioId": "scenario-012", "category": "mapping-rules"},
+    {"scenarioId": "scenario-013", "category": "mapping-rules"},
+    {"scenarioId": "scenario-014", "category": "mapping-rules"},
+    {"scenarioId": "scenario-015", "category": "mapping-rules"},
+    {"scenarioId": "scenario-016", "category": "mapping-rules"},
+    {"scenarioId": "scenario-017", "category": "mapping-rules"},
+    {"scenarioId": "scenario-018", "category": "mapping-rules"},
+    {"scenarioId": "scenario-019", "category": "mapping-rules"},
+    {"scenarioId": "scenario-020", "category": "mapping-rules"},
+    {"scenarioId": "scenario-021", "category": "mapping-rules"},
+    {"scenarioId": "scenario-022", "category": "mapping-rules"},
+    {"scenarioId": "scenario-023", "category": "mapping-rules"},
+    {"scenarioId": "scenario-024", "category": "mapping-rules"},
+    {"scenarioId": "scenario-025", "category": "mapping-rules"},
+    {"scenarioId": "scenario-026", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-027", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-028", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-029", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-030", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-031", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-032", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-033", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-034", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-035", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-036", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-037", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-038", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-039", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-040", "category": "cross-field-invariants"},
+    {"scenarioId": "scenario-041", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-042", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-043", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-044", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-045", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-046", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-047", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-048", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-049", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-050", "category": "domain-boundaries"},
+    {"scenarioId": "scenario-051", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-052", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-053", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-054", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-055", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-056", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-057", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-058", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-059", "category": "legacy-regressions"},
+    {"scenarioId": "scenario-060", "category": "legacy-regressions"}
+  ],
+  "categories": [
+    {"category": "mapping-rules", "minQuota": 20},
+    {"category": "cross-field-invariants", "minQuota": 15},
+    {"category": "domain-boundaries", "minQuota": 10},
+    {"category": "legacy-regressions", "minQuota": 10}
+  ],
+  "maxSizes": {
+    "contractFileBytes": 262144,
+    "scenarioBytes": 65536,
+    "manifestBytes": 262144
+  },
+  "v1ConfigSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["version", "service", "logging", "cache", "database", "retries", "security", "features"],
+    "properties": {
+      "version": {"type": "integer", "const": 1},
+      "service": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "environment", "region"],
+        "properties": {
+          "name": {"type": "string", "maxLength": 80},
+          "environment": {"type": "string", "maxLength": 4, "enum": ["dev", "test", "prod"]},
+          "region": {"type": "string", "maxLength": 32},
+          "port": {"type": "integer", "minimum": -100000, "maximum": 100000},
+          "timeoutSeconds": {"type": "integer", "minimum": -100000, "maximum": 100000}
+        }
+      },
+      "logging": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level"],
+        "properties": {
+          "level": {"type": "string", "maxLength": 5, "enum": ["debug", "info", "warn", "error"]},
+          "pretty": {"type": "boolean"}
+        }
+      },
+      "cache": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["enabled"],
+        "properties": {
+          "enabled": {"type": "boolean"},
+          "provider": {"type": "string", "maxLength": 6, "enum": ["memory", "redis"]},
+          "ttlSeconds": {"type": "integer", "minimum": -100000, "maximum": 100000},
+          "endpoint": {"type": "string", "maxLength": 512}
+        }
+      },
+      "database": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["engine", "name"],
+        "properties": {
+          "engine": {"type": "string", "maxLength": 8, "enum": ["postgres", "mysql", "sqlite"]},
+          "host": {"type": "string", "maxLength": 255},
+          "port": {"type": "integer", "minimum": -100000, "maximum": 100000},
+          "name": {"type": "string", "maxLength": 80},
+          "ssl": {"type": "boolean"}
+        }
+      },
+      "retries": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode", "maxAttempts", "delayMs"],
+        "properties": {
+          "mode": {"type": "string", "maxLength": 11, "enum": ["fixed", "exponential"]},
+          "maxAttempts": {"type": "integer", "minimum": -100000, "maximum": 100000},
+          "delayMs": {"type": "integer", "minimum": -100000, "maximum": 100000}
+        }
+      },
+      "security": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["allowedOrigins"],
+        "properties": {
+          "allowedOrigins": {
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 16,
+            "uniqueItems": false,
+            "items": {"type": "string", "maxLength": 512}
+          }
+        }
+      },
+      "features": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["flags"],
+        "properties": {
+          "flags": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [],
+            "properties": {
+              "alpha": {"type": "boolean"},
+              "stable": {"type": "boolean"},
+              "newUI": {"type": "boolean"},
+              "newui": {"type": "boolean"},
+              "betaFlag": {"type": "boolean"}
+            }
+          }
+        }
+      }
+    }
+  },
+  "requestHash": "c5d5c16891c952298a03dc3f37e5c11a1e23f1ff3d093458cab6a2008b016da7"
+}
