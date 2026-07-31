@@ -52,7 +52,6 @@ const MUTANT_FILES = [
   "evaluator/mutants/run.mjs",
   "evaluator/mutants/validate.mjs",
   "evaluator/mutants/oracle-tuned-reference.json",
-  "evaluator/mutants/oracle-tuned-reference.json",
   "evaluator/artifacts/baseline-corpus.json",
   "evaluator/tests/golden-cases.json"
 ];

@@ -623,8 +623,50 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert.equal(failure.status, "pre-session-failure");
     assert.equal(failure.failure.kickoffStarted, false);
     assert.equal(failure.failure.usage.modelTokens, 0);
+
+    const unavailableRoot = resolve(temporary, "preflight-unavailable");
+    const unavailable = runControlledHarness({
+      cli: process.execPath,
+      projectId: "fixture-project",
+      candidateRoot: resolve(unavailableRoot, "candidate"),
+      artifactRoot: resolve(unavailableRoot, "artifacts"),
+      startIndexPath: resolve(unavailableRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(unavailable.status, "unavailable");
+    const unavailableIndex = JSON.parse(
+      readFileSync(resolve(unavailableRoot, "start-index.json"), "utf8")
+    );
+    assert.equal(unavailableIndex.captures.length, 1);
+    assert.equal(unavailableIndex.captures[0].disposition, "unavailable");
+    assert(existsSync(resolve(unavailableRoot, "artifacts", "unit-disposition.json")));
+
+    process.env.FAKE_COPILOT_MISSING_USAGE = "1";
+    const uncertainRoot = resolve(temporary, "started-uncertain");
+    const uncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(uncertainRoot, "candidate"),
+      artifactRoot: resolve(uncertainRoot, "artifacts"),
+      startIndexPath: resolve(uncertainRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    assert.equal(uncertain.status, "started-uncertain");
+    assert(existsSync(resolve(uncertainRoot, "artifacts", "lifecycle-start.json")));
+    assert(existsSync(resolve(uncertainRoot, "artifacts", "captured.events.jsonl")));
+    assert(existsSync(resolve(uncertainRoot, "artifacts", "unit-disposition.json")));
+    const uncertainIndex = JSON.parse(
+      readFileSync(resolve(uncertainRoot, "start-index.json"), "utf8")
+    );
+    assert.equal(uncertainIndex.captures[0].disposition, "started");
   } finally {
     delete process.env.FAKE_COPILOT_CREATE_FAILURE;
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
     rmSync(temporary, { recursive: true, force: true });
   }
 });

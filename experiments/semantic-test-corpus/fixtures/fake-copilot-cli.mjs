@@ -285,7 +285,9 @@ usage.rows[0].parent_tool_call_id = null;
 mkdirSync(dirname(eventsPath), { recursive: true });
 mkdirSync(dirname(usagePath), { recursive: true });
 writeFileSync(eventsPath, `${events.map((event) => JSON.stringify(event)).join("\n")}\n`, { flag: "wx" });
-writeFileSync(usagePath, `${JSON.stringify(usage, null, 2)}\n`, { flag: "wx" });
+if (process.env.FAKE_COPILOT_MISSING_USAGE !== "1") {
+  writeFileSync(usagePath, `${JSON.stringify(usage, null, 2)}\n`, { flag: "wx" });
+}
 process.stdout.write(`${JSON.stringify({
   project_session_id: appSessionId,
   project_id: projectId,
