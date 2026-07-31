@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "statistics-input.schema.json",
+  "type": "object",
+  "required": ["observations", "runRecords"],
+  "additionalProperties": false,
+  "properties": {
+    "observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["runId", "blockId", "armId", "promotionRate", "semanticPathCoverage", "mutantKillRate"],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {"properties": {"armId": {"const": 0}}},
+            "else": {"required": ["evidenceContext"]}
+          }
+        ],
+        "properties": {
+          "runId": {"type": "string"},
+          "blockId": {"type": "string"},
+          "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+          "promotionRate": {"type": "number", "minimum": 0, "maximum": 1},
+          "semanticPathCoverage": {"type": "number", "minimum": 0, "maximum": 1},
+          "mutantKillRate": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidenceContext": {
+            "type": "object",
+            "required": ["candidateRoot", "evaluatorRoot", "stagingPath"],
+            "additionalProperties": false,
+            "properties": {
+              "candidateRoot": {"type": "string"},
+              "evaluatorRoot": {"type": "string"},
+              "stagingPath": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "runRecords": {"type": "array", "items": {"type": "object"}}
+  }
+}

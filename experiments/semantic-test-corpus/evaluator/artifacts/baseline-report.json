@@ -1,0 +1,84 @@
+{
+  "formatVersion": 1,
+  "corpus": {
+    "targetCases": 60,
+    "submittedCases": 60,
+    "cases": 60,
+    "promoted": 60,
+    "invalidCases": 0,
+    "missingSlots": 0,
+    "structurallyValidCases": 60,
+    "structurallyInvalidCases": 0,
+    "structuralValidityRate": 1,
+    "promotionRate": 1,
+    "semanticallyValid": 40,
+    "semanticValidityRate": 0.6666666666666666,
+    "semanticallyInvalid": 20,
+    "strategyCounts": {
+      "pairwise-covering": 13,
+      "decision-table": 19,
+      "boundary-partition": 16,
+      "grammar-property": 4,
+      "constraint-solver": 8
+    }
+  },
+  "semanticCoverage": {
+    "rules": {
+      "exercised": 12,
+      "total": 12,
+      "rate": 1,
+      "missing": []
+    },
+    "paths": {
+      "exercised": 67,
+      "total": 67,
+      "rate": 1,
+      "missing": []
+    },
+    "invariants": {
+      "exercised": 15,
+      "total": 15,
+      "rate": 1,
+      "missing": []
+    }
+  },
+  "diagnosticCoverage": {
+    "categories": [
+      "cross-field",
+      "deprecation",
+      "domain",
+      "ignored-input",
+      "normalization"
+    ],
+    "totalDefinedCategories": 5,
+    "rate": 1,
+    "counts": {
+      "cross-field": 8,
+      "deprecation": 4,
+      "domain": 12,
+      "ignored-input": 6,
+      "normalization": 16
+    }
+  },
+  "mutation": {
+    "catalogVersion": "2026-07-29.1",
+    "catalogValidation": {
+      "frozenCount": 33,
+      "validated": 33
+    },
+    "cases": 60,
+    "total": 33,
+    "triggered": 33,
+    "untriggered": 0,
+    "killed": 33,
+    "survived": 0,
+    "mutationScore": 1
+  },
+  "redundancyAndDiversity": {
+    "exactDuplicateCases": 0,
+    "semanticDuplicateCases": 14,
+    "semanticUniqueSignatures": 46,
+    "meanPairwiseJaccardDistance": 0.39554650116357876,
+    "note": "Duplicate detection compares corpus artifacts only; it is not a training-data leakage test."
+  }
+}

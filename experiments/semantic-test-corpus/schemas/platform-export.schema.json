@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "platform-export.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "provider", "exportId", "exportedAt", "capturedAt", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "provider": {"const": "github-copilot-platform"},
+    "exportId": {"type": "string", "minLength": 1},
+    "exportedAt": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
+    "capturedAt": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["eventId", "type", "timestamp", "sessionId"],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {"properties": {"type": {"enum": ["run.started", "run.completed", "outcomes.unblinded", "outcome.accessed", "session.created", "model.bound"]}}},
+            "then": {"required": ["runId", "blockId", "armId", "role"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "run.started"}}},
+            "then": {"required": ["sequence", "processId"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "model.bound"}}},
+            "then": {"required": ["modelId", "atomic"]}
+          },
+          {
+            "if": {"properties": {"type": {"enum": ["tool.called", "tool.result"]}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "actor", "toolName"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "tool.result"}}},
+            "then": {"required": ["callId"]}
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {"const": "tool.called"},
+                "toolName": {"enum": ["file.read", "file.write"]}
+              }
+            },
+            "then": {"required": ["callId", "path"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "fs.access"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "actor", "callId", "path", "operation", "decision"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "network.access"}}},
+            "then": {
+              "required": ["runId", "blockId", "armId", "role", "actorSessionId", "callId"],
+              "allOf": [
+                {"anyOf": [{"required": ["endpoint"]}, {"required": ["target"]}]},
+                {"anyOf": [{"required": ["decision"]}, {"required": ["allowed"]}]}
+              ]
+            }
+          },
+          {
+            "if": {"properties": {"type": {"enum": ["delegation.invoked", "delegation.completed"]}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "callId"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "usage.reported"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "totalTokens", "intervalStart", "intervalEnd"]}
+          }
+        ],
+        "properties": {
+          "eventId": {"type": "string", "minLength": 1},
+          "type": {
+            "type": "string",
+            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "usage.reported", "audit.started", "audit.completed"]
+          },
+          "timestamp": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
+          "sessionId": {"type": "string", "minLength": 1},
+          "runId": {"type": "string"},
+          "blockId": {"type": "string"},
+          "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+          "role": {"type": "string", "enum": ["baseline", "parent", "worker"]},
+          "sequence": {"type": "integer", "minimum": 1, "maximum": 5},
+          "processId": {"type": "string", "minLength": 1},
+          "parentSessionId": {"type": "string"},
+          "workerSessionId": {"type": "string"},
+          "modelId": {"type": "string"},
+          "atomic": {"type": "boolean"},
+          "skillName": {"type": "string"},
+          "skillSha256": {"type": "string"},
+          "returnFields": {"type": "array", "items": {"type": "string"}},
+          "toolName": {"type": "string"},
+          "callId": {"type": "string", "minLength": 1},
+          "actor": {"type": "string", "enum": ["parent", "worker"]},
+          "actorSessionId": {"type": "string", "minLength": 1},
+          "candidateRoot": {"type": "string"},
+          "deniedRoots": {"type": "array", "items": {"type": "string"}},
+          "filesystemMode": {"type": "string"},
+          "networkMode": {"type": "string"},
+          "path": {"type": "string"},
+          "operation": {"type": "string", "enum": ["read", "write"]},
+          "decision": {"type": "string", "enum": ["allow", "deny"]},
+          "allowed": {"type": "boolean"},
+          "endpoint": {"type": "string", "minLength": 1},
+          "target": {"type": "string", "minLength": 1},
+          "totalTokens": {"type": "integer", "minimum": 0, "maximum": 100000},
+          "intervalStart": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
+          "intervalEnd": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
+          "filesystemComplete": {"type": "boolean"},
+          "networkComplete": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

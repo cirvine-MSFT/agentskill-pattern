@@ -1,0 +1,3 @@
+Generate exactly 60 high-value v1 configuration migration scenarios.
+
+Read the supplied mapping contract and public schemas. Write only the staging JSON file named by the coordinator. Every case needs a unique ID, a concise description, a structurally valid v1 input, and one or more allowed sourceTags. Do not execute the migration, derive expected v2 output, add diagnostics, or inspect acceptance-only paths. Optimize semantic decisions, boundaries, cross-field interactions, and nonredundant path coverage within the fixed budget.

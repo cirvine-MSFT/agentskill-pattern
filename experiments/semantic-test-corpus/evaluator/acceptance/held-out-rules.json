@@ -1,0 +1,36 @@
+{
+  "setId": "semantic-held-out-2026-07-29",
+  "visibility": "acceptance-only",
+  "provenance": {
+    "authoredAt": "2026-07-29",
+    "authoredAgainstCommit": "48f44fbf3dca97a001ab2e822cf17faff869b846",
+    "origin": "Newly authored for this benchmark; not copied from repository examples.",
+    "trainingLeakageClaim": "No claim is made that these rules or examples are absent from any model's training data. External candidate materialization plus signed platform access evidence proves only that they are not supplied in measured prompts or candidate workspaces."
+  },
+  "generatorAccess": {
+    "suppliedToArms": false,
+    "excludedPaths": ["evaluator/**"]
+  },
+  "rules": [
+    {
+      "id": "H-PRECEDENCE-PROD-FORMAT",
+      "statement": "The production safety override wins over a user request for pretty logs while preserving a warning."
+    },
+    {
+      "id": "H-EFFECTIVE-PORT-CONFLICT",
+      "statement": "Port conflict detection uses the environment-derived service default when service.port is absent."
+    },
+    {
+      "id": "H-NORMALIZED-FEATURE-COLLISION",
+      "statement": "Feature uniqueness is checked after case, whitespace, underscore, and punctuation normalization."
+    },
+    {
+      "id": "H-CORS-CANONICALIZATION",
+      "statement": "Origin scheme/host canonicalization happens before sorting and duplicate removal."
+    },
+    {
+      "id": "H-RETRY-CAP",
+      "statement": "Exponential maxDelayMs is capped at 60000 after exponentiation, not before it."
+    }
+  ]
+}

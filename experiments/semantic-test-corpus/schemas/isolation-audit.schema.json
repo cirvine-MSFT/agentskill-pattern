@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "isolation-audit.schema.json",
+  "type": "object",
+  "required": ["exportId", "runId", "armId", "evidence", "candidateRoot", "stagingPath", "roleSessions", "globalAttribution", "networkAttribution", "budgets", "status", "checks", "violations"],
+  "additionalProperties": false,
+  "properties": {
+    "exportId": {"type": "string"},
+    "runId": {"type": "string"},
+    "armId": {"type": "integer", "minimum": 1, "maximum": 4},
+    "evidence": {"type": "object"},
+    "candidateRoot": {"type": "string"},
+    "stagingPath": {"type": "string"},
+    "roleSessions": {
+      "type": "object",
+      "required": ["parent"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": {"type": "string"},
+        "worker": {"type": "string"}
+      }
+    },
+    "networkAttribution": {
+      "type": "object",
+      "required": ["status", "totalEvents", "attributedEvents", "violations"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
+        "totalEvents": {"type": "integer", "minimum": 0},
+        "attributedEvents": {"type": "integer", "minimum": 0},
+        "violations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "globalAttribution": {
+      "type": "object",
+      "required": ["status", "totalEvents", "attributedEvents", "violations"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
+        "totalEvents": {"type": "integer", "minimum": 0},
+        "attributedEvents": {"type": "integer", "minimum": 0},
+        "violations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "required": ["durationMs", "toolCalls", "totalTokens", "limits", "met"],
+      "additionalProperties": false,
+      "properties": {
+        "durationMs": {},
+        "toolCalls": {"type": "integer", "minimum": 0},
+        "totalTokens": {"type": "integer", "minimum": 0},
+        "limits": {
+          "type": "object",
+          "required": ["durationMs", "toolCalls", "totalTokens"],
+          "additionalProperties": false,
+          "properties": {
+            "durationMs": {"const": 1800000},
+            "toolCalls": {"const": 120},
+            "totalTokens": {"const": 100000}
+          }
+        },
+        "met": {"type": "boolean"}
+      }
+    },
+    "status": {"type": "string", "enum": ["compliant", "noncompliant"]},
+    "checks": {
+      "type": "object",
+      "required": ["policyEvents", "auditStartEvents", "auditEvents", "fileToolCalls", "fileAccessEvents", "correlatedFileCalls", "networkAccessEvents", "toolCallEvents", "toolResultEvents", "usageEvents", "startEvents", "delegationEvents", "completionEvents", "unblindingEvents", "outcomeAccessEvents"],
+      "additionalProperties": false,
+      "properties": {
+        "policyEvents": {"type": "integer", "minimum": 0},
+        "auditStartEvents": {"type": "integer", "minimum": 0},
+        "auditEvents": {"type": "integer", "minimum": 0},
+        "fileToolCalls": {"type": "integer", "minimum": 0},
+        "fileAccessEvents": {"type": "integer", "minimum": 0},
+        "correlatedFileCalls": {"type": "integer", "minimum": 0},
+        "networkAccessEvents": {"type": "integer", "minimum": 0},
+        "toolCallEvents": {"type": "integer", "minimum": 0},
+        "toolResultEvents": {"type": "integer", "minimum": 0},
+        "usageEvents": {"type": "integer", "minimum": 0},
+        "startEvents": {"type": "integer", "minimum": 0},
+        "delegationEvents": {"type": "integer", "minimum": 0},
+        "completionEvents": {"type": "integer", "minimum": 0},
+        "unblindingEvents": {"type": "integer", "minimum": 0},
+        "outcomeAccessEvents": {"type": "integer", "minimum": 0}
+      }
+    },
+    "violations": {"type": "array", "items": {"type": "string"}}
+  }
+}
