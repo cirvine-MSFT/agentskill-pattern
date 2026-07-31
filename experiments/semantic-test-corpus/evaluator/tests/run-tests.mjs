@@ -15,6 +15,7 @@ import { buildKillMatrix } from "../mutants/run.mjs";
 import { validateMutantCatalog } from "../mutants/validate.mjs";
 import { authenticateExport, readAuthenticatedExport } from "../../scripts/authenticated-export.mjs";
 import { materializeCandidate } from "../../scripts/materialize-candidate.mjs";
+import { adaptPlatformAudit } from "../../scripts/platform-audit-adapter.mjs";
 import { evaluateModelBindings } from "../../scripts/preflight-models.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
 import { evaluateIsolationEvidence } from "../../scripts/verify-isolation-evidence.mjs";
@@ -25,8 +26,10 @@ import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
 import {
   analyzeAuthenticatedStatisticsInput,
   analyzeBaselineComparisons,
-  analyzeStatisticsInput
+  analyzeStatisticsInput,
+  verifyMetricsArtifact
 } from "../statistics.mjs";
+import { canonicalMetricsBytes, deriveMetricsArtifact } from "../metrics.mjs";
 import { validateJsonSchema } from "../../validators/json-schema.mjs";
 import { validateStaging } from "../../validators/staging.mjs";
 import { createDispatcher } from "../../../../tools/semantic-corpus-mcp/protocol.mjs";
@@ -715,6 +718,205 @@ test("baseline report is derived and complete", () => {
   assert.equal(duplicateReport.redundancyAndDiversity.exactDuplicateCases, 1);
 });
 
+test("canonical metrics are snapshot-derived and reject outcome tampering", () => {
+  const temporary = resolve(root, ".test-work", "metrics-authentication");
+  rmSync(temporary, { recursive: true, force: true });
+  mkdirSync(temporary, { recursive: true });
+  try {
+    const snapshotPath = resolve(temporary, "B00-A0.json");
+    const metricsPath = resolve(temporary, "B00-A0.metrics.json");
+    const snapshotBytes = readFileSync(resolve(root, "staging", "baseline.json"));
+    writeFileSync(snapshotPath, snapshotBytes);
+    const artifact = deriveMetricsArtifact(snapshotBytes, {
+      runId: "B00-A0",
+      blockId: "B00",
+      armId: 0
+    });
+    assert.equal(artifact.metrics.coverage.paths.rate, 1);
+    assert.equal(artifact.metrics.mutation.catalogSize, 33);
+    assert.equal(artifact.metrics.mutation.triggered + artifact.metrics.mutation.untriggered, 33);
+    assert.equal(artifact.metrics.mutation.killed + artifact.metrics.mutation.survived, 33);
+    assert.deepEqual(artifact.provenance.oracle.files.map((file) => file.path),
+      ["evaluator/oracle/index.mjs"]);
+    assert.throws(() => deriveMetricsArtifact(Buffer.concat([snapshotBytes, Buffer.from("\n")]), {
+      runId: "B00-A0",
+      blockId: "B00",
+      armId: 0
+    }), /not canonical staging bytes/);
+    const metricsBytes = canonicalMetricsBytes(artifact);
+    writeFileSync(metricsPath, metricsBytes);
+    const metricsSha256 = createHash("sha256").update(metricsBytes).digest("hex");
+    const runRecord = {
+      runId: "B00-A0",
+      blockId: "B00",
+      armId: 0,
+      staging: {
+        path: snapshotPath,
+        sha256: artifact.snapshotSha256,
+        sourceRoot: "corpus-staging/"
+      },
+      metrics: {
+        path: metricsPath,
+        sha256: metricsSha256,
+        snapshotSha256: artifact.snapshotSha256
+      }
+    };
+    const payload = {
+      formatVersion: 1,
+      provider: "github-copilot-platform",
+      exportId: "metrics-authentication",
+      exportedAt: "2026-07-29T00:05:00Z",
+      capturedAt: "2026-07-29T00:04:30Z",
+      events: [
+        {
+          eventId: "baseline-completed",
+          type: "run.completed",
+          timestamp: "2026-07-29T00:04:00Z",
+          sessionId: "baseline-session",
+          runId: "B00-A0",
+          blockId: "B00",
+          armId: 0,
+          role: "baseline"
+        },
+        {
+          eventId: "baseline-unblinded",
+          type: "outcomes.unblinded",
+          timestamp: "2026-07-29T00:04:10Z",
+          sessionId: "baseline-session",
+          runId: "B00-A0",
+          blockId: "B00",
+          armId: 0,
+          role: "baseline"
+        },
+        {
+          eventId: "baseline-metrics",
+          type: "metrics.computed",
+          timestamp: "2026-07-29T00:04:20Z",
+          sessionId: "evaluator-session",
+          runId: "B00-A0",
+          blockId: "B00",
+          armId: 0,
+          role: "evaluator",
+          actor: "evaluator",
+          metricsPath,
+          metricsSha256,
+          snapshotSha256: artifact.snapshotSha256,
+          evaluatorCodeSha256: artifact.provenance.evaluator.sha256,
+          specSha256: artifact.provenance.spec.sha256,
+          oracleCodeSha256: artifact.provenance.oracle.sha256,
+          mutantCodeSha256: artifact.provenance.mutants.sha256
+        }
+      ]
+    };
+    const signed = signedExport(payload);
+    const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
+    assert.deepEqual(verifyMetricsArtifact({
+      metricsPath,
+      runRecord,
+      authenticated
+    }), artifact);
+
+    const tampered = structuredClone(artifact);
+    tampered.metrics.promotion.promotionRate = 0.5;
+    const tamperedBytes = canonicalMetricsBytes(tampered);
+    writeFileSync(metricsPath, tamperedBytes);
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord,
+      authenticated
+    }), /metrics hash differs/);
+
+    const reboundRecord = structuredClone(runRecord);
+    reboundRecord.metrics.sha256 = createHash("sha256").update(tamperedBytes).digest("hex");
+    const reboundPayload = structuredClone(payload);
+    reboundPayload.events.find((event) => event.type === "metrics.computed").metricsSha256
+      = reboundRecord.metrics.sha256;
+    const reboundSigned = signedExport(reboundPayload);
+    const reboundAuthenticated = authenticateExport(
+      reboundSigned.bytes,
+      reboundSigned.signature,
+      reboundSigned.publicKey
+    );
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord: reboundRecord,
+      authenticated: reboundAuthenticated
+    }), /does not match deterministic evaluator output/);
+
+    writeFileSync(metricsPath, metricsBytes);
+    writeFileSync(snapshotPath, Buffer.concat([snapshotBytes, Buffer.from("\n")]));
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord,
+      authenticated
+    }), /snapshot hash differs/);
+    writeFileSync(snapshotPath, snapshotBytes);
+
+    const wrongSnapshotRecord = structuredClone(runRecord);
+    wrongSnapshotRecord.metrics.snapshotSha256 = "0".repeat(64);
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord: wrongSnapshotRecord,
+      authenticated
+    }), /identity differs/);
+
+    const forgedCodeArtifact = structuredClone(artifact);
+    forgedCodeArtifact.provenance.oracle.sha256 = "0".repeat(64);
+    const forgedCodeBytes = canonicalMetricsBytes(forgedCodeArtifact);
+    writeFileSync(metricsPath, forgedCodeBytes);
+    const forgedCodeRecord = structuredClone(runRecord);
+    forgedCodeRecord.metrics.sha256 = createHash("sha256").update(forgedCodeBytes).digest("hex");
+    const forgedCodePayload = structuredClone(payload);
+    const forgedCodeEvent = forgedCodePayload.events.find((event) =>
+      event.type === "metrics.computed");
+    forgedCodeEvent.metricsSha256 = forgedCodeRecord.metrics.sha256;
+    forgedCodeEvent.oracleCodeSha256 = forgedCodeArtifact.provenance.oracle.sha256;
+    const forgedCodeSigned = signedExport(forgedCodePayload);
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord: forgedCodeRecord,
+      authenticated: authenticateExport(
+        forgedCodeSigned.bytes,
+        forgedCodeSigned.signature,
+        forgedCodeSigned.publicKey
+      )
+    }), /does not match deterministic evaluator output/);
+    writeFileSync(metricsPath, metricsBytes);
+
+    const wrongCodePayload = structuredClone(payload);
+    wrongCodePayload.events.find((event) => event.type === "metrics.computed").oracleCodeSha256
+      = "0".repeat(64);
+    const wrongCodeSigned = signedExport(wrongCodePayload);
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord,
+      authenticated: authenticateExport(
+        wrongCodeSigned.bytes,
+        wrongCodeSigned.signature,
+        wrongCodeSigned.publicKey
+      )
+    }), /signed metrics event differs/);
+
+    const oldShape = {
+      runs: [{
+        runId: "B00-A0",
+        blockId: "B00",
+        armId: 0,
+        metricsPath,
+        promotionRate: 1
+      }],
+      runRecords: []
+    };
+    assert(validateJsonSchema(
+      oldShape,
+      readRootJson("schemas", "statistics-input.schema.json"),
+      { schemaDir: resolve(root, "schemas") }
+    ).some((error) => error.keyword === "additionalProperties"));
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
 test("reproduction rejects JSON formatting, key-order, and newline tampering", () => {
   const value = { alpha: 1, nested: { beta: 2, gamma: 3 } };
   assert.doesNotThrow(() => assertExactArtifact(value, canonicalArtifactBytes(value), "fixture"));
@@ -733,20 +935,24 @@ test("delegated arms use one byte-identical mechanism and tool contract", () => 
   const cheap = contract.arms.find((arm) => arm.id === 4);
   assert.equal(frontier.delegationContract, cheap.delegationContract);
   assert.deepEqual(contract.delegationContract.toolSurface, contract.commonContract.toolSurface);
-  assert.equal(contract.delegationContract.artifact, "task/delegated-worker-skill.md");
+  assert.equal(contract.delegationContract.artifact, ".github/skills/semantic-test-corpus/SKILL.md");
+  assert.equal(contract.delegationContract.artifact, contract.delegationContract.registeredPath);
   assert.equal(contract.delegationContract.invocation, "semantic-test-corpus");
   assert.equal(contract.commonContract.agentName, "semantic-test-corpus");
   assert(contract.commonContract.toolSurface.every((name) => name.startsWith("semantic-corpus/")));
+  assert.equal(existsSync(resolve(root, "design", "delegated-worker-skill.md")), false);
+  assert(!readRootJson("design", "candidate-manifest.json").files.some((file) =>
+    file.source === "design/delegated-worker-skill.md"));
 });
 
-test("signed run evidence enforces the common delegated mechanism", () => {
+test("synthetic signed-event unit enforces the common delegated mechanism", () => {
   const current = readRootJson("design", "arm-contract.json");
   assert.deepEqual(current.delegationContract.toolSurface, current.commonContract.toolSurface);
   assert(!current.commonContract.toolSurface.some((name) =>
     ["file.read", "file.write", "staging.validate"].includes(name)));
 });
 
-async function runLiveCorpusArm({ armId, runId, delegated }) {
+async function runSyntheticCorpusArm({ armId, runId, delegated }) {
   const request = readRootJson("design", "corpus-request.json");
   const run = await createCorpusRun(request);
   try {
@@ -809,7 +1015,7 @@ async function runLiveCorpusArm({ armId, runId, delegated }) {
     });
     if (delegated) {
       const skillSha256 = createHash("sha256")
-        .update(readFileSync(resolve(root, "design", "delegated-worker-skill.md")))
+        .update(readFileSync(resolve(root, "..", "..", ".github", "skills", "semantic-test-corpus", "SKILL.md")))
         .digest("hex");
       events.push(
         {
@@ -824,6 +1030,7 @@ async function runLiveCorpusArm({ armId, runId, delegated }) {
           callId: `${runId}-delegation`,
           workerSessionId: `${runId}-worker`,
           skillName: "semantic-test-corpus",
+          skillPath: ".github/skills/semantic-test-corpus/SKILL.md",
           agentName: "semantic-test-corpus",
           skillSha256
         },
@@ -991,9 +1198,9 @@ async function runLiveCorpusArm({ armId, runId, delegated }) {
   }
 }
 
-test("live MCP adapter preserves partial and rejected inline/delegated runs", async () => {
-  const inline = await runLiveCorpusArm({ armId: 1, runId: "B01-A1", delegated: false });
-  const delegated = await runLiveCorpusArm({ armId: 2, runId: "B01-A2", delegated: true });
+test("synthetic event units cover partial and rejected inline/delegated MCP runs", async () => {
+  const inline = await runSyntheticCorpusArm({ armId: 1, runId: "B01-A1", delegated: false });
+  const delegated = await runSyntheticCorpusArm({ armId: 2, runId: "B01-A2", delegated: true });
   try {
     const spoofed = structuredClone(delegated.payload);
     for (const event of spoofed.events.filter((item) =>
@@ -1091,7 +1298,42 @@ test("live MCP adapter preserves partial and rejected inline/delegated runs", as
   }
 });
 
-test("model preflight accepts only authenticated fresh atomic platform evidence", () => {
+test("captured real Copilot smoke audits preserve names and fail unavailable honestly", () => {
+  const captures = readRootJson("fixtures", "platform-audit", "captures.json");
+  const expectedTools = [
+    "semantic-corpus/list_contract_files",
+    "semantic-corpus/read_contract_file",
+    "semantic-corpus/write_scenario_input",
+    "semantic-corpus/write_scenario_manifest"
+  ];
+  for (const capture of captures.captures) {
+    const bytes = readFileSync(resolve(root, capture.path));
+    assert.equal(bytes.length, capture.bytes);
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), capture.sha256);
+    const adapted = adaptPlatformAudit({ rawBytes: bytes, cell: capture.cell });
+    assert.equal(adapted.status, "unavailable");
+    assert.equal(adapted.protocolCellAvailable, false);
+    assert.equal(adapted.normalizedExport, null);
+    assert(adapted.missingEvidence.includes("detached-ed25519-signature"));
+    assert.deepEqual(
+      [...new Set(adapted.observed.toolCalls.map((call) => call.contractToolName))].sort(),
+      expectedTools.toSorted()
+    );
+    assert(adapted.observed.toolCalls.every((call) =>
+      call.rawToolName === `semantic-corpus-${call.mcpToolName}`));
+    if (capture.cell === "inline") {
+      assert(adapted.observed.toolCalls.every((call) => call.actor === "parent"));
+      assert.equal(adapted.observed.delegation.invoked, false);
+    } else {
+      assert(adapted.observed.toolCalls.every((call) => call.actor === "worker"));
+      assert.equal(adapted.observed.delegation.invoked, true);
+      assert.equal(adapted.observed.delegation.completed, true);
+      assert.equal(adapted.observed.delegation.agentName, "semantic-test-corpus");
+    }
+  }
+});
+
+test("model preflight unit accepts only authenticated fresh atomic event evidence", () => {
   const signed = signedExport(modelEvidencePayload());
   const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
   const runRecords = modelRunRecords(authenticated);
@@ -1122,6 +1364,16 @@ test("model preflight accepts only authenticated fresh atomic platform evidence"
       outputTokens: null,
       totalTokens: null
     }])),
+    staging: {
+      path: "staging/B01-A1.json",
+      sha256: "d".repeat(64),
+      sourceRoot: "corpus-staging/"
+    },
+    metrics: {
+      path: "metrics/B01-A1.json",
+      sha256: "e".repeat(64),
+      snapshotSha256: "d".repeat(64)
+    },
     tools: { surface: [], calls: [] },
     compliance: {
       isolationAuditPath: "audit.json",
@@ -1214,7 +1466,10 @@ test("model preflight accepts only authenticated fresh atomic platform evidence"
 
 test("candidate materialization excludes evaluator assets in an external repository", () => {
   const temporary = resolve(root, ".test-work", "semantic-candidate");
+  const repositoryRoot = resolve(root, "..", "..");
+  const repositorySibling = resolve(repositoryRoot, "..", `.semantic-candidate-sibling-${process.pid}`);
   rmSync(temporary, { recursive: true, force: true });
+  rmSync(repositorySibling, { recursive: true, force: true });
   try {
     const boundary = materializeCandidate(temporary, { allowTestDestination: true });
     assert.equal(boundary.files.length, readRootJson("design", "candidate-manifest.json").files.length);
@@ -1224,7 +1479,18 @@ test("candidate materialization excludes evaluator assets in an external reposit
     assert(existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus.agent.md")));
     assert(existsSync(resolve(temporary, "tools", "semantic-corpus-mcp", "server.mjs")));
     assert.equal(readRootJson("design", "corpus-request.json").targetCount, 60);
-    assert.throws(() => materializeCandidate(resolve(root, "candidate-output")), /outside the benchmark repository/);
+    assert.throws(() => materializeCandidate(resolve(root, "candidate-output")), /outside the source repository/);
+    assert.throws(() => materializeCandidate(
+      resolve(root, "..", "semantic-candidate-sibling")
+    ), /outside the source repository/);
+    assert.equal(materializeCandidate(repositorySibling).candidateRoot, repositorySibling);
+    assert.throws(() => materializeCandidate(resolve(repositoryRoot, "..")),
+      /cannot contain the source repository/);
+
+    process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION = "1";
+    assert.throws(() => materializeCandidate(resolve(root, "environment-override")),
+      /outside the source repository/);
+    delete process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION;
 
     const junctionTarget = resolve(root, ".test-work", "junction-target");
     const junction = resolve(root, ".test-work", "junction");
@@ -1237,7 +1503,9 @@ test("candidate materialization excludes evaluator assets in an external reposit
       if (error.code !== "EPERM" && error.code !== "EACCES") throw error;
     }
   } finally {
+    delete process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION;
     rmSync(resolve(root, ".test-work"), { recursive: true, force: true });
+    rmSync(repositorySibling, { recursive: true, force: true });
   }
 });
 

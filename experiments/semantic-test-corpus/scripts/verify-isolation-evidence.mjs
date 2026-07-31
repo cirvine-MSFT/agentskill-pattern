@@ -11,7 +11,7 @@ const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"
 const seeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
 const frozenRequest = JSON.parse(readFileSync(resolve(root, "design", "corpus-request.json"), "utf8"));
 const delegatedSkillSha256 = createHash("sha256")
-  .update(readFileSync(resolve(root, "design", "delegated-worker-skill.md")))
+  .update(readFileSync(resolve(root, "..", "..", ".github", "skills", "semantic-test-corpus", "SKILL.md")))
   .digest("hex");
 const MCP_TOOLS = new Set(armContract.commonContract.toolSurface);
 
@@ -665,6 +665,9 @@ export function evaluateIsolationEvidence(authenticated, {
       if (invocation.skillName !== armContract.delegationContract.invocation
         || invocation.agentName !== armContract.delegationContract.agentName) {
         violations.push("delegated arm used the wrong semantic-test-corpus identity");
+      }
+      if (invocation.skillPath !== armContract.delegationContract.registeredPath) {
+        violations.push("delegated arm used the wrong registered Skill path");
       }
       if (invocation.skillSha256 !== delegatedSkillSha256) {
         violations.push("delegated arm used a noncanonical Skill artifact");

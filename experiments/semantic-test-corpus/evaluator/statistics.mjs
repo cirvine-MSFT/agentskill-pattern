@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +7,7 @@ import { readAuthenticatedExport } from "../scripts/authenticated-export.mjs";
 import { evaluateModelBindings } from "../scripts/preflight-models.mjs";
 import { evaluateIsolationEvidence } from "../scripts/verify-isolation-evidence.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
+import { canonicalMetricsBytes, deriveMetricsArtifact } from "./metrics.mjs";
 
 const FROZEN_ALPHA = 0.05;
 const FROZEN_BOOTSTRAP_RESAMPLES = 10000;
@@ -20,6 +22,12 @@ const schedule = JSON.parse(readFileSync(resolve(evaluatorRoot, "..", "design", 
 const schemaRoot = resolve(evaluatorRoot, "..", "schemas");
 const statisticsInputSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "statistics-input.schema.json"), "utf8")
+);
+const runRecordSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "run-record.schema.json"), "utf8")
+);
+const metricsArtifactSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "metrics-artifact.schema.json"), "utf8")
 );
 const PLANNED_BLOCKS = [...new Set(schedule.runs.map((run) => run.blockId))].sort();
 const ARM_IDS = [0, 1, 2, 3, 4];
@@ -81,6 +89,94 @@ function assertProbability(value, label) {
   if (!Number.isFinite(value) || value < 0 || value > 1) {
     throw new Error(`${label} must be a finite number from 0 through 1`);
   }
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function samePath(left, right) {
+  return process.platform === "win32"
+    ? resolve(left).toLowerCase() === resolve(right).toLowerCase()
+    : resolve(left) === resolve(right);
+}
+
+export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated }) {
+  if (!runRecord?.metrics || !runRecord?.staging) {
+    throw new Error(`run record ${runRecord?.runId ?? "<missing>"} lacks staging/metrics bindings`);
+  }
+  if (!samePath(metricsPath, runRecord.metrics.path)) {
+    throw new Error(`metrics path differs from run record for ${runRecord.runId}`);
+  }
+  const metricsBytes = readFileSync(resolve(metricsPath));
+  const metricsSha256 = sha256(metricsBytes);
+  if (metricsSha256 !== runRecord.metrics.sha256) {
+    throw new Error(`metrics hash differs from run record for ${runRecord.runId}`);
+  }
+  const artifact = JSON.parse(metricsBytes);
+  const schemaErrors = validateJsonSchema(artifact, metricsArtifactSchema, {
+    schemaDir: schemaRoot
+  });
+  if (schemaErrors.length > 0) {
+    throw new Error(`metrics artifact schema failed for ${runRecord.runId}: ${schemaErrors[0].path} ${schemaErrors[0].message}`);
+  }
+  if (!canonicalMetricsBytes(artifact).equals(metricsBytes)) {
+    throw new Error(`metrics artifact is not canonical for ${runRecord.runId}`);
+  }
+  if (artifact.runId !== runRecord.runId
+    || artifact.blockId !== runRecord.blockId
+    || artifact.armId !== runRecord.armId
+    || artifact.snapshotSha256 !== runRecord.metrics.snapshotSha256
+    || artifact.snapshotSha256 !== runRecord.staging.sha256) {
+    throw new Error(`metrics artifact identity differs from run record for ${runRecord.runId}`);
+  }
+  const snapshotBytes = readFileSync(resolve(runRecord.staging.path));
+  if (sha256(snapshotBytes) !== artifact.snapshotSha256) {
+    throw new Error(`snapshot hash differs from metrics artifact for ${runRecord.runId}`);
+  }
+  const expected = deriveMetricsArtifact(snapshotBytes, {
+    runId: runRecord.runId,
+    blockId: runRecord.blockId,
+    armId: runRecord.armId
+  });
+  if (!canonicalMetricsBytes(expected).equals(metricsBytes)) {
+    throw new Error(`metrics artifact does not match deterministic evaluator output for ${runRecord.runId}`);
+  }
+  const events = authenticated.payload.events;
+  const computed = events.filter((event) =>
+    event.type === "metrics.computed" && event.runId === runRecord.runId);
+  if (computed.length !== 1) {
+    throw new Error(`${runRecord.runId} requires exactly one signed metrics.computed event`);
+  }
+  const event = computed[0];
+  const modelSessions = new Set(events
+    .filter((item) => item.type === "session.created")
+    .map((item) => item.sessionId));
+  if (event.role !== "evaluator"
+    || event.actor !== "evaluator"
+    || modelSessions.has(event.sessionId)
+    || event.blockId !== runRecord.blockId
+    || event.armId !== runRecord.armId
+    || !samePath(event.metricsPath ?? "", metricsPath)
+    || event.metricsSha256 !== metricsSha256
+    || event.snapshotSha256 !== artifact.snapshotSha256
+    || event.evaluatorCodeSha256 !== artifact.provenance.evaluator.sha256
+    || event.specSha256 !== artifact.provenance.spec.sha256
+    || event.oracleCodeSha256 !== artifact.provenance.oracle.sha256
+    || event.mutantCodeSha256 !== artifact.provenance.mutants.sha256) {
+    throw new Error(`signed metrics event differs from artifact/run identity for ${runRecord.runId}`);
+  }
+  const completion = events.filter((item) =>
+    item.runId === runRecord.runId && item.type === "run.completed");
+  const unblinding = events.filter((item) =>
+    item.runId === runRecord.runId && item.type === "outcomes.unblinded");
+  const boundaries = [...completion, ...unblinding];
+  if (completion.length !== 1
+    || unblinding.length !== 1
+    || boundaries.some((item) => Date.parse(event.timestamp) <= Date.parse(item.timestamp))) {
+    throw new Error(`signed metrics event precedes completion/unblinding for ${runRecord.runId}`);
+  }
+  return artifact;
 }
 
 function exactSignFlipPValue(values, alternative) {
@@ -514,7 +610,7 @@ export function analyzeBaselineComparisons(observations, options = {}) {
 export { DEFAULT_ENDPOINTS };
 
 export function analyzeStatisticsInput(input) {
-  throw new Error("authenticated platform export, signature, public key, run records, and isolation contexts are required");
+  throw new Error("authenticated platform export, signature, public key, run records, metrics artifacts, and isolation contexts are required");
 }
 
 export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
@@ -522,7 +618,7 @@ export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
     throw new Error("analysis input must be an object");
   }
   const unexpectedKeys = Object.keys(input).filter((key) =>
-    key !== "observations" && key !== "runRecords");
+    key !== "runs" && key !== "runRecords");
   if (unexpectedKeys.length > 0) {
     throw new Error(`caller-supplied analysis/evidence fields are forbidden: ${unexpectedKeys.join(", ")}`);
   }
@@ -530,29 +626,54 @@ export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
   if (schemaErrors.length > 0) {
     throw new Error(`statistics input schema failed: ${schemaErrors[0].path} ${schemaErrors[0].message}`);
   }
-  if (!Array.isArray(input.observations) || !Array.isArray(input.runRecords)) {
-    throw new Error("observations and runRecords arrays are required");
+  if (!Array.isArray(input.runs) || !Array.isArray(input.runRecords)) {
+    throw new Error("runs and runRecords arrays are required");
+  }
+  const records = new Map();
+  for (const record of input.runRecords) {
+    const errors = validateJsonSchema(record, runRecordSchema, { schemaDir: schemaRoot });
+    if (errors.length > 0) {
+      throw new Error(`run record schema failed for ${record?.runId ?? "<missing>"}: ${errors[0].path} ${errors[0].message}`);
+    }
+    if (records.has(record.runId)) throw new Error(`duplicate run record ${record.runId}`);
+    records.set(record.runId, record);
   }
   const bindingAvailability = evaluateModelBindings(authenticated, input.runRecords);
-  const verifiedObservations = input.observations.map((observation) => {
-    if ("isolationVerified" in observation || "isolationAudit" in observation) {
-      throw new Error(`caller-supplied isolation flags are forbidden for ${observation.runId}`);
+  const verifiedObservations = input.runs.map((run) => {
+    const record = records.get(run.runId);
+    if (!record
+      || record.blockId !== run.blockId
+      || record.armId !== run.armId
+      || record.phase !== "complete") {
+      throw new Error(`statistics run identity differs from run record for ${run.runId}`);
     }
-    if (observation.armId === 0) return { ...observation, isolationVerified: true };
-    const context = observation.evidenceContext;
+    const artifact = verifyMetricsArtifact({
+      metricsPath: run.metricsPath,
+      runRecord: record,
+      authenticated
+    });
+    const observation = {
+      runId: run.runId,
+      blockId: run.blockId,
+      armId: run.armId,
+      promotionRate: artifact.metrics.promotion.promotionRate,
+      semanticPathCoverage: artifact.metrics.coverage.paths.rate,
+      mutantKillRate: artifact.metrics.mutation.killRate
+    };
+    if (run.armId === 0) return { ...observation, isolationVerified: true };
+    const context = run.evidenceContext;
     if (!context?.contractRoot
       || !context?.stagingRoot
-      || !context?.evaluatorRoot
-      || !context?.snapshotPath) {
-      throw new Error(`isolation evidence context is required for ${observation.runId}`);
+      || !context?.evaluatorRoot) {
+      throw new Error(`isolation evidence context is required for ${run.runId}`);
     }
     const audit = evaluateIsolationEvidence(authenticated, {
-      armId: observation.armId,
-      runId: observation.runId,
+      armId: run.armId,
+      runId: run.runId,
       contractRoot: context.contractRoot,
       stagingRoot: context.stagingRoot,
       evaluatorRoot: context.evaluatorRoot,
-      snapshotPath: context.snapshotPath
+      snapshotPath: record.staging.path
     });
     return {
       ...observation,
@@ -570,7 +691,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const publicKeyIndex = process.argv.indexOf("--public-key");
   if ([inputIndex, outputIndex, payloadIndex, signatureIndex, publicKeyIndex].some((index) =>
     index < 0 || !process.argv[index + 1])) {
-    throw new Error("Usage: node evaluator/statistics.mjs --in <metrics.json> --payload <platform-export.json> --signature <export.sig> --public-key <platform.pem> --out <analysis.json>");
+    throw new Error("Usage: node evaluator/statistics.mjs --in <run-artifacts.json> --payload <platform-export.json> --signature <export.sig> --public-key <platform.pem> --out <analysis.json>");
   }
   const input = JSON.parse(readFileSync(resolve(process.argv[inputIndex + 1]), "utf8"));
   const authenticated = readAuthenticatedExport({

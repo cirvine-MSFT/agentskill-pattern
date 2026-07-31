@@ -19,7 +19,6 @@ const repositoryRoot = resolve(root, "..", "..");
 const evaluatorRoot = resolve(root, "evaluator");
 const testWorkRoot = resolve(root, ".test-work");
 const manifest = JSON.parse(readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8"));
-const canonicalRoot = realpathSync.native(root);
 const canonicalRepositoryRoot = realpathSync.native(repositoryRoot);
 const canonicalEvaluatorRoot = realpathSync.native(evaluatorRoot);
 
@@ -30,6 +29,12 @@ function hash(bytes) {
 function within(parent, child) {
   const path = relative(parent, child);
   return path === "" || (!path.startsWith(`..${sep}`) && path !== ".." && !isAbsolute(path));
+}
+
+function samePath(left, right) {
+  return process.platform === "win32"
+    ? resolve(left).toLowerCase() === resolve(right).toLowerCase()
+    : resolve(left) === resolve(right);
 }
 
 function runGit(destination, args) {
@@ -47,7 +52,8 @@ function rejectReparseComponents(path) {
     cursor = parent;
   }
   for (const component of existing.reverse()) {
-    if (lstatSync(component).isSymbolicLink()) {
+    if (lstatSync(component).isSymbolicLink()
+      || !samePath(realpathSync.native(component), component)) {
       throw new Error(`Path contains a symbolic link, junction, or reparse component: ${component}`);
     }
   }
@@ -70,21 +76,21 @@ export function materializeCandidate(destination, { allowTestDestination = false
   const canonicalTarget = canonicalProspectivePath(target);
   const testDestination = allowTestDestination
     && within(canonicalProspectivePath(testWorkRoot), canonicalTarget);
-  if (within(canonicalRoot, canonicalTarget) && !testDestination) {
-    throw new Error("Candidate root must be outside the benchmark repository");
+  if (within(canonicalRepositoryRoot, canonicalTarget) && !testDestination) {
+    throw new Error("Candidate root must be outside the source repository");
   }
-  if (within(canonicalTarget, canonicalRoot)) {
-    throw new Error("Candidate root cannot contain the benchmark repository");
+  if (within(canonicalTarget, canonicalRepositoryRoot)) {
+    throw new Error("Candidate root cannot contain the source repository");
   }
   if (existsSync(target) && readdirSync(target).length > 0) throw new Error("Candidate root must be absent or empty");
   mkdirSync(target, { recursive: true });
   rejectReparseComponents(target);
   const materializedReal = realpathSync.native(target);
-  if (!testDestination && within(canonicalRoot, materializedReal)) {
-    throw new Error("Candidate root resolves inside the benchmark repository");
+  if (!testDestination && within(canonicalRepositoryRoot, materializedReal)) {
+    throw new Error("Candidate root resolves inside the source repository");
   }
-  if (within(materializedReal, canonicalRoot)) {
-    throw new Error("Candidate root resolves around the benchmark repository");
+  if (within(materializedReal, canonicalRepositoryRoot)) {
+    throw new Error("Candidate root resolves around the source repository");
   }
 
   const files = [];

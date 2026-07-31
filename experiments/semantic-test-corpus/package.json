@@ -13,6 +13,8 @@
     "report": "node evaluator/report.mjs --corpus evaluator/artifacts/baseline-corpus.json --matrix evaluator/artifacts/baseline-kill-matrix.json --out evaluator/artifacts/baseline-report.json",
     "analyze": "node evaluator/statistics.mjs",
     "adapt": "node evaluator/adapter.mjs",
+    "metrics": "node evaluator/metrics.mjs",
+    "adapt-audit": "node scripts/platform-audit-adapter.mjs",
     "randomize": "node scripts/randomize.mjs --out design/schedule.json",
     "reproduce": "node evaluator/reproduce.mjs",
     "test": "node evaluator/tests/run-tests.mjs"

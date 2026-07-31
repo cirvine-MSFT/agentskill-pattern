@@ -1,0 +1,26 @@
+{
+  "captureVersion": 1,
+  "provider": "github-copilot-cli",
+  "cliVersion": "1.0.77",
+  "captureKind": "actual-local-smoke",
+  "mcpConfiguration": "semantic-corpus was supplied as an additional session MCP configuration and merged with existing Copilot CLI MCP configuration",
+  "platformSignature": "unavailable",
+  "productionPreflightEligible": false,
+  "capturePolicy": "Byte-exact JSONL lines for run identity, selected tool calls/results, delegation lifecycle, and final result. Unrelated personal extension/Skill registry events were excluded before committing the fixtures.",
+  "captures": [
+    {
+      "cell": "inline",
+      "path": "fixtures/platform-audit/inline-smoke.captured.jsonl",
+      "capturedAt": "2026-07-31T07:22:45.585Z",
+      "sha256": "f0b4c58649309c97167f27644eaf3015688ac51f59f7018033b586c4fccb10d1",
+      "bytes": 26417
+    },
+    {
+      "cell": "delegated",
+      "path": "fixtures/platform-audit/delegated-smoke.captured.jsonl",
+      "capturedAt": "2026-07-31T07:21:24.703Z",
+      "sha256": "6ceb89dd69569c6b381146daa307b8b2791a26c993d2886b4c19e32598a2de37",
+      "bytes": 35173
+    }
+  ]
+}

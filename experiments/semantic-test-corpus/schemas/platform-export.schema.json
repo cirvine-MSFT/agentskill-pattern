@@ -89,12 +89,20 @@
             "then": {"required": ["runId", "blockId", "armId", "role", "callId", "agentName"]}
           },
           {
+            "if": {"properties": {"type": {"const": "delegation.invoked"}}},
+            "then": {"required": ["skillName", "skillPath", "skillSha256", "workerSessionId"]}
+          },
+          {
             "if": {"properties": {"type": {"const": "delegation.completed"}}},
             "then": {"required": ["returnText"]}
           },
           {
             "if": {"properties": {"type": {"const": "adapter.snapshot"}}},
             "then": {"required": ["runId", "blockId", "armId", "role", "snapshotPath", "snapshotSha256", "sourceStagingRoot", "adapterVersion"]}
+          },
+          {
+            "if": {"properties": {"type": {"const": "metrics.computed"}}},
+            "then": {"required": ["runId", "blockId", "armId", "role", "actor", "metricsPath", "metricsSha256", "snapshotSha256", "evaluatorCodeSha256", "specSha256", "oracleCodeSha256", "mutantCodeSha256"]}
           },
           {
             "if": {"properties": {"type": {"const": "usage.reported"}}},
@@ -105,7 +113,7 @@
           "eventId": {"type": "string", "minLength": 1},
           "type": {
             "type": "string",
-            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "adapter.snapshot", "usage.reported", "audit.started", "audit.completed"]
+            "enum": ["run.started", "run.completed", "outcomes.unblinded", "session.created", "model.bound", "outcome.accessed", "sandbox.policy.applied", "fs.access", "network.access", "tool.called", "tool.result", "delegation.invoked", "delegation.completed", "adapter.snapshot", "metrics.computed", "usage.reported", "audit.started", "audit.completed"]
           },
           "timestamp": {"type": "string", "format": "canonical-platform-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"},
           "sessionId": {"type": "string", "minLength": 1},
@@ -120,6 +128,7 @@
           "modelId": {"type": "string"},
           "atomic": {"type": "boolean"},
           "skillName": {"type": "string"},
+          "skillPath": {"type": "string"},
           "agentName": {"type": "string"},
           "skillSha256": {"type": "string"},
           "returnText": {"type": "string"},
@@ -141,6 +150,12 @@
           "errorMessage": {"type": "string", "minLength": 1},
           "snapshotPath": {"type": "string"},
           "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "metricsPath": {"type": "string"},
+          "metricsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "evaluatorCodeSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "specSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "oracleCodeSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "mutantCodeSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "sourceStagingRoot": {"type": "string"},
           "adapterVersion": {"const": 1},
           "operation": {"type": "string", "enum": ["read", "write"]},

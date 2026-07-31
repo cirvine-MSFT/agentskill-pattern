@@ -11,7 +11,7 @@
   "requiredModelEvents": ["run.started", "session.created", "model.bound"],
   "requiredIsolationEvents": ["sandbox.policy.applied", "tool.called", "tool.result", "fs.access", "audit.completed", "adapter.snapshot"],
   "requiredDelegationEvents": ["delegation.invoked", "delegation.completed"],
-  "requiredOutcomeBoundaryEvents": ["run.completed", "outcomes.unblinded"],
+  "requiredOutcomeBoundaryEvents": ["run.completed", "outcomes.unblinded", "metrics.computed"],
   "outcomeBoundaryEvent": "outcome.accessed",
   "maxPreflightSessionAgeSeconds": 600,
   "policy": {
@@ -28,6 +28,7 @@
     "Every tool.called event has one call-ID-matched tool.result event. argumentsSha256 hashes recursively key-sorted canonical JSON arguments with original array order. Rejected calls retain authenticated error code/message and argument hash for the evaluator adapter.",
     "Inline parents and delegated workers own their MCP filesystem effects. Delegated parents cannot call semantic-corpus tools or read staging.",
     "Exactly one evaluator-role adapter.snapshot event follows model completion and binds the canonical staging path and SHA-256 outside model context.",
+    "Exactly one evaluator-role metrics.computed event binds the canonical metrics artifact, source snapshot, evaluator code, mapping spec, independent oracle code, and mutant harness hashes.",
     "Any outcome.accessed event must use an authenticated run role and occur after both signed run.completed and outcomes.unblinded boundaries."
   ]
 }

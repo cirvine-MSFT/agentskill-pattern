@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metrics-artifact.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "runId", "blockId", "armId", "snapshotSha256", "provenance", "metrics"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "runId": {"type": "string", "minLength": 1},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 4},
+    "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "provenance": {
+      "type": "object",
+      "required": ["evaluator", "spec", "oracle", "mutants"],
+      "additionalProperties": false,
+      "properties": {
+        "evaluator": {"$ref": "hash-file-set.schema.json"},
+        "spec": {
+          "type": "object",
+          "required": ["path", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "path": {"const": "fixture/spec/mapping-spec.json"},
+            "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }
+        },
+        "oracle": {"$ref": "hash-file-set.schema.json"},
+        "mutants": {"$ref": "hash-file-set.schema.json"}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["promotion", "coverage", "mutation", "diversity"],
+      "additionalProperties": false,
+      "properties": {
+        "promotion": {
+          "type": "object",
+          "required": ["targetCases", "submittedCases", "promotedCases", "invalidCases", "missingSlots", "promotionRate"],
+          "additionalProperties": false,
+          "properties": {
+            "targetCases": {"const": 60},
+            "submittedCases": {"type": "integer", "minimum": 0, "maximum": 60},
+            "promotedCases": {"type": "integer", "minimum": 0, "maximum": 60},
+            "invalidCases": {"type": "integer", "minimum": 0, "maximum": 60},
+            "missingSlots": {"type": "integer", "minimum": 0, "maximum": 60},
+            "promotionRate": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "required": ["rules", "paths", "invariants", "diagnostics"],
+          "additionalProperties": false,
+          "properties": {
+            "rules": {"$ref": "coverage-metric.schema.json"},
+            "paths": {"$ref": "coverage-metric.schema.json"},
+            "invariants": {"$ref": "coverage-metric.schema.json"},
+            "diagnostics": {
+              "type": "object",
+              "required": ["categories", "totalDefinedCategories", "rate", "counts"],
+              "additionalProperties": false,
+              "properties": {
+                "categories": {"type": "array", "items": {"type": "string"}},
+                "totalDefinedCategories": {"type": "integer", "minimum": 1},
+                "rate": {"type": "number", "minimum": 0, "maximum": 1},
+                "counts": {"type": "object"}
+              }
+            }
+          }
+        },
+        "mutation": {
+          "type": "object",
+          "required": ["catalogVersion", "catalogValidation", "catalogSize", "triggered", "untriggered", "killed", "survived", "killRate"],
+          "additionalProperties": false,
+          "properties": {
+            "catalogVersion": {"type": "string"},
+            "catalogValidation": {
+              "type": "object",
+              "required": ["frozenCount", "validated"],
+              "additionalProperties": false,
+              "properties": {
+                "frozenCount": {"const": 33},
+                "validated": {"type": "integer", "minimum": 0}
+              }
+            },
+            "catalogSize": {"const": 33},
+            "triggered": {"type": "integer", "minimum": 0, "maximum": 33},
+            "untriggered": {"type": "integer", "minimum": 0, "maximum": 33},
+            "killed": {"type": "integer", "minimum": 0, "maximum": 33},
+            "survived": {"type": "integer", "minimum": 0, "maximum": 33},
+            "killRate": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        },
+        "diversity": {
+          "type": "object",
+          "required": ["exactDuplicateCases", "semanticDuplicateCases", "semanticUniqueSignatures", "meanPairwiseJaccardDistance"],
+          "additionalProperties": false,
+          "properties": {
+            "exactDuplicateCases": {"type": "integer", "minimum": 0, "maximum": 60},
+            "semanticDuplicateCases": {"type": "integer", "minimum": 0, "maximum": 60},
+            "semanticUniqueSignatures": {"type": "integer", "minimum": 0, "maximum": 60},
+            "meanPairwiseJaccardDistance": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+          }
+        }
+      }
+    }
+  }
+}

@@ -102,7 +102,8 @@ Arms 1-4 form the complete 2x2 model-tier by delegation factorial. Arm 0 is the
 external baseline. All AI arms use the byte-identical shared task, immutable
 `design/corpus-request.json`, actual `semantic-corpus/*` MCP tools, and MCP
 request/output semantics. Arms 2 and 4 invoke the same `semantic-test-corpus`
-agent through byte-identical `task/delegated-worker-skill.md`; the agent profile
+agent through the actual registered `.github/skills/semantic-test-corpus/SKILL.md`;
+the agent profile
 has no fixed model and inherits the authenticated worker binding. Inline parents
 receive those same four MCP tools directly. Model tier and delegation are the
 only intended factors.
@@ -131,6 +132,16 @@ unsigned, fabricated, non-atomic, late, or model-mismatched evidence makes that
 run unavailable. If any AI run is unavailable, do not
 substitute a model, run only a marginal, or call the result a partial factorial.
 The factorial analysis is withheld; arm 0 may be reported descriptively.
+
+`scripts/platform-audit-adapter.mjs` accepts captured bytes without translating
+unsigned CLI telemetry into signed evidence. Real Copilot CLI 1.0.77 inline and
+delegated smoke captures under `fixtures/platform-audit/` show the actual
+`semantic-corpus-*` runtime tool names, MCP server/tool names, parent/worker
+attribution fields, and subagent lifecycle. They do not contain a detached
+Ed25519 signature, signed sandbox/filesystem audit, or signed run/adapter/metrics
+boundaries. Both smoke cells and every measured protocol cell are therefore
+currently **unavailable**. Synthetic signed-event streams are unit tests, never
+platform evidence.
 
 ## Blocking, repetitions, and schedule
 
@@ -222,8 +233,8 @@ parent-does-all trace fails compliance. Inline arms have no worker and require
 the authenticated parent to own all MCP calls. Zero successful writes remains a
 valid measured failure and does not by itself violate actor isolation.
 
-For both arms 2 and 4, invoke the single materialized
-`task/delegated-worker-skill.md` artifact and actual agent name
+For both arms 2 and 4, invoke the single materialized registered
+`.github/skills/semantic-test-corpus/SKILL.md` artifact and actual agent name
 `semantic-test-corpus`. The coordinator rejects any run whose signed
 tool/session evidence shows a different agent identity, delegation mechanism,
 terminal line, or worker access pattern.
@@ -235,7 +246,7 @@ held-out rules/examples, mutants, promoted artifacts, and evaluator tests.
 Measured sessions never use this benchmark checkout as their repository.
 `scripts/materialize-candidate.mjs` creates a new external Git repository from
 the exact allowlist in `design/candidate-manifest.json`; it refuses destinations
-inside or containing the benchmark repository and never copies `evaluator/`,
+inside or containing the entire source repository and never copies `evaluator/`,
 prior staging, the candidate migration implementation, seeds, or schedule.
 The sole in-tree exception is the cleaned `.test-work/` path used by the
 materializer regression test; measured runs must use an external destination.
@@ -337,6 +348,17 @@ trigger and kill evidence per case, and reports `killed / 33`.
 
 All quality metrics are computed after opaque oracle promotion.
 
+For every run, `evaluator/metrics.mjs` consumes the exact canonical snapshot and
+emits canonical `metrics/<run-id>.json`. The artifact binds its snapshot SHA-256
+and exact evaluator-code, mapping-spec, independent-oracle-code, and full
+mutant-harness file hashes. The run
+record binds the metrics path/hash/snapshot hash, and one signed evaluator-role
+`metrics.computed` event repeats those bindings after completion and unblinding.
+`evaluator/statistics.mjs` validates canonical bytes and hashes, reloads the
+bound snapshot, reruns deterministic promotion/coverage/mutation/diversity, and
+requires byte-identical metrics before constructing observations. Its input
+schema has no outcome-value fields.
+
 | Metric | Definition |
 |---|---|
 | Structural validity | Staged cases passing scenario and v1 structural schemas / submitted cases |
@@ -364,7 +386,8 @@ parsed-object equality is insufficient.
 
 `schemas/run-record.schema.json` is the normative telemetry envelope. Its
 compliance object references the derived isolation audit and evidence hash; it
-does not accept self-attested booleans. Total usage
+also binds canonical staging and metrics hashes and does not accept self-attested
+outcomes or booleans. Total usage
 must equal parent plus worker where the platform exposes additive units. Missing
 platform fields remain explicit `null`/unavailable in collected records; they are
 never reconstructed from outcome quality.
@@ -483,7 +506,9 @@ deterministic endpoints.
    evaluator oracle without opening corpus content in parent/worker context.
 8. Run evaluator-only held-out acceptance, traces, mutation, and compact reporting under blinded
    run IDs.
-9. Freeze metric tables, then join arm labels and execute the registered analysis.
+9. Emit canonical hash-bound metrics artifacts and signed `metrics.computed`
+   events, then have statistics rederive every outcome before joining arm labels
+   and executing the registered analysis.
 
 Do not merge, publish claims, or alter this protocol merely because a preferred
 arm underperforms.
