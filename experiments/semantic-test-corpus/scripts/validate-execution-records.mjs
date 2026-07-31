@@ -8,7 +8,11 @@ import { preflightLocalModel } from "./preflight-local-model.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
 const schemas = Object.fromEntries([
-  "run-manifest", "run-attempt", "retry", "deviation", "local-model-preflight"
+  "run-manifest",
+  "run-attempt",
+  "pre-session-failure",
+  "deviation",
+  "local-model-preflight"
 ].map((name) => [
   name,
   JSON.parse(readFileSync(resolve(schemaRoot, `${name}.schema.json`), "utf8"))
@@ -24,107 +28,75 @@ export function validateExecutionRecords({
   attempts,
   preflights,
   evidenceBytes,
-  retries,
+  preSessionFailures,
   deviations = []
 }) {
   const errors = [
     ...schemaErrors(manifest, "run-manifest"),
     ...attempts.flatMap((attempt) => schemaErrors(attempt, "run-attempt")),
     ...preflights.flatMap((preflight) => schemaErrors(preflight, "local-model-preflight")),
-    ...retries.flatMap((retry) => schemaErrors(retry, "retry")),
+    ...preSessionFailures.flatMap((failure) =>
+      schemaErrors(failure, "pre-session-failure")),
     ...deviations.flatMap((deviation) => schemaErrors(deviation, "deviation"))
   ];
   if (errors.length > 0) return errors;
-  if (attempts.length !== manifest.attempts.length
-    || attempts.length !== manifest.attemptNumber
-    || preflights.length !== manifest.preflights.length
-    || preflights.length !== attempts.length
-    || evidenceBytes.length !== attempts.length
-    || retries.length !== manifest.retries.length) {
-    errors.push("manifest paths/counts do not match supplied attempts, preflights, and retries");
+  if (attempts.length !== 1
+    || preflights.length !== 1
+    || evidenceBytes.length !== 1
+    || preSessionFailures.length !== manifest.preSessionFailures.length) {
+    errors.push("v2 requires exactly one measured attempt/preflight and at most one pre-session failure");
+    return errors;
   }
-  const sorted = [...attempts].sort((left, right) => left.attemptNumber - right.attemptNumber);
-  const expectedParent = sorted[0]?.requestedParentModel;
-  const expectedWorker = sorted[0]?.requestedWorkerModel;
-  const expectedTreatment = JSON.stringify(sorted[0]?.treatment);
-  for (const [index, attempt] of sorted.entries()) {
-    const number = index + 1;
-    if (attempt.runId !== manifest.runId
-      || attempt.attemptNumber !== number
-      || attempt.attemptId !== `${manifest.runId}-attempt-${number}`) {
-      errors.push(`attempt ${number} identity or sequence differs from the manifest`);
-    }
-    if (attempt.requestedParentModel !== expectedParent
-      || attempt.requestedWorkerModel !== expectedWorker
-      || JSON.stringify(attempt.treatment) !== expectedTreatment) {
-      errors.push("retry treatment differs from the first attempt");
-    }
-    if (attempt.outcomesOpenedAt !== null && number < sorted.length) {
-      errors.push("outcomes were opened before a later attempt");
-    }
+
+  const attempt = attempts[0];
+  const preflight = preflights[0];
+  if (attempt.runId !== manifest.runId
+    || attempt.attemptNumber !== 1
+    || attempt.attemptId !== `${manifest.runId}-attempt-1`) {
+    errors.push("measured attempt identity differs from the run manifest");
   }
-  if (new Set(attempts.map((attempt) => attempt.appProjectSessionId)).size !== attempts.length
-    || new Set(attempts.map((attempt) => attempt.cliSessionId)).size !== attempts.length) {
-    errors.push("attempt retries must use fresh app and CLI sessions");
+  if (manifest.preflights[0] !== attempt.modelPreflightPath) {
+    errors.push("run manifest does not bind the exact measured attempt/preflight paths");
   }
-  if (attempts.length === 1 && retries.length !== 0) {
-    errors.push("one-attempt run cannot contain a retry");
+  if (preflight.runId !== manifest.runId
+    || preflight.attemptNumber !== 1
+    || preflight.beforeOutcomesOpened !== true
+    || preflight.retryEligible !== false) {
+    errors.push("model preflight does not bind the single pre-outcome measured attempt");
   }
-  if (attempts.length === 2) {
-    if (retries.length !== 1) {
-      errors.push("two-attempt run requires exactly one retry");
-    } else if (retries[0].runId !== manifest.runId
-      || retries[0].fromAttemptId !== sorted[0].attemptId
-      || retries[0].toAttemptId !== sorted[1].attemptId
-      || retries[0].reason !== "observed-model-mismatch"
-      || retries[0].outcomesOpened !== false
-      || retries[0].sameTreatment !== true) {
-      errors.push("retry does not link the exact first and second attempts");
+  try {
+    const evidence = JSON.parse(evidenceBytes[0]);
+    const recomputed = preflightLocalModel(evidence, evidenceBytes[0]);
+    if (JSON.stringify(preflight) !== JSON.stringify(recomputed)) {
+      errors.push("model preflight does not match its exact local evidence");
     }
-    if (preflights[0]?.runId !== manifest.runId
-      || preflights[0]?.attemptNumber !== 1
-      || preflights[0]?.status !== "retry-required"
-      || preflights[0]?.retryEligible !== true
-      || !preflights[0]?.reasons?.some((reason) => reason.includes("model mismatch"))) {
-      errors.push("first-attempt preflight does not authorize a model-mismatch retry");
-    }
+  } catch (error) {
+    errors.push(`model preflight evidence is invalid: ${error.message}`);
   }
-  for (const [index, preflight] of preflights.entries()) {
-    if (preflight.runId !== manifest.runId
-      || preflight.attemptNumber !== index + 1
-      || preflight.beforeOutcomesOpened !== true) {
-      errors.push(`preflight ${index + 1} does not bind the matching pre-outcome attempt`);
-    }
-    try {
-      const evidence = JSON.parse(evidenceBytes[index]);
-      const recomputed = preflightLocalModel(evidence, evidenceBytes[index]);
-      if (JSON.stringify(preflight) !== JSON.stringify(recomputed)) {
-        errors.push(`preflight ${index + 1} does not match its exact local evidence`);
-      }
-    } catch (error) {
-      errors.push(`preflight ${index + 1} evidence is invalid: ${error.message}`);
-    }
-    if (manifest.preflights[index] !== attempts[index]?.modelPreflightPath) {
-      errors.push(`manifest preflight ${index + 1} path differs from the attempt`);
-    }
-    if (preflight.status !== "pass" && attempts[index]?.evaluatorSnapshotPath !== null) {
-      errors.push(`attempt ${index + 1} has a snapshot before a passing model preflight`);
-    }
+  if (preflight.status !== "pass" && attempt.evaluatorSnapshotPath !== null) {
+    errors.push("non-passing model preflight cannot have an evaluator snapshot");
   }
-  const finalAttempt = sorted.at(-1);
-  const finalPreflight = preflights.at(-1);
-  if (finalPreflight?.status === "pass") {
-    if (finalAttempt?.status === "excluded") {
-      errors.push("passing final model preflight cannot have an excluded attempt");
+  if (preflight.status === "pass") {
+    if (attempt.status === "excluded") {
+      errors.push("passing model preflight cannot have an excluded attempt");
     }
-  } else if (finalAttempt?.status !== "excluded"
-    || finalAttempt?.evaluatorSnapshotPath !== null
-    || finalAttempt?.outcomesOpenedAt !== null) {
-    errors.push("unavailable final preflight requires an excluded attempt with no snapshot or outcome access");
+  } else if (attempt.status !== "excluded"
+    || attempt.evaluatorSnapshotPath !== null
+    || attempt.outcomesOpenedAt !== null) {
+    errors.push("unavailable model preflight requires exclusion with no snapshot/outcome access");
   }
-  if (manifest.appProjectSessionId !== sorted.at(-1)?.appProjectSessionId
-    || manifest.cliSessionId !== sorted.at(-1)?.cliSessionId) {
-    errors.push("manifest session IDs do not identify the latest attempt");
+  if (manifest.appProjectSessionId !== attempt.appProjectSessionId
+    || manifest.cliSessionId !== attempt.cliSessionId) {
+    errors.push("manifest session IDs do not identify the measured attempt");
+  }
+  if (manifest.attemptNumber !== 1 || manifest.outcomesOpenedAt !== attempt.outcomesOpenedAt) {
+    errors.push("manifest measured-attempt/outcome state differs from the attempt");
+  }
+  for (const [index, failure] of preSessionFailures.entries()) {
+    if (failure.runId !== manifest.runId
+      || manifest.preSessionFailures[index] !== `${failure.failureId}.json`) {
+      errors.push("pre-session failure is not path/identity bound to the run");
+    }
   }
   return errors;
 }
@@ -146,9 +118,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     preflights: readRecords(manifest.preflights),
     evidenceBytes: attempts.map((attempt) =>
       readFileSync(resolve(artifactRoot, attempt.localEvidencePath))),
-    retries: readRecords(manifest.retries),
+    preSessionFailures: readRecords(manifest.preSessionFailures),
     deviations: readRecords(manifest.deviations)
   });
   if (errors.length > 0) throw new Error(`Execution record validation failed: ${errors[0]}`);
-  process.stdout.write(`${manifest.runId}: ${manifest.attempts.length} attempt(s), ${manifest.retries.length} retry\n`);
+  process.stdout.write(
+    `${manifest.runId}: 1 measured attempt, ${manifest.preSessionFailures.length} pre-session failure(s)\n`
+  );
 }

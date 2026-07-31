@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pre-session-failure.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "failureId", "runId", "attemptedAt",
+    "phase", "kickoffStarted", "sessionCreated", "reason", "usage"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "failureId": {"type": "string", "minLength": 1},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A[1-5]$"},
+    "attemptedAt": {"type": "string"},
+    "phase": {"const": "create_session"},
+    "kickoffStarted": {"const": false},
+    "sessionCreated": {"const": false},
+    "reason": {"type": "string", "minLength": 1},
+    "usage": {
+      "type": "object",
+      "required": ["aiCredits", "premiumRequests", "nanoAiu", "modelTokens", "completionCount"],
+      "additionalProperties": false,
+      "properties": {
+        "aiCredits": {"const": 0},
+        "premiumRequests": {"type": "null"},
+        "nanoAiu": {"const": 0},
+        "modelTokens": {"const": 0},
+        "completionCount": {"const": 0}
+      }
+    }
+  }
+}

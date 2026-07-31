@@ -18,9 +18,12 @@ const runManifestPath = resolve(fixtureRoot, "run-manifest.json");
 const runAttemptPath = resolve(fixtureRoot, "attempt-1.json");
 
 export function reproduceLocalEvidence() {
-  const candidateRoot = resolve(root, ".test-work", "reproduce-evidence-candidate");
+  const candidateRoot = resolve(root, ".regression-work", "reproduce-evidence-candidate");
   rmSync(candidateRoot, { recursive: true, force: true });
-  materializeCandidate(candidateRoot, { allowTestDestination: true });
+  materializeCandidate(candidateRoot, {
+    allowTestDestination: true,
+    blockId: "B01"
+  });
   try {
     const eventsBytes = readFileSync(eventsPath);
     const usageBytes = readFileSync(usagePath);

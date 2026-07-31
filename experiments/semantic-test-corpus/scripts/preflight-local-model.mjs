@@ -41,6 +41,24 @@ export function preflightLocalModel(evidence, evidenceBytes) {
   let status = "pass";
   let retryEligible = false;
   const reasons = [];
+  const checks = {
+    session: evidence.availability.session.status === "available",
+    model: evidence.availability.model.status === "available" && mismatchReasons.length === 0
+      && missingReasons.length === 0,
+    mechanism: evidence.availability.mechanism.status === "available",
+    tools: evidence.tools.callCount > 0
+      && evidence.tools.resultCount === evidence.tools.callCount
+      && evidence.tools.calls.length > 0,
+    roles: mismatchReasons.length === 0
+      && !evidence.availability.model.reasons.some((reason) =>
+        reason.includes("lifecycle") || reason.includes("role")),
+    budgets: evidence.budgets.status === "within-budget",
+    candidate: /^[a-f0-9]{64}$/u.test(evidence.identity.candidateSnapshotSha256)
+      && /^[a-f0-9]{40,64}$/u.test(evidence.identity.terminalCommit),
+    source: /^[a-f0-9]{40,64}$/u.test(evidence.identity.sourceCommit)
+      && /^[a-f0-9]{40,64}$/u.test(evidence.identity.sourceTree)
+      && evidence.identity.sourceBlobs.length > 0
+  };
   if (!beforeOutcomesOpened) {
     status = "unavailable";
     reasons.push("model preflight occurred after outcomes were opened");
@@ -50,19 +68,17 @@ export function preflightLocalModel(evidence, evidenceBytes) {
   } else if (missingReasons.length > 0) {
     status = "unavailable";
     reasons.push(...missingReasons, ...evidence.availability.model.reasons);
-  } else if (mismatchReasons.length > 0
-    && attemptNumber === 1
-    && evidence.attempt.retryCount === 0) {
-    status = "retry-required";
-    retryEligible = true;
-    reasons.push(...mismatchReasons);
   } else if (mismatchReasons.length > 0) {
     status = "unavailable";
-    reasons.push("model mismatch persisted after the single permitted retry", ...mismatchReasons);
+    reasons.push("observed model mismatch after kickoff; post-start retry is forbidden", ...mismatchReasons);
   } else if (evidence.availability.model.status !== "available") {
     status = "unavailable";
     reasons.push(...missingReasons, ...evidence.availability.model.reasons);
   }
+  for (const [name, passed] of Object.entries(checks)) {
+    if (!passed) reasons.push(`${name} eligibility evidence is unavailable or nonconforming`);
+  }
+  if (reasons.length > 0) status = "unavailable";
   const output = {
     formatVersion: 1,
     protocolId: evidence.protocolId,
@@ -74,6 +90,7 @@ export function preflightLocalModel(evidence, evidenceBytes) {
     beforeOutcomesOpened,
     expected: evidence.models.requested,
     observed: evidence.models.observed,
+    checks,
     reasons
   };
   const errors = validateJsonSchema(output, outputSchema, { schemaDir: schemaRoot });

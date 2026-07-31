@@ -4,9 +4,10 @@
   "type": "object",
   "required": [
     "formatVersion", "protocolId", "runId", "blockId", "armId", "seed",
-    "scheduleOrder", "appProjectSessionId", "cliSessionId", "terminalCommit",
+    "scheduleOrder", "globalOrder", "sourceCommit", "sourceTree",
+    "appProjectSessionId", "cliSessionId", "terminalCommit",
     "candidateSnapshotSha256", "candidateBoundaryPath", "attemptNumber", "outcomesOpenedAt",
-    "attempts", "preflights", "retries", "deviations"
+    "attempts", "preflights", "preSessionFailures", "deviations"
   ],
   "additionalProperties": false,
   "allOf": [
@@ -34,16 +35,19 @@
     "armId": {"type": "integer", "minimum": 0, "maximum": 5},
     "seed": {"type": "integer"},
     "scheduleOrder": {"type": "integer", "minimum": 1, "maximum": 6},
+    "globalOrder": {"type": "integer", "minimum": 1, "maximum": 72},
+    "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+    "sourceTree": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
     "appProjectSessionId": {"type": ["string", "null"]},
     "cliSessionId": {"type": ["string", "null"]},
     "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
     "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "candidateBoundaryPath": {"type": "string", "minLength": 1},
-    "attemptNumber": {"type": "integer", "minimum": 1, "maximum": 2},
+    "attemptNumber": {"const": 1},
     "outcomesOpenedAt": {"type": ["string", "null"]},
-    "attempts": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "string"}},
-    "preflights": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "string"}},
-    "retries": {"type": "array", "maxItems": 1, "items": {"type": "string"}},
+    "attempts": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string"}},
+    "preflights": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string"}},
+    "preSessionFailures": {"type": "array", "maxItems": 1, "items": {"type": "string"}},
     "deviations": {"type": "array", "items": {"type": "string"}}
   }
 }

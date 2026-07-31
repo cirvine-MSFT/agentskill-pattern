@@ -6,9 +6,10 @@ import { basename, dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import {
-  kickoffBytesForArm,
-  kickoffSha256ForArm,
-  sharedTaskSha256
+  kickoffBytesForRun,
+  kickoffSha256ForRun,
+  taskBytesForSeed,
+  taskSha256ForSeed
 } from "./execution-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,7 +18,9 @@ const evidenceSchema = JSON.parse(readFileSync(resolve(schemaRoot, "local-eviden
 const usageSchema = JSON.parse(readFileSync(resolve(schemaRoot, "local-usage-export.schema.json"), "utf8"));
 const manifestSchema = JSON.parse(readFileSync(resolve(schemaRoot, "run-manifest.schema.json"), "utf8"));
 const attemptSchema = JSON.parse(readFileSync(resolve(schemaRoot, "run-attempt.schema.json"), "utf8"));
-const retrySchema = JSON.parse(readFileSync(resolve(schemaRoot, "retry.schema.json"), "utf8"));
+const preSessionFailureSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "pre-session-failure.schema.json"), "utf8")
+);
 const sessionCreationSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "session-creation.schema.json"), "utf8")
 );
@@ -26,6 +29,7 @@ const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"
 const candidateManifest = JSON.parse(
   readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8")
 );
+const sourcePin = JSON.parse(readFileSync(resolve(root, candidateManifest.sourcePin), "utf8"));
 const repositoryRoot = resolve(root, "..", "..");
 const MCP_TOOLS = new Set(contract.commonContract.toolSurface);
 
@@ -50,10 +54,20 @@ function git(candidateRoot, args) {
   return result.stdout;
 }
 
-function committedSourceBytes(sourcePath) {
+function committedSource(sourcePath) {
   const repositoryPath = relative(repositoryRoot, resolve(root, sourcePath))
     .replaceAll("\\", "/");
-  const result = spawnSync("git", ["show", `HEAD:${repositoryPath}`], {
+  const blobId = sourcePin.sourceBlobs[repositoryPath];
+  const observed = spawnSync("git", [
+    "rev-parse", `${sourcePin.sourceCommit}:${repositoryPath}`
+  ], {
+    cwd: repositoryRoot,
+    encoding: "utf8"
+  });
+  if (observed.status !== 0 || observed.stdout.trim() !== blobId) {
+    throw new Error(`Pinned treatment blob differs for ${repositoryPath}`);
+  }
+  const result = spawnSync("git", ["cat-file", "blob", blobId], {
     cwd: repositoryRoot,
     encoding: null,
     maxBuffer: 16 * 1024 * 1024
@@ -61,7 +75,7 @@ function committedSourceBytes(sourcePath) {
   if (result.status !== 0) {
     throw new Error(`Cannot read committed treatment source ${repositoryPath}: ${result.stderr}`);
   }
-  return result.stdout;
+  return { repositoryPath, blobId, bytes: result.stdout };
 }
 
 function canonicalJson(value) {
@@ -87,14 +101,18 @@ function available(status, ...reasons) {
   return { status, reasons: reasons.filter(Boolean) };
 }
 
-function roleForUsage(row) {
-  return row.agent_id === null ? "parent" : "worker";
-}
-
 function safeSum(rows, field) {
   if (rows.some((row) => !Number.isSafeInteger(row[field]) || row[field] < 0)) return null;
   const total = rows.reduce((sum, row) => sum + row[field], 0);
   return Number.isSafeInteger(total) ? total : null;
+}
+
+function safeAverage(rows, field) {
+  if (rows.length === 0) return 0;
+  if (rows.some((row) => typeof row[field] !== "number"
+    || !Number.isFinite(row[field])
+    || row[field] < 0)) return null;
+  return rows.reduce((sum, row) => sum + row[field], 0) / rows.length;
 }
 
 function usageFor(rows, required) {
@@ -109,7 +127,12 @@ function usageFor(rows, required) {
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
       cachedTokens: 0,
+      reasoningTokens: 0,
       modelTokens: 0,
+      requestMultiplier: 0,
+      durationMs: 0,
+      meanTimeToFirstTokenMs: 0,
+      meanInterTokenLatencyMs: 0,
       completionCount: 0
     };
   }
@@ -118,7 +141,12 @@ function usageFor(rows, required) {
     inputTokens: safeSum(rows, "input_tokens"),
     outputTokens: safeSum(rows, "output_tokens"),
     cacheReadTokens: safeSum(rows, "cache_read_tokens"),
-    cacheWriteTokens: safeSum(rows, "cache_write_tokens")
+    cacheWriteTokens: safeSum(rows, "cache_write_tokens"),
+    reasoningTokens: safeSum(rows, "reasoning_tokens"),
+    requestMultiplier: safeSum(rows, "request_multiplier"),
+    durationMs: safeSum(rows, "duration_ms"),
+    meanTimeToFirstTokenMs: safeAverage(rows, "time_to_first_token_ms"),
+    meanInterTokenLatencyMs: safeAverage(rows, "inter_token_latency_ms")
   };
   const availableFields = Object.values(fields).every((value) => value !== null);
   return {
@@ -139,7 +167,7 @@ function usageFor(rows, required) {
 function totalUsage(parent, worker) {
   const fields = [
     "nanoAiu", "inputTokens", "outputTokens", "cacheReadTokens", "cacheWriteTokens",
-    "cachedTokens", "modelTokens"
+    "cachedTokens", "reasoningTokens", "modelTokens", "requestMultiplier", "durationMs"
   ];
   const result = {};
   for (const field of fields) {
@@ -152,6 +180,18 @@ function totalUsage(parent, worker) {
     aiCredits: result.nanoAiu === null ? null : result.nanoAiu / 1e9,
     premiumRequests: null,
     ...result,
+    meanTimeToFirstTokenMs: parent.meanTimeToFirstTokenMs === null
+      || worker.meanTimeToFirstTokenMs === null
+      ? null
+      : ((parent.meanTimeToFirstTokenMs * parent.completionCount)
+        + (worker.meanTimeToFirstTokenMs * worker.completionCount))
+        / Math.max(1, parent.completionCount + worker.completionCount),
+    meanInterTokenLatencyMs: parent.meanInterTokenLatencyMs === null
+      || worker.meanInterTokenLatencyMs === null
+      ? null
+      : ((parent.meanInterTokenLatencyMs * parent.completionCount)
+        + (worker.meanInterTokenLatencyMs * worker.completionCount))
+        / Math.max(1, parent.completionCount + worker.completionCount),
     completionCount: parent.completionCount + worker.completionCount
   };
 }
@@ -209,9 +249,7 @@ export function collectLocalEvidence({
   runAttempt,
   runAttemptBytes,
   runAttemptPath,
-  retryRecord = null,
-  retryBytes = null,
-  retryPath = null
+  preSessionFailures = []
 }) {
   const usageExport = JSON.parse(usageBytes);
   const sessionCreation = JSON.parse(sessionCreationBytes);
@@ -244,20 +282,37 @@ export function collectLocalEvidence({
     || planned.blockId !== runManifest.blockId
     || planned.armId !== runManifest.armId
     || planned.seed !== runManifest.seed
-    || planned.order !== runManifest.scheduleOrder) {
+    || planned.order !== runManifest.scheduleOrder
+    || planned.globalOrder !== runManifest.globalOrder) {
     throw new Error("Run manifest differs from the frozen schedule");
   }
   const boundary = JSON.parse(candidateBoundaryBytes);
-  if (boundary.formatVersion !== 2
+  if (boundary.formatVersion !== 3
     || boundary.protocolId !== contract.protocolId
+    || boundary.sourceCommit !== sourcePin.sourceCommit
+    || boundary.sourceTree !== sourcePin.sourceTree
+    || runManifest.sourceCommit !== sourcePin.sourceCommit
+    || runManifest.sourceTree !== sourcePin.sourceTree
+    || boundary.blockId !== runManifest.blockId
+    || boundary.seed !== runManifest.seed
+    || boundary.taskSha256 !== taskSha256ForSeed(runManifest.seed)
     || !Array.isArray(boundary.files)
     || boundary.files.length === 0) {
     throw new Error("Candidate boundary is not the frozen v2 materialization format");
   }
-  const expectedCandidateFiles = candidateManifest.files.map((entry) => ({
-    path: entry.destination.replaceAll("\\", "/"),
-    sha256: sha256(committedSourceBytes(entry.source))
-  })).sort((left, right) => left.path.localeCompare(right.path));
+  const expectedCandidateFiles = candidateManifest.files.map((entry) => {
+    const source = committedSource(entry.source);
+    const bytes = entry.transform === "append-block-seed"
+      ? taskBytesForSeed(runManifest.seed)
+      : source.bytes;
+    return {
+      path: entry.destination.replaceAll("\\", "/"),
+      sha256: sha256(bytes),
+      sourcePath: source.repositoryPath,
+      sourceBlob: source.blobId,
+      transform: entry.transform ?? null
+    };
+  }).sort((left, right) => left.path.localeCompare(right.path));
   const observedCandidateFiles = [...boundary.files]
     .sort((left, right) => left.path.localeCompare(right.path));
   if (JSON.stringify(observedCandidateFiles) !== JSON.stringify(expectedCandidateFiles)) {
@@ -270,15 +325,19 @@ export function collectLocalEvidence({
   }
   const status = git(liveCandidateRoot, ["status", "--porcelain=v1"]);
   if (status !== "") throw new Error("Candidate worktree is not clean at evidence collection");
-  const head = git(liveCandidateRoot, ["rev-parse", "HEAD"]).trim();
-  if (head !== runManifest.terminalCommit) {
-    throw new Error("Executed candidate HEAD differs from the terminal commit");
+  const candidateCommit = git(liveCandidateRoot, [
+    "rev-parse", runManifest.terminalCommit
+  ]).trim();
+  if (candidateCommit !== runManifest.terminalCommit) {
+    throw new Error("Executed candidate commit cannot be resolved exactly");
   }
   const expectedTreePaths = [
     ...expectedCandidateFiles.map((file) => file.path),
     ".benchmark-boundary.json"
   ].sort();
-  const observedTreePaths = git(liveCandidateRoot, ["ls-tree", "-r", "--name-only", "HEAD"])
+  const observedTreePaths = git(liveCandidateRoot, [
+    "ls-tree", "-r", "--name-only", runManifest.terminalCommit
+  ])
     .split(/\r?\n/u)
     .filter(Boolean)
     .sort();
@@ -306,14 +365,17 @@ export function collectLocalEvidence({
   }
   const taskFile = boundary.files.find((file) => file.path === contract.commonContract.taskArtifact);
   if (!taskFile
-    || taskFile.sha256 !== sharedTaskSha256()
+    || taskFile.sha256 !== taskSha256ForSeed(runManifest.seed)
     || runAttempt.treatment.blockId !== runManifest.blockId
     || runAttempt.treatment.armId !== runManifest.armId
     || runAttempt.treatment.seed !== runManifest.seed
+    || runAttempt.treatment.sourceCommit !== runManifest.sourceCommit
+    || runAttempt.treatment.sourceTree !== runManifest.sourceTree
     || runAttempt.treatment.terminalCommit !== runManifest.terminalCommit
     || runAttempt.treatment.candidateSnapshotSha256 !== runManifest.candidateSnapshotSha256
     || runAttempt.treatment.sharedTaskSha256 !== taskFile.sha256
-    || runAttempt.treatment.kickoffSha256 !== kickoffSha256ForArm(runManifest.armId)
+    || runAttempt.treatment.kickoffSha256
+      !== kickoffSha256ForRun(runManifest.armId, runManifest.seed)
     || runAttempt.treatment.wallLimitMs !== contract.commonContract.wallClockMinutes * 60_000
     || runAttempt.treatment.toolCallLimit !== contract.commonContract.maximumToolCalls
     || runAttempt.treatment.modelTokenLimit !== contract.commonContract.maximumTotalModelTokens) {
@@ -323,25 +385,17 @@ export function collectLocalEvidence({
     || basename(runManifest.attempts.at(-1)) !== basename(runAttemptPath)) {
     throw new Error("Run manifest attempt chain does not end at the collected attempt");
   }
-  if (runManifest.attemptNumber === 1
-    && (runManifest.retries.length !== 0 || retryRecord !== null)) {
-    throw new Error("First attempt cannot contain a retry record");
+  if (preSessionFailures.length !== runManifest.preSessionFailures.length) {
+    throw new Error("Pre-session failure records differ from the run manifest");
   }
-  if (runManifest.attemptNumber === 2) {
-    if (runManifest.retries.length !== 1 || !retryRecord || !retryBytes || !retryPath) {
-      throw new Error("Second attempt requires exactly one retry record");
-    }
-    const retryErrors = validateJsonSchema(retryRecord, retrySchema, { schemaDir: schemaRoot });
-    if (retryErrors.length > 0) {
-      throw new Error(`Retry record is invalid: ${retryErrors[0].path} ${retryErrors[0].message}`);
-    }
-    if (basename(runManifest.retries[0]) !== basename(retryPath)
-      || retryRecord.runId !== runManifest.runId
-      || retryRecord.toAttemptId !== runAttempt.attemptId
-      || retryRecord.reason !== "observed-model-mismatch"
-      || retryRecord.outcomesOpened !== false
-      || retryRecord.sameTreatment !== true) {
-      throw new Error("Retry record does not authorize this exact second attempt");
+  for (const [index, item] of preSessionFailures.entries()) {
+    const errors = validateJsonSchema(item.record, preSessionFailureSchema, {
+      schemaDir: schemaRoot
+    });
+    if (errors.length > 0
+      || item.record.runId !== runManifest.runId
+      || basename(runManifest.preSessionFailures[index]) !== basename(item.path)) {
+      throw new Error("Invalid or mismatched pre-session creation failure record");
     }
   }
   const events = parseJsonLines(eventsBytes);
@@ -361,7 +415,9 @@ export function collectLocalEvidence({
     || sessionCreation.request.kickoff.agent !== null
     || sessionCreation.request.candidate_commit !== runManifest.terminalCommit
     || sha256(capturedKickoffBytes) !== runAttempt.treatment.kickoffSha256
-    || !capturedKickoffBytes.equals(kickoffBytesForArm(runManifest.armId))) {
+    || !capturedKickoffBytes.equals(
+      kickoffBytesForRun(runManifest.armId, runManifest.seed)
+    )) {
     sessionReasons.push("captured atomic create_session request/response differs from the frozen attempt");
   }
   if (starts[0]?.data?.sessionId !== cliSessionId) sessionReasons.push("session.start CLI session ID differs from the run manifest");
@@ -389,8 +445,31 @@ export function collectLocalEvidence({
     sessionReasons.push("captured user kickoff differs from the atomic create_session prompt");
   }
 
-  const parentRows = usageExport.rows.filter((row) => roleForUsage(row) === "parent");
-  const workerRows = usageExport.rows.filter((row) => roleForUsage(row) === "worker");
+  const toolStarts = events.filter((event) => event.type === "tool.execution_start");
+  const toolCompletes = events.filter((event) => event.type === "tool.execution_complete");
+  const toolStartsById = new Map(toolStarts.map((event) => [event.data?.toolCallId, event]));
+  const semanticCalls = toolStarts.filter((event) => MCP_TOOLS.has(contractToolName(event)));
+  const subagentStarts = events.filter((event) => event.type === "subagent.started");
+  const subagentCompletes = events.filter((event) => event.type === "subagent.completed");
+  const skillInvocations = events.filter((event) => event.type === "skill.invoked");
+  const skillCalls = toolStarts.filter((event) => event.data?.toolName === "skill");
+  const taskCalls = toolStarts.filter((event) => event.data?.toolName === "task");
+  const expectedAgent = contract.delegationContract.agentName;
+  const workerCallId = arm.delegated && taskCalls.length === 1
+    ? taskCalls[0].data?.toolCallId
+    : null;
+  const parentRows = usageExport.rows.filter((row) =>
+    row.agent_id === null && row.parent_tool_call_id === null);
+  const workerRows = arm.delegated
+    ? usageExport.rows.filter((row) =>
+      row.agent_id === workerCallId
+      && row.parent_tool_call_id === workerCallId
+      && row.initiator === "sub-agent")
+    : [];
+  const attributedUsageIds = new Set([...parentRows, ...workerRows].map((row) => row.id));
+  const usageRoleReasons = usageExport.rows
+    .filter((row) => !attributedUsageIds.has(row.id))
+    .map((row) => `usage row ${row.id} is not bound to the exact parent/worker lifecycle`);
   const requested = {
     parent: [arm.model],
     worker: arm.delegated ? [arm.workerModel] : []
@@ -399,7 +478,7 @@ export function collectLocalEvidence({
     parent: [...new Set(parentRows.map((row) => row.model))].sort(),
     worker: [...new Set(workerRows.map((row) => row.model))].sort()
   };
-  const modelReasons = [];
+  const modelReasons = [...usageRoleReasons];
   for (const role of ["parent", "worker"]) {
     const expected = requested[role];
     const actual = observed[role];
@@ -412,10 +491,6 @@ export function collectLocalEvidence({
     }
   }
 
-  const toolStarts = events.filter((event) => event.type === "tool.execution_start");
-  const toolCompletes = events.filter((event) => event.type === "tool.execution_complete");
-  const toolStartsById = new Map(toolStarts.map((event) => [event.data?.toolCallId, event]));
-  const semanticCalls = toolStarts.filter((event) => MCP_TOOLS.has(contractToolName(event)));
   const callCounts = new Map();
   for (const event of toolStarts) {
     const key = `${eventRole(event)}\0${contractToolName(event)}`;
@@ -425,12 +500,6 @@ export function collectLocalEvidence({
     const [role, name] = key.split("\0");
     return { role, name, count };
   }).sort((left, right) => `${left.role}/${left.name}`.localeCompare(`${right.role}/${right.name}`));
-  const subagentStarts = events.filter((event) => event.type === "subagent.started");
-  const subagentCompletes = events.filter((event) => event.type === "subagent.completed");
-  const skillInvocations = events.filter((event) => event.type === "skill.invoked");
-  const skillCalls = toolStarts.filter((event) => event.data?.toolName === "skill");
-  const taskCalls = toolStarts.filter((event) => event.data?.toolName === "task");
-  const expectedAgent = arm.agentName ?? contract.delegationContract.agentName;
   const mechanismReasons = [];
   if (arm.delegated) {
     if (subagentStarts.length !== 1 || subagentCompletes.length !== 1) {
@@ -449,20 +518,35 @@ export function collectLocalEvidence({
       || taskCalls[0]?.data?.arguments?.agent_type !== expectedAgent) {
       mechanismReasons.push(`delegated arm requires one exact ${expectedAgent} task invocation`);
     }
+    if (subagentStarts[0]?.data?.toolCallId !== workerCallId
+      || subagentStarts[0]?.agentId !== workerCallId
+      || subagentCompletes[0]?.agentId !== workerCallId
+      || subagentCompletes[0]?.data?.toolCallId !== workerCallId) {
+      mechanismReasons.push("worker lifecycle is not cross-bound to the Task call ID");
+    }
+    if (subagentStarts[0]?.data?.model !== arm.workerModel
+      || subagentCompletes[0]?.data?.model !== arm.workerModel
+      || workerRows.some((row) => row.model !== arm.workerModel)) {
+      mechanismReasons.push("worker lifecycle/name/usage is not cross-bound to the exact worker model");
+    }
+    const observedOverride = taskCalls[0]?.data?.arguments?.model;
+    if (runManifest.armId === 5) {
+      if (observedOverride !== arm.workerModelOverride) {
+        mechanismReasons.push("arm 5 lacks the exact claude-haiku-4.5 worker model override");
+      }
+    } else if (observedOverride !== undefined) {
+      mechanismReasons.push("inherited delegated arm unexpectedly overrides the worker model");
+    }
     const observedWorkerPrompt = taskCalls[0]?.data?.arguments?.prompt;
     if (typeof observedWorkerPrompt !== "string"
       || sha256(Buffer.from(observedWorkerPrompt, "utf8")) !== taskFile.sha256) {
       mechanismReasons.push("delegated task prompt differs from the byte-exact shared task");
     }
-    if ([2, 4].includes(runManifest.armId)) {
-      if (skillCalls.length !== 1
-        || skillCalls[0]?.data?.arguments?.skill !== "semantic-test-corpus"
-        || skillInvocations.length !== 1
-        || skillInvocations[0]?.data?.name !== "semantic-test-corpus") {
-        mechanismReasons.push("inherited delegated arm requires one semantic-test-corpus Skill invocation");
-      }
-    } else if (skillCalls.length > 0 || skillInvocations.length > 0) {
-      mechanismReasons.push("arm 5 must invoke the fixed specialist directly without the core Skill");
+    if (skillCalls.length !== 1
+      || skillCalls[0]?.data?.arguments?.skill !== "semantic-test-corpus"
+      || skillInvocations.length !== 1
+      || skillInvocations[0]?.data?.name !== "semantic-test-corpus") {
+      mechanismReasons.push("delegated arm requires one semantic-test-corpus Skill invocation");
     }
   } else {
     if (subagentStarts.length > 0 || subagentCompletes.length > 0) {
@@ -483,9 +567,7 @@ export function collectLocalEvidence({
       && role === (arm.delegated ? "worker" : "parent");
     const parentDelegationAllowed = role === "parent"
       && arm.delegated
-      && (runManifest.armId === 5
-        ? name === "task"
-        : ["skill", "task"].includes(name));
+      && ["skill", "task"].includes(name);
     if (!semanticAllowed && !parentDelegationAllowed) {
       mechanismReasons.push(`${role} used prohibited tool ${name ?? "<missing>"}`);
     }
@@ -618,6 +700,12 @@ export function collectLocalEvidence({
     identity: {
       appProjectSessionId: runManifest.appProjectSessionId,
       cliSessionId,
+      sourceCommit: sourcePin.sourceCommit,
+      sourceTree: sourcePin.sourceTree,
+      sourceBlobs: boundary.files.map((file) => ({
+        path: file.sourcePath,
+        blob: file.sourceBlob
+      })).sort((left, right) => left.path.localeCompare(right.path)),
       terminalCommit: runManifest.terminalCommit,
       candidateSnapshotSha256: runManifest.candidateSnapshotSha256
     },
@@ -652,11 +740,11 @@ export function collectLocalEvidence({
         sha256: sha256(runAttemptBytes),
         bytes: runAttemptBytes.length
       },
-      retry: retryBytes ? {
-        path: basename(retryPath),
-        sha256: sha256(retryBytes),
-        bytes: retryBytes.length
-      } : null
+      preSessionFailures: preSessionFailures.map((item) => ({
+        path: basename(item.path),
+        sha256: sha256(item.bytes),
+        bytes: item.bytes.length
+      }))
     },
     trust: {
       status: "local-hash-bound",
@@ -675,6 +763,20 @@ export function collectLocalEvidence({
       fields: {
         premiumRequests: available("unavailable", "assistant_usage_events has no premium-request field"),
         toolSchemas: available("unavailable", "local events do not expose the complete tool schema payload"),
+        exposedTools: available("unavailable", "local events do not expose the complete configured tool list"),
+        compaction: available("unavailable", "local events do not expose an authoritative compaction counter"),
+        reasoningTokens: available(total.reasoningTokens === null ? "unavailable" : "available",
+          total.reasoningTokens === null ? "one or more usage rows omit reasoning_tokens" : null),
+        latencyDetails: available(
+          total.meanTimeToFirstTokenMs === null || total.meanInterTokenLatencyMs === null
+            ? "unavailable"
+            : "available",
+          total.meanTimeToFirstTokenMs === null || total.meanInterTokenLatencyMs === null
+            ? "one or more usage rows omit latency fields"
+            : null
+        ),
+        requestMultiplier: available(total.requestMultiplier === null ? "unavailable" : "available",
+          total.requestMultiplier === null ? "one or more usage rows omit request_multiplier" : null),
         parentWait: available(measuredTiming.parentWaitMs === null ? "unavailable" : "available",
           measuredTiming.parentWaitMs === null ? "one complete delegated lifecycle is required" : null),
         sourceReadOnly: available("unavailable", "portable read-only state is not represented in the source formats")
@@ -684,10 +786,15 @@ export function collectLocalEvidence({
     attempt: {
       attemptId: runAttempt.attemptId,
       number: runAttempt.attemptNumber,
-      retryCount: runManifest.retries.length,
+      preSessionFailureCount: preSessionFailures.length,
       outcomesOpened: runManifest.outcomesOpenedAt !== null || runAttempt.outcomesOpenedAt !== null
     },
     usage: {
+      parent: parentUsage,
+      worker: workerUsage,
+      total
+    },
+    operationalUsage: {
       parent: parentUsage,
       worker: workerUsage,
       total
@@ -700,6 +807,7 @@ export function collectLocalEvidence({
     },
     tools: {
       schemas: { available: false, count: null, names: null },
+      exposed: { available: false, names: null },
       calls,
       callCount: toolStarts.length,
       resultCount: toolCompletes.length,
@@ -711,9 +819,15 @@ export function collectLocalEvidence({
       invoked: subagentStarts.length > 0,
       completed: subagentCompletes.length > 0,
       agentName: subagentStarts[0]?.data?.agentName ?? null,
-      compactReturn
+      compactReturn,
+      compactReturnBytes: compactReturn === null
+        ? null
+        : Buffer.byteLength(compactReturn, "utf8")
     },
-    timing: measuredTiming,
+    timing: {
+      ...measuredTiming,
+      globalOrder: runManifest.globalOrder
+    },
     budgets: {
       limits: {
         wallMs: contract.commonContract.wallClockMinutes * 60_000,
@@ -730,10 +844,10 @@ export function collectLocalEvidence({
     },
     events: {
       count: events.length,
-      completionCount: usageExport.rows.length
+      completionCount: usageExport.rows.length,
+      compactionCount: null
     },
     deviations: [
-      ...(runManifest.armId === 5 ? ["arm-5-named-fixed-specialist"] : []),
       ...sessionReasons,
       ...modelReasons,
       ...mechanismReasons,
@@ -756,14 +870,21 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const attemptPath = argument(args, "--run-attempt");
   const candidateBoundaryPath = argument(args, "--candidate-boundary");
   const candidateRoot = argument(args, "--candidate-root");
-  const retryPath = argument(args, "--retry");
   const outputPath = argument(args, "--out");
   if (!eventsPath || !usagePath || !sessionCreationPath || !manifestPath || !attemptPath || !candidateBoundaryPath || !candidateRoot || !outputPath) {
-    throw new Error("Usage: node scripts/collect-local-evidence.mjs --events <events.jsonl> --usage <usage.json> --session-creation <create-session.json> --candidate-boundary <boundary.json> --candidate-root <clean-candidate-repository> --run-manifest <manifest.json> --run-attempt <attempt.json> [--retry <retry.json>] --out <local-evidence.json>");
+    throw new Error("Usage: node scripts/collect-local-evidence.mjs --events <events.jsonl> --usage <usage.json> --session-creation <create-session.json> --candidate-boundary <boundary.json> --candidate-root <clean-candidate-repository> --run-manifest <manifest.json> --run-attempt <attempt.json> --out <local-evidence.json>");
   }
   const runManifestBytes = readFileSync(resolve(manifestPath));
   const runAttemptBytes = readFileSync(resolve(attemptPath));
-  const retryBytes = retryPath ? readFileSync(resolve(retryPath)) : null;
+  const preSessionFailures = JSON.parse(runManifestBytes).preSessionFailures.map((path) => {
+    const absolutePath = resolve(dirname(manifestPath), path);
+    const bytes = readFileSync(absolutePath);
+    return {
+      path: absolutePath,
+      bytes,
+      record: JSON.parse(bytes)
+    };
+  });
   const output = collectLocalEvidence({
     eventsBytes: readFileSync(resolve(eventsPath)),
     eventsPath,
@@ -780,11 +901,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     runAttempt: JSON.parse(runAttemptBytes),
     runAttemptBytes,
     runAttemptPath: attemptPath,
-    ...(retryBytes ? {
-      retryRecord: JSON.parse(retryBytes),
-      retryBytes,
-      retryPath
-    } : {})
+    preSessionFailures
   });
   const target = resolve(outputPath);
   mkdirSync(dirname(target), { recursive: true });

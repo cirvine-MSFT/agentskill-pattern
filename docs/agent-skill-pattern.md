@@ -28,8 +28,9 @@ through the [path-constrained MCP server](../tools/semantic-corpus-mcp/server.mj
 [security/protocol tests](../tests/semantic-corpus-mcp/). An enforceable OS sandbox
 (container, restricted mounts, restricted VM, or dedicated ACL identity) is mandatory
 outside the MCP's own defense-in-depth checks. The
-[protocol](../experiments/semantic-test-corpus/protocol.md#arms) fixes five arms: one
-strong deterministic baseline plus a complete 2x2 model-tier-by-delegation design.
+[v2 protocol](../experiments/semantic-test-corpus/execution-amendment-v2.md#design-and-arms)
+fixes six arms: one public-contract-only deterministic script, a complete 2x2
+model-tier-by-delegation design, and a GPT-parent-to-Haiku same-agent target.
 
 ## Roles
 

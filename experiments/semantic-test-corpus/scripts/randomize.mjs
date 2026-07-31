@@ -2,6 +2,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  kickoffSha256ForRun,
+  taskSha256ForSeed
+} from "./execution-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -27,15 +31,18 @@ export function createSchedule() {
   const design = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
   return {
     protocolId: "semantic-test-corpus-execution-v2",
-    scheduleVersion: 2,
+    scheduleVersion: 3,
     randomizationSeed: design.randomizationSeed,
-    runs: design.blocks.flatMap((block) =>
+    runs: design.blocks.flatMap((block, blockIndex) =>
       shuffle([0, 1, 2, 3, 4, 5], block.seed).map((armId, order) => ({
         runId: `${block.id}-A${armId}`,
         blockId: block.id,
         armId,
         order: order + 1,
-        seed: block.seed
+        globalOrder: blockIndex * 6 + order + 1,
+        seed: block.seed,
+        taskSha256: taskSha256ForSeed(block.seed),
+        kickoffSha256: armId === 0 ? null : kickoffSha256ForRun(armId, block.seed)
       })))
   };
 }

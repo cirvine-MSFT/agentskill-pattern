@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "start-index.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "protocolId", "captures"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "captures": {
+      "type": "array",
+      "maxItems": 72,
+      "items": {
+        "type": "object",
+        "required": [
+          "runId", "blockId", "armId", "sequence", "startedAt",
+          "sourcePath", "sourceSha256"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+          "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+          "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+          "sequence": {"type": "integer", "minimum": 1, "maximum": 72},
+          "startedAt": {"type": "string"},
+          "sourcePath": {"type": "string", "minLength": 1},
+          "sourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    }
+  }
+}

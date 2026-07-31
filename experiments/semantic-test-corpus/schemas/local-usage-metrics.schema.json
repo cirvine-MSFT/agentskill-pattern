@@ -5,7 +5,8 @@
   "required": [
     "available", "aiCredits", "premiumRequests", "nanoAiu", "inputTokens",
     "outputTokens", "cacheReadTokens", "cacheWriteTokens", "cachedTokens",
-    "modelTokens", "completionCount"
+    "reasoningTokens", "modelTokens", "requestMultiplier", "durationMs",
+    "meanTimeToFirstTokenMs", "meanInterTokenLatencyMs", "completionCount"
   ],
   "additionalProperties": false,
   "properties": {
@@ -18,7 +19,12 @@
     "cacheReadTokens": {"type": ["integer", "null"], "minimum": 0},
     "cacheWriteTokens": {"type": ["integer", "null"], "minimum": 0},
     "cachedTokens": {"type": ["integer", "null"], "minimum": 0},
+    "reasoningTokens": {"type": ["integer", "null"], "minimum": 0},
     "modelTokens": {"type": ["integer", "null"], "minimum": 0},
+    "requestMultiplier": {"type": ["number", "null"], "minimum": 0},
+    "durationMs": {"type": ["integer", "null"], "minimum": 0},
+    "meanTimeToFirstTokenMs": {"type": ["number", "null"], "minimum": 0},
+    "meanInterTokenLatencyMs": {"type": ["number", "null"], "minimum": 0},
     "completionCount": {"type": "integer", "minimum": 0}
   }
 }

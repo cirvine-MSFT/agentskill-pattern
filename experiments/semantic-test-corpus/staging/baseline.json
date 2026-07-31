@@ -7,1068 +7,1934 @@
   },
   "cases": [
     {
-      "id": "B001",
-      "description": "Pairwise covering row 1",
+      "id": "G001",
+      "description": "Schema pairwise row 14",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "error"
         },
         "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 60
-        },
-        "database": {
-          "engine": "mysql",
-          "host": "mysql.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "pairwise-covering"
-      ]
-    },
-    {
-      "id": "B002",
-      "description": "Pairwise covering row 2",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "us"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": true
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "pairwise-covering"
-      ]
-    },
-    {
-      "id": "B003",
-      "description": "Pairwise covering row 3",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "prod",
-          "region": "westeurope"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": true
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "redis",
-          "ttlSeconds": 60,
-          "endpoint": "redis://cache.internal:6379"
+          "enabled": false,
+          "provider": "memory"
         },
         "database": {
           "engine": "sqlite",
-          "name": "pairwise.db"
+          "name": "value"
         },
         "retries": {
           "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "pairwise-covering"
+        "schema-pairwise"
       ]
     },
     {
-      "id": "B004",
-      "description": "Pairwise covering row 4",
+      "id": "G002",
+      "description": "Enum service.environment = \"test\"",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "test",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
           "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-enumeration"
+      ]
+    },
+    {
+      "id": "G003",
+      "description": "Optional database.ssl absent",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-optional"
+      ]
+    },
+    {
+      "id": "G004",
+      "description": "Public contract value logging.level = \"error\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "error"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "public-contract-value"
+      ]
+    },
+    {
+      "id": "G005",
+      "description": "Generic integer boundary cache.ttlSeconds = 0",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false,
+          "ttlSeconds": 0
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
+      ]
+    },
+    {
+      "id": "G006",
+      "description": "Generic string partition service.region",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "https://example.test"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-string-partition"
+      ]
+    },
+    {
+      "id": "G007",
+      "description": "Seeded generic schema sample 37",
+      "input": {
+        "version": 7,
+        "service": {
+          "name": "value-36-648",
+          "environment": "test",
+          "region": "value-36-787",
+          "port": 9,
+          "timeoutSeconds": 13
+        },
+        "logging": {
+          "level": "info",
+          "pretty": true
+        },
+        "cache": {
+          "enabled": true,
+          "provider": "memory",
+          "ttlSeconds": 1,
+          "endpoint": "value-36-561"
+        },
+        "database": {
+          "engine": "mysql",
+          "name": "value-36-148",
+          "host": "value-36-254",
+          "port": 4,
+          "ssl": false
+        },
+        "retries": {
+          "mode": "exponential",
+          "maxAttempts": 9,
+          "delayMs": 2
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "seeded-schema-property"
+      ]
+    },
+    {
+      "id": "G008",
+      "description": "Schema pairwise row 4",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "test",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "warn"
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "redis"
         },
         "database": {
           "engine": "sqlite",
-          "name": "pairwise.db"
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "pairwise-covering"
-      ]
-    },
-    {
-      "id": "B005",
-      "description": "Pairwise covering row 5",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "prod",
-          "region": "us"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "redis",
-          "ttlSeconds": 60,
-          "endpoint": "redis://cache.internal:6379"
-        },
-        "database": {
-          "engine": "mysql",
-          "host": "mysql.internal",
-          "name": "app",
-          "ssl": true
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "pairwise-covering"
-      ]
-    },
-    {
-      "id": "B006",
-      "description": "Pairwise covering row 6",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "test",
-          "region": "us"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": true
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 60
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "value"
         },
         "retries": {
           "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "pairwise-covering"
+        "schema-pairwise"
       ]
     },
     {
-      "id": "B007",
-      "description": "Pairwise covering row 7",
+      "id": "G009",
+      "description": "Enum cache.provider = \"redis\"",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
-          "environment": "prod",
-          "region": "westeurope"
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 60
+          "enabled": false,
+          "provider": "redis"
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": true
+          "name": "value"
         },
         "retries": {
           "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "pairwise-covering"
+        "schema-enumeration"
       ]
     },
     {
-      "id": "B008",
-      "description": "Pairwise covering row 8",
+      "id": "G010",
+      "description": "Optional database.host present",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
-          "environment": "test",
-          "region": "westeurope"
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": true
+          "level": "debug"
         },
         "cache": {
           "enabled": false
         },
         "database": {
-          "engine": "mysql",
-          "host": "mysql.internal",
-          "name": "app",
-          "ssl": false
+          "engine": "postgres",
+          "name": "value",
+          "host": "value"
         },
         "retries": {
-          "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "pairwise-covering"
+        "schema-optional"
       ]
     },
     {
-      "id": "B009",
-      "description": "Pairwise covering row 9",
+      "id": "G011",
+      "description": "Public contract value database.port = 3306",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": true
+          "level": "debug"
         },
         "cache": {
-          "enabled": true,
-          "provider": "redis",
-          "ttlSeconds": 60,
-          "endpoint": "redis://cache.internal:6379"
+          "enabled": false
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "value",
+          "port": 3306
         },
         "retries": {
-          "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "pairwise-covering"
+        "public-contract-value"
       ]
     },
     {
-      "id": "B010",
-      "description": "Pairwise covering row 10",
+      "id": "G012",
+      "description": "Generic integer boundary version = -1",
+      "input": {
+        "version": -1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
+      ]
+    },
+    {
+      "id": "G013",
+      "description": "Generic string partition service.region",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
-          "region": "us"
+          "region": "value with spaces"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
-          "enabled": true,
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-string-partition"
+      ]
+    },
+    {
+      "id": "G014",
+      "description": "Seeded generic schema sample 4",
+      "input": {
+        "version": 12,
+        "service": {
+          "name": "value-3-985",
+          "environment": "test",
+          "region": "value-3-577",
+          "port": 14,
+          "timeoutSeconds": 4
+        },
+        "logging": {
+          "level": "debug",
+          "pretty": true
+        },
+        "cache": {
+          "enabled": false,
           "provider": "memory",
-          "ttlSeconds": 60
+          "ttlSeconds": 6,
+          "endpoint": "value-3-824"
         },
         "database": {
           "engine": "sqlite",
-          "name": "pairwise.db"
-        },
-        "retries": {
-          "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "pairwise-covering"
-      ]
-    },
-    {
-      "id": "B011",
-      "description": "Pairwise covering row 11",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "prod",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "mysql",
-          "host": "mysql.internal",
-          "name": "app",
+          "name": "value-3-808",
+          "host": "value-3-540",
+          "port": -2,
           "ssl": true
         },
         "retries": {
           "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 12,
+          "delayMs": 6
         },
         "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "pairwise-covering"
+        "seeded-schema-property"
       ]
     },
     {
-      "id": "B012",
-      "description": "Pairwise covering row 12",
+      "id": "G015",
+      "description": "Schema pairwise row 2",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
-          "region": "westeurope"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 60
-        },
-        "database": {
-          "engine": "mysql",
-          "host": "mysql.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "pairwise-covering"
-      ]
-    },
-    {
-      "id": "B013",
-      "description": "Pairwise covering row 13",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "test",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "error"
         },
         "cache": {
-          "enabled": true,
-          "provider": "redis",
-          "ttlSeconds": 60,
-          "endpoint": "redis://cache.internal:6379"
+          "enabled": false,
+          "provider": "redis"
         },
         "database": {
-          "engine": "mysql",
-          "host": "mysql.internal",
-          "name": "app",
-          "ssl": false
+          "engine": "postgres",
+          "name": "value"
         },
         "retries": {
-          "mode": "exponential",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "pairwise-covering"
+        "schema-pairwise"
       ]
     },
     {
-      "id": "B014",
-      "description": "Unknown region diagnostic",
+      "id": "G016",
+      "description": "Enum retries.mode = \"exponential\"",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
-          "region": "moonbase"
+          "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
           "enabled": false
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "value"
         },
         "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "mode": "exponential",
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "decision-table"
+        "schema-enumeration"
       ]
     },
     {
-      "id": "B015",
-      "description": "Explicit service port and timeout",
+      "id": "G017",
+      "description": "Optional cache.endpoint present",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false,
+          "endpoint": "value"
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-optional"
+      ]
+    },
+    {
+      "id": "G018",
+      "description": "Public contract value logging.level = \"info\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "info"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "public-contract-value"
+      ]
+    },
+    {
+      "id": "G019",
+      "description": "Generic integer boundary retries.maxAttempts = -12",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": -12,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
+      ]
+    },
+    {
+      "id": "G020",
+      "description": "Generic string partition database.host",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value",
+          "host": "*"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-string-partition"
+      ]
+    },
+    {
+      "id": "G021",
+      "description": "Seeded generic schema sample 24",
+      "input": {
+        "version": 14,
+        "service": {
+          "name": "value-23-842",
+          "environment": "prod",
+          "region": "value-23-898",
+          "port": 1,
+          "timeoutSeconds": 8
+        },
+        "logging": {
+          "level": "warn",
+          "pretty": true
+        },
+        "cache": {
+          "enabled": true,
+          "provider": "redis",
+          "ttlSeconds": 8,
+          "endpoint": "value-23-523"
+        },
+        "database": {
+          "engine": "mysql",
+          "name": "value-23-648",
+          "host": "value-23-855",
+          "port": 15,
+          "ssl": true
+        },
+        "retries": {
+          "mode": "exponential",
+          "maxAttempts": -1,
+          "delayMs": 1
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "seeded-schema-property"
+      ]
+    },
+    {
+      "id": "G022",
+      "description": "Schema pairwise row 12",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "test",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "memory"
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "exponential",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-pairwise"
+      ]
+    },
+    {
+      "id": "G023",
+      "description": "Enum cache.provider = \"memory\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "memory"
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-enumeration"
+      ]
+    },
+    {
+      "id": "G024",
+      "description": "Optional service.timeoutSeconds present",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
           "environment": "dev",
           "region": "eastus",
-          "port": 9090,
-          "timeoutSeconds": 7
+          "timeoutSeconds": 1
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
           "enabled": false
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-optional"
+      ]
+    },
+    {
+      "id": "G025",
+      "description": "Public contract value service.region = \"eu\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eu"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "public-contract-value"
+      ]
+    },
+    {
+      "id": "G026",
+      "description": "Generic integer boundary version = -2",
+      "input": {
+        "version": -2,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
+      ]
+    },
+    {
+      "id": "G027",
+      "description": "Generic string partition service.name",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "VALUE",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-string-partition"
+      ]
+    },
+    {
+      "id": "G028",
+      "description": "Seeded generic schema sample 30",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value-29-528",
+          "environment": "dev",
+          "region": "value-29-388",
+          "port": 4,
+          "timeoutSeconds": 11
+        },
+        "logging": {
+          "level": "error",
+          "pretty": true
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "memory",
+          "ttlSeconds": -3,
+          "endpoint": "value-29-476"
+        },
+        "database": {
+          "engine": "mysql",
+          "name": "value-29-89",
+          "host": "value-29-71",
+          "port": 9,
           "ssl": false
         },
         "retries": {
           "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 5,
+          "delayMs": 2
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "decision-table"
+        "seeded-schema-property"
       ]
     },
     {
-      "id": "B016",
-      "description": "Warn level conversion",
+      "id": "G029",
+      "description": "Schema pairwise row 1",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
           "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "memory"
+        },
+        "database": {
+          "engine": "mysql",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "exponential",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-pairwise"
+      ]
+    },
+    {
+      "id": "G030",
+      "description": "Enum database.engine = \"sqlite\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "sqlite",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-enumeration"
+      ]
+    },
+    {
+      "id": "G031",
+      "description": "Optional service.port present",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus",
+          "port": 1
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-optional"
+      ]
+    },
+    {
+      "id": "G032",
+      "description": "Public contract value service.region = \"southeastasia\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "southeastasia"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "public-contract-value"
+      ]
+    },
+    {
+      "id": "G033",
+      "description": "Generic integer boundary cache.ttlSeconds = -2",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false,
+          "ttlSeconds": -2
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
+      ]
+    },
+    {
+      "id": "G034",
+      "description": "Generic string partition database.name",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "*"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-string-partition"
+      ]
+    },
+    {
+      "id": "G035",
+      "description": "Seeded generic schema sample 20",
+      "input": {
+        "version": 14,
+        "service": {
+          "name": "value-19-919",
+          "environment": "test",
+          "region": "value-19-551",
+          "port": 1,
+          "timeoutSeconds": 8
+        },
+        "logging": {
+          "level": "error",
+          "pretty": false
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "memory",
+          "ttlSeconds": 13,
+          "endpoint": "value-19-662"
+        },
+        "database": {
+          "engine": "mysql",
+          "name": "value-19-697",
+          "host": "value-19-397",
+          "port": 3,
+          "ssl": false
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 8,
+          "delayMs": 6
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "seeded-schema-property"
+      ]
+    },
+    {
+      "id": "G036",
+      "description": "Schema pairwise row 6",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "prod",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "error"
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "memory"
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "exponential",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-pairwise"
+      ]
+    },
+    {
+      "id": "G037",
+      "description": "Enum logging.level = \"warn\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "warn"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-enumeration"
+      ]
+    },
+    {
+      "id": "G038",
+      "description": "Optional cache.ttlSeconds present",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false,
+          "ttlSeconds": 1
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-optional"
+      ]
+    },
+    {
+      "id": "G039",
+      "description": "Public contract value cache.enabled = true",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": true
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "public-contract-value"
+      ]
+    },
+    {
+      "id": "G040",
+      "description": "Generic integer boundary database.port = 0",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value",
+          "port": 0
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
+      ]
+    },
+    {
+      "id": "G041",
+      "description": "Generic string partition database.host",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value",
+          "host": "value with spaces"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-string-partition"
+      ]
+    },
+    {
+      "id": "G042",
+      "description": "Seeded generic schema sample 27",
+      "input": {
+        "version": 9,
+        "service": {
+          "name": "value-26-200",
+          "environment": "dev",
+          "region": "value-26-61",
+          "port": 14,
+          "timeoutSeconds": 7
         },
         "logging": {
           "level": "warn",
           "pretty": false
         },
         "cache": {
+          "enabled": false,
+          "provider": "redis",
+          "ttlSeconds": 6,
+          "endpoint": "value-26-870"
+        },
+        "database": {
+          "engine": "sqlite",
+          "name": "value-26-452",
+          "host": "value-26-481",
+          "port": -1,
+          "ssl": true
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 13,
+          "delayMs": 12
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "seeded-schema-property"
+      ]
+    },
+    {
+      "id": "G043",
+      "description": "Schema pairwise row 11",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "warn"
+        },
+        "cache": {
+          "enabled": false,
+          "provider": "memory"
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "exponential",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-pairwise"
+      ]
+    },
+    {
+      "id": "G044",
+      "description": "Enum service.environment = \"prod\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "prod",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
           "enabled": false
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "value"
         },
         "retries": {
           "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "decision-table"
+        "schema-enumeration"
       ]
     },
     {
-      "id": "B017",
-      "description": "Pretty production logging is forced to JSON",
+      "id": "G045",
+      "description": "Optional database.ssl present",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
-          "environment": "prod",
+          "name": "value",
+          "environment": "dev",
           "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value",
+          "ssl": true
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "schema-optional"
+      ]
+    },
+    {
+      "id": "G046",
+      "description": "Public contract value service.region = \"us\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "us"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "public-contract-value"
+      ]
+    },
+    {
+      "id": "G047",
+      "description": "Generic integer boundary retries.maxAttempts = -13",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": -13,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
+      ]
+    },
+    {
+      "id": "G048",
+      "description": "Generic string partition service.region",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "value"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-string-partition"
+      ]
+    },
+    {
+      "id": "G049",
+      "description": "Seeded generic schema sample 12",
+      "input": {
+        "version": 4,
+        "service": {
+          "name": "value-11-432",
+          "environment": "test",
+          "region": "value-11-206",
+          "port": 8,
+          "timeoutSeconds": -2
         },
         "logging": {
           "level": "info",
           "pretty": true
         },
         "cache": {
-          "enabled": false
+          "enabled": false,
+          "provider": "memory",
+          "ttlSeconds": -1,
+          "endpoint": "value-11-648"
         },
         "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
+          "engine": "sqlite",
+          "name": "value-11-955",
+          "host": "value-11-499",
+          "port": 1,
           "ssl": true
         },
         "retries": {
           "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 11,
+          "delayMs": -2
         },
         "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "decision-table"
+        "seeded-schema-property"
       ]
     },
     {
-      "id": "B018",
-      "description": "Disabled cache ignores stale fields",
+      "id": "G050",
+      "description": "Schema pairwise row 15",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
-          "environment": "dev",
+          "name": "value",
+          "environment": "prod",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "warn"
         },
         "cache": {
           "enabled": false,
-          "provider": "redis",
-          "ttlSeconds": 30,
-          "endpoint": "redis://old:6379"
+          "provider": "memory"
         },
         "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B019",
-      "description": "Redis endpoint violation",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "redis",
-          "ttlSeconds": 300,
-          "endpoint": "https://cache.invalid"
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B020",
-      "description": "SQLite production violation",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "prod",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "sqlite",
-          "name": "prod.db"
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B021",
-      "description": "Production remote database without TLS",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "prod",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B022",
-      "description": "Service and database port conflict",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus",
-          "port": 5432
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B023",
-      "description": "Exponential retry cap",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "engine": "mysql",
+          "name": "value"
         },
         "retries": {
           "mode": "exponential",
-          "maxAttempts": 10,
-          "delayMs": 10000
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "decision-table"
+        "schema-pairwise"
       ]
     },
     {
-      "id": "B024",
-      "description": "Exponential attempts violation",
+      "id": "G051",
+      "description": "Enum database.engine = \"mysql\"",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
           "enabled": false
         },
         "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "engine": "mysql",
+          "name": "value"
         },
         "retries": {
-          "mode": "exponential",
-          "maxAttempts": 1,
-          "delayMs": 500
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "decision-table"
+        "schema-enumeration"
       ]
     },
     {
-      "id": "B025",
-      "description": "Production debug violation",
+      "id": "G052",
+      "description": "Optional logging.pretty present",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
-          "environment": "prod",
+          "name": "value",
+          "environment": "dev",
           "region": "eastus"
         },
         "logging": {
@@ -1080,1570 +1946,322 @@
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": true
+          "name": "value"
         },
         "retries": {
           "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://prod.example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B026",
-      "description": "Production wildcard CORS violation",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "prod",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": true
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "*"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B027",
-      "description": "CORS canonicalization and duplicate removal",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://B.example.test",
-            "https://a.example.test",
-            "https://A.example.test/"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B028",
-      "description": "Empty feature flags",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
           "flags": {}
         }
       },
       "sourceTags": [
-        "decision-table"
+        "schema-optional"
       ]
     },
     {
-      "id": "B029",
-      "description": "Feature normalization and sorting",
+      "id": "G053",
+      "description": "Public contract value service.region = \"westeurope\"",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
-          "region": "eastus"
+          "region": "westeurope"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
           "enabled": false
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "New UI": true,
-            "alpha": false
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B030",
-      "description": "Feature normalization collision",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "New UI": true,
-            "new-ui": false
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B031",
-      "description": "Unsupported source version",
-      "input": {
-        "version": 2,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B032",
-      "description": "Explicit database port",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false,
-          "port": 5544
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "decision-table"
-      ]
-    },
-    {
-      "id": "B033",
-      "description": "Service port boundary 1",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus",
-          "port": 1
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B034",
-      "description": "Service port boundary 65535",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus",
-          "port": 65535
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B035",
-      "description": "Service port boundary 0",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus",
-          "port": 0
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B036",
-      "description": "Service port boundary 65536",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus",
-          "port": 65536
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B037",
-      "description": "Cache TTL boundary 1",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 1
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B038",
-      "description": "Cache TTL boundary 86400",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 86400
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B039",
-      "description": "Cache TTL boundary 0",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 0
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B040",
-      "description": "Cache TTL boundary 86401",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 86401
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B041",
-      "description": "Retry-attempt boundary 0",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "value"
         },
         "retries": {
           "mode": "fixed",
           "maxAttempts": 0,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B042",
-      "description": "Retry-attempt boundary 10",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 10,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B043",
-      "description": "Retry-attempt boundary -1",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": -1,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B044",
-      "description": "Retry-attempt boundary 11",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 11,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B045",
-      "description": "Retry-delay boundary 100",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
           "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "boundary-partition"
+        "public-contract-value"
       ]
     },
     {
-      "id": "B046",
-      "description": "Retry-delay boundary 10000",
+      "id": "G054",
+      "description": "Generic integer boundary database.port = -1",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
           "enabled": false
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "value",
+          "port": -1
         },
         "retries": {
           "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 10000
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "boundary-partition"
+        "generic-boundary"
       ]
     },
     {
-      "id": "B047",
-      "description": "Retry-delay boundary 99",
+      "id": "G055",
+      "description": "Generic string partition database.name",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
           "enabled": false
         },
         "database": {
           "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "__unknown__"
         },
         "retries": {
           "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 99
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "boundary-partition"
+        "generic-string-partition"
       ]
     },
     {
-      "id": "B048",
-      "description": "Retry-delay boundary 10001",
+      "id": "G056",
+      "description": "Seeded generic schema sample 36",
       "input": {
-        "version": 1,
+        "version": 11,
         "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
+          "name": "value-35-494",
+          "environment": "test",
+          "region": "value-35-500",
+          "port": 10,
+          "timeoutSeconds": -1
         },
         "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 10001
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "boundary-partition"
-      ]
-    },
-    {
-      "id": "B049",
-      "description": "Seeded grammar/property sample 1",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "!!!",
-          "environment": "dev",
-          "region": "eastus",
-          "timeoutSeconds": 83
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test/path"
-          ]
-        },
-        "features": {
-          "flags": {
-            "Feature A": true,
-            "stable": true
-          }
-        }
-      },
-      "sourceTags": [
-        "grammar-property"
-      ]
-    },
-    {
-      "id": "B050",
-      "description": "Seeded grammar/property sample 2",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "MIXED Case 1",
-          "environment": "dev",
-          "region": "eastus",
-          "timeoutSeconds": 63
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://sub.example.test/",
-            "https://sub.example.test/"
-          ]
-        },
-        "features": {
-          "flags": {
-            "Feature B": false,
-            "stable": true
-          }
-        }
-      },
-      "sourceTags": [
-        "grammar-property"
-      ]
-    },
-    {
-      "id": "B051",
-      "description": "Seeded grammar/property sample 3",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "Search.v2 2",
-          "environment": "dev",
-          "region": "eastus",
-          "timeoutSeconds": 96
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://sub.example.test/",
-            "http://localhost:8080"
-          ]
-        },
-        "features": {
-          "flags": {
-            "Feature C": true,
-            "stable": true
-          }
-        }
-      },
-      "sourceTags": [
-        "grammar-property"
-      ]
-    },
-    {
-      "id": "B052",
-      "description": "Seeded grammar/property sample 4",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "edge_worker 3",
-          "environment": "dev",
-          "region": "eastus",
-          "timeoutSeconds": 79
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": false
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 3,
-          "delayMs": 500
-        },
-        "security": {
-          "allowedOrigins": [
-            "http://localhost:8080",
-            "https://EXAMPLE.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "Feature D": false,
-            "stable": false
-          }
-        }
-      },
-      "sourceTags": [
-        "grammar-property"
-      ]
-    },
-    {
-      "id": "B053",
-      "description": "Finite-domain conjunction 1",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
+          "level": "error",
           "pretty": true
         },
         "cache": {
           "enabled": false,
-          "ttlSeconds": 42
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "solver-db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "exponential",
-          "maxAttempts": 5,
-          "delayMs": 250
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "constraint-solver"
-      ]
-    },
-    {
-      "id": "B054",
-      "description": "Finite-domain conjunction 2",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": true
-        },
-        "cache": {
-          "enabled": false,
-          "ttlSeconds": 42
-        },
-        "database": {
-          "engine": "mysql",
-          "host": "solver-db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "exponential",
-          "maxAttempts": 5,
-          "delayMs": 250
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "constraint-solver"
-      ]
-    },
-    {
-      "id": "B055",
-      "description": "Finite-domain conjunction 3",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": true
-        },
-        "cache": {
-          "enabled": false,
-          "ttlSeconds": 42
+          "provider": "memory",
+          "ttlSeconds": 3,
+          "endpoint": "value-35-946"
         },
         "database": {
           "engine": "sqlite",
-          "name": "solver.db"
+          "name": "value-35-378",
+          "host": "value-35-111",
+          "port": 4,
+          "ssl": true
         },
         "retries": {
           "mode": "exponential",
-          "maxAttempts": 5,
-          "delayMs": 250
+          "maxAttempts": -1,
+          "delayMs": 6
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "constraint-solver"
+        "seeded-schema-property"
       ]
     },
     {
-      "id": "B056",
-      "description": "Finite-domain conjunction 4",
+      "id": "G057",
+      "description": "Schema pairwise row 13",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
-          "environment": "dev",
+          "name": "value",
+          "environment": "test",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": true
+          "level": "error"
         },
         "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 42
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "solver-db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "fixed",
-          "maxAttempts": 2,
-          "delayMs": 250
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "constraint-solver"
-      ]
-    },
-    {
-      "id": "B057",
-      "description": "Finite-domain conjunction 5",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": false
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 42
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "solver-db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "exponential",
-          "maxAttempts": 5,
-          "delayMs": 250
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "constraint-solver"
-      ]
-    },
-    {
-      "id": "B058",
-      "description": "Finite-domain conjunction 6",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": true
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 42
-        },
-        "database": {
-          "engine": "postgres",
-          "host": "solver-db.internal",
-          "name": "app",
-          "ssl": false
-        },
-        "retries": {
-          "mode": "exponential",
-          "maxAttempts": 5,
-          "delayMs": 250
-        },
-        "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
-        },
-        "features": {
-          "flags": {
-            "alpha": true
-          }
-        }
-      },
-      "sourceTags": [
-        "constraint-solver"
-      ]
-    },
-    {
-      "id": "B059",
-      "description": "Finite-domain conjunction 7",
-      "input": {
-        "version": 1,
-        "service": {
-          "name": "api",
-          "environment": "dev",
-          "region": "eastus"
-        },
-        "logging": {
-          "level": "info",
-          "pretty": true
-        },
-        "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 42
+          "enabled": false,
+          "provider": "memory"
         },
         "database": {
           "engine": "mysql",
-          "host": "solver-db.internal",
-          "name": "app",
-          "ssl": false
+          "name": "value"
         },
         "retries": {
-          "mode": "fixed",
-          "maxAttempts": 2,
-          "delayMs": 250
+          "mode": "exponential",
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "constraint-solver"
+        "schema-pairwise"
       ]
     },
     {
-      "id": "B060",
-      "description": "Finite-domain conjunction 8",
+      "id": "G058",
+      "description": "Optional database.port present",
       "input": {
         "version": 1,
         "service": {
-          "name": "api",
+          "name": "value",
           "environment": "dev",
           "region": "eastus"
         },
         "logging": {
-          "level": "info",
-          "pretty": false
+          "level": "debug"
         },
         "cache": {
-          "enabled": true,
-          "provider": "memory",
-          "ttlSeconds": 42
+          "enabled": false
         },
         "database": {
-          "engine": "mysql",
-          "host": "solver-db.internal",
-          "name": "app",
-          "ssl": false
+          "engine": "postgres",
+          "name": "value",
+          "port": 1
         },
         "retries": {
-          "mode": "exponential",
-          "maxAttempts": 5,
-          "delayMs": 250
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
         },
         "security": {
-          "allowedOrigins": [
-            "https://example.test"
-          ]
+          "allowedOrigins": []
         },
         "features": {
-          "flags": {
-            "alpha": true
-          }
+          "flags": {}
         }
       },
       "sourceTags": [
-        "constraint-solver"
+        "schema-optional"
+      ]
+    },
+    {
+      "id": "G059",
+      "description": "Public contract value service.region = \"apac\"",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "apac"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": 0,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "public-contract-value"
+      ]
+    },
+    {
+      "id": "G060",
+      "description": "Generic integer boundary retries.maxAttempts = -11",
+      "input": {
+        "version": 1,
+        "service": {
+          "name": "value",
+          "environment": "dev",
+          "region": "eastus"
+        },
+        "logging": {
+          "level": "debug"
+        },
+        "cache": {
+          "enabled": false
+        },
+        "database": {
+          "engine": "postgres",
+          "name": "value"
+        },
+        "retries": {
+          "mode": "fixed",
+          "maxAttempts": -11,
+          "delayMs": 100
+        },
+        "security": {
+          "allowedOrigins": []
+        },
+        "features": {
+          "flags": {}
+        }
+      },
+      "sourceTags": [
+        "generic-boundary"
       ]
     }
   ]

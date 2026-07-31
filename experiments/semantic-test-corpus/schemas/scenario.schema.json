@@ -22,7 +22,25 @@
     "sourceTags": {
       "type": "array",
       "minItems": 1,
-      "items": {"type": "string", "enum": ["decision-table", "boundary-partition", "pairwise-covering", "grammar-property", "constraint-solver", "held-out"]}
+      "items": {
+        "type": "string",
+        "enum": [
+          "decision-table",
+          "boundary-partition",
+          "pairwise-covering",
+          "grammar-property",
+          "constraint-solver",
+          "held-out",
+          "schema-pairwise",
+          "schema-enumeration",
+          "schema-optional",
+          "public-contract-value",
+          "generic-boundary",
+          "generic-string-partition",
+          "generic-collection-partition",
+          "seeded-schema-property"
+        ]
+      }
     }
   }
 }

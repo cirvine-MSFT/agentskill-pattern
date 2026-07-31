@@ -4,7 +4,8 @@
   "type": "object",
   "required": [
     "formatVersion", "protocolId", "runId", "blockId", "armId", "seed",
-    "scheduleOrder", "cases", "wallMs", "stagingSha256"
+    "scheduleOrder", "globalOrder", "startedAt", "endedAt", "cases", "wallMs",
+    "stagingSha256"
   ],
   "additionalProperties": false,
   "properties": {
@@ -15,6 +16,9 @@
     "armId": {"const": 0},
     "seed": {"type": "integer"},
     "scheduleOrder": {"type": "integer", "minimum": 1, "maximum": 6},
+    "globalOrder": {"type": "integer", "minimum": 1, "maximum": 72},
+    "startedAt": {"type": "string"},
+    "endedAt": {"type": "string"},
     "cases": {"const": 60},
     "wallMs": {"type": "integer", "minimum": 0, "maximum": 1800000},
     "stagingSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}

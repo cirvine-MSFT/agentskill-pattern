@@ -24,6 +24,9 @@ const evaluationSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "evaluation-record.schema.json"), "utf8")
 );
 const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const contrastContract = JSON.parse(
+  readFileSync(resolve(root, "design", "descriptive-contrasts.json"), "utf8")
+);
 const endpointNames = Object.keys(
   inputSchema.properties.runs.items.properties.endpoints.properties
 );
@@ -54,6 +57,36 @@ function point(values) {
       : values.reduce((sum, value) => sum + value, 0) / values.length,
     median: median(values)
   };
+}
+
+function registeredContrasts(runs, endpointNames) {
+  return contrastContract.contrasts.flatMap((definition) =>
+    endpointNames.map((endpoint) => {
+      const blockValues = [];
+      for (let block = 1; block <= 12; block += 1) {
+        const blockId = `B${String(block).padStart(2, "0")}`;
+        const terms = Object.entries(definition.coefficients).map(([armId, coefficient]) => ({
+          coefficient,
+          value: runs.find((run) =>
+            run.blockId === blockId && run.armId === Number(armId))?.endpoints[endpoint]
+        }));
+        if (terms.every((term) => Number.isFinite(term.value))) {
+          blockValues.push({
+            blockId,
+            value: terms.reduce((sum, term) => sum + term.coefficient * term.value, 0)
+          });
+        }
+      }
+      return {
+        id: definition.id,
+        label: definition.label,
+        endpoint,
+        coefficients: definition.coefficients,
+        ...point(blockValues.map((entry) => entry.value)),
+        blockValues
+      };
+    })
+  );
 }
 
 function emptyEndpoints() {
@@ -94,7 +127,12 @@ function usageEndpoints(evidence) {
       ["CacheReadTokens", "cacheReadTokens"],
       ["CacheWriteTokens", "cacheWriteTokens"],
       ["CachedTokens", "cachedTokens"],
+      ["ReasoningTokens", "reasoningTokens"],
       ["ModelTokens", "modelTokens"],
+      ["RequestMultiplier", "requestMultiplier"],
+      ["DurationMs", "durationMs"],
+      ["MeanTimeToFirstTokenMs", "meanTimeToFirstTokenMs"],
+      ["MeanInterTokenLatencyMs", "meanInterTokenLatencyMs"],
       ["CompletionCount", "completionCount"]
     ]) {
       output[`${role}${suffix}`] = usage[field];
@@ -113,7 +151,7 @@ function readExecutionRecords(evidence, evidencePath) {
     JSON.parse(readFileSync(resolve(artifactRoot, path), "utf8")));
   const evidenceBytes = attempts.map((attempt) =>
     readFileSync(resolve(artifactRoot, attempt.localEvidencePath)));
-  const retries = manifest.retries.map((path) =>
+  const preSessionFailures = manifest.preSessionFailures.map((path) =>
     JSON.parse(readFileSync(resolve(artifactRoot, path), "utf8")));
   const deviations = manifest.deviations.map((path) =>
     JSON.parse(readFileSync(resolve(artifactRoot, path), "utf8")));
@@ -122,13 +160,13 @@ function readExecutionRecords(evidence, evidencePath) {
     attempts,
     preflights,
     evidenceBytes,
-    retries,
+    preSessionFailures,
     deviations
   });
   if (errors.length > 0) {
     throw new Error(`Execution records are invalid for ${evidence.runId}: ${errors[0]}`);
   }
-  return { manifest, attempts, preflights, evidenceBytes };
+  return { manifest, attempts, preflights, evidenceBytes, preSessionFailures };
 }
 
 export function buildDescriptiveRuns(input, artifactRoot) {
@@ -186,7 +224,14 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         || evaluation.executionSha256 !== sha256(executionBytes)
         || execution.stagingSha256 !== metrics.snapshotSha256
         || !canonicalStagingBytes(JSON.parse(snapshotBytes)).equals(snapshotBytes)) {
-        throw new Error(`Deterministic execution is not bound to its exact snapshot: ${definition.runId}`);
+        throw new Error(`Deterministic execution is not bound to its exact snapshot: ${definition.runId}; ${JSON.stringify({
+          executionErrors,
+          executionRunId: execution.runId,
+          executionBlockId: execution.blockId,
+          executionShaMatches: evaluation.executionSha256 === sha256(executionBytes),
+          snapshotShaMatches: execution.stagingSha256 === metrics.snapshotSha256,
+          canonicalSnapshot: canonicalStagingBytes(JSON.parse(snapshotBytes)).equals(snapshotBytes)
+        })}`);
       }
       if (evaluation.attemptId !== null
         || evaluation.localEvidenceSha256 !== null
@@ -246,6 +291,12 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         || evidence.armId !== definition.armId) {
         throw new Error(`Local evidence is not bound to the artifact run: ${definition.runId}`);
       }
+      if (evidence.availability.session.status !== "available"
+        || evidence.availability.model.status !== "available"
+        || evidence.availability.mechanism.status !== "available"
+        || evidence.budgets.status !== "within-budget") {
+        throw new Error(`Unavailable AI run must not be included in analysis: ${definition.runId}`);
+      }
       verifyLocalSnapshotWrites(snapshotBytes, evidence);
       const preflightPath = resolve(artifactRoot, definition.modelPreflightPath);
       const preflightBytes = readFileSync(preflightPath);
@@ -291,12 +342,18 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         }
       }
       Object.assign(endpoints, usageEndpoints(evidence), {
+        operationalTotalAiCredits: evidence.operationalUsage.total.aiCredits,
+        operationalTotalNanoAiu: evidence.operationalUsage.total.nanoAiu,
+        operationalTotalModelTokens: evidence.operationalUsage.total.modelTokens,
+        operationalTotalCompletionCount: evidence.operationalUsage.total.completionCount,
         parentCumulativeInputTokens: evidence.parentContext.cumulativeInputTokens,
         parentPeakInputTokens: evidence.parentContext.peakInputTokens,
         toolSchemaCount: evidence.tools.schemas.count,
         toolCallCount: evidence.tools.callCount,
         toolResultCount: evidence.tools.resultCount,
         toolResultBytes: evidence.tools.resultBytes,
+        compactReturnBytes: evidence.delegation.compactReturnBytes,
+        compactionCount: evidence.events.compactionCount,
         wallMs: evidence.timing.wallMs,
         parentActiveMs: evidence.timing.parentActiveMs,
         workerActiveMs: evidence.timing.workerActiveMs,
@@ -392,8 +449,17 @@ export function summarizeDescriptive(runs) {
     analysis: "descriptive-point-estimates-and-within-block-pairs-only",
     plannedRuns: 72,
     observedRuns: runs.length,
+    unavailableRuns: schedule.runs
+      .filter((planned) => !seen.has(planned.runId))
+      .map((planned) => ({
+        runId: planned.runId,
+        blockId: planned.blockId,
+        armId: planned.armId,
+        reason: "No exact eligible artifact was supplied; unavailable runs are excluded"
+      })),
     armPoints,
-    pairs
+    pairs,
+    registeredContrasts: registeredContrasts(runs, endpointNames)
   };
 }
 

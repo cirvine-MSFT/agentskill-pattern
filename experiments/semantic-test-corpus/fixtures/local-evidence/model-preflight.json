@@ -3,7 +3,7 @@
   "protocolId": "semantic-test-corpus-execution-v2",
   "runId": "B01-A2",
   "attemptNumber": 1,
-  "evidenceSha256": "7f40a0c184d953ffd40406a7b8e941341831e209e8ddc3e430650f7b70cf13d0",
+  "evidenceSha256": "5a890b3f40090340aa0907374a751f67de1480febce6e1bd56d025996282a458",
   "status": "pass",
   "retryEligible": false,
   "beforeOutcomesOpened": true,
@@ -22,6 +22,16 @@
     "worker": [
       "gpt-5.6-sol"
     ]
+  },
+  "checks": {
+    "session": true,
+    "model": true,
+    "mechanism": true,
+    "tools": true,
+    "roles": true,
+    "budgets": true,
+    "candidate": true,
+    "source": true
   },
   "reasons": []
 }

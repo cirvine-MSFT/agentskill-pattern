@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "execution-preflight.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "capturedAt", "cli", "capabilities", "arms"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "capturedAt": {"type": "string"},
+    "cli": {
+      "type": "object",
+      "required": ["command", "version", "capabilityExitCode"],
+      "additionalProperties": false,
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"]},
+        "capabilityExitCode": {"type": ["integer", "null"]}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": [
+        "atomicCreateSession", "localExecution", "promptFile", "parentModel",
+        "customAgent", "workerModelOverride", "rawEvents", "usageExport"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "atomicCreateSession": {"type": "boolean"},
+        "localExecution": {"type": "boolean"},
+        "promptFile": {"type": "boolean"},
+        "parentModel": {"type": "boolean"},
+        "customAgent": {"type": "boolean"},
+        "workerModelOverride": {"type": "boolean"},
+        "rawEvents": {"type": "boolean"},
+        "usageExport": {"type": "boolean"}
+      }
+    },
+    "arms": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["armId", "status", "reasons"],
+        "additionalProperties": false,
+        "properties": {
+          "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+          "status": {"type": "string", "enum": ["available", "unavailable"]},
+          "reasons": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

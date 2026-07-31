@@ -1,73 +1,55 @@
-# Run orchestration
+# V2 run orchestration
 
-Use only an external candidate created by:
+`scripts/run-controlled-harness.mjs` is the only execution entry point. It owns
+candidate materialization, sandbox/MCP configuration, atomic kickoff, raw capture,
+collection, preflight, evaluation, metrics, provenance, and global-order indexing.
+Do not hand-author session, attempt, manifest, evidence, usage, or evaluation JSON.
 
-```text
-node scripts/materialize-candidate.mjs --out <external-empty-directory>
-```
+## Before kickoff
 
-Persist the returned `terminalCommit`, `boundarySha256`, and file hashes in the
-run manifest and attempt `treatment`. Bind the block/arm/seed, exact shared-task
-file hash, candidate commit/snapshot, and all three budgets in every attempt so a
-retry validator can prove the treatment was unchanged. Create a separate app project for that candidate if one does not
-already exist.
+1. Run `npm test` and `npm run reproduce`.
+2. Run `scripts/preflight-execution.mjs` against the real CLI/adapter.
+3. Use external empty candidate/artifact directories and the next exact run in
+   `design/schedule.json`.
+4. Review a harness `--dry-run`.
 
-For every AI attempt, make one atomic `create_session` call with:
+Preflight starts no model session. Arm 5 is unavailable unless the exact same
+`semantic-test-corpus` Skill/agent invocation supports and reports the
+`claude-haiku-4.5` worker override. There is no alternate profile.
 
-- the candidate `project_id`;
-- `execution_location: "local"` (cloud sessions have no eligible local store);
-- a `kickoff` object containing the exact arm condition plus the byte-exact shared
-  task, `model` equal to the arm parent model, and `mode: "autopilot"`;
-- no later message as the measured kickoff.
+The harness reads candidate files only from the immutable source commit/tree/blob
+IDs in `design/source-pin.json`. It transforms the pinned shared task by appending
+the block seed, and the resulting bytes are embedded exactly in kickoff. It creates
+the read-only `corpus-contract`, writable `corpus-staging`, sandbox config, and MCP
+config before one atomic local/autopilot create-session command.
 
-An idle session followed by `send_session_message` is not a measured attempt.
-Record the app project session ID returned by creation and the internal CLI
-session ID from the resulting `session.start` event. Persist a canonical
-`session-creation.json` containing the complete create request/response: project,
-local execution, no parent coordination, candidate commit, and the full kickoff
-object including exact prompt bytes, mode, model, agent, context tier, and
-reasoning effort, plus the returned app project session metadata.
+## Capture and eligibility
 
-After generation ends, copy the complete local `events.jsonl` into the immutable
-attempt artifact directory and export usage:
+The harness captures exact app and CLI session IDs, raw events, usage rows,
+candidate terminal commit/boundary, attempts, model preflight, snapshot, metrics,
+evaluation, and provenance. Files are created once, SHA-256 bound, then read-only.
+The evidence is unsigned and descriptive only.
 
-```text
-node scripts/export-local-usage.mjs --database <session-store.db> \
-  --cli-session-id <id> --out <attempt>/usage.json
-node scripts/collect-local-evidence.mjs --events <attempt>/events.jsonl \
-  --usage <attempt>/usage.json --session-creation <attempt>/session-creation.json \
-  --candidate-boundary <attempt>/candidate-boundary.json --candidate-root <candidate> \
-  --run-manifest <attempt>/manifest.json --run-attempt <attempt>/attempt.json \
-  --out <attempt>/local-evidence.json
-node scripts/preflight-local-model.mjs --evidence <attempt>/local-evidence.json \
-  --out <attempt>/model-preflight.json
-node scripts/validate-local-evidence.mjs --in <attempt>/local-evidence.json \
-  --candidate-root <candidate>
-node scripts/validate-execution-records.mjs --manifest <attempt>/manifest.json
-node evaluator/local-adapter-v2.mjs --corpus-contract <corpus-contract> \
-  --corpus-staging <corpus-staging> --local-evidence <attempt>/local-evidence.json \
-  --model-preflight <attempt>/model-preflight.json --candidate-root <candidate> \
-  --out <attempt>/staging.json
-```
+Eligibility requires observed exact:
 
-For a second attempt, add `--retry <attempt>/retry.json` to collection and retain
-both attempt, local-evidence, and preflight files in the manifest. A retry is valid
-only when the first exact preflight says `retry-required` for a model mismatch and
-the second attempt has fresh app/CLI session IDs with byte-identical treatment.
-Make the copied source exports read-only after
-hashing. Model preflight occurs
-before evaluator snapshot or outcome inspection. A model mismatch may create one
-new atomic attempt; preserve the first attempt and a `retry.schema.json` record.
+- parent and worker sessions/models;
+- Skill, registered agent, invocation, lifecycle, and compact return;
+- `agent_id` plus `parent_tool_call_id` cross-binding to worker name/model;
+- allowed role-specific tools, calls, results, and bytes;
+- wall/tool/model-token budgets;
+- source commit/tree/blobs, candidate boundary hash, and terminal commit.
 
-Only evaluator code may read `corpus-staging/` after model completion. The parent
-stores the worker's compact terminal return but never the full staged corpus.
+Missing, ambiguous, mismatched, or exceeded evidence makes the run unavailable and
+excludes it from analysis. A started wrong model or mechanism is never retried.
+Only a failure before session creation/kickoff may have one retry; it must record
+zero model usage. Selected-attempt and all-attempt operational costs remain separate.
 
-After all eligible snapshots and metrics are frozen, create a
-`descriptive-artifacts.schema.json` manifest containing only run identities and
-paths to deterministic execution, snapshot, metrics, local-evidence, and final
-preflight artifacts. Add an evaluator-owned `evaluation-record.schema.json`
-artifact binding the final eligible attempt ID (or null for arm 0) and exact
-snapshot/metrics paths and SHA-256 values. Run
-`npm run analyze -- --in <manifest> --out <summary>`.
-The analyzer reconstructs every measurement and rejects caller-supplied outcomes
-or reused app/CLI session IDs.
+## Order and analysis
+
+Each deterministic start or AI `session.start` produces a raw-bound start capture.
+`scripts/validate-start-order.mjs` requires all 72 captures, sequence 1..72, and
+strictly increasing raw-derived timestamps.
+
+After snapshots and metrics are immutable, `npm run analyze` reports only the
+registered descriptive arm/block values and contrasts. Unavailable runs are listed
+and excluded. Inferential statistics and v1 execution are unavailable.

@@ -1,0 +1,95 @@
+{
+  "formatVersion": 1,
+  "policy": "Evaluator-only oracle/mutant validation reference; never imported or accessed by the arm-0 generator.",
+  "cases": [
+    {
+      "id": "oracle-reference-M07",
+      "purpose": "evaluator-only witness for M07",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "prod", "region": "eastus"},
+        "logging": {"level": "info", "pretty": true},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db.internal", "name": "app", "ssl": true},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://prod.example.test"]},
+        "features": {"flags": {"alpha": true}}
+      }
+    },
+    {
+      "id": "oracle-reference-M15",
+      "purpose": "evaluator-only witness for M15",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "dev", "region": "eastus"},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db.internal", "name": "app", "ssl": false},
+        "retries": {"mode": "exponential", "maxAttempts": 10, "delayMs": 10000},
+        "security": {"allowedOrigins": ["https://example.test"]},
+        "features": {"flags": {"alpha": true}}
+      }
+    },
+    {
+      "id": "oracle-reference-M26",
+      "purpose": "evaluator-only witness for M26",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "prod", "region": "westeurope"},
+        "logging": {"level": "info", "pretty": true},
+        "cache": {
+          "enabled": true,
+          "provider": "redis",
+          "ttlSeconds": 60,
+          "endpoint": "redis://cache.internal:6379"
+        },
+        "database": {"engine": "sqlite", "name": "pairwise.db"},
+        "retries": {"mode": "exponential", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://prod.example.test"]},
+        "features": {"flags": {"alpha": true}}
+      }
+    },
+    {
+      "id": "oracle-reference-M28",
+      "purpose": "evaluator-only witness for M28",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "dev", "region": "eastus", "port": 5432},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db.internal", "name": "app", "ssl": false},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://example.test"]},
+        "features": {"flags": {"alpha": true}}
+      }
+    },
+    {
+      "id": "oracle-reference-M30",
+      "purpose": "evaluator-only witness for M30",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "dev", "region": "eastus"},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db.internal", "name": "app", "ssl": false},
+        "retries": {"mode": "exponential", "maxAttempts": 1, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://example.test"]},
+        "features": {"flags": {"alpha": true}}
+      }
+    },
+    {
+      "id": "oracle-reference-M32",
+      "purpose": "evaluator-only witness for M32",
+      "input": {
+        "version": 1,
+        "service": {"name": "api", "environment": "dev", "region": "eastus"},
+        "logging": {"level": "info", "pretty": false},
+        "cache": {"enabled": false},
+        "database": {"engine": "postgres", "host": "db.internal", "name": "app", "ssl": false},
+        "retries": {"mode": "fixed", "maxAttempts": 3, "delayMs": 500},
+        "security": {"allowedOrigins": ["https://example.test"]},
+        "features": {"flags": {"New UI": true, "new-ui": false}}
+      }
+    }
+  ]
+}

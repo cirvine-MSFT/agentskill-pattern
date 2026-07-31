@@ -12,12 +12,15 @@ import {
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { taskBytesForSeed, taskSha256ForSeed } from "./execution-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = resolve(root, "..", "..");
 const evaluatorRoot = resolve(root, "evaluator");
-const testWorkRoot = resolve(root, ".test-work");
+const testWorkRoot = resolve(root, ".regression-work");
 const manifest = JSON.parse(readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8"));
+const sourcePin = JSON.parse(readFileSync(resolve(root, manifest.sourcePin), "utf8"));
+const seeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
 const canonicalRepositoryRoot = realpathSync.native(repositoryRoot);
 const canonicalEvaluatorRoot = realpathSync.native(evaluatorRoot);
 
@@ -46,8 +49,18 @@ function runGit(destination, args, extra = {}) {
   return result.stdout;
 }
 
-function committedBlob(repositoryPath) {
-  const result = spawnSync("git", ["show", `HEAD:${repositoryPath}`], {
+function pinnedBlob(repositoryPath) {
+  const blobId = sourcePin.sourceBlobs[repositoryPath];
+  if (!/^[a-f0-9]{40,64}$/u.test(blobId ?? "")) {
+    throw new Error(`No immutable source blob is pinned for ${repositoryPath}`);
+  }
+  const observedBlob = runGit(repositoryRoot, [
+    "rev-parse", `${sourcePin.sourceCommit}:${repositoryPath}`
+  ]).trim();
+  if (observedBlob !== blobId) {
+    throw new Error(`Pinned blob differs from source commit path ${repositoryPath}`);
+  }
+  const result = spawnSync("git", ["cat-file", "blob", blobId], {
     cwd: repositoryRoot,
     encoding: null,
     maxBuffer: 16 * 1024 * 1024
@@ -55,7 +68,7 @@ function committedBlob(repositoryPath) {
   if (result.status !== 0) {
     throw new Error(`Cannot read committed candidate source ${repositoryPath}: ${result.stderr}`);
   }
-  return result.stdout;
+  return { blobId, bytes: result.stdout };
 }
 
 function rejectReparseComponents(path) {
@@ -86,7 +99,18 @@ function canonicalProspectivePath(path) {
   return resolve(realpathSync.native(ancestor), relative(ancestor, target));
 }
 
-export function materializeCandidate(destination, { allowTestDestination = false } = {}) {
+export function materializeCandidate(destination, {
+  allowTestDestination = false,
+  blockId
+} = {}) {
+  const block = seeds.blocks.find((item) => item.id === blockId);
+  if (!block) throw new Error("A frozen block ID from design/seeds.json is required");
+  const observedTree = runGit(repositoryRoot, [
+    "rev-parse", `${sourcePin.sourceCommit}^{tree}`
+  ]).trim();
+  if (observedTree !== sourcePin.sourceTree) {
+    throw new Error("Pinned source tree differs from the immutable source commit");
+  }
   const target = resolve(destination);
   rejectReparseComponents(target);
   const canonicalTarget = canonicalProspectivePath(target);
@@ -126,15 +150,32 @@ export function materializeCandidate(destination, { allowTestDestination = false
     mkdirSync(dirname(output), { recursive: true });
     rejectReparseComponents(dirname(output));
     const repositoryPath = relative(repositoryRoot, canonicalSource).replaceAll("\\", "/");
-    const bytes = committedBlob(repositoryPath);
+    const pinned = pinnedBlob(repositoryPath);
+    const bytes = entry.transform === "append-block-seed"
+      ? taskBytesForSeed(block.seed)
+      : pinned.bytes;
+    if (entry.transform && entry.transform !== "append-block-seed") {
+      throw new Error(`Unsupported candidate transform: ${entry.transform}`);
+    }
     writeFileSync(output, bytes);
-    files.push({ path: entry.destination.replaceAll("\\", "/"), sha256: hash(bytes) });
+    files.push({
+      path: entry.destination.replaceAll("\\", "/"),
+      sha256: hash(bytes),
+      sourcePath: repositoryPath,
+      sourceBlob: pinned.blobId,
+      transform: entry.transform ?? null
+    });
   }
 
   const boundary = {
-    formatVersion: 2,
+    formatVersion: 3,
     protocolId: "semantic-test-corpus-execution-v2",
     manifestVersion: manifest.manifestVersion,
+    sourceCommit: sourcePin.sourceCommit,
+    sourceTree: sourcePin.sourceTree,
+    blockId: block.id,
+    seed: block.seed,
+    taskSha256: taskSha256ForSeed(block.seed),
     candidateRoot: ".",
     networkPolicy: "deny",
     filesystemPolicy: "semantic-corpus-launcher-required",
@@ -159,15 +200,18 @@ export function materializeCandidate(destination, { allowTestDestination = false
     ...boundary,
     materializedRoot: materializedReal,
     boundarySha256: hash(boundaryBytes),
-    terminalCommit: runGit(target, ["rev-parse", "HEAD"]).trim()
+    terminalCommit: runGit(target, ["rev-parse", "refs/heads/main"]).trim()
   };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const index = process.argv.indexOf("--out");
-  if (index < 0 || !process.argv[index + 1]) {
-    throw new Error("Usage: node scripts/materialize-candidate.mjs --out <external-empty-directory>");
+  const blockIndex = process.argv.indexOf("--block");
+  if (index < 0 || !process.argv[index + 1] || blockIndex < 0 || !process.argv[blockIndex + 1]) {
+    throw new Error("Usage: node scripts/materialize-candidate.mjs --block <B01..B12> --out <external-empty-directory>");
   }
-  const boundary = materializeCandidate(process.argv[index + 1]);
+  const boundary = materializeCandidate(process.argv[index + 1], {
+    blockId: process.argv[blockIndex + 1]
+  });
   process.stdout.write(`${JSON.stringify(boundary)}\n`);
 }

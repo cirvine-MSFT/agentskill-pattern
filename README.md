@@ -71,15 +71,16 @@ descriptions of both diagrams.
 | Reference | Live components | Status |
 | --- | --- | --- |
 | **ASCII art** | [`ascii-art` Skill](.github/skills/ascii-art/SKILL.md), [custom agent](.github/agents/ascii-art.agent.md), and [implementation notes](docs/reference-implementations/ascii-art.md) | Implemented; the [completed case study](experiments/ascii-art-powershell-cli) tests the pattern's small-task cost/quality hypothesis. |
-| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [custom agent](.github/agents/semantic-test-corpus.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [five-arm preregistered design](experiments/semantic-test-corpus/README.md) has a deterministic foundation, but no AI trials or AI benchmark results yet. |
+| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [custom agent](.github/agents/semantic-test-corpus.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [six-arm v2 design](experiments/semantic-test-corpus/README.md) has a general deterministic foundation, but no AI trials or AI benchmark results yet. |
 
 In the semantic reference, migration and expected-output oracle behavior remain
 deterministic. AI is limited to proposing semantic v1 source scenarios, with staged
 writes isolated behind a [path-constrained MCP server](tools/semantic-corpus-mcp/server.mjs)
 and its [tests](tests/semantic-corpus-mcp/). An enforceable OS sandbox is mandatory:
 use a container, restricted mounts, restricted VM, or dedicated ACL identity. The
-[executable protocol](experiments/semantic-test-corpus/protocol.md) compares one strong
-deterministic baseline with a 2x2 model-tier-by-delegation design.
+[executable v2 protocol](experiments/semantic-test-corpus/execution-amendment-v2.md)
+compares one public-contract-only script, a 2x2 model-tier-by-delegation design,
+and a GPT-parent-to-Haiku same-agent target arm. V1 is historical and unavailable.
 
 ## Evidence and experiments
 

@@ -1,10 +1,10 @@
 {
   "protocolId": "semantic-test-corpus-execution-v2",
-  "version": 1,
+  "version": 2,
   "sharedTask": "task/shared-task-prompt.txt",
   "executionLocation": "local",
   "kickoffMode": "autopilot",
-  "sessionCreation": "atomic-create-session-with-kickoff",
+  "sessionCreation": "atomic-create-session-with-seeded-kickoff",
   "conditions": [
     {
       "armId": 0,
@@ -44,11 +44,12 @@
     },
     {
       "armId": 5,
-      "execution": "delegated-fixed-specialist",
+      "execution": "delegated-worker-model-override",
       "parentModel": "gpt-5.6-sol",
       "workerModel": "claude-haiku-4.5",
-      "kickoff": "Invoke the benchmark-only semantic-test-corpus-haiku agent through the same custom-agent delegation API with the exact bytes in task/shared-task-prompt.txt. Do not load the core Skill because its contract forbids substituting another identity. Do not call semantic-corpus tools or read corpus-staging in the parent. Return only the worker terminal line.",
-      "unavoidableDifference": "Cross-model inheritance is unavailable and the core Skill forbids substituting its registered identity. Arm 5 therefore omits the Skill router and names semantic-test-corpus-haiku directly. Its test attests that the profile is byte-identical to semantic-test-corpus after removing only the name and fixed model lines."
+      "workerModelOverride": "claude-haiku-4.5",
+      "kickoff": "Load the semantic-test-corpus Skill and invoke its registered semantic-test-corpus agent with the exact bytes in task/shared-task-prompt.txt, explicitly overriding only that worker invocation to claude-haiku-4.5. Do not call semantic-corpus tools or read corpus-staging in the parent. Return only the worker terminal line.",
+      "availabilityRule": "Unavailable before execution unless real preflight observes support for a same-invocation custom-agent worker model override. Never substitute an agent, profile, invocation, tools, instructions, or return contract."
     }
   ]
 }

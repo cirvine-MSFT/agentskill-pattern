@@ -4,7 +4,7 @@
   "type": "object",
   "required": [
     "formatVersion", "protocolId", "evidenceTier", "runId", "blockId", "armId",
-    "identity", "source", "trust", "availability", "models", "attempt", "usage",
+    "identity", "source", "trust", "availability", "models", "attempt", "usage", "operationalUsage",
     "parentContext", "tools", "successfulWrites", "toolErrors", "delegation", "timing", "budgets", "events", "deviations"
   ],
   "additionalProperties": false,
@@ -18,20 +18,35 @@
     "identity": {
       "type": "object",
       "required": [
-        "appProjectSessionId", "cliSessionId", "terminalCommit",
-        "candidateSnapshotSha256"
+        "appProjectSessionId", "cliSessionId", "sourceCommit", "sourceTree",
+        "sourceBlobs", "terminalCommit", "candidateSnapshotSha256"
       ],
       "additionalProperties": false,
       "properties": {
         "appProjectSessionId": {"type": "string", "minLength": 1},
         "cliSessionId": {"type": "string", "minLength": 1},
+        "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+        "sourceTree": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+        "sourceBlobs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["path", "blob"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "blob": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"}
+            }
+          }
+        },
         "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
         "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       }
     },
     "source": {
       "type": "object",
-      "required": ["events", "usage", "sessionCreation", "candidateBoundary", "runManifest", "runAttempt", "retry"],
+      "required": ["events", "usage", "sessionCreation", "candidateBoundary", "runManifest", "runAttempt", "preSessionFailures"],
       "additionalProperties": false,
       "properties": {
         "events": {"$ref": "local-file-source.schema.json"},
@@ -40,11 +55,10 @@
         "candidateBoundary": {"$ref": "local-file-source.schema.json"},
         "runManifest": {"$ref": "local-file-source.schema.json"},
         "runAttempt": {"$ref": "local-file-source.schema.json"},
-        "retry": {
-          "anyOf": [
-            {"type": "null"},
-            {"$ref": "local-file-source.schema.json"}
-          ]
+        "preSessionFailures": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {"$ref": "local-file-source.schema.json"}
         }
       }
     },
@@ -69,11 +83,20 @@
         "mechanism": {"$ref": "evidence-availability.schema.json"},
         "fields": {
           "type": "object",
-          "required": ["premiumRequests", "toolSchemas", "parentWait", "sourceReadOnly"],
+          "required": [
+            "premiumRequests", "toolSchemas", "exposedTools", "compaction",
+            "reasoningTokens", "latencyDetails", "requestMultiplier", "parentWait",
+            "sourceReadOnly"
+          ],
           "additionalProperties": false,
           "properties": {
             "premiumRequests": {"$ref": "evidence-availability.schema.json"},
             "toolSchemas": {"$ref": "evidence-availability.schema.json"},
+            "exposedTools": {"$ref": "evidence-availability.schema.json"},
+            "compaction": {"$ref": "evidence-availability.schema.json"},
+            "reasoningTokens": {"$ref": "evidence-availability.schema.json"},
+            "latencyDetails": {"$ref": "evidence-availability.schema.json"},
+            "requestMultiplier": {"$ref": "evidence-availability.schema.json"},
             "parentWait": {"$ref": "evidence-availability.schema.json"},
             "sourceReadOnly": {"$ref": "evidence-availability.schema.json"}
           }
@@ -91,16 +114,26 @@
     },
     "attempt": {
       "type": "object",
-      "required": ["attemptId", "number", "retryCount", "outcomesOpened"],
+      "required": ["attemptId", "number", "preSessionFailureCount", "outcomesOpened"],
       "additionalProperties": false,
       "properties": {
         "attemptId": {"type": "string", "minLength": 1},
-        "number": {"type": "integer", "minimum": 1, "maximum": 2},
-        "retryCount": {"type": "integer", "minimum": 0, "maximum": 1},
+        "number": {"const": 1},
+        "preSessionFailureCount": {"type": "integer", "minimum": 0, "maximum": 1},
         "outcomesOpened": {"type": "boolean"}
       }
     },
     "usage": {
+      "type": "object",
+      "required": ["parent", "worker", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": {"$ref": "local-usage-metrics.schema.json"},
+        "worker": {"$ref": "local-usage-metrics.schema.json"},
+        "total": {"$ref": "local-usage-metrics.schema.json"}
+      }
+    },
+    "operationalUsage": {
       "type": "object",
       "required": ["parent", "worker", "total"],
       "additionalProperties": false,
@@ -121,7 +154,7 @@
     },
     "tools": {
       "type": "object",
-      "required": ["schemas", "calls", "callCount", "resultCount", "resultBytes"],
+      "required": ["schemas", "exposed", "calls", "callCount", "resultCount", "resultBytes"],
       "additionalProperties": false,
       "properties": {
         "schemas": {
@@ -132,6 +165,15 @@
             "available": {"type": "boolean"},
             "count": {"type": ["integer", "null"], "minimum": 0},
             "names": {"type": ["array", "null"], "items": {"type": "string"}}
+          }
+        },
+        "exposed": {
+          "type": "object",
+          "required": ["available", "names"],
+          "additionalProperties": false,
+          "properties": {
+            "available": {"const": false},
+            "names": {"type": "null"}
           }
         },
         "calls": {
@@ -192,25 +234,27 @@
     },
     "delegation": {
       "type": "object",
-      "required": ["invoked", "completed", "agentName", "compactReturn"],
+      "required": ["invoked", "completed", "agentName", "compactReturn", "compactReturnBytes"],
       "additionalProperties": false,
       "properties": {
         "invoked": {"type": "boolean"},
         "completed": {"type": "boolean"},
         "agentName": {"type": ["string", "null"]},
         "compactReturn": {"type": ["string", "null"]}
+        ,"compactReturnBytes": {"type": ["integer", "null"], "minimum": 0}
       }
     },
     "timing": {
       "type": "object",
       "required": [
-        "startedAt", "endedAt", "wallMs", "parentActiveMs",
+        "startedAt", "endedAt", "globalOrder", "wallMs", "parentActiveMs",
         "workerActiveMs", "parentWaitMs"
       ],
       "additionalProperties": false,
       "properties": {
         "startedAt": {"type": ["string", "null"]},
         "endedAt": {"type": ["string", "null"]},
+        "globalOrder": {"type": "integer", "minimum": 1, "maximum": 72},
         "wallMs": {"type": ["integer", "null"], "minimum": 0},
         "parentActiveMs": {"type": ["integer", "null"], "minimum": 0},
         "workerActiveMs": {"type": ["integer", "null"], "minimum": 0},
@@ -248,11 +292,12 @@
     },
     "events": {
       "type": "object",
-      "required": ["count", "completionCount"],
+      "required": ["count", "completionCount", "compactionCount"],
       "additionalProperties": false,
       "properties": {
         "count": {"type": "integer", "minimum": 1},
         "completionCount": {"type": "integer", "minimum": 0}
+        ,"compactionCount": {"type": "null"}
       }
     },
     "deviations": {"type": "array", "items": {"type": "string"}}

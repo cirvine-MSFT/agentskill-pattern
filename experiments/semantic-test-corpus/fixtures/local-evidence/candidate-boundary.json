@@ -1,62 +1,99 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 3,
   "protocolId": "semantic-test-corpus-execution-v2",
-  "manifestVersion": 2,
+  "manifestVersion": 3,
+  "sourceCommit": "a4adf743e593aae3aee901efac63e4e6fcbeadbf",
+  "sourceTree": "03684bfb1d0c2c1e6733e4ef83f0cd0bfb6c6deb",
+  "blockId": "B01",
+  "seed": 1812433253,
+  "taskSha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
   "candidateRoot": ".",
   "networkPolicy": "deny",
   "filesystemPolicy": "semantic-corpus-launcher-required",
   "files": [
     {
       "path": "package.json",
-      "sha256": "63fc1adda5171634f544ae60eee8f654d2fc7857355f4a2e68cf0f487bf4f6d9"
+      "sha256": "63fc1adda5171634f544ae60eee8f654d2fc7857355f4a2e68cf0f487bf4f6d9",
+      "sourcePath": "experiments/semantic-test-corpus/candidate-template/package.json",
+      "sourceBlob": "375823f8278557b384b3363894ba5a7b90ec201c",
+      "transform": null
     },
     {
-      "path": "contract/mapping-spec.json",
-      "sha256": "d75f087df2b1256a0d6f92a0958424e575e3c009a70a90c35377254f51a99578"
+      "path": "corpus-contract/mapping-spec.json",
+      "sha256": "d75f087df2b1256a0d6f92a0958424e575e3c009a70a90c35377254f51a99578",
+      "sourcePath": "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json",
+      "sourceBlob": "d84c06bf006ed0037ed2245ea748caac3c70d145",
+      "transform": null
     },
     {
-      "path": "contract/request.json",
-      "sha256": "122c026ad00bb9b3800efecb53f75d8bd1a4344ab8ab9e79319a5ddf7be375c9"
+      "path": "corpus-contract/request.json",
+      "sha256": "122c026ad00bb9b3800efecb53f75d8bd1a4344ab8ab9e79319a5ddf7be375c9",
+      "sourcePath": "experiments/semantic-test-corpus/design/corpus-request.json",
+      "sourceBlob": "5f196dbb59c106afe6e6902560bd886ca1683451",
+      "transform": null
     },
     {
       "path": "schemas/v1-config.schema.json",
-      "sha256": "9c9eed772f23dc9bb86f69970e54506f5f1b5ca18036270b17013eb703959cec"
+      "sha256": "9c9eed772f23dc9bb86f69970e54506f5f1b5ca18036270b17013eb703959cec",
+      "sourcePath": "experiments/semantic-test-corpus/schemas/v1-config.schema.json",
+      "sourceBlob": "6a109acfa4d610ed5eec6b0041b8524230f7c979",
+      "transform": null
     },
     {
       "path": "schemas/scenario.schema.json",
-      "sha256": "2740f3894b0256d4c156d5f3422ce38192e44d81a1421adf859b0cd63136e65e"
+      "sha256": "2740f3894b0256d4c156d5f3422ce38192e44d81a1421adf859b0cd63136e65e",
+      "sourcePath": "experiments/semantic-test-corpus/schemas/scenario.schema.json",
+      "sourceBlob": "96cd02f89b3d81ecd93b80eb18073596a9dec1ae",
+      "transform": null
     },
     {
       "path": "schemas/staging.schema.json",
-      "sha256": "251f652dc3ed8a622faae86994f9a826380eb5f3a0f049b163c29d43237ce12c"
+      "sha256": "251f652dc3ed8a622faae86994f9a826380eb5f3a0f049b163c29d43237ce12c",
+      "sourcePath": "experiments/semantic-test-corpus/schemas/staging.schema.json",
+      "sourceBlob": "b38752f9e2526d79043e6b51114409a37e4ee637",
+      "transform": null
     },
     {
       "path": "task/shared-task-prompt.txt",
-      "sha256": "0e8f3d4976a3d77d6e0cca689f9c9d7f382c5ca86598a6410f0e966af5771000"
+      "sha256": "d098a6165bcbfef94faa52d7b9afa3cd1003f9cead905a3362791a56e248c1a0",
+      "sourcePath": "experiments/semantic-test-corpus/design/shared-task-prompt.txt",
+      "sourceBlob": "d26a4706e7f1254ef24240e0acd4b0795c99eef7",
+      "transform": "append-block-seed"
     },
     {
       "path": ".github/agents/semantic-test-corpus.agent.md",
-      "sha256": "ab556e226e3dda4cbd939fdf7de69cf328b06a5516deaf1c905ef497ccadd2f1"
-    },
-    {
-      "path": ".github/agents/semantic-test-corpus-haiku.agent.md",
-      "sha256": "8975388d6c386ddccf47e7997d17618b03260218832e2b88d27fd8a64906ebd6"
+      "sha256": "ab556e226e3dda4cbd939fdf7de69cf328b06a5516deaf1c905ef497ccadd2f1",
+      "sourcePath": ".github/agents/semantic-test-corpus.agent.md",
+      "sourceBlob": "9a3068268d5223a94af800ce7b3aa6cafa252a5c",
+      "transform": null
     },
     {
       "path": ".github/skills/semantic-test-corpus/SKILL.md",
-      "sha256": "ce2a9d6af353fef1b1c41d8a0b0419df1e7e42463a6a3ce2893697f096df2cf8"
+      "sha256": "ce2a9d6af353fef1b1c41d8a0b0419df1e7e42463a6a3ce2893697f096df2cf8",
+      "sourcePath": ".github/skills/semantic-test-corpus/SKILL.md",
+      "sourceBlob": "95c53117bb4520fa38fee7ab8df975fc76e12b20",
+      "transform": null
     },
     {
       "path": "tools/semantic-corpus-mcp/server.mjs",
-      "sha256": "7f7bf0865a970d9af1f28a82cc56cb861f9257e0db0e744287c13dc375910aab"
+      "sha256": "7f7bf0865a970d9af1f28a82cc56cb861f9257e0db0e744287c13dc375910aab",
+      "sourcePath": "tools/semantic-corpus-mcp/server.mjs",
+      "sourceBlob": "ac9baf5ee9fb0666185069bd653daec2ea1eb296",
+      "transform": null
     },
     {
       "path": "tools/semantic-corpus-mcp/protocol.mjs",
-      "sha256": "707f3df5f8133ea647abd3e833420b775703df771e8265a969da0e52da979abe"
+      "sha256": "707f3df5f8133ea647abd3e833420b775703df771e8265a969da0e52da979abe",
+      "sourcePath": "tools/semantic-corpus-mcp/protocol.mjs",
+      "sourceBlob": "c3798060c843c8fafcf0f33c99f2bcbad5448c83",
+      "transform": null
     },
     {
       "path": "tools/semantic-corpus-mcp/lib.mjs",
-      "sha256": "4d3a85c9ff89bd24c97fc12cc1c6d05dfedca28df64586f58ca7537e7345cc80"
+      "sha256": "4d3a85c9ff89bd24c97fc12cc1c6d05dfedca28df64586f58ca7537e7345cc80",
+      "sourcePath": "tools/semantic-corpus-mcp/lib.mjs",
+      "sourceBlob": "fa94ac314c125340d3dd00181d88e2b03b79d778",
+      "transform": null
     }
   ]
 }

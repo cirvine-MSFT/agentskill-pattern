@@ -29,20 +29,24 @@ export function validateLocalEvidence(evidence, { artifactRoot, candidateRoot } 
   if (artifactRoot) {
     for (const [label, source] of Object.entries(evidence.source ?? {})) {
       if (source === null) continue;
-      const path = resolve(artifactRoot, source.path);
-      if (!existsSync(path)) {
-        errors.push(`${label} source file is missing`);
-        continue;
+      for (const item of Array.isArray(source) ? source : [source]) {
+        const path = resolve(artifactRoot, item.path);
+        if (!existsSync(path)) {
+          errors.push(`${label} source file is missing`);
+          continue;
+        }
+        const bytes = readFileSync(path);
+        if (bytes.length !== item.bytes) errors.push(`${label} source byte count differs`);
+        if (sha256(bytes) !== item.sha256) errors.push(`${label} source SHA-256 differs`);
       }
-      const bytes = readFileSync(path);
-      if (bytes.length !== source.bytes) errors.push(`${label} source byte count differs`);
-      if (sha256(bytes) !== source.sha256) errors.push(`${label} source SHA-256 differs`);
     }
     if (errors.length === 0) {
       const readSource = (name) => readFileSync(resolve(artifactRoot, evidence.source[name].path));
-      const retryBytes = evidence.source.retry
-        ? readFileSync(resolve(artifactRoot, evidence.source.retry.path))
-        : null;
+      const preSessionFailures = evidence.source.preSessionFailures.map((source) => {
+        const path = resolve(artifactRoot, source.path);
+        const bytes = readFileSync(path);
+        return { path, bytes, record: JSON.parse(bytes) };
+      });
       const manifestBytes = readSource("runManifest");
       const attemptBytes = readSource("runAttempt");
       const recomputed = collectLocalEvidence({
@@ -61,11 +65,7 @@ export function validateLocalEvidence(evidence, { artifactRoot, candidateRoot } 
         runAttempt: JSON.parse(attemptBytes),
         runAttemptBytes: attemptBytes,
         runAttemptPath: evidence.source.runAttempt.path,
-        ...(retryBytes ? {
-          retryRecord: JSON.parse(retryBytes),
-          retryBytes,
-          retryPath: evidence.source.retry.path
-        } : {})
+        preSessionFailures
       });
       if (JSON.stringify(recomputed) !== JSON.stringify(evidence)) {
         errors.push("local evidence does not exactly match deterministic recollection from bound sources");

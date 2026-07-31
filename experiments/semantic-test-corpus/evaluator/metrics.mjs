@@ -6,7 +6,10 @@ import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { canonicalStagingBytes } from "./adapter.mjs";
-import { generateBaseline } from "../baseline/generate.mjs";
+import {
+  GENERAL_GENERATOR_DEPENDENCIES,
+  generateGeneralBaseline
+} from "../baseline/general-generate.mjs";
 import { buildKillMatrix } from "./mutants/run.mjs";
 import { promoteSubmission } from "./promote.mjs";
 import { buildReport } from "./report.mjs";
@@ -21,16 +24,14 @@ const mappingSpecPath = resolve(root, "fixture", "spec", "mapping-spec.json");
 const mappingSpec = JSON.parse(readFileSync(mappingSpecPath, "utf8"));
 const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
 const seeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
+const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.json"), "utf8"));
 const GENERATOR_FILES = [
-  "baseline/finite-domain-solver.mjs",
-  "baseline/generate.mjs",
-  "baseline/pairwise.mjs",
+  ...GENERAL_GENERATOR_DEPENDENCIES,
   "design/schedule.json",
   "design/seeds.json"
 ];
 const EVALUATOR_FILES = [
-  "baseline/finite-domain-solver.mjs",
-  "baseline/generate.mjs",
+  "baseline/general-generate.mjs",
   "baseline/pairwise.mjs",
   "evaluator/adapter.mjs",
   "evaluator/metrics.mjs",
@@ -86,8 +87,9 @@ function gitBlobHash(bytes, objectFormat) {
 }
 
 function generatorProvenance() {
-  const commitSha = gitValue(["rev-parse", "HEAD"], "generator commit");
-  const repositoryRoot = gitValue(["rev-parse", "--show-toplevel"], "repository root");
+  const commitSha = sourcePin.generatorCommit;
+  const treeSha = sourcePin.generatorTree;
+  const repositoryRoot = resolve(root, "..", "..");
   const objectFormat = gitValue(["rev-parse", "--show-object-format"], "Git object format");
   if (!["sha1", "sha256"].includes(objectFormat)) {
     throw new Error(`Unsupported Git object format: ${objectFormat}`);
@@ -96,16 +98,22 @@ function generatorProvenance() {
     const absolutePath = resolve(root, path);
     const repositoryPath = relative(repositoryRoot, absolutePath).replaceAll("\\", "/");
     const bytes = readFileSync(absolutePath);
-    const blobSha = gitValue(
-      ["rev-parse", `HEAD:${repositoryPath}`],
-      `committed generator blob ${path}`
+    const blobSha = sourcePin.generatorBlobs[repositoryPath];
+    const committedBlob = gitValue(
+      ["rev-parse", `${commitSha}:${repositoryPath}`],
+      `pinned generator blob ${path}`
     );
+    if (committedBlob !== blobSha) {
+      throw new Error(`Pinned generator path differs from blob: ${path}`);
+    }
     if (gitBlobHash(bytes, objectFormat) !== blobSha) {
       throw new Error(`Baseline generator dependency differs from committed blob: ${path}`);
     }
     return { path, blobSha };
   });
-  return { commitSha, objectFormat, files };
+  const committedTree = gitValue(["rev-parse", `${commitSha}^{tree}`], "generator tree");
+  if (committedTree !== treeSha) throw new Error("Pinned generator tree differs from commit");
+  return { commitSha, treeSha, objectFormat, files };
 }
 
 export function canonicalMetricsBytes(value) {
@@ -144,7 +152,7 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
     throw new Error("Metrics run differs from the frozen schedule and seed");
   }
   if (armId === 0) {
-    const expected = canonicalStagingBytes(generateBaseline({ seed, blockId }));
+    const expected = canonicalStagingBytes(generateGeneralBaseline({ seed, blockId }));
     if (!expected.equals(snapshotBytes)) {
       throw new Error("Baseline snapshot differs from the frozen seeded generator");
     }

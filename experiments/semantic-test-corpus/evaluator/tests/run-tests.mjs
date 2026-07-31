@@ -5,7 +5,11 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, wr
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { generateBaseline, PAIRWISE_FACTORS } from "../../baseline/generate.mjs";
+import {
+  GENERAL_GENERATOR_DEPENDENCIES,
+  generateBaseline,
+  PAIRWISE_FACTORS
+} from "../../baseline/generate.mjs";
 import { FiniteDomainSolver } from "../../baseline/finite-domain-solver.mjs";
 import { findUncoveredPairs, generatePairwiseCoveringArray } from "../../baseline/pairwise.mjs";
 import { compareCodePointStrings, mappingSpec, migrateV1ToV2 } from "../../fixture/migration/index.mjs";
@@ -20,8 +24,15 @@ import { evaluateModelBindings } from "../../scripts/preflight-models.mjs";
 import { collectLocalEvidence } from "../../scripts/collect-local-evidence.mjs";
 import { createUsageExport } from "../../scripts/export-local-usage.mjs";
 import { preflightLocalModel } from "../../scripts/preflight-local-model.mjs";
+import {
+  kickoffBytesForRun,
+  kickoffSha256ForRun
+} from "../../scripts/execution-contract.mjs";
+import { preflightExecution } from "../../scripts/preflight-execution.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
+import { runControlledHarness } from "../../scripts/run-controlled-harness.mjs";
 import { runDeterministicBlock } from "../../scripts/run-deterministic-block.mjs";
+import { validateStartOrder } from "../../scripts/validate-start-order.mjs";
 import { validateExecutionRecords } from "../../scripts/validate-execution-records.mjs";
 import { validateLocalEvidence } from "../../scripts/validate-local-evidence.mjs";
 import {
@@ -57,12 +68,16 @@ const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluato
 const frozenSchedule = readRootJson("design", "schedule.json");
 const frozenContract = readRootJson("design", "arm-contract.json");
 const tests = [];
-const evidenceCandidateRoot = resolve(root, ".test-work", "evidence-candidate");
+const evidenceCandidateRoot = resolve(root, ".regression-work", "evidence-candidate");
 
 function ensureEvidenceCandidate() {
-  if (!existsSync(resolve(evidenceCandidateRoot, ".git"))) {
+  if (!existsSync(resolve(evidenceCandidateRoot, ".git"))
+    || !existsSync(resolve(evidenceCandidateRoot, ".benchmark-boundary.json"))) {
     rmSync(evidenceCandidateRoot, { recursive: true, force: true });
-    materializeCandidate(evidenceCandidateRoot, { allowTestDestination: true });
+    materializeCandidate(evidenceCandidateRoot, {
+      allowTestDestination: true,
+      blockId: "B01"
+    });
   }
   return evidenceCandidateRoot;
 }
@@ -432,9 +447,15 @@ test("baseline is deterministic and staging-valid", () => {
   assert.deepEqual(generateBaseline(), checked);
   assert.equal(checked.cases.length, 60);
   assert.deepEqual(validateStaging(checked), []);
-  for (const tag of ["decision-table", "boundary-partition", "pairwise-covering", "grammar-property", "constraint-solver"]) {
+  for (const tag of [
+    "schema-pairwise", "schema-enumeration", "schema-optional",
+    "public-contract-value", "generic-boundary", "generic-string-partition",
+    "seeded-schema-property"
+  ]) {
     assert(checked.cases.some((scenario) => scenario.sourceTags.includes(tag)), `missing strategy ${tag}`);
   }
+  assert(GENERAL_GENERATOR_DEPENDENCIES.every((path) =>
+    !/evaluator|held-out|mutant|oracle/iu.test(path)));
 });
 
 test("randomized complete-block schedule is frozen", () => {
@@ -450,16 +471,173 @@ test("randomized complete-block schedule is frozen", () => {
     assert.deepEqual(rows.map((run) => run.armId).toSorted(), [0, 1, 2, 3, 4, 5]);
     assert.deepEqual(rows.map((run) => run.order).toSorted(), [1, 2, 3, 4, 5, 6]);
   }
+  assert.deepEqual(schedule.runs.map((run) => run.globalOrder),
+    Array.from({ length: 72 }, (_, index) => index + 1));
 });
 
-test("condition instructions freeze all six mechanisms and fixed specialist", () => {
+test("captured timestamps enforce the strict 72-run global start order", () => {
+  const temporary = resolve(root, ".order-test-work");
+  rmSync(temporary, { recursive: true, force: true });
+  mkdirSync(temporary, { recursive: true });
+  try {
+    const captures = frozenSchedule.runs.map((run, index) => {
+      const startedAt = new Date(Date.parse("2026-07-31T20:00:00.000Z") + index * 1000)
+        .toISOString();
+      const sourcePath = `${run.runId}.start`;
+      const bytes = run.armId === 0
+        ? Buffer.from(`${JSON.stringify({ startedAt })}\n`)
+        : Buffer.from(`${JSON.stringify({
+            type: "session.start",
+            timestamp: startedAt,
+            data: { sessionId: `${run.runId}-session` }
+          })}\n`);
+      writeFileSync(resolve(temporary, sourcePath), bytes);
+      return {
+        runId: run.runId,
+        blockId: run.blockId,
+        armId: run.armId,
+        sequence: run.globalOrder,
+        startedAt,
+        sourcePath,
+        sourceSha256: createHash("sha256").update(bytes).digest("hex")
+      };
+    });
+    const index = {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      captures
+    };
+    assert.deepEqual(validateStartOrder(index, { baseDir: temporary }), []);
+    const reordered = structuredClone(index);
+    [reordered.captures[0], reordered.captures[1]] =
+      [reordered.captures[1], reordered.captures[0]];
+    assert(validateStartOrder(reordered, { baseDir: temporary })
+      .some((error) => error.includes("global start sequence")));
+    const forged = structuredClone(index);
+    forged.captures[1].startedAt = forged.captures[0].startedAt;
+    assert(validateStartOrder(forged, { baseDir: temporary })
+      .some((error) => error.includes("strictly increasing")
+        || error.includes("not derived")));
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("fake CLI preflight and harness capture a complete immutable run", () => {
+  const fakeCli = resolve(root, "fixtures", "fake-copilot-cli.mjs");
+  const available = preflightExecution(fakeCli, "2026-07-31T20:00:00.000Z");
+  assert(available.arms.every((arm) => arm.status === "available"));
+  const unsupported = preflightExecution(process.execPath, "2026-07-31T20:00:00.000Z");
+  assert.equal(unsupported.arms[5].status, "unavailable");
+  assert(unsupported.arms[5].reasons.some((reason) =>
+    reason.includes("worker model override")));
+
+  const repositoryRoot = resolve(root, "..", "..");
+  const temporary = resolve(repositoryRoot, "..", `.semantic-harness-${process.pid}`);
+  const candidateRoot = resolve(temporary, "candidate");
+  const artifactRoot = resolve(temporary, "artifacts");
+  const startIndexPath = resolve(temporary, "start-index.json");
+  rmSync(temporary, { recursive: true, force: true });
+  mkdirSync(temporary, { recursive: true });
+  try {
+    const dryRun = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot,
+      artifactRoot,
+      startIndexPath,
+      blockId: "B01",
+      armId: 4,
+      dryRun: true,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(dryRun.status, "dry-run");
+    assert(dryRun.plan.atomicCommand.args.includes("--prompt-file"));
+    assert(dryRun.plan.atomicCommand.args.includes("--model"));
+    assert.equal(dryRun.plan.atomicCommand.args.includes("--worker-model"), false);
+    const targetDryRun = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "target-candidate"),
+      artifactRoot: resolve(temporary, "target-artifacts"),
+      startIndexPath,
+      blockId: "B01",
+      armId: 5,
+      dryRun: true,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    const workerModelIndex = targetDryRun.plan.atomicCommand.args.indexOf("--worker-model");
+    assert.equal(
+      targetDryRun.plan.atomicCommand.args[workerModelIndex + 1],
+      "claude-haiku-4.5"
+    );
+
+    const result = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot,
+      artifactRoot,
+      startIndexPath,
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(result.status, "complete", result.modelPreflight?.reasons.join("\n"));
+    assert.equal(result.modelPreflight.status, "pass");
+    assert.equal(result.evidence.trust.signed, false);
+    assert.equal(result.evidence.trust.complianceProof, false);
+    assert.equal(result.evidence.delegation.agentName, "semantic-test-corpus");
+    assert.equal(result.evidence.models.observed.worker[0], "claude-haiku-4.5");
+    assert.equal(result.provenance.evidence, "unsigned-descriptive-only");
+    const startIndex = JSON.parse(readFileSync(startIndexPath, "utf8"));
+    assert.deepEqual(validateStartOrder(startIndex, {
+      requireComplete: false,
+      baseDir: temporary
+    }), []);
+    assert(existsSync(resolve(artifactRoot, "staging.json")));
+    assert(existsSync(resolve(artifactRoot, "metrics.json")));
+    assert(existsSync(resolve(artifactRoot, "capture-provenance.json")));
+
+    process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
+    const failureRoot = resolve(temporary, "failure");
+    const failure = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(failureRoot, "candidate"),
+      artifactRoot: resolve(failureRoot, "artifacts"),
+      startIndexPath: resolve(failureRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_CREATE_FAILURE;
+    assert.equal(failure.status, "pre-session-failure");
+    assert.equal(failure.failure.kickoffStarted, false);
+    assert.equal(failure.failure.usage.modelTokens, 0);
+  } finally {
+    delete process.env.FAKE_COPILOT_CREATE_FAILURE;
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("condition instructions freeze all six mechanisms and same-agent override", () => {
   const conditions = readRootJson("design", "condition-instructions.json");
   assert.equal(conditions.protocolId, "semantic-test-corpus-execution-v2");
   assert.deepEqual(conditions.conditions.map((condition) => condition.armId), [0, 1, 2, 3, 4, 5]);
   assert.equal(conditions.conditions.find((condition) => condition.armId === 5).workerModel,
     "claude-haiku-4.5");
-  assert.match(conditions.conditions.find((condition) => condition.armId === 5).kickoff,
-    /semantic-test-corpus-haiku/);
+  const target = conditions.conditions.find((condition) => condition.armId === 5);
+  assert.equal(target.workerModelOverride, "claude-haiku-4.5");
+  assert.match(target.kickoff, /registered semantic-test-corpus agent/);
+  assert.doesNotMatch(target.kickoff, /semantic-test-corpus-haiku/);
+  assert.equal(existsSync(resolve(root, "..", "..", ".github", "agents",
+    "semantic-test-corpus-haiku.agent.md")), false);
+  const kickoff = kickoffBytesForRun(5, 1812433253);
+  assert.match(kickoff.toString("utf8"), /Benchmark block seed: 1812433253/);
+  assert.equal(
+    createHash("sha256").update(kickoff).digest("hex"),
+    kickoffSha256ForRun(5, 1812433253)
+  );
 });
 
 test("v2 analyzer emits six-arm point estimates and pairs without inference", () => {
@@ -485,12 +663,36 @@ test("v2 analyzer emits six-arm point estimates and pairs without inference", ()
     pair.armId === 5 && pair.endpoint === "promotionRate").blockPairs.length, 12);
   assert.equal(summary.pairs.find((pair) =>
     pair.armId === 5 && pair.endpoint === "promotionRate").mean, 0.5);
+  assert.deepEqual(
+    [...new Set(summary.registeredContrasts.map((contrast) => contrast.id))],
+    [
+      "script-vs-gpt-inline",
+      "script-vs-gpt-gpt",
+      "script-vs-haiku-inline",
+      "script-vs-haiku-haiku",
+      "script-vs-gpt-haiku",
+      "gpt-delegation",
+      "delegated-worker-tier",
+      "haiku-delegation",
+      "gpt-inline-vs-target",
+      "factorial-model-tier",
+      "factorial-delegation",
+      "factorial-interaction",
+      "factorial-tier-inline",
+      "factorial-tier-delegated"
+    ]
+  );
+  assert.equal(summary.unavailableRuns.length, 0);
+  const incomplete = summarizeDescriptive(runs.slice(1));
+  assert.equal(incomplete.observedRuns, 71);
+  assert.deepEqual(incomplete.unavailableRuns.map((run) => run.runId), [runs[0].runId]);
+  assert.match(incomplete.unavailableRuns[0].reason, /excluded/);
   assert.doesNotMatch(JSON.stringify(summary),
     /pValue|confidenceInterval|noninferior|bootstrap|holm/i);
 });
 
 test("v2 analyzer derives measurements only from exact evaluator artifacts", () => {
-  const temporary = resolve(root, ".test-work", "descriptive-v2");
+  const temporary = resolve(process.env.TEMP ?? root, `semantic-descriptive-${process.pid}`);
   rmSync(temporary, { recursive: true, force: true });
   mkdirSync(temporary, { recursive: true });
   try {
@@ -607,12 +809,15 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     assert.equal(runs.find((run) => run.armId === 0).endpoints.totalModelTokens, 0);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.totalModelTokens, 1850);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.modelEvidenceAvailable, 1);
-    assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 0);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 1);
 
     const tampered = structuredClone(aiMetrics);
     tampered.metrics.promotion.promotionRate = -1;
     writeFileSync(aiMetricsPath, canonicalMetricsBytes(tampered));
-    assert.throws(() => buildDescriptiveRuns(definitions, temporary),
+    assert.throws(() => buildDescriptiveRuns({
+      ...definitions,
+      runs: [definitions.runs[1]]
+    }, temporary),
       /Evaluation record|not exact deterministic output/);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
@@ -680,7 +885,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
   assert.equal(evidence.usage.total.aiCredits, 6);
   assert.equal(evidence.usage.total.cachedTokens, 1450);
   assert.equal(evidence.delegation.compactReturn,
-    "corpus-staging/manifest.json - 60 scenarios - SUCCESS");
+    "corpus-staging - 0 scenarios - FAILURE: SCHEMA_ERROR");
 
   const evidenceBytes = Buffer.from(`${JSON.stringify(evidence, null, 2)}\n`);
   assert.equal(preflightLocalModel(evidence, evidenceBytes).status, "pass");
@@ -689,7 +894,7 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
   assert.equal(preflightLocalModel(
     metadataOnlyMismatch,
     Buffer.from(`${JSON.stringify(metadataOnlyMismatch, null, 2)}\n`)
-  ).status, "retry-required");
+  ).status, "unavailable");
 
   const mismatchUsage = JSON.parse(usageBytes);
   mismatchUsage.rows.find((row) => row.agent_id !== null).model = "claude-haiku-4.5";
@@ -711,16 +916,35 @@ test("captured local evidence is reproducible, fail-closed, and model-bound", ()
     runAttemptBytes,
     runAttemptPath
   });
-  const retry = preflightLocalModel(mismatch, Buffer.from(`${JSON.stringify(mismatch, null, 2)}\n`));
-  assert.equal(retry.status, "retry-required");
-  assert.equal(retry.retryEligible, true);
-  const secondMismatch = structuredClone(mismatch);
-  secondMismatch.attempt.number = 2;
-  secondMismatch.attempt.retryCount = 1;
-  const exhausted = preflightLocalModel(secondMismatch,
-    Buffer.from(`${JSON.stringify(secondMismatch, null, 2)}\n`));
-  assert.equal(exhausted.status, "unavailable");
-  assert.equal(exhausted.retryEligible, false);
+  const rejected = preflightLocalModel(mismatch,
+    Buffer.from(`${JSON.stringify(mismatch, null, 2)}\n`));
+  assert.equal(rejected.status, "unavailable");
+  assert.equal(rejected.retryEligible, false);
+  assert(rejected.reasons.some((reason) => reason.includes("post-start retry is forbidden")));
+  const unboundUsage = JSON.parse(usageBytes);
+  const unboundWorker = unboundUsage.rows.find((row) => row.agent_id !== null);
+  unboundWorker.agent_id = "wrong-agent";
+  const unboundBytes = Buffer.from(`${JSON.stringify(unboundUsage, null, 2)}\n`);
+  const unbound = collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes: unboundBytes,
+    usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    candidateRoot,
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+  assert.equal(unbound.availability.model.status, "unavailable");
+  assert(unbound.availability.model.reasons.some((reason) =>
+    reason.includes("exact parent/worker lifecycle")));
   const openedEvidence = structuredClone(evidence);
   openedEvidence.attempt.outcomesOpened = true;
   const opened = preflightLocalModel(openedEvidence,
@@ -795,7 +1019,7 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
   const evidenceBytes = readFileSync(resolve(fixtureRoot, "expected.json"));
   const evidence = JSON.parse(evidenceBytes);
   const preflight = preflightLocalModel(evidence, evidenceBytes);
-  const temporary = resolve(root, ".test-work", "local-adapter");
+  const temporary = resolve(process.env.TEMP ?? root, `semantic-local-adapter-${process.pid}`);
   const contractRoot = resolve(temporary, "corpus-contract");
   const stagingRoot = resolve(temporary, "corpus-staging");
   const outputPath = resolve(temporary, "snapshot", "B01-A2.json");
@@ -834,13 +1058,18 @@ test("local evaluator adapter snapshots only after passing model preflight", () 
     assert.equal(snapshot.staging.adapter.successfulWrites, 0);
     assert.deepEqual(snapshot.bytes, canonicalStagingBytes(snapshot.staging));
 
-    const retryRequired = { ...preflight, status: "retry-required", retryEligible: true };
+    const unavailable = {
+      ...preflight,
+      status: "unavailable",
+      retryEligible: false,
+      reasons: ["started mechanism mismatch"]
+    };
     assert.throws(() => snapshotLocalCorpusStaging({
       corpusContractRoot: contractRoot,
       corpusStagingRoot: stagingRoot,
       localEvidence: evidence,
       localEvidenceBytes: evidenceBytes,
-      modelPreflight: retryRequired,
+      modelPreflight: unavailable,
       sourceArtifactRoot: fixtureRoot,
       sourceCandidateRoot: candidateRoot,
       outputPath: resolve(temporary, "snapshot", "rejected.json")
@@ -885,6 +1114,8 @@ test("local usage export and execution record schemas reject cross-session ambig
         blockId: "B01",
         armId: 2,
         seed: 1812433253,
+        sourceCommit: "a".repeat(40),
+        sourceTree: "b".repeat(40),
         terminalCommit: "a".repeat(40),
         candidateSnapshotSha256: "b".repeat(64),
         sharedTaskSha256: "c".repeat(64),
@@ -897,28 +1128,16 @@ test("local usage export and execution record schemas reject cross-session ambig
       outcomesOpenedAt: null,
       deviations: []
     }],
-    ["retry.schema.json", {
-      formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
-      retryId: "B01-A2-retry-1",
-      runId: "B01-A2",
-      fromAttemptId: "B01-A2-attempt-1",
-      toAttemptId: "B01-A2-attempt-2",
-      reason: "observed-model-mismatch",
-      authorizedAt: "2026-07-31T07:00:11.000Z",
-      outcomesOpened: false,
-      sameTreatment: true
-    }],
     ["deviation.schema.json", {
       formatVersion: 1,
       protocolId: "semantic-test-corpus-execution-v2",
-      deviationId: "B01-A5-named-agent",
+      deviationId: "B01-A5-worker-override-unavailable",
       runId: "B01-A5",
       attemptId: null,
       category: "mechanism",
       observedAt: "2026-07-31T07:00:00.000Z",
-      description: "Fixed-Haiku named specialist",
-      impact: "descriptive-only",
+      description: "Same-agent worker model override unavailable",
+      impact: "exclude",
       outcomesOpened: false
     }]
   ];
@@ -936,48 +1155,22 @@ test("local usage export and execution record schemas reject cross-session ambig
     attempts: [attempt],
     preflights: [fixturePreflight],
     evidenceBytes: [fixtureEvidenceBytes],
-    retries: []
+    preSessionFailures: []
   }), []);
-  const reused = { ...attempt, attemptId: "B01-A2-attempt-2", attemptNumber: 2 };
-  const twoAttemptManifest = {
+  const invalidSecondAttempt = { ...attempt, attemptId: "B01-A2-attempt-2", attemptNumber: 2 };
+  const invalidTwoAttemptManifest = {
     ...manifest,
     attemptNumber: 2,
     attempts: ["attempt-1.json", "attempt-2.json"],
-    preflights: ["preflight-1.json", "preflight-2.json"],
-    retries: ["retry.json"]
+    preflights: ["preflight-1.json", "preflight-2.json"]
   };
-  const retry = schemaSamples.find(([name]) => name === "retry.schema.json")[1];
   assert(validateExecutionRecords({
-    manifest: twoAttemptManifest,
-    attempts: [attempt, reused],
-    preflights: [{
-      formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
-      runId: "B01-A2",
-      attemptNumber: 1,
-      evidenceSha256: "a".repeat(64),
-      status: "retry-required",
-      retryEligible: true,
-      beforeOutcomesOpened: true,
-      expected: { parent: ["gpt-5.6-sol"], worker: ["gpt-5.6-sol"] },
-      observed: { parent: ["gpt-5.6-sol"], worker: ["claude-haiku-4.5"] },
-      reasons: ["worker model mismatch"]
-    }, {
-      formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
-      runId: "B01-A2",
-      attemptNumber: 2,
-      evidenceSha256: "b".repeat(64),
-      status: "pass",
-      retryEligible: false,
-      beforeOutcomesOpened: true,
-      expected: { parent: ["gpt-5.6-sol"], worker: ["gpt-5.6-sol"] },
-      observed: { parent: ["gpt-5.6-sol"], worker: ["gpt-5.6-sol"] },
-      reasons: []
-    }],
+    manifest: invalidTwoAttemptManifest,
+    attempts: [attempt, invalidSecondAttempt],
+    preflights: [fixturePreflight, fixturePreflight],
     evidenceBytes: [fixtureEvidenceBytes, fixtureEvidenceBytes],
-    retries: [retry]
-  }).some((error) => error.includes("fresh app and CLI sessions")));
+    preSessionFailures: []
+  }).length > 0);
 });
 
 test("pairwise array covers every two-factor tuple", () => {
@@ -1224,7 +1417,7 @@ test("URL invariants reject malformed ports, credentials, paths, and queries", (
   }
 });
 
-test("all meaningful deterministic mutants are killed", () => {
+test("general baseline scores the full mutant catalog without tuned selection", () => {
   assert(mutants.length >= 20);
   const corpus = readEvaluatorJson("artifacts", "baseline-corpus.json");
   const declaredRuleIds = new Set([
@@ -1242,19 +1435,10 @@ test("all meaningful deterministic mutants are killed", () => {
   const matrix = buildKillMatrix(corpus);
   assert.deepEqual(matrix, readEvaluatorJson("artifacts", "baseline-kill-matrix.json"));
   assert.equal(matrix.totals.total, 33);
-  assert.equal(matrix.totals.triggered, 33);
-  assert.equal(matrix.totals.untriggered, 0);
-  assert.equal(matrix.totals.survived, 0);
-  assert.equal(matrix.totals.mutationScore, 1);
-  for (const row of matrix.cases) {
-    for (const mutant of mutants) {
-      if (row.triggered[mutant.id]) assert.equal(row.kills[mutant.id], true, `${row.caseId}/${mutant.id}`);
-    }
-  }
-  for (const mutant of mutants) {
-    assert(corpus.cases.some((scenario) =>
-      JSON.stringify(executeMutant(mutant, scenario.input, scenario.expected)) !== JSON.stringify(scenario.expected)), mutant.id);
-  }
+  assert.equal(matrix.totals.killed + matrix.totals.survived, 33);
+  assert.equal(matrix.totals.triggered + matrix.totals.untriggered, 33);
+  assert(matrix.totals.killed > 0 && matrix.totals.killed < 33);
+  assert.equal(matrix.totals.mutationScore, matrix.totals.killed / 33);
 });
 
 test("untriggered mutants survive under the frozen full-catalog denominator", () => {
@@ -1283,7 +1467,11 @@ test("baseline report is derived and complete", () => {
   const report = buildReport(corpus, matrix, mappingSpec);
   assert.deepEqual(report, readEvaluatorJson("artifacts", "baseline-report.json"));
   assert.equal(report.semanticCoverage.rules.rate, 1);
-  assert.equal(report.semanticCoverage.paths.rate, 1);
+  assert(report.semanticCoverage.paths.rate > 0 && report.semanticCoverage.paths.rate < 1);
+  assert.equal(
+    report.semanticCoverage.paths.exercised + report.semanticCoverage.paths.missing.length,
+    report.semanticCoverage.paths.total
+  );
   assert.equal(report.semanticCoverage.invariants.rate, 1);
   assert.equal(report.diagnosticCoverage.rate, 1);
   assert.equal(report.mutation.catalogValidation.validated, 33);
@@ -1314,7 +1502,7 @@ test("baseline report is derived and complete", () => {
 });
 
 test("canonical metrics are snapshot-derived and reject outcome tampering", () => {
-  const temporary = resolve(root, ".test-work", "metrics-authentication");
+  const temporary = resolve(root, ".regression-work", "metrics-authentication");
   rmSync(temporary, { recursive: true, force: true });
   mkdirSync(temporary, { recursive: true });
   try {
@@ -1328,15 +1516,17 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
       blockId: "B01",
       armId: 0
     });
-    assert.equal(artifact.metrics.coverage.paths.rate, 1);
+    assert(artifact.metrics.coverage.paths.rate > 0
+      && artifact.metrics.coverage.paths.rate <= 1);
     assert.equal(artifact.metrics.mutation.catalogSize, 33);
     assert.equal(artifact.metrics.mutation.triggered + artifact.metrics.mutation.untriggered, 33);
     assert.equal(artifact.metrics.mutation.killed + artifact.metrics.mutation.survived, 33);
     assert.deepEqual(artifact.provenance.oracle.files.map((file) => file.path),
       ["evaluator/oracle/index.mjs"]);
     assert.match(artifact.provenance.generator.commitSha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
+    assert.match(artifact.provenance.generator.treeSha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
     assert(artifact.provenance.generator.files.some((file) =>
-      file.path === "baseline/generate.mjs"
+      file.path === "baseline/general-generate.mjs"
       && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(file.blobSha)));
     const relabeledBaseline = generateBaseline();
     relabeledBaseline.generator = { armId: 0, blockId: "B01", seed: 1812433253 };
@@ -1604,7 +1794,11 @@ test("delegated arms use one byte-identical mechanism and tool contract", () => 
   const contract = readRootJson("design", "arm-contract.json");
   const frontier = contract.arms.find((arm) => arm.id === 2);
   const cheap = contract.arms.find((arm) => arm.id === 4);
+  const target = contract.arms.find((arm) => arm.id === 5);
   assert.equal(frontier.delegationContract, cheap.delegationContract);
+  assert.equal(frontier.delegationContract, target.delegationContract);
+  assert.equal(target.agentName, contract.delegationContract.agentName);
+  assert.equal(target.workerModelOverride, "claude-haiku-4.5");
   assert.deepEqual(contract.delegationContract.toolSurface, contract.commonContract.toolSurface);
   assert.equal(contract.delegationContract.artifact, ".github/skills/semantic-test-corpus/SKILL.md");
   assert.equal(contract.delegationContract.artifact, contract.delegationContract.registeredPath);
@@ -1614,6 +1808,8 @@ test("delegated arms use one byte-identical mechanism and tool contract", () => 
   assert.equal(existsSync(resolve(root, "design", "delegated-worker-skill.md")), false);
   assert(!readRootJson("design", "candidate-manifest.json").files.some((file) =>
     file.source === "design/delegated-worker-skill.md"));
+  assert(!readRootJson("design", "candidate-manifest.json").files.some((file) =>
+    file.destination.includes("semantic-test-corpus-haiku")));
 });
 
 test("synthetic signed-event unit enforces the common delegated mechanism", () => {
@@ -2398,50 +2594,75 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
 });
 
 test("candidate materialization excludes evaluator assets in an external repository", () => {
-  const temporary = resolve(root, ".test-work", "semantic-candidate");
+  const temporary = resolve(root, ".regression-work", "semantic-candidate");
   const repositoryRoot = resolve(root, "..", "..");
   const repositorySibling = resolve(repositoryRoot, "..", `.semantic-candidate-sibling-${process.pid}`);
   rmSync(temporary, { recursive: true, force: true });
   rmSync(repositorySibling, { recursive: true, force: true });
   try {
-    const boundary = materializeCandidate(temporary, { allowTestDestination: true });
+    const boundary = materializeCandidate(temporary, {
+      allowTestDestination: true,
+      blockId: "B01"
+    });
     assert.equal(boundary.files.length, readRootJson("design", "candidate-manifest.json").files.length);
     assert.equal(boundary.protocolId, "semantic-test-corpus-execution-v2");
     assert.match(boundary.boundarySha256, /^[a-f0-9]{64}$/);
     assert.match(boundary.terminalCommit, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
+    const sourcePin = readRootJson("design", "source-pin.json");
+    assert.equal(boundary.sourceCommit, sourcePin.sourceCommit);
+    assert.equal(boundary.sourceTree, sourcePin.sourceTree);
+    assert(boundary.files.every((file) =>
+      sourcePin.sourceBlobs[file.sourcePath] === file.sourceBlob));
     assert(boundary.files.every((file) => !file.path.startsWith("evaluator/")));
     assert.equal(existsSync(resolve(temporary, "evaluator")), false);
     assert.equal(spawnSync("git", ["status", "--short"], { cwd: temporary, encoding: "utf8" }).stdout, "");
     assert(existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus.agent.md")));
-    assert(existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus-haiku.agent.md")));
+    assert.equal(
+      existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus-haiku.agent.md")),
+      false
+    );
     assert(existsSync(resolve(temporary, "tools", "semantic-corpus-mcp", "server.mjs")));
     assert.equal(readRootJson("design", "corpus-request.json").targetCount, 60);
-    assert.throws(() => materializeCandidate(resolve(root, "candidate-output")), /outside the source repository/);
+    for (const script of ["materialize-candidate.mjs", "collect-local-evidence.mjs"]) {
+      assert.doesNotMatch(readFileSync(resolve(root, "scripts", script), "utf8"), /\bHEAD\b/u);
+    }
+    assert.throws(() => materializeCandidate(resolve(root, "candidate-output"), {
+      blockId: "B01"
+    }), /outside the source repository/);
     assert.throws(() => materializeCandidate(
-      resolve(root, "..", "semantic-candidate-sibling")
+      resolve(root, "..", "semantic-candidate-sibling"), { blockId: "B01" }
     ), /outside the source repository/);
-    assert.equal(materializeCandidate(repositorySibling).materializedRoot, repositorySibling);
-    assert.throws(() => materializeCandidate(resolve(repositoryRoot, "..")),
+    assert.equal(materializeCandidate(repositorySibling, {
+      blockId: "B01"
+    }).materializedRoot, repositorySibling);
+    assert.throws(() => materializeCandidate(resolve(repositoryRoot, ".."), {
+      blockId: "B01"
+    }),
       /cannot contain the source repository/);
 
     process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION = "1";
-    assert.throws(() => materializeCandidate(resolve(root, "environment-override")),
+    assert.throws(() => materializeCandidate(resolve(root, "environment-override"), {
+      blockId: "B01"
+    }),
       /outside the source repository/);
     delete process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION;
 
-    const junctionTarget = resolve(root, ".test-work", "junction-target");
-    const junction = resolve(root, ".test-work", "junction");
+    const junctionTarget = resolve(root, ".regression-work", "junction-target");
+    const junction = resolve(root, ".regression-work", "junction");
     mkdirSync(junctionTarget, { recursive: true });
     try {
       symlinkSync(junctionTarget, junction, process.platform === "win32" ? "junction" : "dir");
-      assert.throws(() => materializeCandidate(junction, { allowTestDestination: true }),
+      assert.throws(() => materializeCandidate(junction, {
+        allowTestDestination: true,
+        blockId: "B01"
+      }),
         /symbolic link, junction, or reparse/);
     } catch (error) {
       if (error.code !== "EPERM" && error.code !== "EACCES") throw error;
     }
   } finally {
     delete process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION;
-    rmSync(resolve(root, ".test-work"), { recursive: true, force: true });
+    rmSync(resolve(root, ".regression-work"), { recursive: true, force: true });
     rmSync(repositorySibling, { recursive: true, force: true });
   }
 });

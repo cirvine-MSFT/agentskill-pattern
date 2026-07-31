@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { generateBaseline } from "../baseline/generate.mjs";
+import { generateGeneralBaseline } from "../baseline/general-generate.mjs";
 import { validateStaging } from "../validators/staging.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,13 +21,15 @@ function sha256(bytes) {
 export function runDeterministicBlock(blockId) {
   const planned = schedule.runs.find((run) => run.blockId === blockId && run.armId === 0);
   if (!planned) throw new Error(`No deterministic run is scheduled for ${blockId}`);
+  const startedAt = new Date().toISOString();
   const started = process.hrtime.bigint();
-  const staging = generateBaseline({ blockId, seed: planned.seed });
+  const staging = generateGeneralBaseline({ blockId, seed: planned.seed });
   const errors = validateStaging(staging);
   if (errors.length > 0) throw new Error(`Deterministic staging is invalid: ${JSON.stringify(errors[0])}`);
   if (staging.cases.length !== 60) throw new Error(`${planned.runId} did not produce exactly 60 cases`);
   const bytes = Buffer.from(`${JSON.stringify(staging, null, 2)}\n`, "utf8");
   const wallMs = Number((process.hrtime.bigint() - started) / 1_000_000n);
+  const endedAt = new Date().toISOString();
   return {
     planned,
     staging,
@@ -40,6 +42,9 @@ export function runDeterministicBlock(blockId) {
       armId: 0,
       seed: planned.seed,
       scheduleOrder: planned.order,
+      globalOrder: planned.globalOrder,
+      startedAt,
+      endedAt,
       cases: staging.cases.length,
       wallMs,
       stagingSha256: sha256(bytes)

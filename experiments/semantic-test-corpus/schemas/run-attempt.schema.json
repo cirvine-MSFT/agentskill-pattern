@@ -12,7 +12,7 @@
   "additionalProperties": false,
   "allOf": [
     {
-      "if": {"properties": {"status": {"enum": ["completed", "retry-required", "excluded", "evaluated"]}}},
+      "if": {"properties": {"status": {"enum": ["completed", "excluded", "evaluated"]}}},
       "then": {
         "properties": {
           "localEvidencePath": {"type": "string", "minLength": 1},
@@ -26,14 +26,14 @@
     "protocolId": {"const": "semantic-test-corpus-execution-v2"},
     "attemptId": {"type": "string", "minLength": 1},
     "runId": {"type": "string"},
-    "attemptNumber": {"type": "integer", "minimum": 1, "maximum": 2},
+    "attemptNumber": {"const": 1},
     "appProjectSessionId": {"type": "string", "minLength": 1},
     "cliSessionId": {"type": "string", "minLength": 1},
     "requestedParentModel": {"type": "string", "minLength": 1},
     "requestedWorkerModel": {"type": ["string", "null"]},
     "status": {
       "type": "string",
-      "enum": ["created", "completed", "retry-required", "excluded", "evaluated"]
+      "enum": ["created", "completed", "excluded", "evaluated"]
     },
     "startedAt": {"type": "string"},
     "endedAt": {"type": ["string", "null"]},
@@ -43,7 +43,8 @@
     "treatment": {
       "type": "object",
       "required": [
-        "blockId", "armId", "seed", "terminalCommit", "candidateSnapshotSha256",
+        "blockId", "armId", "seed", "sourceCommit", "sourceTree",
+        "terminalCommit", "candidateSnapshotSha256",
         "sharedTaskSha256", "kickoffSha256", "wallLimitMs", "toolCallLimit", "modelTokenLimit"
       ],
       "additionalProperties": false,
@@ -51,6 +52,8 @@
         "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
         "armId": {"type": "integer", "minimum": 1, "maximum": 5},
         "seed": {"type": "integer"},
+        "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+        "sourceTree": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
         "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
         "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "sharedTaskSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
