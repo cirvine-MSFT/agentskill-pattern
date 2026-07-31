@@ -15,7 +15,10 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readLauncherBootDescriptor } from "./attestation.mjs";
+import {
+  launcherAuthorityPublicKeyPath,
+  readLauncherBootDescriptor,
+} from "./attestation.mjs";
 import { assessObservedStaging } from "./assessment.mjs";
 
 const INTERNAL = Symbol("verified sandbox");
@@ -798,6 +801,13 @@ function isJsonValue(value, seen = new Set()) {
   return valid;
 }
 
+function invalidObservedSlot(slot, reason) {
+  return { invalid: true, reason, slot };
+}
+
+const AGGREGATE_BUDGET_REASON =
+  "observed scenario exceeded the remaining aggregate artifact budget";
+
 function composeStagingSchema(request) {
   const schema = cloneJson(request.stagingSchema);
   schema.properties.cases.items = composeScenarioSchema(request);
@@ -1035,6 +1045,7 @@ function parseSandboxConfig(value) {
       "deniedReadRoots",
       "executable",
       "launcher",
+      "authority",
       "sources",
     ]),
     new Set([
@@ -1047,6 +1058,7 @@ function parseSandboxConfig(value) {
       "deniedReadRoots",
       "executable",
       "launcher",
+      "authority",
       "sources",
     ]),
     "sandbox config confinement",
@@ -1136,6 +1148,21 @@ function parseSandboxConfig(value) {
     if (path.resolve(executable.path) !== path.resolve(expectedPath)) {
       fail("SANDBOX_CONFIG_INVALID", `${name} path does not match the trusted layout`);
     }
+    assertExactKeys(
+      value.confinement.authority,
+      new Set(["publicKeyPath", "publicKeySha256"]),
+      new Set(["publicKeyPath", "publicKeySha256"]),
+      "sandbox config confinement.authority",
+    );
+    if (
+      path.resolve(value.confinement.authority.publicKeyPath) !==
+        path.resolve(launcherAuthorityPublicKeyPath) ||
+      !/^[a-f0-9]{64}$/u.test(
+        value.confinement.authority.publicKeySha256 ?? "",
+      )
+    ) {
+      fail("SANDBOX_CONFIG_INVALID", "launcher authority does not match the pinned trust root");
+    }
   }
   if (
     !Array.isArray(value.confinement.sources) ||
@@ -1219,6 +1246,14 @@ async function verifyProcessConfinement(config, configPath) {
     if (loaded.digest !== executable.sha256) {
       fail("SANDBOX_UNVERIFIED", `${label} hash changed before startup`);
     }
+  }
+  const authority = await readStandaloneFile(
+    config.confinement.authority.publicKeyPath,
+    CONFIG_BYTES,
+    "launcher authority public key",
+  );
+  if (authority.digest !== config.confinement.authority.publicKeySha256) {
+    fail("SANDBOX_UNVERIFIED", "launcher authority public key changed before startup");
   }
 }
 
@@ -2044,29 +2079,51 @@ export class CorpusService {
         }
         const candidateBytes = canonicalJsonBytes(args.scenario);
         if (candidateBytes.length > request.maxSizes.scenarioBytes) {
-          observed = {
-            invalid: true,
-            reason: "observed scenario exceeded the bounded slot size",
+          observed = invalidObservedSlot(
             slot,
-          };
+            "observed scenario exceeded the bounded slot size",
+          );
         } else if (containsAcceptanceContent(args.scenario)) {
-          observed = {
-            invalid: true,
-            reason: "acceptance-only content was omitted from the observed slot",
+          observed = invalidObservedSlot(
             slot,
-          };
+            "acceptance-only content was omitted from the observed slot",
+          );
         } else {
           observed = args.scenario;
         }
-      } catch (error) {
-        observed = {
-          invalid: true,
-          reason:
-            error instanceof CorpusError
-              ? error.message
-              : "observed scenario arguments were not serializable",
+      } catch {
+        observed = invalidObservedSlot(
           slot,
+          "observed scenario arguments were malformed",
+        );
+      }
+      const remainingReservations = Array.from(
+        { length: request.targetCount - slot },
+        (_, index) =>
+          invalidObservedSlot(slot + index + 1, AGGREGATE_BUDGET_REASON),
+      );
+      let projected = {
+        formatVersion: 1,
+        generator: cloneJson(request.generator),
+        cases: [
+          ...existing.scenarios,
+          observed,
+          ...remainingReservations,
+        ],
+      };
+      if (canonicalJsonBytes(projected).length > request.maxSizes.stagingBytes) {
+        observed = invalidObservedSlot(slot, AGGREGATE_BUDGET_REASON);
+        projected = {
+          ...projected,
+          cases: [
+            ...existing.scenarios,
+            observed,
+            ...remainingReservations,
+          ],
         };
+      }
+      if (canonicalJsonBytes(projected).length > request.maxSizes.stagingBytes) {
+        fail("LIMIT_EXCEEDED", "reserved aggregate staging budget is inconsistent");
       }
       const scenarioBytes = canonicalJsonBytes(observed);
       const directory = await this.scenarioDirectoryUnlocked();

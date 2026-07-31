@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
 import { once } from "node:events";
 import {
   mkdir,
@@ -142,6 +143,10 @@ test("trusted launcher writes verifiable confinement rather than accepting sandb
   assert.match(run.config.confinement.repository.sourceHash, /^[a-f0-9]{64}$/);
   assert.match(run.config.confinement.executable.sha256, /^[a-f0-9]{64}$/);
   assert.match(run.config.confinement.launcher.sha256, /^[a-f0-9]{64}$/);
+  assert.match(
+    run.config.confinement.authority.publicKeySha256,
+    /^[a-f0-9]{64}$/,
+  );
   assert.equal(run.config.confinement.sources.length, 5);
 
   for (const target of [
@@ -156,7 +161,7 @@ test("trusted launcher writes verifiable confinement rather than accepting sandb
   }
 });
 
-test("direct env forge, path tampering, expiry, replay, and executable mismatch fail closed", async (t) => {
+test("direct env and authority-key forgery, path tampering, expiry, replay, and executable mismatch fail closed", async (t) => {
   const run = await createRun();
   t.after(() => run.cleanup());
   const server = fileURLToPath(
@@ -189,6 +194,17 @@ test("direct env forge, path tampering, expiry, replay, and executable mismatch 
       pathBoot.publicKeyBytes,
       { requireParent: false },
     ),
+    (error) => error.code === "LAUNCH_SIGNATURE_INVALID",
+  );
+
+  const rogue = generateKeyPairSync("ed25519");
+  assert.throws(
+    () =>
+      verifyLauncherBootEnvelope(
+        pathBoot.bytes,
+        rogue.publicKey.export({ type: "spki", format: "der" }),
+        { requireParent: false },
+      ),
     (error) => error.code === "LAUNCH_SIGNATURE_INVALID",
   );
   const substitutedKey = run.bootEnvelope();
@@ -343,7 +359,7 @@ test("staging junctions cannot redirect scenario writes outside the sandbox", as
   assert.deepEqual(await readdir(outside), []);
 });
 
-test("finalization publishes observed 0, 59, malformed mixed, and 60-valid submissions once", async (t) => {
+test("finalization publishes observed 0, 59, malformed, aggregate-bounded, and 60-valid submissions once", async (t) => {
   const cases = [
     { name: "zero", submissions: [], promoted: 0, errors: 0 },
     {
@@ -368,6 +384,15 @@ test("finalization publishes observed 0, 59, malformed mixed, and 60-valid submi
       submissions: Array.from({ length: 60 }, (_, index) => ({ scenario: scenario(index) })),
       promoted: 60,
       errors: 0,
+    },
+    {
+      name: "aggregate-budget",
+      submissions: Array.from(
+        { length: 60 },
+        () => ({ scenario: "x".repeat(70_000) }),
+      ),
+      promoted: 0,
+      errors: null,
     },
   ];
   for (const fixture of cases) {

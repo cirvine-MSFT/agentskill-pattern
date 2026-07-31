@@ -32,13 +32,14 @@ starting MCP, the launcher:
    contract manifest;
 4. derives the immutable run request, which pins the manifest hash, request hash, run
    metadata, schemas, limits, and the registered target of exactly 60;
-5. creates fresh server and cleanup tokens plus an ephemeral Ed25519 launch keypair;
+5. creates fresh server and cleanup tokens plus an ephemeral Ed25519 launch keypair
+   certified by an OS-protected per-user launcher authority outside the candidate root;
 6. rejects symlinks, junctions, and reparse roots;
 7. applies and probes read-only contract/config ACLs on Windows or modes on POSIX, while
    proving staging remains writable; and
 8. signs the fixed sandbox IDs, request hash, nonce/expiry, denied roots, and source,
-   launcher, server, and Node-executable hashes; passes the envelope and public key over
-   separate inherited descriptors with one-use replay state; and
+   launcher, server, and Node-executable hashes; passes the envelope and authority-certified
+   run public key over separate inherited descriptors with one-use replay state; and
 9. launches the trusted server under Node's permission model with read access only to
    the hash-attested MCP sources, config, contract, and staging, and write access
    only to staging.
@@ -88,7 +89,8 @@ The supported safe schema dialect accepts the actual merged draft-2020-12 docume
 
 The merged staging schema deliberately accepts zero through 60 observed slot values.
 `write_scenario` captures malformed safe JSON attempts and a bounded reason record when
-needed. Expected outputs, traces, and diagnostics are omitted. After finalization, the
+needed, including when the remaining aggregate artifact budget cannot retain a raw
+attempt. Expected outputs, traces, and diagnostics are omitted. After finalization, the
 merged scenario and v1 validators classify each slot; only valid unique cases promote.
 
 ## Narrow tools and output
@@ -194,8 +196,9 @@ node --test $tests
 The suite uses the real merged arm contract and schemas. It covers launcher startup and
 failure, Windows/POSIX access policy probes, permission-model MCP startup, full
 initialize/list/read/write/finalize flow, exact canonical output and parent hash
-verification, real v1 integration, 0/59/mixed-malformed/60-valid publication, normalized
+verification, real v1 integration, 0/59/mixed-malformed/60-valid and
+aggregate-budget-bounded publication, normalized
 `file.read`/`file.write`/`staging.validate` events through the merged isolation verifier,
 forged/path-tampered/expired/replayed/executable-mismatched startup, traversal and reparse
-attacks, write-once publication, bounded contention, abrupt termination, fail-closed stale
+authority-key forgery, write-once publication, bounded contention, abrupt termination, fail-closed stale
 locks, and authorized cleanup/resume.

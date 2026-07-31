@@ -22,7 +22,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assessStaging } from "../../experiments/semantic-test-corpus/validators/staging.mjs";
-import { createLauncherBootEnvelope } from "./attestation.mjs";
+import {
+  createLauncherBootEnvelope,
+  launcherAuthorityPaths,
+} from "./attestation.mjs";
 import {
   canonicalJson,
   canonicalJsonBytes,
@@ -470,6 +473,7 @@ async function loadState(statePath, cleanupToken) {
     "stagingPath",
     "auditPath",
     "executablePath",
+    "authorityPublicKeyPath",
   ]) {
     if (typeof state[key] !== "string" || !path.isAbsolute(state[key])) {
       fail("STATE_INVALID", `launcher state ${key} is invalid`);
@@ -481,7 +485,8 @@ async function loadState(statePath, cleanupToken) {
       !/^[a-f0-9]{64}$/u.test(state.configSha256 ?? "") ||
       !/^[a-f0-9]{64}$/u.test(state.expectedServerSha256 ?? "") ||
       !/^[a-f0-9]{64}$/u.test(state.expectedExecutableSha256 ?? "") ||
-      !/^[a-f0-9]{64}$/u.test(state.expectedLauncherSha256 ?? "")
+      !/^[a-f0-9]{64}$/u.test(state.expectedLauncherSha256 ?? "") ||
+      !/^[a-f0-9]{64}$/u.test(state.authorityPublicKeySha256 ?? "")
     ) {
       fail("STATE_INVALID", "launcher state executable/config hashes are invalid");
     }
@@ -521,6 +526,10 @@ async function loadState(statePath, cleanupToken) {
     config.roots?.staging?.path !== state.stagingRoot ||
     config.sandbox?.path !== state.sandboxRoot ||
     config.audit?.logicalStagingPath !== state.logicalStagingPath ||
+    config.confinement?.authority?.publicKeyPath !==
+      state.authorityPublicKeyPath ||
+    config.confinement?.authority?.publicKeySha256 !==
+      state.authorityPublicKeySha256 ||
     config.confinement?.executable?.path !== state.executablePath ||
     config.confinement?.executable?.sha256 !== state.expectedExecutableSha256 ||
     config.confinement?.launcher?.path !== launcherPath ||
@@ -539,7 +548,9 @@ async function loadState(statePath, cleanupToken) {
     await hashFile(state.configPath) !== state.configSha256 ||
     await hashFile(serverPath) !== state.expectedServerSha256 ||
     await hashFile(state.executablePath) !== state.expectedExecutableSha256 ||
-    await hashFile(launcherPath) !== state.expectedLauncherSha256
+    await hashFile(launcherPath) !== state.expectedLauncherSha256 ||
+    await hashFile(state.authorityPublicKeyPath) !==
+      state.authorityPublicKeySha256
   ) {
     fail("STATE_INVALID", "launcher config or expected executable hash changed");
   }
@@ -640,6 +651,12 @@ export async function prepareSandbox(options = {}) {
       fail("LAUNCH_CONFIG_INVALID", "lock stale interval must exceed its wait interval");
     }
     const sources = await attestTrustedSources();
+    const authority = launcherAuthorityPaths();
+    await Promise.all([
+      restrictPrivateFile(authority.privateKeyPath),
+      restrictPrivateFile(authority.publicKeyPath),
+    ]);
+    const authorityPublicKeySha256 = await hashFile(authority.publicKeyPath);
     const executablePath = await realpath(process.execPath);
     const expectedExecutableSha256 = await hashFile(executablePath);
     const expectedLauncherSha256 = await hashFile(launcherPath);
@@ -696,6 +713,10 @@ export async function prepareSandbox(options = {}) {
           path: launcherPath,
           sha256: expectedLauncherSha256,
         },
+        authority: {
+          publicKeyPath: authority.publicKeyPath,
+          publicKeySha256: authorityPublicKeySha256,
+        },
         sources,
       },
     };
@@ -725,6 +746,8 @@ export async function prepareSandbox(options = {}) {
         expectedExecutableSha256,
         executablePath,
         expectedLauncherSha256,
+        authorityPublicKeyPath: authority.publicKeyPath,
+        authorityPublicKeySha256,
         requestHash: request.requestHash,
         manifestHash,
         lock,
@@ -761,6 +784,7 @@ function permissionArguments(prepared) {
     ...trustedSources.map((source) => `--allow-fs-read=${source}`),
     `--allow-fs-read=${prepared.state.executablePath}`,
     `--allow-fs-read=${launcherPath}`,
+    `--allow-fs-read=${prepared.state.authorityPublicKeyPath}`,
     `--allow-fs-read=${prepared.state.sandboxRoot}`,
     `--allow-fs-read=${prepared.state.configPath}`,
     `--allow-fs-read=${prepared.state.contractRoot}`,

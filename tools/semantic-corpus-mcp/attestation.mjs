@@ -1,15 +1,38 @@
 import {
+  createPrivateKey,
   createPublicKey,
   generateKeyPairSync,
   randomBytes,
   sign,
   verify,
 } from "node:crypto";
-import { createReadStream } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const MAX_BOOT_BYTES = 128 * 1024;
 const MAX_LIFETIME_MS = 5 * 60 * 1000;
+const authorityRoot = path.join(
+  os.userInfo().homedir,
+  ".copilot",
+  "semantic-corpus-launcher",
+);
+const authorityPrivateKeyPath = path.join(authorityRoot, "authority-private.der");
+export const launcherAuthorityPublicKeyPath = path.join(
+  authorityRoot,
+  "authority-public.der",
+);
+const authorityLockPath = path.join(authorityRoot, "authority.lock");
 
 export class AttestationError extends Error {
   constructor(code, message) {
@@ -66,6 +89,7 @@ export function createLauncherBootEnvelope({
     fail("LAUNCH_ATTESTATION_INVALID", "boot lifetime is out of range");
   }
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const authority = launcherAuthority();
   const nonce = cryptoNonce();
   const replayPath = path.join(stagingRoot, `.launch-${nonce}.cap`);
   const replayToken = randomBytes(32).toString("base64url");
@@ -94,6 +118,11 @@ export function createLauncherBootEnvelope({
     version: 1,
     algorithm: "Ed25519",
     payload,
+    authoritySignature: sign(
+      null,
+      publicKeyDer,
+      authority.privateKey,
+    ).toString("base64"),
     signature: signature.toString("base64"),
   };
   return {
@@ -101,6 +130,87 @@ export function createLauncherBootEnvelope({
     publicKeyBytes: publicKeyDer,
     envelope,
     payload,
+  };
+}
+
+function launcherAuthority() {
+  mkdirSync(authorityRoot, { recursive: true, mode: 0o700 });
+  let lock;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      lock = openSync(authorityLockPath, "wx", 0o600);
+      break;
+    } catch (error) {
+      if (error?.code !== "EEXIST") throw error;
+      if (
+        existsSync(authorityPrivateKeyPath) &&
+        existsSync(launcherAuthorityPublicKeyPath)
+      ) {
+        break;
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+    }
+  }
+  try {
+    if (
+      !existsSync(authorityPrivateKeyPath) ||
+      !existsSync(launcherAuthorityPublicKeyPath)
+    ) {
+      if (lock === undefined) {
+        fail("LAUNCH_AUTHORITY_UNAVAILABLE", "launcher authority initialization timed out");
+      }
+      rmSync(authorityPrivateKeyPath, { force: true });
+      rmSync(launcherAuthorityPublicKeyPath, { force: true });
+      const keys = generateKeyPairSync("ed25519");
+      writeFileSync(
+        authorityPrivateKeyPath,
+        keys.privateKey.export({ type: "pkcs8", format: "der" }),
+        { flag: "wx", mode: 0o600 },
+      );
+      writeFileSync(
+        launcherAuthorityPublicKeyPath,
+        keys.publicKey.export({ type: "spki", format: "der" }),
+        { flag: "wx", mode: 0o600 },
+      );
+    }
+  } finally {
+    if (lock !== undefined) {
+      closeSync(lock);
+      rmSync(authorityLockPath, { force: true });
+    }
+  }
+  chmodSync(authorityPrivateKeyPath, 0o600);
+  chmodSync(launcherAuthorityPublicKeyPath, 0o600);
+  const privateKey = createPrivateKey({
+    key: readFileSync(authorityPrivateKeyPath),
+    type: "pkcs8",
+    format: "der",
+  });
+  const publicKeyBytes = readFileSync(launcherAuthorityPublicKeyPath);
+  const proof = randomBytes(32);
+  if (
+    !verify(
+      null,
+      proof,
+      createPublicKey({ key: publicKeyBytes, type: "spki", format: "der" }),
+      sign(null, proof, privateKey),
+    )
+  ) {
+    fail("LAUNCH_AUTHORITY_INVALID", "launcher authority keypair is inconsistent");
+  }
+  return {
+    privateKey,
+    privateKeyPath: authorityPrivateKeyPath,
+    publicKeyBytes,
+    publicKeyPath: launcherAuthorityPublicKeyPath,
+  };
+}
+
+export function launcherAuthorityPaths() {
+  const authority = launcherAuthority();
+  return {
+    privateKeyPath: authority.privateKeyPath,
+    publicKeyPath: authority.publicKeyPath,
   };
 }
 
@@ -140,7 +250,13 @@ export function verifyLauncherBootEnvelope(bytes, publicKeyBytes, options = {}) 
   }
   assertExactKeys(
     envelope,
-    new Set(["version", "algorithm", "payload", "signature"]),
+    new Set([
+      "version",
+      "algorithm",
+      "payload",
+      "authoritySignature",
+      "signature",
+    ]),
     "launcher boot envelope",
   );
   if (envelope.version !== 1 || envelope.algorithm !== "Ed25519") {
@@ -203,9 +319,15 @@ export function verifyLauncherBootEnvelope(bytes, publicKeyBytes, options = {}) 
     fail("LAUNCH_ATTESTATION_INVALID", "launcher boot payload is malformed");
   }
   let publicKey;
+  let authorityPublicKey;
   try {
     publicKey = createPublicKey({
       key: publicKeyBytes,
+      type: "spki",
+      format: "der",
+    });
+    authorityPublicKey = createPublicKey({
+      key: readFileSync(launcherAuthorityPublicKeyPath),
       type: "spki",
       format: "der",
     });
@@ -213,6 +335,13 @@ export function verifyLauncherBootEnvelope(bytes, publicKeyBytes, options = {}) 
     fail("LAUNCH_ATTESTATION_INVALID", "launcher public key is invalid");
   }
   if (
+    authorityPublicKey.asymmetricKeyType !== "ed25519" ||
+    !verify(
+      null,
+      publicKeyBytes,
+      authorityPublicKey,
+      Buffer.from(envelope.authoritySignature, "base64"),
+    ) ||
     publicKey.asymmetricKeyType !== "ed25519" ||
     !verify(
       null,
