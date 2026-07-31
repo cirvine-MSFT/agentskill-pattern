@@ -20,6 +20,20 @@ documents for parent-defined IDs only; the manifest can repeat only immutable
 request-defined ID/category pairs. If preparation, confinement, or delegation is
 unavailable, report failure and stop; never generate scenarios inline.
 
-After return, the parent deterministically validates staged inputs, promotes only
-accepted source inputs, computes expected results with the trusted oracle, and runs
-trace and mutant scoring. Never delegate migration, oracle, promotion, or scoring work.
+When a benchmark coordinator supplies the immutable shared task artifact, pass those
+bytes to the custom agent without additions or omissions. Return only the agent's exact
+terminal line: `corpus-staging/manifest.json - <count> scenarios - SUCCESS` or
+`corpus-staging - <written-count> scenarios - FAILURE: <reason>`. Do not synthesize
+staging metadata in the parent.
+
+The custom agent does not pin a model. It inherits the caller/session model so the same
+agent, MCP tools, request, output semantics, and confinement contract can be used under
+different authenticated model bindings. Never substitute a different agent identity or
+tool surface.
+
+After return, evaluator-only deterministic code may snapshot the confined files and
+authenticated tool-error records into a benchmark staging artifact. The parent must not
+read, package, validate, or copy the corpus. Trusted evaluator code validates and
+promotes accepted source inputs, computes expected results with the trusted oracle, and runs
+trace and mutant scoring. Never delegate the adapter, migration, oracle, promotion, or
+scoring work.

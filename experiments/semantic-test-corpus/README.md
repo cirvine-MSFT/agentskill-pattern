@@ -65,11 +65,54 @@ Generate the frozen 12-block schedule:
 node .\scripts\randomize.mjs --out .\design\schedule.json
 ```
 
-Materialize a candidate repository outside this checkout:
+Materialize a candidate repository outside the entire source repository:
 
 ```powershell
 node .\scripts\materialize-candidate.mjs --out C:\benchmark-runs\B01-A1
 ```
+
+The materialized repository contains the real `semantic-test-corpus` profile,
+the dependency-free `semantic-corpus` MCP server, the immutable 60-slot request,
+and public contract. A trusted coordinator must copy these into a disposable
+non-repository run and establish the mandatory container/restricted-mount/ACL
+boundary before server initialization. There is no in-repository lifetime
+launcher or unsafe fallback.
+
+After signed model completion, run the evaluator-only adapter outside model
+context:
+
+```powershell
+node .\evaluator\adapter.mjs `
+  --corpus-contract C:\isolated-runs\B01-A1\corpus-contract `
+  --corpus-staging C:\isolated-runs\B01-A1\corpus-staging `
+  --payload .\raw\model-complete-export.json `
+  --signature .\raw\model-complete-export.sig `
+  --public-key C:\trusted\copilot-platform-ed25519.pem `
+  --run-id B01-A1 --block-id B01 --arm-id 1 --seed 1812433253 `
+  --out .\staging\B01-A1.json
+```
+
+Its compact stdout reports the canonical staging path/hash and observed counts.
+The full corpus remains evaluator-only.
+
+Derive the canonical evaluator metrics artifact from that exact snapshot:
+
+```powershell
+node .\evaluator\metrics.mjs `
+  --snapshot .\staging\B01-A1.json `
+  --run-id B01-A1 --block-id B01 --arm-id 1 `
+  --out .\metrics\B01-A1.json
+```
+
+The run record binds both snapshot and metrics hashes. A signed
+`metrics.computed` event also binds the evaluator-code, mapping-spec, independent
+oracle-code, and mutant-harness hashes. Statistics reloads the snapshot and
+deterministically rederives the artifact; callers cannot supply promotion,
+coverage, mutation, or diversity values.
+Arm 0 is regenerated from its frozen block seed and must match canonical bytes;
+the artifact also binds the generator commit and committed blob hashes. Metrics
+events bind a dedicated evaluator session/process distinct from all measured run
+identities, and signed boundaries—not caller latency—enforce baseline duration.
 
 For every measured AI run, bind its run record to the exact raw signed platform
 export and verify all required parent/worker sessions:
@@ -91,7 +134,7 @@ registered primary analyses. The CLI authenticates the raw export itself:
 
 ```powershell
 node .\evaluator\statistics.mjs `
-  --in .\raw\blinded-run-metrics.json `
+  --in .\raw\blinded-run-artifacts.json `
   --payload .\raw\platform-export.json `
   --signature .\raw\platform-export.sig `
   --public-key C:\trusted\copilot-platform-ed25519.pem `
@@ -109,10 +152,12 @@ and conditional simple-effect contrasts with the registered bootstrap, plus
 0/1 and worst/best missing-outcome sensitivity bounds. With zero complete
 blocks, paired comparisons and factorial results are null while deterministic
 arm availability and descriptive summaries remain.
-Input follows `schemas/statistics-input.schema.json`: run records bind model
-events, and each AI observation supplies only candidate/evaluator/staging paths.
-The CLI derives model availability, isolation compliance, and budgets from the
-authenticated export; caller flags/hashes are forbidden. It also rejects
+Input follows `schemas/statistics-input.schema.json`: each row supplies only
+run identity, a metrics-artifact path, and (for AI runs) isolation roots. Run
+records bind the snapshot and metrics hashes. The CLI rederives all outcome
+values and derives model availability, isolation compliance, and budgets from
+the authenticated export; caller outcome values, flags, and hashes are
+forbidden. It also rejects
 `input.options` and all top-level analysis overrides; alpha
 0.05, the three registered margins, 10,000 draws, and seed 20260729 are frozen.
 
@@ -125,9 +170,10 @@ node .\scripts\verify-isolation-evidence.mjs `
   --public-key C:\trusted\copilot-platform-ed25519.pem `
   --arm-id 1 `
   --run-id B01-A1 `
-  --candidate-root C:\benchmark-runs\B01-A1 `
+  --contract-root C:\isolated-runs\B01-A1\corpus-contract `
+  --staging-root C:\isolated-runs\B01-A1\corpus-staging `
   --evaluator-root (Join-Path $PWD evaluator) `
-  --staging-path C:\benchmark-runs\B01-A1\staging\B01-A1.json `
+  --snapshot-path (Join-Path $PWD staging\B01-A1.json) `
   --out .\raw\B01-A1-isolation.json
 ```
 
@@ -140,6 +186,25 @@ mismapped signed events fail closed. Scoping checks both `sessionId` and
 `actorSessionId`, and a dataset-wide attribution pass rejects unknown,
 ambiguous, or cross-run identities before any per-run audit.
 
+### Real Copilot smoke audit availability
+
+`fixtures/platform-audit/` contains privacy-bounded, byte-exact relevant JSONL
+event captures from real Copilot CLI 1.0.77 smoke sessions for direct inline MCP
+calls and parent-to-`semantic-test-corpus` delegation. Replay them with:
+
+```powershell
+node .\scripts\platform-audit-adapter.mjs `
+  --in .\fixtures\platform-audit\inline-smoke.captured.jsonl `
+  --cell inline --out .\raw\inline-smoke-audit.json
+```
+
+The captures record actual runtime MCP names, parent/worker attribution,
+and delegation lifecycle, but Copilot CLI JSONL does not export the required
+detached Ed25519 signature, sandbox policy/filesystem audit, or signed run,
+adapter, and metrics boundaries. The adapter therefore exits 2 and marks both
+smoke cells/protocol cells **unavailable**. It never fabricates a signed
+platform export. Synthetic signed-event streams remain unit tests only.
+
 ## Layout
 
 | Path | Purpose |
@@ -147,18 +212,21 @@ ambiguous, or cross-run identities before any per-run audit.
 | `protocol.md` | Immutable arms, budgets, isolation, metrics, thresholds, and analysis |
 | `fixture/spec/` | Executable public mapping and invariant program |
 | `fixture/migration/` | Candidate spec interpreter |
-| `schemas/`, `validators/` | Input, staging, promotion, telemetry contracts and validators |
+| `schemas/`, `validators/` | Input, staging, metrics, audit, promotion, and telemetry contracts |
 | `baseline/` | Decision, boundary, pairwise, grammar/property, and solver generator |
 | `candidate-template/`, `design/candidate-manifest.json` | External candidate materialization allowlist |
-| `evaluator/` | Isolated oracle, acceptance, mutants, statistics, goldens, artifacts, and evaluator tests |
-| `design/` | Shared prompt/Skill, evidence contract, fixed models, seeds, and schedule |
-| `staging/` | Inputs only; expected output is forbidden |
+| `evaluator/` | Isolated adapter, oracle, metrics, acceptance, mutants, statistics, goldens, and tests |
+| `design/` | Immutable MCP request, shared prompt/Skill, evidence contract, fixed models, seeds, and schedule |
+| `staging/` | Canonical evaluator snapshots; expected output is forbidden |
 
-Measured generators run only in external repositories created by the
-materializer; the evaluator directory is never copied or mounted. Signed
-platform policy/access exports prove candidate-root-only filesystem access and
-network denial. Both delegated arms invoke the same byte-identical materialized
-Skill and return only compact staging metadata; parents never read the corpus.
+Measured generators run only against disposable launcher-confined contract and
+staging roots; the evaluator directory and repository are inaccessible. Signed
+platform policy/access exports prove contract-read-only/staging-read-write
+access and network denial. Inline parents and delegated workers use the same
+four actual MCP tools. Both delegated arms invoke the same bytes at the actual
+registered `.github/skills/semantic-test-corpus/SKILL.md` path and the
+`semantic-test-corpus` agent, returning only its
+terminal success/failure line; parents never read the corpus.
 Dataset-wide attribution covers tool/results, filesystem, network, outcome,
 delegation, completion, and unblinding events; generation activity at or after
 completion fails closed.

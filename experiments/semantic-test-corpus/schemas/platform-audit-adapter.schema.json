@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "platform-audit-adapter.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "provider", "cell", "source", "status", "protocolCellAvailable", "missingEvidence", "observed", "normalizedExport"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "provider": {"const": "github-copilot-cli"},
+    "cell": {"type": "string", "enum": ["inline", "delegated"]},
+    "source": {
+      "type": "object",
+      "required": ["format", "bytes", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "format": {"type": "string", "enum": ["copilot-jsonl", "signed-platform-export"]},
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "status": {"type": "string", "enum": ["available", "unavailable"]},
+    "protocolCellAvailable": {"type": "boolean"},
+    "missingEvidence": {"type": "array", "items": {"type": "string"}},
+    "observed": {
+      "type": "object",
+      "required": ["models", "toolCalls", "delegation"],
+      "additionalProperties": false,
+      "properties": {
+        "models": {"type": "array", "items": {"type": "string"}},
+        "toolCalls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["eventId", "callId", "rawToolName", "mcpServerName", "mcpToolName", "contractToolName", "actor"],
+            "additionalProperties": false,
+            "properties": {
+              "eventId": {"type": "string"},
+              "callId": {"type": "string"},
+              "rawToolName": {"type": "string"},
+              "mcpServerName": {"const": "semantic-corpus"},
+              "mcpToolName": {"type": "string"},
+              "contractToolName": {"type": "string"},
+              "actor": {"type": "string", "enum": ["parent", "worker"]},
+              "agentId": {"type": "string"},
+              "parentToolCallId": {"type": "string"}
+            }
+          }
+        },
+        "delegation": {
+          "type": "object",
+          "required": ["invoked", "completed", "agentName", "callId"],
+          "additionalProperties": false,
+          "properties": {
+            "invoked": {"type": "boolean"},
+            "completed": {"type": "boolean"},
+            "agentName": {"type": ["string", "null"]},
+            "callId": {"type": ["string", "null"]}
+          }
+        }
+      }
+    },
+    "normalizedExport": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "object"}
+      ]
+    }
+  }
+}

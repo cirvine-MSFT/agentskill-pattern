@@ -67,7 +67,7 @@ export function buildReport(corpus, matrix, mappingSpec) {
   }
   const strategyCounts = {};
   for (const scenario of corpus.cases) {
-    for (const tag of scenario.sourceTags) strategyCounts[tag] = (strategyCounts[tag] ?? 0) + 1;
+    for (const tag of scenario.sourceTags ?? []) strategyCounts[tag] = (strategyCounts[tag] ?? 0) + 1;
   }
   const valid = corpus.cases.filter((scenario) => scenario.expected.status === "ok").length;
   const categories = [...new Set(diagnostics.map((item) => item.category))].sort();

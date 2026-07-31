@@ -9,6 +9,10 @@
       "if": {"properties": {"armId": {"const": 0}}},
       "then": {"properties": {"modelEvidence": {"type": "null"}}},
       "else": {"properties": {"modelEvidence": {"type": "object"}}}
+    },
+    {
+      "if": {"properties": {"phase": {"enum": ["promoted", "complete"]}}},
+      "then": {"required": ["staging", "metrics"]}
     }
   ],
   "properties": {
@@ -54,11 +58,25 @@
     },
     "staging": {
       "type": "object",
+      "required": ["path", "sha256", "sourceRoot"],
+      "additionalProperties": false,
       "properties": {
         "path": {"type": "string"},
-        "sha256": {"type": "string"},
-        "submittedCases": {"type": "integer"},
-        "promotedCases": {"type": "integer"}
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "sourceRoot": {"const": "corpus-staging/"}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["path", "sha256", "snapshotSha256", "eventId", "evaluatorSessionId", "evaluatorProcessId"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "eventId": {"type": "string", "minLength": 1},
+        "evaluatorSessionId": {"type": "string", "minLength": 1},
+        "evaluatorProcessId": {"type": "string", "minLength": 1}
       }
     },
     "timing": {

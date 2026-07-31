@@ -15,7 +15,7 @@ test("custom-agent frontmatter exposes only request-bound MCP tools", async () =
   const frontmatter = text.split("---")[1];
   assert.match(frontmatter, /^name: semantic-test-corpus$/m);
   assert.match(frontmatter, /^target: github-copilot$/m);
-  assert.match(frontmatter, /^model: claude-haiku-4\.5$/m);
+  assert.doesNotMatch(frontmatter, /^model:/m);
   assert.match(frontmatter, /^user-invocable: false$/m);
   assert.match(frontmatter, /^\s+type: local$/m);
   assert.match(frontmatter, /^\s+command: node$/m);
@@ -51,7 +51,9 @@ test("agent and Skill preserve deterministic parent ownership and no fallback", 
   assert.match(skill, /never\s+generate scenarios inline/i);
   assert.match(skill, /container, enforceable OS sandbox, or dedicated ACL/i);
   assert.match(skill, /fails before MCP\s+initialization otherwise/i);
-  assert.match(skill, /parent deterministically validates staged inputs/i);
+  assert.match(skill, /evaluator-only deterministic code may snapshot/i);
+  assert.match(skill, /parent must not\s+read, package, validate, or copy the corpus/i);
   assert.match(skill, /trusted oracle/i);
   assert.match(skill, /mutant scoring/i);
+  assert.match(skill, /inherits the caller\/session model/i);
 });

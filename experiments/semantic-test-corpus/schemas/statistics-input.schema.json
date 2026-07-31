@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "statistics-input.schema.json",
   "type": "object",
-  "required": ["observations", "runRecords"],
+  "required": ["runs", "runRecords"],
   "additionalProperties": false,
   "properties": {
-    "observations": {
+    "runs": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["runId", "blockId", "armId", "promotionRate", "semanticPathCoverage", "mutantKillRate"],
+        "required": ["runId", "blockId", "armId", "metricsPath"],
         "additionalProperties": false,
         "allOf": [
           {
@@ -21,17 +21,15 @@
           "runId": {"type": "string"},
           "blockId": {"type": "string"},
           "armId": {"type": "integer", "minimum": 0, "maximum": 4},
-          "promotionRate": {"type": "number", "minimum": 0, "maximum": 1},
-          "semanticPathCoverage": {"type": "number", "minimum": 0, "maximum": 1},
-          "mutantKillRate": {"type": "number", "minimum": 0, "maximum": 1},
+          "metricsPath": {"type": "string"},
           "evidenceContext": {
             "type": "object",
-            "required": ["candidateRoot", "evaluatorRoot", "stagingPath"],
+            "required": ["contractRoot", "stagingRoot", "evaluatorRoot"],
             "additionalProperties": false,
             "properties": {
-              "candidateRoot": {"type": "string"},
-              "evaluatorRoot": {"type": "string"},
-              "stagingPath": {"type": "string"}
+              "contractRoot": {"type": "string"},
+              "stagingRoot": {"type": "string"},
+              "evaluatorRoot": {"type": "string"}
             }
           }
         }
