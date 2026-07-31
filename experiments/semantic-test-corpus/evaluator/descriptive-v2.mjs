@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { canonicalMetricsBytes, deriveMetricsArtifact } from "./metrics.mjs";
@@ -9,6 +9,7 @@ import { canonicalStagingBytes, verifyLocalSnapshotWrites } from "./adapter.mjs"
 import { preflightLocalModel } from "../scripts/preflight-local-model.mjs";
 import { validateExecutionRecords } from "../scripts/validate-execution-records.mjs";
 import { validateLocalEvidence } from "../scripts/validate-local-evidence.mjs";
+import { validateStartOrder } from "../scripts/validate-start-order.mjs";
 
 const evaluatorRoot = dirname(fileURLToPath(import.meta.url));
 const root = resolve(evaluatorRoot, "..");
@@ -94,81 +95,116 @@ function registeredContrasts(runs, endpointNames) {
 
 function targetDecisionRule(runs) {
   const rule = contrastContract.targetArmDecisionRule;
-  const meanFor = (armId, endpoint) => point(
-    runs.filter((run) => run.armId === armId)
-      .map((run) => run.endpoints[endpoint])
-      .filter(Number.isFinite)
-  ).mean;
-  const difference = (endpoint, referenceArm) => {
-    const target = meanFor(rule.armId, endpoint);
-    const reference = meanFor(referenceArm, endpoint);
-    return Number.isFinite(target) && Number.isFinite(reference)
-      ? target - reference
-      : null;
+  const requiredComparableBlocks = rule.requiredComparableBlocks;
+  const comparison = (endpoint, referenceArm) => {
+    const pairs = [];
+    for (let block = 1; block <= 12; block += 1) {
+      const blockId = `B${String(block).padStart(2, "0")}`;
+      const target = runs.find((run) =>
+        run.blockId === blockId && run.armId === rule.armId)?.endpoints[endpoint];
+      const reference = runs.find((run) =>
+        run.blockId === blockId && run.armId === referenceArm)?.endpoints[endpoint];
+      if (Number.isFinite(target) && Number.isFinite(reference)) {
+        pairs.push({ blockId, target, reference });
+      }
+    }
+    const targetMean = point(pairs.map((pair) => pair.target)).mean;
+    const referenceMean = point(pairs.map((pair) => pair.reference)).mean;
+    return {
+      endpoint,
+      referenceArm,
+      n: pairs.length,
+      complete: pairs.length === requiredComparableBlocks,
+      targetMean,
+      referenceMean,
+      difference: Number.isFinite(targetMean) && Number.isFinite(referenceMean)
+        ? targetMean - referenceMean
+        : null,
+      ratio: Number.isFinite(targetMean) && Number.isFinite(referenceMean)
+        && referenceMean > 0
+        ? targetMean / referenceMean
+        : null,
+      blockValues: pairs
+    };
   };
-  const ratio = (endpoint, referenceArm) => {
-    const target = meanFor(rule.armId, endpoint);
-    const reference = meanFor(referenceArm, endpoint);
-    return Number.isFinite(target) && Number.isFinite(reference) && reference > 0
-      ? target / reference
-      : null;
+  const qualityComparisons = {
+    promotionRate: comparison("promotionRate", rule.qualityFloorsAgainstArm),
+    pathCoverage: comparison("pathCoverage", rule.qualityFloorsAgainstArm),
+    mutantKillRate: comparison("mutantKillRate", rule.qualityFloorsAgainstArm)
   };
   const quality = {
-    promotionRateDifference: difference("promotionRate", rule.qualityFloorsAgainstArm),
-    pathCoverageDifference: difference("pathCoverage", rule.qualityFloorsAgainstArm),
-    mutantKillRateDifference: difference("mutantKillRate", rule.qualityFloorsAgainstArm)
+    promotionRateDifference: qualityComparisons.promotionRate.difference,
+    pathCoverageDifference: qualityComparisons.pathCoverage.difference,
+    mutantKillRateDifference: qualityComparisons.mutantKillRate.difference
   };
   const qualityPasses = {
-    promotionRate: Number.isFinite(quality.promotionRateDifference)
+    promotionRate: qualityComparisons.promotionRate.complete
+      && Number.isFinite(quality.promotionRateDifference)
       && quality.promotionRateDifference
         >= rule.qualityFloors.promotionRateDifferenceMinimum,
-    pathCoverage: Number.isFinite(quality.pathCoverageDifference)
+    pathCoverage: qualityComparisons.pathCoverage.complete
+      && Number.isFinite(quality.pathCoverageDifference)
       && quality.pathCoverageDifference
         >= rule.qualityFloors.pathCoverageDifferenceMinimum,
-    mutantKillRate: Number.isFinite(quality.mutantKillRateDifference)
+    mutantKillRate: qualityComparisons.mutantKillRate.complete
+      && Number.isFinite(quality.mutantKillRateDifference)
       && quality.mutantKillRateDifference
         >= rule.qualityFloors.mutantKillRateDifferenceMinimum
   };
-  const efficiency = {
-    parentCumulativeInputTokensRatio: ratio(
+  const efficiencyComparisons = {
+    parentCumulativeInputTokens: comparison(
       "parentCumulativeInputTokens",
       rule.positiveEfficiencySignalAgainstArm
     ),
-    totalNanoAiuRatio: ratio(
+    totalNanoAiu: comparison(
       "totalNanoAiu",
       rule.positiveEfficiencySignalAgainstArm
     ),
-    totalAiCreditsRatio: ratio(
+    totalAiCredits: comparison(
       "totalAiCredits",
       rule.positiveEfficiencySignalAgainstArm
     )
   };
+  const efficiency = {
+    parentCumulativeInputTokensRatio:
+      efficiencyComparisons.parentCumulativeInputTokens.ratio,
+    totalNanoAiuRatio: efficiencyComparisons.totalNanoAiu.ratio,
+    totalAiCreditsRatio: efficiencyComparisons.totalAiCredits.ratio
+  };
   const efficiencyPasses = {
-    parentCumulativeInputTokens: Number.isFinite(efficiency.parentCumulativeInputTokensRatio)
+    parentCumulativeInputTokens:
+      efficiencyComparisons.parentCumulativeInputTokens.complete
+      && Number.isFinite(efficiency.parentCumulativeInputTokensRatio)
       && efficiency.parentCumulativeInputTokensRatio
         <= rule.positiveEfficiencySignalRequires.parentCumulativeInputTokensRatioMaximum,
-    totalNanoAiu: Number.isFinite(efficiency.totalNanoAiuRatio)
+    totalNanoAiu: efficiencyComparisons.totalNanoAiu.complete
+      && Number.isFinite(efficiency.totalNanoAiuRatio)
       && efficiency.totalNanoAiuRatio
         <= rule.positiveEfficiencySignalRequires.totalNanoAiuRatioMaximum,
-    totalAiCredits: Number.isFinite(efficiency.totalAiCreditsRatio)
+    totalAiCredits: efficiencyComparisons.totalAiCredits.complete
+      && Number.isFinite(efficiency.totalAiCreditsRatio)
       && efficiency.totalAiCreditsRatio
         <= rule.positiveEfficiencySignalRequires.totalAiCreditsRatioMaximum
   };
-  const wallRatio = ratio(
+  const wallComparison = comparison(
     rule.secondaryWallTarget.endpoint,
     rule.positiveEfficiencySignalAgainstArm
   );
+  const wallRatio = wallComparison.ratio;
   return {
     preregisteredRule: rule,
+    qualityComparisons,
     quality,
     qualityPasses,
+    efficiencyComparisons,
     efficiency,
     efficiencyPasses,
     positiveEfficiencySignal: Object.values(qualityPasses).every(Boolean)
       && Object.values(efficiencyPasses).every(Boolean),
     secondaryWallTarget: {
+      comparison: wallComparison,
       ratio: wallRatio,
-      met: Number.isFinite(wallRatio)
+      met: wallComparison.complete && Number.isFinite(wallRatio)
         && wallRatio <= rule.secondaryWallTarget.ratioMaximum
     }
   };
@@ -259,23 +295,54 @@ export function buildDescriptiveRuns(input, artifactRoot) {
   if (errors.length > 0) {
     throw new Error(`Descriptive artifact manifest is invalid: ${errors[0].path} ${errors[0].message}`);
   }
+  const startIndexPath = resolve(artifactRoot, input.startIndexPath);
+  const startIndexBytes = readFileSync(startIndexPath);
+  const startIndexSha256 = sha256(startIndexBytes);
+  const startIndexShaBytes = readFileSync(
+    resolve(artifactRoot, input.startIndexSha256Path)
+  );
+  if (startIndexShaBytes.toString("utf8") !== `${startIndexSha256}\n`) {
+    throw new Error("Finalized start-index SHA-256 file differs from exact index bytes");
+  }
+  const startIndex = JSON.parse(startIndexBytes);
+  const startErrors = validateStartOrder(startIndex, {
+    requireComplete: true,
+    baseDir: dirname(startIndexPath)
+  });
+  if (startErrors.length > 0) {
+    throw new Error(`Finalized start index is invalid: ${startErrors[0]}`);
+  }
+  const withinArtifactRoot = (path) => {
+    const child = relative(resolve(artifactRoot), resolve(path));
+    return child === "" || (!isAbsolute(child) && child !== ".."
+      && !child.startsWith(`..\\`) && !child.startsWith("../"));
+  };
+  const appSessions = new Set();
+  const cliSessions = new Set();
   const seenUnits = new Set();
-  const unitRecords = input.runs.map((definition) => {
+  const unitRecords = input.runs.map((definition, unitIndex) => {
     const planned = schedule.runs.find((run) => run.runId === definition.runId);
+    const orderCapture = startIndex.captures[unitIndex];
     if (!planned
       || planned.blockId !== definition.blockId
       || planned.armId !== definition.armId
-      || seenUnits.has(definition.runId)) {
+      || seenUnits.has(definition.runId)
+      || orderCapture?.runId !== definition.runId
+      || orderCapture?.sequence !== planned.globalOrder) {
       throw new Error(`Unit identity is duplicate or differs from the frozen schedule: ${definition.runId}`);
     }
     seenUnits.add(definition.runId);
     if (definition.status === "eligible") {
+      if (orderCapture.disposition !== "started") {
+        throw new Error(`Eligible unit does not have a started order record: ${definition.runId}`);
+      }
       return {
         runId: definition.runId,
         blockId: definition.blockId,
         armId: definition.armId,
         status: "eligible",
-        reason: null
+        reason: null,
+        operationalUsage: null
       };
     }
     const dispositionPath = resolve(artifactRoot, definition.dispositionPath);
@@ -287,30 +354,114 @@ export function buildDescriptiveRuns(input, artifactRoot) {
     const sourceBytes = dispositionErrors.length === 0
       ? readFileSync(resolve(dirname(dispositionPath), disposition.sourcePath))
       : Buffer.alloc(0);
+    const orderSourcePath = dispositionErrors.length === 0
+      ? resolve(dirname(startIndexPath), disposition.orderSourcePath)
+      : "";
+    const captureSourcePath = resolve(dirname(startIndexPath), orderCapture.sourcePath);
+    const orderSourceBytes = dispositionErrors.length === 0
+      ? readFileSync(orderSourcePath)
+      : Buffer.alloc(0);
     if (dispositionErrors.length > 0
       || disposition.runId !== definition.runId
       || disposition.blockId !== definition.blockId
       || disposition.armId !== definition.armId
       || disposition.status !== definition.status
-      || disposition.sourceSha256 !== sha256(sourceBytes)) {
+      || disposition.sourceSha256 !== sha256(sourceBytes)
+      || orderSourcePath !== captureSourcePath
+      || disposition.orderSourceSha256 !== sha256(orderSourceBytes)
+      || disposition.orderSourceSha256 !== orderCapture.sourceSha256) {
       throw new Error(`Unavailable/excluded unit lacks exact evidence binding: ${definition.runId}`);
+    }
+    const source = JSON.parse(sourceBytes);
+    const expectedKinds = definition.status === "excluded"
+      ? ["model-excluded"]
+      : ["preflight-unavailable", "retry-exhausted", "started-uncertain"];
+    if (!expectedKinds.includes(disposition.evidenceKind)) {
+      throw new Error(`Unit disposition evidence kind is invalid: ${definition.runId}`);
+    }
+    if (["preflight-unavailable", "retry-exhausted"].includes(disposition.evidenceKind)) {
+      if (source.runId !== definition.runId
+        || source.blockId !== definition.blockId
+        || source.armId !== definition.armId
+        || source.disposition !== "unavailable"
+        || source.recordedAt !== orderCapture.recordedAt) {
+        throw new Error(`Unavailable order evidence is invalid: ${definition.runId}`);
+      }
+    }
+    if (disposition.evidenceKind === "started-uncertain") {
+      if (source.runId !== definition.runId
+        || source.blockId !== definition.blockId
+        || source.armId !== definition.armId
+        || source.status !== "started-uncertain"
+        || source.lifecycleSha256 !== sha256(orderSourceBytes)
+        || !Array.isArray(source.preservedFiles)) {
+        throw new Error(`Started/uncertain evidence is invalid: ${definition.runId}`);
+      }
+      for (const file of source.preservedFiles) {
+        const filePath = resolve(dirname(dispositionPath), file.path);
+        if (!withinArtifactRoot(filePath)) {
+          throw new Error(`Started/uncertain evidence escapes artifact root: ${definition.runId}`);
+        }
+        const bytes = readFileSync(filePath);
+        if (bytes.length !== file.bytes || sha256(bytes) !== file.sha256) {
+          throw new Error(`Started/uncertain preserved file differs: ${definition.runId}/${file.path}`);
+        }
+      }
+    }
+    let operationalUsage = null;
+    if (disposition.evidenceKind === "model-excluded") {
+      const evidencePath = resolve(artifactRoot, definition.localEvidencePath);
+      const evidenceBytes = readFileSync(evidencePath);
+      const evidence = JSON.parse(evidenceBytes);
+      const evidenceErrors = validateLocalEvidence(evidence, {
+        artifactRoot: dirname(evidencePath),
+        candidateRoot: resolve(artifactRoot, definition.candidateRoot)
+      });
+      const preflightPath = resolve(artifactRoot, definition.modelPreflightPath);
+      const preflightBytes = readFileSync(preflightPath);
+      const preflight = JSON.parse(preflightBytes);
+      const recomputed = preflightLocalModel(evidence, evidenceBytes);
+      if (evidenceErrors.length > 0
+        || evidence.runId !== definition.runId
+        || evidence.blockId !== definition.blockId
+        || evidence.armId !== definition.armId
+        || preflightPath !== resolve(dirname(dispositionPath), disposition.sourcePath)
+        || !preflightBytes.equals(sourceBytes)
+        || JSON.stringify(preflight) !== JSON.stringify(recomputed)
+        || preflight.status === "pass") {
+        throw new Error(`Excluded unit local evidence is invalid: ${definition.runId}`);
+      }
+      const records = readExecutionRecords(evidence, evidencePath);
+      for (const attempt of records.attempts) {
+        for (const [label, value, set] of [
+          ["app project", attempt.appProjectSessionId, appSessions],
+          ["CLI", attempt.cliSessionId, cliSessions]
+        ]) {
+          if (set.has(value)) {
+            throw new Error(`${label} session is reused across AI attempts: ${value}`);
+          }
+          set.add(value);
+        }
+      }
+      operationalUsage = evidence.operationalUsage;
     }
     return {
       runId: definition.runId,
       blockId: definition.blockId,
       armId: definition.armId,
       status: definition.status,
-      reason: disposition.reason
+      reason: disposition.reason,
+      operationalUsage
     };
   });
   if (seenUnits.size !== schedule.runs.length) {
     throw new Error("Exactly 72 unique frozen unit records are required");
   }
-  const appSessions = new Set();
-  const cliSessions = new Set();
   const runs = input.runs.filter((definition) => definition.status === "eligible")
     .map((definition) => {
     const planned = schedule.runs.find((run) => run.runId === definition.runId);
+    const orderCapture = startIndex.captures.find((capture) =>
+      capture.runId === definition.runId);
     if (!planned
       || planned.blockId !== definition.blockId
       || planned.armId !== definition.armId) {
@@ -365,6 +516,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         || evaluation.executionSha256 !== sha256(executionBytes)
         || execution.stagingSha256 !== metrics.snapshotSha256
         || execution.startEvidenceSha256 !== sha256(startBytes)
+        || execution.startEvidenceSha256 !== orderCapture.sourceSha256
         || execution.endEvidenceSha256 !== sha256(endBytes)
         || startEvidence.runId !== planned.runId
         || startEvidence.blockId !== planned.blockId
@@ -456,6 +608,9 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         parentActiveMs: 0,
         workerActiveMs: 0,
         parentWaitMs: 0,
+        sessionEvidenceAvailable: 0,
+        modelEvidenceAvailable: 0,
+        mechanismEvidenceAvailable: 0,
         deviationCount: 0
       });
     } else {
@@ -647,6 +802,29 @@ export function summarizeDescriptive(runs) {
       });
     }
   }
+  const excludedOperationalRuns = units
+    .filter((unit) => unit.status === "excluded" && unit.operationalUsage)
+    .map((unit) => ({
+      runId: unit.runId,
+      blockId: unit.blockId,
+      armId: unit.armId,
+      usage: unit.operationalUsage
+    }));
+  const operationalFields = [
+    "aiCredits", "nanoAiu", "modelTokens", "completionCount"
+  ];
+  const excludedOperationalTotals = Object.fromEntries(
+    operationalFields.map((field) => {
+      const values = excludedOperationalRuns
+        .map((run) => run.usage.total[field]);
+      return [
+        field,
+        values.length > 0 && values.every(Number.isFinite)
+          ? values.reduce((sum, value) => sum + value, 0)
+          : null
+      ];
+    })
+  );
   return {
     formatVersion: 1,
     protocolId: "semantic-test-corpus-execution-v2",
@@ -655,6 +833,10 @@ export function summarizeDescriptive(runs) {
     validatedUnits: units.length,
     observedRuns: runs.length,
     unavailableRuns: units.filter((unit) => unit.status !== "eligible"),
+    excludedOperationalUsage: {
+      runs: excludedOperationalRuns,
+      totals: excludedOperationalTotals
+    },
     armPoints,
     pairs,
     registeredContrasts: registeredContrasts(runs, endpointNames),

@@ -42,10 +42,18 @@ export function validateLocalEvidence(evidence, { artifactRoot, candidateRoot } 
     }
     if (errors.length === 0) {
       const readSource = (name) => readFileSync(resolve(artifactRoot, evidence.source[name].path));
-      const preSessionFailures = evidence.source.preSessionFailures.map((source) => {
+      const preSessionFailures = evidence.source.preSessionFailures.map((source, index) => {
         const path = resolve(artifactRoot, source.path);
         const bytes = readFileSync(path);
-        return { path, bytes, record: JSON.parse(bytes) };
+        const receiptSource = evidence.source.preSessionFailureReceipts[index];
+        const receiptPath = resolve(artifactRoot, receiptSource.path);
+        return {
+          path,
+          bytes,
+          record: JSON.parse(bytes),
+          receiptPath,
+          receiptBytes: readFileSync(receiptPath)
+        };
       });
       const manifestBytes = readSource("runManifest");
       const attemptBytes = readSource("runAttempt");

@@ -4,7 +4,8 @@
   "type": "object",
   "required": [
     "formatVersion", "protocolId", "runId", "blockId", "armId", "status",
-    "reason", "sourcePath", "sourceSha256"
+    "reason", "evidenceKind", "sourcePath", "sourceSha256",
+    "orderSourcePath", "orderSourceSha256"
   ],
   "additionalProperties": false,
   "properties": {
@@ -15,7 +16,16 @@
     "armId": {"type": "integer", "minimum": 0, "maximum": 5},
     "status": {"type": "string", "enum": ["unavailable", "excluded"]},
     "reason": {"type": "string", "minLength": 1},
+    "evidenceKind": {
+      "type": "string",
+      "enum": [
+        "preflight-unavailable", "retry-exhausted", "started-uncertain",
+        "model-excluded"
+      ]
+    },
     "sourcePath": {"type": "string", "minLength": 1},
-    "sourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    "sourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "orderSourcePath": {"type": "string", "minLength": 1},
+    "orderSourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
   }
 }

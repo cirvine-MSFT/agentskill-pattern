@@ -2,11 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "descriptive-artifacts.schema.json",
   "type": "object",
-  "required": ["formatVersion", "protocolId", "runs"],
+  "required": [
+    "formatVersion", "protocolId", "startIndexPath", "startIndexSha256Path",
+    "runs"
+  ],
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
     "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "startIndexPath": {"type": "string", "minLength": 1},
+    "startIndexSha256Path": {"type": "string", "minLength": 1},
     "runs": {
       "type": "array",
       "minItems": 72,
@@ -58,18 +63,36 @@
               ]
             },
             "else": {
-              "properties": {
-                "snapshotPath": {"type": "null"},
-                "metricsPath": {"type": "null"},
-                "executionPath": {"type": "null"},
-                "localEvidencePath": {"type": "null"},
-                "modelPreflightPath": {"type": "null"},
-                "candidateRoot": {"type": "null"},
-                "evaluationPath": {"type": "null"},
-                "startEvidencePath": {"type": "null"},
-                "endEvidencePath": {"type": "null"},
-                "dispositionPath": {"type": "string", "minLength": 1}
-              }
+              "allOf": [
+                {
+                  "properties": {
+                    "snapshotPath": {"type": "null"},
+                    "metricsPath": {"type": "null"},
+                    "executionPath": {"type": "null"},
+                    "evaluationPath": {"type": "null"},
+                    "startEvidencePath": {"type": "null"},
+                    "endEvidencePath": {"type": "null"},
+                    "dispositionPath": {"type": "string", "minLength": 1}
+                  }
+                },
+                {
+                  "if": {"properties": {"status": {"const": "excluded"}}},
+                  "then": {
+                    "properties": {
+                      "localEvidencePath": {"type": "string", "minLength": 1},
+                      "modelPreflightPath": {"type": "string", "minLength": 1},
+                      "candidateRoot": {"type": "string", "minLength": 1}
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "localEvidencePath": {"type": "null"},
+                      "modelPreflightPath": {"type": "null"},
+                      "candidateRoot": {"type": "null"}
+                    }
+                  }
+                }
+              ]
             }
           }
         ],

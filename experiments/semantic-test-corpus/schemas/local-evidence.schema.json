@@ -46,7 +46,10 @@
     },
     "source": {
       "type": "object",
-      "required": ["events", "usage", "sessionCreation", "candidateBoundary", "runManifest", "runAttempt", "preSessionFailures"],
+      "required": [
+        "events", "usage", "sessionCreation", "candidateBoundary", "runManifest",
+        "runAttempt", "preSessionFailures", "preSessionFailureReceipts"
+      ],
       "additionalProperties": false,
       "properties": {
         "events": {"$ref": "local-file-source.schema.json"},
@@ -56,6 +59,11 @@
         "runManifest": {"$ref": "local-file-source.schema.json"},
         "runAttempt": {"$ref": "local-file-source.schema.json"},
         "preSessionFailures": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {"$ref": "local-file-source.schema.json"}
+        },
+        "preSessionFailureReceipts": {
           "type": "array",
           "maxItems": 1,
           "items": {"$ref": "local-file-source.schema.json"}

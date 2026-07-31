@@ -44,7 +44,8 @@ Eligibility requires observed exact:
 Missing, crashed, ambiguous, mismatched, or exceeded evidence after the marker is
 started/uncertain, preserves partial artifacts and every cost, and is never retried.
 Only authoritative positive evidence of no kickoff, no session, and zero usage permits
-one retry. Selected-attempt and all-attempt operational costs remain separate.
+one retry. The raw authoritative receipt is preserved, hashed, and revalidated before
+retry. Selected-attempt and all-attempt operational costs remain separate.
 
 ## Order and analysis
 
@@ -54,5 +55,6 @@ the sequence; started records bind the durable lifecycle marker.
 
 After snapshots and metrics are immutable, `npm run analyze` reports only the
 registered descriptive arm/block values and contrasts. Exactly 72 eligible or
-evidence-bound unavailable/excluded units are mandatory; omission fails. V1 execution
-is unavailable.
+evidence-bound unavailable/excluded units and the finalized start-index bytes/SHA are
+mandatory; omission fails. Started excluded local evidence remains bound so operational
+costs can be reported separately. V1 execution is unavailable.

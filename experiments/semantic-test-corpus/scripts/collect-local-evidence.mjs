@@ -400,9 +400,23 @@ export function collectLocalEvidence({
     const errors = validateJsonSchema(item.record, preSessionFailureSchema, {
       schemaDir: schemaRoot
     });
+    let receipt = null;
+    try {
+      receipt = item.receiptBytes ? JSON.parse(item.receiptBytes) : null;
+    } catch {
+      receipt = null;
+    }
     if (errors.length > 0
       || item.record.runId !== runManifest.runId
-      || basename(runManifest.preSessionFailures[index]) !== basename(item.path)) {
+      || basename(runManifest.preSessionFailures[index]) !== basename(item.path)
+      || basename(item.receiptPath ?? "") !== item.record.receipt.path
+      || !item.receiptBytes
+      || sha256(item.receiptBytes) !== item.record.receipt.sha256
+      || receipt?.receiptKind !== item.record.receipt.receiptKind
+      || receipt?.receiptId !== item.record.receipt.receiptId
+      || receipt?.kickoffStarted !== false
+      || receipt?.sessionCreated !== false
+      || JSON.stringify(receipt?.usage) !== JSON.stringify(item.record.usage)) {
       throw new Error("Invalid or mismatched pre-session creation failure record");
     }
   }
@@ -756,6 +770,11 @@ export function collectLocalEvidence({
         path: basename(item.path),
         sha256: sha256(item.bytes),
         bytes: item.bytes.length
+      })),
+      preSessionFailureReceipts: preSessionFailures.map((item) => ({
+        path: basename(item.receiptPath),
+        sha256: sha256(item.receiptBytes),
+        bytes: item.receiptBytes.length
       }))
     },
     trust: {
@@ -891,10 +910,14 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const preSessionFailures = JSON.parse(runManifestBytes).preSessionFailures.map((path) => {
     const absolutePath = resolve(dirname(manifestPath), path);
     const bytes = readFileSync(absolutePath);
+    const record = JSON.parse(bytes);
+    const receiptPath = resolve(dirname(absolutePath), record.receipt.path);
     return {
       path: absolutePath,
       bytes,
-      record: JSON.parse(bytes)
+      record,
+      receiptPath,
+      receiptBytes: readFileSync(receiptPath)
     };
   });
   const output = collectLocalEvidence({

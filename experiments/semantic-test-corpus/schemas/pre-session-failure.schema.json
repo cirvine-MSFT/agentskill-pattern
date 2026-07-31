@@ -19,11 +19,12 @@
     "reason": {"type": "string", "minLength": 1},
     "receipt": {
       "type": "object",
-      "required": ["receiptKind", "receiptId", "sha256"],
+      "required": ["receiptKind", "receiptId", "path", "sha256"],
       "additionalProperties": false,
       "properties": {
         "receiptKind": {"const": "authoritative-pre-session-failure"},
         "receiptId": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "pattern": "^[^/\\\\]+\\.receipt\\.json$"},
         "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       }
     },

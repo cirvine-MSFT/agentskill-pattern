@@ -173,7 +173,11 @@ function immutable(path) {
   chmodSync(path, 0o444);
 }
 
-function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes) {
+function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes, {
+  evidenceKind,
+  orderSourcePath = sourcePath,
+  orderSourceBytes = sourceBytes
+}) {
   const disposition = {
     formatVersion: 1,
     protocolId: contract.protocolId,
@@ -182,8 +186,14 @@ function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes) {
     armId: plan.armId,
     status,
     reason,
+    evidenceKind,
     sourcePath: relative(plan.artifactRoot, sourcePath).replaceAll("\\", "/"),
-    sourceSha256: sha256(sourceBytes)
+    sourceSha256: sha256(sourceBytes),
+    orderSourcePath: relative(
+      dirname(plan.startIndexPath),
+      orderSourcePath
+    ).replaceAll("\\", "/"),
+    orderSourceSha256: sha256(orderSourceBytes)
   };
   const dispositionPath = resolve(plan.artifactRoot, "unit-disposition.json");
   writeOnce(dispositionPath, jsonBytes(disposition));
@@ -237,7 +247,11 @@ function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reaso
   const disposition = existsSync(resolve(plan.artifactRoot, "unit-disposition.json"))
     ? null
     : writeUnitDisposition(
-      plan, "unavailable", reason, uncertaintyPath, uncertaintyBytes
+      plan, "unavailable", reason, uncertaintyPath, uncertaintyBytes, {
+        evidenceKind: "started-uncertain",
+        orderSourcePath: lifecyclePath,
+        orderSourceBytes: lifecycleBytes
+      }
     );
   for (const path of [...filesBeforeRecord, uncertaintyPath]) immutable(path);
   return {
@@ -317,6 +331,12 @@ export function runControlledHarness(options) {
   mkdirSync(plan.artifactRoot, { recursive: true });
   const startIndex = nextStart(plan.startIndexPath, planned);
   const reservationPath = reserveStart(plan);
+  let reservationActive = true;
+  const releaseReservationOnce = () => {
+    if (!reservationActive) return;
+    releaseReservation(reservationPath);
+    reservationActive = false;
+  };
   const preflightPath = resolve(plan.artifactRoot, "execution-preflight.json");
   const preflightBytes = jsonBytes(preflight);
   writeOnce(preflightPath, preflightBytes);
@@ -347,14 +367,15 @@ export function runControlledHarness(options) {
       "unavailable",
       armPreflight.reasons.join("; "),
       unavailablePath,
-      unavailableBytes
+      unavailableBytes,
+      { evidenceKind: "preflight-unavailable" }
     );
     const stored = storeStart(
       plan.startIndexPath,
       startIndex,
       orderCapture(plan, unavailablePath, unavailableBytes, "unavailable", recordedAt)
     );
-    releaseReservation(reservationPath);
+    releaseReservationOnce();
     return {
       status: "unavailable",
       plan,
@@ -367,48 +388,106 @@ export function runControlledHarness(options) {
   }
   const preSessionFailures = [];
   if (options.preSessionFailurePath) {
-    const sourceBytes = readFileSync(resolve(options.preSessionFailurePath));
+    try {
+    const sourcePath = resolve(options.preSessionFailurePath);
+    const sourceBytes = readFileSync(sourcePath);
     const record = JSON.parse(sourceBytes);
     const errors = validateJsonSchema(record, preSessionFailureSchema, {
       schemaDir: resolve(root, "schemas")
     });
+    const receiptPath = errors.length === 0
+      ? resolve(dirname(sourcePath), record.receipt.path)
+      : null;
+    const receiptBytes = receiptPath && existsSync(receiptPath)
+      ? readFileSync(receiptPath)
+      : null;
+    let receipt = null;
+    try {
+      receipt = receiptBytes ? JSON.parse(receiptBytes) : null;
+    } catch {
+      receipt = null;
+    }
     if (errors.length > 0
       || record.runId !== plan.runId
       || record.kickoffStarted !== false
-      || record.sessionCreated !== false) {
+      || record.sessionCreated !== false
+      || !receiptBytes
+      || sha256(receiptBytes) !== record.receipt.sha256
+      || receipt?.receiptKind !== record.receipt.receiptKind
+      || receipt?.receiptId !== record.receipt.receiptId
+      || receipt?.kickoffStarted !== false
+      || receipt?.sessionCreated !== false
+      || JSON.stringify(receipt?.usage) !== JSON.stringify(record.usage)) {
+      releaseReservationOnce();
       throw new Error("Prior pre-session failure is invalid or belongs to another run");
     }
     const target = resolve(plan.artifactRoot, `${record.failureId}.json`);
+    const targetReceipt = resolve(plan.artifactRoot, record.receipt.path);
     writeOnce(target, sourceBytes);
+    writeOnce(targetReceipt, receiptBytes);
     immutable(target);
-    preSessionFailures.push({ path: target, bytes: sourceBytes, record });
+    immutable(targetReceipt);
+    preSessionFailures.push({
+      path: target,
+      bytes: sourceBytes,
+      record,
+      receiptPath: targetReceipt,
+      receiptBytes
+    });
+    } catch (error) {
+      releaseReservationOnce();
+      throw error;
+    }
   }
   if (plan.armId === 0) {
-    const recordedAt = nextRecordedAt(startIndex);
-    const lifecycle = {
-      formatVersion: 1,
-      protocolId: contract.protocolId,
-      runId: plan.runId,
-      blockId: plan.blockId,
-      armId: 0,
-      seed: plan.seed,
-      scheduleOrder: plan.scheduleOrder,
-      globalOrder: plan.globalOrder,
-      disposition: "started",
-      recordedAt,
-      startedAt: recordedAt,
-      taskSha256: plan.taskSha256,
-      kickoffSha256: null
-    };
-    const lifecyclePath = resolve(plan.artifactRoot, "lifecycle-start.json");
-    const lifecycleBytes = jsonBytes(lifecycle);
-    writeOnce(lifecyclePath, lifecycleBytes);
-    immutable(lifecyclePath);
-    const startCapture = orderCapture(
-      plan, lifecyclePath, lifecycleBytes, "started", recordedAt
-    );
-    const startStored = storeStart(plan.startIndexPath, startIndex, startCapture);
-    releaseReservation(reservationPath);
+    let lifecyclePath;
+    let lifecycleBytes;
+    let startCapture;
+    let startStored;
+    let lifecycle;
+    try {
+      const recordedAt = nextRecordedAt(startIndex);
+      lifecycle = {
+        formatVersion: 1,
+        protocolId: contract.protocolId,
+        runId: plan.runId,
+        blockId: plan.blockId,
+        armId: 0,
+        seed: plan.seed,
+        scheduleOrder: plan.scheduleOrder,
+        globalOrder: plan.globalOrder,
+        disposition: "started",
+        recordedAt,
+        startedAt: recordedAt,
+        taskSha256: plan.taskSha256,
+        kickoffSha256: null
+      };
+      lifecyclePath = resolve(plan.artifactRoot, "lifecycle-start.json");
+      lifecycleBytes = jsonBytes(lifecycle);
+      writeOnce(lifecyclePath, lifecycleBytes);
+      immutable(lifecyclePath);
+      startCapture = orderCapture(
+        plan, lifecyclePath, lifecycleBytes, "started", recordedAt
+      );
+      startStored = storeStart(plan.startIndexPath, startIndex, startCapture);
+      releaseReservationOnce();
+    } catch (error) {
+      releaseReservationOnce();
+      if (lifecyclePath && existsSync(lifecyclePath)) {
+        return {
+          ...persistUncertain(
+            plan,
+            startIndex,
+            lifecyclePath,
+            lifecycleBytes,
+            error instanceof Error ? error.message : String(error)
+          ),
+          preflight
+        };
+      }
+      throw error;
+    }
+    const completeBaseline = () => {
     const result = runDeterministicBlock(plan.blockId, { startEvidence: lifecycle });
     const snapshotPath = resolve(plan.artifactRoot, "staging.json");
     const executionPath = resolve(plan.artifactRoot, "execution.json");
@@ -476,44 +555,87 @@ export function runControlledHarness(options) {
     writeOnce(provenancePath, jsonBytes(provenance));
     for (const path of [...files, provenancePath]) immutable(path);
     return { status: "complete", plan, preflight, evaluation, provenance };
+    };
+    try {
+      return completeBaseline();
+    } catch (error) {
+      return {
+        ...persistUncertain(
+          plan,
+          startIndex,
+          lifecyclePath,
+          lifecycleBytes,
+          error instanceof Error ? error.message : String(error)
+        ),
+        preflight
+      };
+    }
   }
-  const boundary = materializeCandidate(plan.candidateRoot, { blockId: plan.blockId });
-  const sandbox = createSandbox(plan.candidateRoot);
-  const kickoffBytes = kickoffBytesForRun(plan.armId, plan.seed);
-  const taskBytes = readFileSync(resolve(plan.candidateRoot, contract.commonContract.taskArtifact));
-  if (sha256(taskBytes) !== plan.taskSha256
-    || sha256(kickoffBytes) !== plan.kickoffSha256
-    || boundary.taskSha256 !== plan.taskSha256) {
-    throw new Error("Materialized task/kickoff bytes differ from the frozen planned SHA-256");
+  let boundary;
+  let sandbox;
+  let kickoffBytes;
+  let kickoffPath;
+  let eventsPath;
+  let usagePath;
+  let lifecyclePath;
+  let lifecycleBytes;
+  try {
+    boundary = materializeCandidate(plan.candidateRoot, { blockId: plan.blockId });
+    sandbox = createSandbox(plan.candidateRoot);
+    kickoffBytes = kickoffBytesForRun(plan.armId, plan.seed);
+    const taskBytes = readFileSync(
+      resolve(plan.candidateRoot, contract.commonContract.taskArtifact)
+    );
+    if (sha256(taskBytes) !== plan.taskSha256
+      || sha256(kickoffBytes) !== plan.kickoffSha256
+      || boundary.taskSha256 !== plan.taskSha256) {
+      throw new Error("Materialized task/kickoff bytes differ from the frozen planned SHA-256");
+    }
+    kickoffPath = resolve(plan.artifactRoot, "kickoff.txt");
+    writeOnce(kickoffPath, kickoffBytes);
+    immutable(kickoffPath);
+    eventsPath = resolve(plan.artifactRoot, "captured.events.jsonl");
+    usagePath = resolve(plan.artifactRoot, "captured.usage.json");
+    const recordedAt = nextRecordedAt(startIndex);
+    const lifecycle = {
+      formatVersion: 1,
+      protocolId: contract.protocolId,
+      runId: plan.runId,
+      blockId: plan.blockId,
+      armId: plan.armId,
+      seed: plan.seed,
+      scheduleOrder: plan.scheduleOrder,
+      globalOrder: plan.globalOrder,
+      disposition: "started",
+      recordedAt,
+      startedAt: recordedAt,
+      state: "atomic-kickoff-planned",
+      taskSha256: plan.taskSha256,
+      kickoffSha256: plan.kickoffSha256,
+      candidateSnapshotSha256: boundary.boundarySha256,
+      terminalCommit: boundary.terminalCommit
+    };
+    lifecyclePath = resolve(plan.artifactRoot, "lifecycle-start.json");
+    lifecycleBytes = jsonBytes(lifecycle);
+    writeOnce(lifecyclePath, lifecycleBytes);
+    immutable(lifecyclePath);
+  } catch (error) {
+    releaseReservationOnce();
+    if (lifecyclePath && lifecycleBytes && existsSync(lifecyclePath)) {
+      return {
+        ...persistUncertain(
+          plan,
+          startIndex,
+          lifecyclePath,
+          lifecycleBytes,
+          error instanceof Error ? error.message : String(error)
+        ),
+        preflight
+      };
+    }
+    throw error;
   }
-  const kickoffPath = resolve(plan.artifactRoot, "kickoff.txt");
-  writeOnce(kickoffPath, kickoffBytes);
-  immutable(kickoffPath);
-  const eventsPath = resolve(plan.artifactRoot, "captured.events.jsonl");
-  const usagePath = resolve(plan.artifactRoot, "captured.usage.json");
-  const recordedAt = nextRecordedAt(startIndex);
-  const lifecycle = {
-    formatVersion: 1,
-    protocolId: contract.protocolId,
-    runId: plan.runId,
-    blockId: plan.blockId,
-    armId: plan.armId,
-    seed: plan.seed,
-    scheduleOrder: plan.scheduleOrder,
-    globalOrder: plan.globalOrder,
-    disposition: "started",
-    recordedAt,
-    startedAt: recordedAt,
-    state: "atomic-kickoff-planned",
-    taskSha256: plan.taskSha256,
-    kickoffSha256: plan.kickoffSha256,
-    candidateSnapshotSha256: boundary.boundarySha256,
-    terminalCommit: boundary.terminalCommit
-  };
-  const lifecyclePath = resolve(plan.artifactRoot, "lifecycle-start.json");
-  const lifecycleBytes = jsonBytes(lifecycle);
-  writeOnce(lifecyclePath, lifecycleBytes);
-  immutable(lifecyclePath);
+  const recordedAt = JSON.parse(lifecycleBytes.toString("utf8")).recordedAt;
   const plannedStartCapture = orderCapture(
     plan, lifecyclePath, lifecycleBytes, "started", recordedAt
   );
@@ -554,11 +676,19 @@ export function runControlledHarness(options) {
       || receipt.receiptKind !== "authoritative-pre-session-failure"
       || receipt.kickoffStarted !== false
       || receipt.sessionCreated !== false
-      || receipt.usage?.modelTokens !== 0
-      || receipt.usage?.completionCount !== 0) {
+      || JSON.stringify(receipt.usage) !== JSON.stringify({
+        aiCredits: 0,
+        premiumRequests: null,
+        nanoAiu: 0,
+        modelTokens: 0,
+        completionCount: 0
+      })) {
       throw new Error("Create-session failure receipt does not prove pre-kickoff zero usage");
     }
     const receiptBytes = Buffer.from(execution.stdout, "utf8");
+    const receiptName = `${plan.runId}-pre-session-${preSessionFailures.length + 1}.receipt.json`;
+    const receiptPath = resolve(plan.artifactRoot, receiptName);
+    writeOnce(receiptPath, receiptBytes);
     const failure = {
       formatVersion: 1,
       protocolId: contract.protocolId,
@@ -572,13 +702,14 @@ export function runControlledHarness(options) {
       receipt: {
         receiptKind: receipt.receiptKind,
         receiptId: receipt.receiptId,
+        path: receiptName,
         sha256: sha256(receiptBytes)
       },
       usage: receipt.usage
     };
     const failurePath = resolve(plan.artifactRoot, `${failure.failureId}.json`);
     writeOnce(failurePath, jsonBytes(failure));
-    for (const path of [stdoutPath, stderrPath, failurePath]) immutable(path);
+    for (const path of [stdoutPath, stderrPath, receiptPath, failurePath]) immutable(path);
     if (preSessionFailures.length > 0) {
       const unavailableRecordedAt = nextRecordedAt(startIndex);
       const unavailable = {
@@ -597,6 +728,14 @@ export function runControlledHarness(options) {
       const unavailableBytes = jsonBytes(unavailable);
       writeOnce(unavailablePath, unavailableBytes);
       immutable(unavailablePath);
+      const retryDisposition = writeUnitDisposition(
+        plan,
+        "unavailable",
+        unavailable.reason,
+        unavailablePath,
+        unavailableBytes,
+        { evidenceKind: "retry-exhausted" }
+      );
       const stored = storeStart(
         plan.startIndexPath,
         startIndex,
@@ -604,18 +743,18 @@ export function runControlledHarness(options) {
           plan, unavailablePath, unavailableBytes, "unavailable", unavailableRecordedAt
         )
       );
-      releaseReservation(reservationPath);
+      releaseReservationOnce();
       return {
         status: "unavailable",
         plan,
         preflight,
         failure,
         orderRecord: unavailable,
-        ...disposition,
+        ...retryDisposition,
         startFinalization: stored.finalization
       };
     }
-    releaseReservation(reservationPath);
+    releaseReservationOnce();
     return {
       status: "pre-session-failure",
       plan,
@@ -634,7 +773,7 @@ export function runControlledHarness(options) {
   const capturePath = resolve(plan.artifactRoot, "start-capture.json");
   writeOnce(capturePath, jsonBytes(plannedStartCapture));
   const startStored = storeStart(plan.startIndexPath, startIndex, plannedStartCapture);
-  releaseReservation(reservationPath);
+  releaseReservationOnce();
 
   const boundaryPath = resolve(plan.artifactRoot, "candidate-boundary.json");
   const boundaryBytes = readFileSync(resolve(plan.candidateRoot, ".benchmark-boundary.json"));
@@ -787,7 +926,7 @@ export function runControlledHarness(options) {
   ]) writeOnce(path, bytes);
 
   const produced = [
-    ...preSessionFailures.map((item) => item.path),
+    ...preSessionFailures.flatMap((item) => [item.path, item.receiptPath]),
     preflightPath, kickoffPath, lifecyclePath, stdoutPath, stderrPath,
     eventsPath, usagePath, capturePath, boundaryPath,
     sessionCreationPath, attemptPath, manifestPath, evidencePath, modelPreflightPath,
@@ -802,7 +941,12 @@ export function runControlledHarness(options) {
       "excluded",
       modelPreflight.reasons.join("; ") || "local model/mechanism preflight failed",
       modelPreflightPath,
-      modelPreflightBytes
+      modelPreflightBytes,
+      {
+        evidenceKind: "model-excluded",
+        orderSourcePath: lifecyclePath,
+        orderSourceBytes: lifecycleBytes
+      }
     );
   if (disposition) produced.push(disposition.dispositionPath);
   let evaluation = null;
@@ -884,6 +1028,7 @@ export function runControlledHarness(options) {
   try {
     return completeAiRun();
   } catch (error) {
+    releaseReservationOnce();
     return {
       ...persistUncertain(
         plan,

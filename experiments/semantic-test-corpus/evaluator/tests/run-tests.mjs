@@ -607,6 +607,34 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert(existsSync(resolve(artifactRoot, "metrics.json")));
     assert(existsSync(resolve(artifactRoot, "capture-provenance.json")));
 
+    for (const armId of [1, 3]) {
+      runControlledHarness({
+        cli: fakeCli,
+        projectId: "fixture-project",
+        candidateRoot: resolve(temporary, `candidate-arm-${armId}`),
+        artifactRoot: resolve(temporary, `artifacts-arm-${armId}`),
+        startIndexPath,
+        blockId: "B01",
+        armId,
+        capturedAt: "2026-07-31T20:00:00.000Z"
+      });
+    }
+    const targetResult = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "candidate-arm-5"),
+      artifactRoot: resolve(temporary, "artifacts-arm-5"),
+      startIndexPath,
+      blockId: "B01",
+      armId: 5,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(targetResult.status, "complete");
+    assert.equal(targetResult.evidence.delegation.agentName,
+      "semantic-test-corpus-haiku");
+    assert.deepEqual(targetResult.evidence.models.observed.worker,
+      ["claude-haiku-4.5"]);
+
     process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
     const failureRoot = resolve(temporary, "failure");
     const failure = runControlledHarness({
@@ -623,6 +651,70 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert.equal(failure.status, "pre-session-failure");
     assert.equal(failure.failure.kickoffStarted, false);
     assert.equal(failure.failure.usage.modelTokens, 0);
+    const failureReceiptPath = resolve(
+      dirname(failure.failurePath),
+      failure.failure.receipt.path
+    );
+    assert(existsSync(failureReceiptPath));
+
+    process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
+    const retryRoot = resolve(temporary, "retry-exhausted");
+    const retry = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(retryRoot, "candidate"),
+      artifactRoot: resolve(retryRoot, "artifacts"),
+      startIndexPath: resolve(retryRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      preSessionFailurePath: failure.failurePath,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_CREATE_FAILURE;
+    assert.equal(retry.status, "unavailable");
+    assert.equal(retry.disposition.evidenceKind, "retry-exhausted");
+
+    const tamperedRoot = resolve(temporary, "tampered-receipt");
+    mkdirSync(tamperedRoot, { recursive: true });
+    const tamperedFailurePath = resolve(tamperedRoot, "failure.json");
+    writeFileSync(tamperedFailurePath, readFileSync(failure.failurePath));
+    writeFileSync(
+      resolve(tamperedRoot, failure.failure.receipt.path),
+      Buffer.from('{"receiptKind":"authoritative-pre-session-failure"}\n')
+    );
+    const rejectedRetryRoot = resolve(temporary, "rejected-retry");
+    assert.throws(() => runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(rejectedRetryRoot, "candidate"),
+      artifactRoot: resolve(rejectedRetryRoot, "artifacts"),
+      startIndexPath: resolve(rejectedRetryRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      preSessionFailurePath: tamperedFailurePath,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    }), /Prior pre-session failure is invalid/);
+    assert.equal(existsSync(
+      resolve(rejectedRetryRoot, "start-index.json.slot-01.lock")
+    ), false);
+
+    const prelaunchRoot = resolve(temporary, "prelaunch-failure");
+    const nonemptyCandidate = resolve(prelaunchRoot, "candidate");
+    mkdirSync(nonemptyCandidate, { recursive: true });
+    writeFileSync(resolve(nonemptyCandidate, "occupied.txt"), "occupied");
+    assert.throws(() => runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: nonemptyCandidate,
+      artifactRoot: resolve(prelaunchRoot, "artifacts"),
+      startIndexPath: resolve(prelaunchRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    }), /Candidate root must be absent or empty/);
+    assert.equal(existsSync(
+      resolve(prelaunchRoot, "start-index.json.slot-01.lock")
+    ), false);
 
     const unavailableRoot = resolve(temporary, "preflight-unavailable");
     const unavailable = runControlledHarness({
@@ -747,6 +839,16 @@ test("v2 analyzer emits six-arm point estimates and pairs without inference", ()
     .every((contrast) => contrast.blockValues.length === 12));
   assert.equal(summary.targetArmDecisionRule.positiveEfficiencySignal, true);
   assert.equal(summary.targetArmDecisionRule.secondaryWallTarget.met, true);
+  const incompletePairs = structuredClone(runs);
+  incompletePairs.find((run) =>
+    run.blockId === "B01" && run.armId === 5).endpoints.totalNanoAiu = null;
+  const incompleteSummary = summarizeDescriptive(incompletePairs);
+  assert.equal(
+    incompleteSummary.targetArmDecisionRule
+      .efficiencyComparisons.totalNanoAiu.n,
+    11
+  );
+  assert.equal(incompleteSummary.targetArmDecisionRule.positiveEfficiencySignal, false);
   assert.throws(() => summarizeDescriptive(runs.slice(1)), /Exactly 72/);
   assert.doesNotMatch(JSON.stringify(summary),
     /pValue|confidenceInterval|noninferior|bootstrap|holm/i);
@@ -757,7 +859,24 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
   rmSync(temporary, { recursive: true, force: true });
   mkdirSync(temporary, { recursive: true });
   try {
-    const baseline = runDeterministicBlock("B01");
+    const orderBaseMs = Date.now() - 15_000;
+    const baselineStartedAt = new Date(orderBaseMs + 5_000).toISOString();
+    const baselinePlan = frozenSchedule.runs.find((run) => run.runId === "B01-A0");
+    const baseline = runDeterministicBlock("B01", {
+      startEvidence: {
+        formatVersion: 1,
+        protocolId: "semantic-test-corpus-execution-v2",
+        runId: baselinePlan.runId,
+        blockId: baselinePlan.blockId,
+        armId: 0,
+        seed: baselinePlan.seed,
+        scheduleOrder: baselinePlan.order,
+        globalOrder: baselinePlan.globalOrder,
+        disposition: "started",
+        recordedAt: baselineStartedAt,
+        startedAt: baselineStartedAt
+      }
+    });
     const baselineSnapshotPath = resolve(temporary, "B01-A0.json");
     const baselineExecutionPath = resolve(temporary, "B01-A0.execution.json");
     const baselineMetricsPath = resolve(temporary, "B01-A0.metrics.json");
@@ -873,11 +992,41 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
           dispositionPath: null
         }]
     ]);
-    const unitDefinitions = frozenSchedule.runs.map((planned) => {
-      if (eligibleDefinitions.has(planned.runId)) return eligibleDefinitions.get(planned.runId);
-      const sourcePath = resolve(temporary, `${planned.runId}.unavailable-source.json`);
-      const sourceBytes = Buffer.from(`${JSON.stringify({ runId: planned.runId })}\n`);
-      writeFileSync(sourcePath, sourceBytes);
+    const captures = [];
+    const unitDefinitions = frozenSchedule.runs.map((planned, index) => {
+      const recordedAt = new Date(
+        orderBaseMs + index * 1000
+      ).toISOString();
+      const eligible = eligibleDefinitions.get(planned.runId);
+      const disposition = eligible ? "started" : "unavailable";
+      const syntheticSourcePath = resolve(temporary, `${planned.runId}.order-source.json`);
+      const syntheticSourceBytes = Buffer.from(`${JSON.stringify({
+        runId: planned.runId,
+        blockId: planned.blockId,
+        armId: planned.armId,
+        disposition,
+        recordedAt,
+        startedAt: eligible ? recordedAt : null
+      })}\n`);
+      const sourcePath = planned.runId === "B01-A0"
+        ? baselineStartPath
+        : syntheticSourcePath;
+      const sourceBytes = planned.runId === "B01-A0"
+        ? baseline.startBytes
+        : syntheticSourceBytes;
+      if (sourcePath === syntheticSourcePath) writeFileSync(sourcePath, sourceBytes);
+      captures.push({
+        runId: planned.runId,
+        blockId: planned.blockId,
+        armId: planned.armId,
+        sequence: planned.globalOrder,
+        disposition,
+        recordedAt,
+        startedAt: eligible ? recordedAt : null,
+        sourcePath: sourcePath.slice(temporary.length + 1),
+        sourceSha256: createHash("sha256").update(sourceBytes).digest("hex")
+      });
+      if (eligible) return eligible;
       const dispositionPath = resolve(temporary, `${planned.runId}.disposition.json`);
       writeFileSync(dispositionPath, `${JSON.stringify({
        formatVersion: 1,
@@ -887,8 +1036,11 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
        armId: planned.armId,
        status: "unavailable",
        reason: "fixture unavailable evidence",
-       sourcePath,
-       sourceSha256: createHash("sha256").update(sourceBytes).digest("hex")
+       evidenceKind: "preflight-unavailable",
+       sourcePath: sourcePath.slice(temporary.length + 1),
+       sourceSha256: createHash("sha256").update(sourceBytes).digest("hex"),
+       orderSourcePath: sourcePath.slice(temporary.length + 1),
+       orderSourceSha256: createHash("sha256").update(sourceBytes).digest("hex")
       }, null, 2)}\n`);
       return {
        runId: planned.runId,
@@ -907,17 +1059,50 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
        dispositionPath
       };
     });
+    const startIndexPath = resolve(temporary, "start-index.json");
+    const startIndexBytes = Buffer.from(`${JSON.stringify({
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      captures
+    }, null, 2)}\n`);
+    writeFileSync(startIndexPath, startIndexBytes);
+    const startIndexSha256Path = resolve(temporary, "start-index.json.sha256");
+    writeFileSync(
+      startIndexSha256Path,
+      `${createHash("sha256").update(startIndexBytes).digest("hex")}\n`
+    );
     const definitions = {
       formatVersion: 1,
       protocolId: "semantic-test-corpus-execution-v2",
+      startIndexPath,
+      startIndexSha256Path,
       runs: unitDefinitions
     };
     const runs = buildDescriptiveRuns(definitions, temporary);
     assert.equal(runs.length, 2);
     assert.equal(runs.find((run) => run.armId === 0).endpoints.totalModelTokens, 0);
+    assert.equal(runs.find((run) => run.armId === 0)
+      .endpoints.sessionEvidenceAvailable, 0);
+    assert.equal(runs.find((run) => run.armId === 0)
+      .endpoints.modelEvidenceAvailable, 0);
+    assert.equal(runs.find((run) => run.armId === 0)
+      .endpoints.mechanismEvidenceAvailable, 0);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.totalModelTokens, 1850);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.modelEvidenceAvailable, 1);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 1);
+
+    const unavailableDefinition = definitions.runs.find((run) =>
+      run.status === "unavailable");
+    const dispositionBytes = readFileSync(unavailableDefinition.dispositionPath);
+    const forgedDisposition = JSON.parse(dispositionBytes);
+    forgedDisposition.orderSourceSha256 = "0".repeat(64);
+    writeFileSync(
+      unavailableDefinition.dispositionPath,
+      `${JSON.stringify(forgedDisposition, null, 2)}\n`
+    );
+    assert.throws(() => buildDescriptiveRuns(definitions, temporary),
+      /lacks exact evidence binding/);
+    writeFileSync(unavailableDefinition.dispositionPath, dispositionBytes);
 
     const tampered = structuredClone(aiMetrics);
     tampered.metrics.promotion.promotionRate = -1;
@@ -1282,12 +1467,12 @@ test("local usage export and execution record schemas reject cross-session ambig
     ["deviation.schema.json", {
       formatVersion: 1,
       protocolId: "semantic-test-corpus-execution-v2",
-      deviationId: "B01-A5-worker-override-unavailable",
+      deviationId: "B01-A5-fixed-haiku-profile-unavailable",
       runId: "B01-A5",
       attemptId: null,
       category: "mechanism",
       observedAt: "2026-07-31T07:00:00.000Z",
-      description: "Same-agent worker model override unavailable",
+      description: "Fixed-Haiku custom-agent selection unavailable",
       impact: "exclude",
       outcomesOpened: false
     }]

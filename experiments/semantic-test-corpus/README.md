@@ -20,6 +20,8 @@ Arms 2, 4, and 5 use the same Skill route, four MCP tools, instructions, worker 
 bytes, staging behavior, and compact return. The Haiku profile is generated
 byte-identically from the registered profile except name/model. Arm 5 is unavailable
 unless real atomic preflight observes that profile and `claude-haiku-4.5`.
+The fixed profile is the frozen mechanism because real same-invocation model override
+is unavailable; an invocation override must not be substituted.
 
 ## Validate and reproduce
 
@@ -109,7 +111,10 @@ zero-usage receipt.
 ## Descriptive analysis
 
 The analyzer requires exactly 72 validated unit records. Each is either an eligible
-artifact or an evidence-bound unavailable/excluded record; omission fails. Eligible
+artifact or an evidence-bound unavailable/excluded record; omission fails. The
+manifest must bind the finalized 72-record start index and its SHA-256 file. Every
+unavailable/excluded disposition is cross-bound to that index and its typed raw
+preflight, uncertainty, retry-exhaustion, or model-preflight evidence. Eligible
 runs require observed exact session, parent/worker model, Skill/agent mechanism,
 tool/role lifecycle, budget, source, terminal commit, and candidate hash evidence
 are eligible. Unavailable units are explicit and excluded.
@@ -129,10 +134,13 @@ The target-arm practical rule uses point estimates: promotion must be at least b
 minus 5 percentage points, path coverage baseline minus 3 points, and mutant kill rate
 baseline minus 5 points. A positive efficiency signal additionally requires parent
 cumulative input at most 85% of GPT inline and both total nano-AIU and total credits at
-most 90% of GPT inline; report both costs. Wall time at most 80% is secondary.
+most 90% of GPT inline; report both costs. All target comparisons require the same 12
+complete blocks. Wall time at most 80% is secondary.
 
 Comparable telemetry includes compact-return bytes, compaction availability,
 completion counts, cached/reasoning tokens, TTFT/inter-token latency, request
 multiplier/credits, exposed-tool availability, calls/results/result bytes, selected
 attempt usage, and all-attempt operational usage. Unsupported fields are explicit
 `null` with availability reasons.
+Started excluded units retain validated local evidence and are reported separately in
+excluded operational-usage totals; they never enter eligible quality estimates.
