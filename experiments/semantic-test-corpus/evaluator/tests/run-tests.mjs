@@ -18,7 +18,10 @@ import { materializeCandidate } from "../../scripts/materialize-candidate.mjs";
 import { adaptPlatformAudit } from "../../scripts/platform-audit-adapter.mjs";
 import { evaluateModelBindings } from "../../scripts/preflight-models.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
-import { evaluateIsolationEvidence } from "../../scripts/verify-isolation-evidence.mjs";
+import {
+  evaluateGlobalAttribution,
+  evaluateIsolationEvidence
+} from "../../scripts/verify-isolation-evidence.mjs";
 import { canonicalStagingBytes, snapshotCorpusStaging } from "../adapter.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
@@ -27,7 +30,7 @@ import {
   analyzeAuthenticatedStatisticsInput,
   analyzeBaselineComparisons,
   analyzeStatisticsInput,
-  assertCompleteRunCoverage,
+  assertAuthenticatedRunCoverage,
   verifyMetricsArtifact
 } from "../statistics.mjs";
 import { canonicalMetricsBytes, deriveMetricsArtifact } from "../metrics.mjs";
@@ -303,8 +306,43 @@ function authenticatedRoleEvents({ runId, blockId, armId, contractRoot, stagingR
     role: run.armId === 0 ? "baseline" : "parent",
     sequence: run.order
   }));
+  const baselineRun = frozenSchedule.runs.find((run) => run.blockId === blockId && run.armId === 0);
+  const baselineSessionId = `${baselineRun.runId}-process`;
   events.push(
     ...blockStarts,
+    {
+      eventId: `${baselineRun.runId}-completed`,
+      type: "run.completed",
+      timestamp: "2026-07-29T00:03:40Z",
+      sessionId: baselineSessionId,
+      runId: baselineRun.runId,
+      blockId,
+      armId: 0,
+      role: "baseline"
+    },
+    {
+      eventId: `${baselineRun.runId}-unblinded`,
+      type: "outcomes.unblinded",
+      timestamp: "2026-07-29T00:03:45Z",
+      sessionId: baselineSessionId,
+      runId: baselineRun.runId,
+      blockId,
+      armId: 0,
+      role: "baseline"
+    },
+    {
+      eventId: `${baselineRun.runId}-usage`,
+      type: "usage.reported",
+      timestamp: "2026-07-29T00:03:46Z",
+      sessionId: baselineSessionId,
+      runId: baselineRun.runId,
+      blockId,
+      armId: 0,
+      role: "baseline",
+      totalTokens: 0,
+      intervalStart: "2026-07-29T00:00:50Z",
+      intervalEnd: "2026-07-29T00:03:45Z"
+    },
     {
       eventId: `${runId}-completed`,
       type: "run.completed",
@@ -726,11 +764,13 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
   try {
     const snapshotPath = resolve(temporary, "B00-A0.json");
     const metricsPath = resolve(temporary, "B00-A0.metrics.json");
-    const snapshotBytes = readFileSync(resolve(root, "staging", "baseline.json"));
+    const baselineSnapshot = generateBaseline();
+    baselineSnapshot.generator = { armId: 0, blockId: "B01", seed: 1812433253 };
+    const snapshotBytes = Buffer.from(`${JSON.stringify(baselineSnapshot, null, 2)}\n`);
     writeFileSync(snapshotPath, snapshotBytes);
     const artifact = deriveMetricsArtifact(snapshotBytes, {
-      runId: "B00-A0",
-      blockId: "B00",
+      runId: "B01-A0",
+      blockId: "B01",
       armId: 0
     });
     assert.equal(artifact.metrics.coverage.paths.rate, 1);
@@ -740,17 +780,18 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
     assert.deepEqual(artifact.provenance.oracle.files.map((file) => file.path),
       ["evaluator/oracle/index.mjs"]);
     assert.throws(() => deriveMetricsArtifact(Buffer.concat([snapshotBytes, Buffer.from("\n")]), {
-      runId: "B00-A0",
-      blockId: "B00",
+      runId: "B01-A0",
+      blockId: "B01",
       armId: 0
     }), /not canonical staging bytes/);
     const metricsBytes = canonicalMetricsBytes(artifact);
     writeFileSync(metricsPath, metricsBytes);
     const metricsSha256 = createHash("sha256").update(metricsBytes).digest("hex");
     const runRecord = {
-      runId: "B00-A0",
-      blockId: "B00",
+      runId: "B01-A0",
+      blockId: "B01",
       armId: 0,
+      sessionIds: ["baseline-session"],
       staging: {
         path: snapshotPath,
         sha256: artifact.snapshotSha256,
@@ -770,12 +811,24 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
       capturedAt: "2026-07-29T00:04:30Z",
       events: [
         {
+          eventId: "baseline-started",
+          type: "run.started",
+          timestamp: "2026-07-29T00:03:50Z",
+          sessionId: "baseline-session",
+          processId: "baseline-process",
+          runId: "B01-A0",
+          blockId: "B01",
+          armId: 0,
+          role: "baseline",
+          sequence: 1
+        },
+        {
           eventId: "baseline-completed",
           type: "run.completed",
           timestamp: "2026-07-29T00:04:00Z",
           sessionId: "baseline-session",
-          runId: "B00-A0",
-          blockId: "B00",
+          runId: "B01-A0",
+          blockId: "B01",
           armId: 0,
           role: "baseline"
         },
@@ -784,8 +837,8 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
           type: "outcomes.unblinded",
           timestamp: "2026-07-29T00:04:10Z",
           sessionId: "baseline-session",
-          runId: "B00-A0",
-          blockId: "B00",
+          runId: "B01-A0",
+          blockId: "B01",
           armId: 0,
           role: "baseline"
         },
@@ -816,9 +869,10 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
       runRecord,
       authenticated
     }), artifact);
-    assert.throws(() => assertCompleteRunCoverage(
+    assert.throws(() => assertAuthenticatedRunCoverage(
       [],
-      new Map([[runRecord.runId, { ...runRecord, phase: "complete" }]])
+      new Map([[runRecord.runId, { ...runRecord, phase: "excluded" }]]),
+      authenticated
     ), /one-to-one/);
 
     const wrongBoundaryPayload = structuredClone(payload);
@@ -1312,9 +1366,231 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
     assert.equal(mismappedAudit.status, "noncompliant");
     assert(mismappedAudit.violations.some((violation) =>
       violation.includes("adapter snapshot run mapping differs")));
+
+    const validGlobalSigned = signedExport(inline.payload);
+    const validGlobal = evaluateGlobalAttribution(authenticateExport(
+      validGlobalSigned.bytes,
+      validGlobalSigned.signature,
+      validGlobalSigned.publicKey
+    ));
+    assert.equal(validGlobal.status, "compliant", validGlobal.violations.join("\n"));
+
+    const mismappedBaseline = structuredClone(inline.payload);
+    mismappedBaseline.events.find((event) =>
+      event.eventId === "B01-A0-completed").armId = 1;
+    const mismappedBaselineSigned = signedExport(mismappedBaseline);
+    const mismappedBaselineGlobal = evaluateGlobalAttribution(authenticateExport(
+      mismappedBaselineSigned.bytes,
+      mismappedBaselineSigned.signature,
+      mismappedBaselineSigned.publicKey
+    ));
+    assert.equal(mismappedBaselineGlobal.status, "noncompliant");
+    assert(mismappedBaselineGlobal.violations.some((violation) =>
+      violation.includes("baseline event B01-A0-completed")));
+
+    const modelBackedBaseline = structuredClone(inline.payload);
+    modelBackedBaseline.events.push({
+      eventId: "B01-A0-created",
+      type: "session.created",
+      timestamp: "2026-07-29T00:00:30Z",
+      sessionId: "B01-A0-process",
+      runId: "B01-A0",
+      blockId: "B01",
+      armId: 0,
+      role: "baseline"
+    });
+    const modelBackedBaselineSigned = signedExport(modelBackedBaseline);
+    const modelBackedBaselineGlobal = evaluateGlobalAttribution(authenticateExport(
+      modelBackedBaselineSigned.bytes,
+      modelBackedBaselineSigned.signature,
+      modelBackedBaselineSigned.publicKey
+    ));
+    assert.equal(modelBackedBaselineGlobal.status, "noncompliant");
+    assert(modelBackedBaselineGlobal.violations.some((violation) =>
+      violation.includes("forbidden model/MCP event")));
   } finally {
     await inline.run.cleanup();
     await delegated.run.cleanup();
+  }
+});
+
+test("statistics accepts a full export containing authenticated baseline and AI events", async () => {
+  const ai = await runSyntheticCorpusArm({ armId: 1, runId: "B01-A1", delegated: false });
+  try {
+    const baselineRun = frozenSchedule.runs.find((run) => run.runId === "B01-A0");
+    const baselineSnapshotPath = resolve(ai.run.cwd, "benchmark-staging", "B01-A0.json");
+    const baselineSnapshot = {
+      ...generateBaseline(),
+      generator: { armId: 0, blockId: "B01", seed: baselineRun.seed }
+    };
+    const baselineSnapshotBytes = canonicalStagingBytes(baselineSnapshot);
+    writeFileSync(baselineSnapshotPath, baselineSnapshotBytes);
+    const definitions = [
+      {
+        runId: "B01-A0",
+        blockId: "B01",
+        armId: 0,
+        snapshotPath: baselineSnapshotPath,
+        snapshotBytes: baselineSnapshotBytes,
+        metricsTimestamp: "2026-07-29T00:04:25Z"
+      },
+      {
+        runId: "B01-A1",
+        blockId: "B01",
+        armId: 1,
+        snapshotPath: ai.outputPath,
+        snapshotBytes: readFileSync(ai.outputPath),
+        metricsTimestamp: "2026-07-29T00:04:26Z"
+      }
+    ];
+    const payload = structuredClone(ai.payload);
+    for (const definition of definitions) {
+      definition.artifact = deriveMetricsArtifact(definition.snapshotBytes, definition);
+      definition.metricsPath = resolve(ai.run.cwd, "metrics", `${definition.runId}.json`);
+      mkdirSync(dirname(definition.metricsPath), { recursive: true });
+      definition.metricsBytes = canonicalMetricsBytes(definition.artifact);
+      writeFileSync(definition.metricsPath, definition.metricsBytes);
+      definition.metricsSha256 = createHash("sha256")
+        .update(definition.metricsBytes)
+        .digest("hex");
+      payload.events.push({
+        eventId: `${definition.runId}-metrics`,
+        type: "metrics.computed",
+        timestamp: definition.metricsTimestamp,
+        sessionId: `${definition.runId}-evaluator`,
+        runId: definition.runId,
+        blockId: definition.blockId,
+        armId: definition.armId,
+        role: "evaluator",
+        actor: "evaluator",
+        metricsPath: definition.metricsPath,
+        metricsSha256: definition.metricsSha256,
+        snapshotSha256: definition.artifact.snapshotSha256,
+        evaluatorCodeSha256: definition.artifact.provenance.evaluator.sha256,
+        specSha256: definition.artifact.provenance.spec.sha256,
+        oracleCodeSha256: definition.artifact.provenance.oracle.sha256,
+        mutantCodeSha256: definition.artifact.provenance.mutants.sha256
+      });
+    }
+    const signed = signedExport(payload);
+    const authenticated = authenticateExport(signed.bytes, signed.signature, signed.publicKey);
+    const unavailableUsage = () => ({
+      available: false,
+      nanoAiu: null,
+      credits: null,
+      inputTokens: null,
+      outputTokens: null,
+      totalTokens: null
+    });
+    const commonRecord = (definition) => ({
+      runId: definition.runId,
+      blockId: definition.blockId,
+      armId: definition.armId,
+      availability: "available",
+      phase: "complete",
+      staging: {
+        path: definition.snapshotPath,
+        sha256: definition.artifact.snapshotSha256,
+        sourceRoot: "corpus-staging/"
+      },
+      metrics: {
+        path: definition.metricsPath,
+        sha256: definition.metricsSha256,
+        snapshotSha256: definition.artifact.snapshotSha256
+      },
+      timing: {
+        startedAt: "2026-07-29T00:00:54Z",
+        endedAt: "2026-07-29T00:04:10Z",
+        latencyMs: 196000
+      },
+      usage: {
+        parent: unavailableUsage(),
+        worker: unavailableUsage(),
+        total: unavailableUsage()
+      },
+      tools: { surface: [], calls: [] },
+      compliance: {
+        isolationAuditPath: `${definition.runId}.audit.json`,
+        evidenceSha256: authenticated.authentication.payloadSha256,
+        status: "compliant",
+        checks: {},
+        violations: []
+      }
+    });
+    const baselineDefinition = definitions.find((definition) => definition.armId === 0);
+    const aiDefinition = definitions.find((definition) => definition.armId === 1);
+    const baselineRecord = {
+      ...commonRecord(baselineDefinition),
+      sessionIds: ["B01-A0-process"],
+      modelEvidence: null
+    };
+    const aiRoles = ["parent"].map((role) => {
+      const created = payload.events.find((event) =>
+        event.runId === aiDefinition.runId && event.role === role && event.type === "session.created");
+      const bound = payload.events.find((event) =>
+        event.runId === aiDefinition.runId && event.role === role && event.type === "model.bound");
+      return {
+        role,
+        sessionId: created.sessionId,
+        sessionCreatedEventId: created.eventId,
+        modelBoundEventId: bound.eventId
+      };
+    });
+    const aiRecord = {
+      ...commonRecord(aiDefinition),
+      sessionIds: aiRoles.map((role) => role.sessionId),
+      modelEvidence: {
+        exportId: payload.exportId,
+        payloadSha256: authenticated.authentication.payloadSha256,
+        signatureSha256: authenticated.authentication.signatureSha256,
+        publicKeySha256: authenticated.authentication.publicKeySha256,
+        roles: aiRoles
+      }
+    };
+    const runs = definitions.map((definition) => ({
+      runId: definition.runId,
+      blockId: definition.blockId,
+      armId: definition.armId,
+      metricsPath: definition.metricsPath,
+      ...(definition.armId === 0 ? {} : {
+        evidenceContext: {
+          contractRoot: ai.run.contract,
+          stagingRoot: ai.run.staging,
+          evaluatorRoot
+        }
+      })
+    }));
+    const result = analyzeAuthenticatedStatisticsInput({
+      runs,
+      runRecords: [baselineRecord, aiRecord]
+    }, authenticated);
+    assert.deepEqual(result.analysisEligibility.unavailableIsolationRuns, []);
+    assert.equal(result.descriptive.armSummaries
+      .find((arm) => arm.armId === 0).eligibleOutcomes, 1);
+    assert.equal(result.descriptive.armSummaries
+      .find((arm) => arm.armId === 1).eligibleOutcomes, 1);
+
+    const mismappedPayload = structuredClone(payload);
+    mismappedPayload.events.find((event) =>
+      event.eventId === "B01-A0-completed").armId = 1;
+    const mismappedSigned = signedExport(mismappedPayload);
+    const mismappedAuthenticated = authenticateExport(
+      mismappedSigned.bytes,
+      mismappedSigned.signature,
+      mismappedSigned.publicKey
+    );
+    const mismappedAiRecord = structuredClone(aiRecord);
+    Object.assign(mismappedAiRecord.modelEvidence, {
+      payloadSha256: mismappedAuthenticated.authentication.payloadSha256,
+      signatureSha256: mismappedAuthenticated.authentication.signatureSha256,
+      publicKeySha256: mismappedAuthenticated.authentication.publicKeySha256
+    });
+    assert.throws(() => analyzeAuthenticatedStatisticsInput({
+      runs,
+      runRecords: [baselineRecord, mismappedAiRecord]
+    }, mismappedAuthenticated), /global event attribution failed/);
+  } finally {
+    await ai.run.cleanup();
   }
 });
 

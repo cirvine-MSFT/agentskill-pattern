@@ -54,6 +54,7 @@ function authenticatedRunMappings(payload) {
     const planned = schedule.runs.find((run) => run.runId === creation.runId);
     const arm = armContract.arms.find((item) => item.id === creation.armId);
     if (!planned
+      || planned.armId === 0
       || planned.armId !== creation.armId
       || planned.blockId !== creation.blockId
       || !arm
@@ -74,6 +75,29 @@ function authenticatedRunMappings(payload) {
         armId: creation.armId,
         role: creation.role,
         sessionId: creation.sessionId
+      });
+    }
+  }
+  for (const planned of schedule.runs.filter((run) => run.armId === 0)) {
+    const starts = payload.events.filter((event) =>
+      event.type === "run.started" && event.runId === planned.runId);
+    if (starts.length !== 1) continue;
+    const start = starts[0];
+    if (start.blockId === planned.blockId
+      && start.armId === 0
+      && start.role === "baseline"
+      && start.sequence === planned.order
+      && typeof start.sessionId === "string"
+      && start.sessionId.length > 0
+      && typeof start.processId === "string"
+      && start.processId.length > 0) {
+      mappings.push({
+        runId: planned.runId,
+        blockId: planned.blockId,
+        armId: 0,
+        role: "baseline",
+        sessionId: start.sessionId,
+        processId: start.processId
       });
     }
   }
@@ -126,6 +150,110 @@ const GLOBAL_ATTRIBUTION_TYPES = new Set([
   "run.completed",
   "outcomes.unblinded"
 ]);
+
+const BASELINE_FORBIDDEN_TYPES = new Set([
+  "session.created",
+  "model.bound",
+  "sandbox.policy.applied",
+  "audit.started",
+  "audit.completed",
+  "tool.called",
+  "tool.result",
+  "fs.access",
+  "network.access",
+  "delegation.invoked",
+  "delegation.completed"
+]);
+
+function evaluateBaselineEvidence(payload, mappings) {
+  const violations = [];
+  let totalEvents = 0;
+  let attributedEvents = 0;
+  const signaledEvents = payload.events.filter((event) => {
+    const planned = schedule.runs.find((run) => run.runId === event.runId);
+    return planned?.armId === 0 || event.armId === 0 || event.role === "baseline";
+  });
+  for (const event of signaledEvents) {
+    const planned = schedule.runs.find((run) => run.runId === event.runId);
+    if (!planned
+      || planned.armId !== 0
+      || event.blockId !== planned.blockId
+      || event.armId !== 0) {
+      violations.push(`baseline event ${event.eventId} differs from the frozen baseline schedule`);
+    }
+  }
+
+  const runIds = new Set(signaledEvents
+    .map((event) => event.runId)
+    .filter((runId) => schedule.runs.some((run) => run.runId === runId && run.armId === 0)));
+  for (const runId of runIds) {
+    const planned = schedule.runs.find((run) => run.runId === runId);
+    const runEvents = payload.events.filter((event) => event.runId === runId);
+    const mappingsForRun = mappings.filter((mapping) =>
+      mapping.runId === runId && mapping.role === "baseline");
+    const mapping = mappingsForRun[0];
+    const starts = runEvents.filter((event) => event.type === "run.started");
+    const completions = runEvents.filter((event) => event.type === "run.completed");
+    const unblindings = runEvents.filter((event) => event.type === "outcomes.unblinded");
+    const usage = runEvents.filter((event) => event.type === "usage.reported");
+    const outcomes = runEvents.filter((event) => event.type === "outcome.accessed");
+    totalEvents += starts.length;
+    if (mappingsForRun.length !== 1 || starts.length !== 1) {
+      violations.push(`${runId} requires one authenticated baseline session/process mapping`);
+    } else {
+      attributedEvents += 1;
+      const duplicateSessionStarts = payload.events.filter((event) =>
+        event.type === "run.started" && event.sessionId === mapping.sessionId);
+      const duplicateProcessStarts = payload.events.filter((event) =>
+        event.type === "run.started" && event.processId === mapping.processId);
+      if (duplicateSessionStarts.length !== 1 || duplicateProcessStarts.length !== 1) {
+        violations.push(`${runId} baseline session/process boundary is reused`);
+      }
+    }
+    if (completions.length !== 1 || unblindings.length !== 1) {
+      violations.push(`${runId} requires one baseline completion and unblinding boundary`);
+    }
+    for (const event of [...starts, ...completions, ...unblindings, ...usage, ...outcomes]) {
+      if (!mapping
+        || event.sessionId !== mapping.sessionId
+        || event.role !== "baseline"
+        || event.blockId !== planned.blockId
+        || event.armId !== 0) {
+        violations.push(`baseline event ${event.eventId} is not owned by its authenticated baseline mapping`);
+      }
+    }
+    const forbidden = runEvents.filter((event) => BASELINE_FORBIDDEN_TYPES.has(event.type));
+    for (const event of forbidden) {
+      violations.push(`baseline run ${runId} emitted forbidden model/MCP event ${event.eventId}`);
+    }
+
+    const startedAt = Date.parse(starts[0]?.timestamp);
+    const completedAt = Date.parse(completions[0]?.timestamp);
+    const unblindedAt = Date.parse(unblindings[0]?.timestamp);
+    if (![startedAt, completedAt, unblindedAt].every(Number.isFinite)
+      || startedAt >= completedAt
+      || completedAt > unblindedAt) {
+      violations.push(`${runId} baseline boundaries are not strictly ordered`);
+    }
+    if (usage.length > 1) violations.push(`${runId} has duplicate baseline usage reports`);
+    if (usage.length === 1) {
+      const reportAt = Date.parse(usage[0].timestamp);
+      const intervalStart = Date.parse(usage[0].intervalStart);
+      const intervalEnd = Date.parse(usage[0].intervalEnd);
+      if (usage[0].totalTokens !== 0
+        || ![reportAt, intervalStart, intervalEnd].every(Number.isFinite)
+        || intervalStart > startedAt
+        || completedAt > intervalEnd
+        || intervalEnd > reportAt) {
+        violations.push(`${runId} baseline usage is nonzero or does not cover the run`);
+      }
+    }
+    if (outcomes.some((event) => Date.parse(event.timestamp) <= unblindedAt)) {
+      violations.push(`${runId} baseline outcome access predates unblinding`);
+    }
+  }
+  return { totalEvents, attributedEvents, violations };
+}
 
 export function evaluateStartOrder(payload, blockId) {
   const violations = [];
@@ -182,11 +310,20 @@ export function evaluateStartOrder(payload, blockId) {
 }
 
 export function evaluateGlobalAttribution(authenticated) {
-  return attributeEvents(
+  const mappings = authenticatedRunMappings(authenticated.payload);
+  const attribution = attributeEvents(
     authenticated.payload,
-    authenticatedRunMappings(authenticated.payload),
+    mappings,
     GLOBAL_ATTRIBUTION_TYPES
   );
+  const baseline = evaluateBaselineEvidence(authenticated.payload, mappings);
+  const violations = [...attribution.violations, ...baseline.violations];
+  return {
+    status: violations.length === 0 ? "compliant" : "noncompliant",
+    totalEvents: attribution.totalEvents + baseline.totalEvents,
+    attributedEvents: attribution.attributedEvents + baseline.attributedEvents,
+    violations
+  };
 }
 
 export function evaluateNetworkAttribution(authenticated) {

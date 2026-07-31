@@ -5,7 +5,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readAuthenticatedExport } from "../scripts/authenticated-export.mjs";
 import { evaluateModelBindings } from "../scripts/preflight-models.mjs";
-import { evaluateIsolationEvidence } from "../scripts/verify-isolation-evidence.mjs";
+import {
+  evaluateGlobalAttribution,
+  evaluateIsolationEvidence
+} from "../scripts/verify-isolation-evidence.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { canonicalMetricsBytes, deriveMetricsArtifact } from "./metrics.mjs";
 
@@ -170,12 +173,26 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
     item.runId === runRecord.runId && item.type === "run.completed");
   const unblinding = events.filter((item) =>
     item.runId === runRecord.runId && item.type === "outcomes.unblinded");
+  const starts = events.filter((item) =>
+    item.runId === runRecord.runId && item.type === "run.started");
+  const planned = schedule.runs.find((item) => item.runId === runRecord.runId);
   const boundaries = [...completion, ...unblinding];
   const expectedBoundaryRole = runRecord.armId === 0 ? "baseline" : "parent";
   const expectedBoundarySession = runRecord.armId === 0
-    ? runRecord.sessionIds?.[0]
+    ? starts[0]?.sessionId
     : runRecord.modelEvidence.roles.find((role) => role.role === "parent")?.sessionId;
-  if (completion.length !== 1
+  if (!planned
+    || planned.blockId !== runRecord.blockId
+    || planned.armId !== runRecord.armId
+    || starts.length !== 1
+    || starts[0].blockId !== runRecord.blockId
+    || starts[0].armId !== runRecord.armId
+    || starts[0].sequence !== planned.order
+    || starts[0].role !== expectedBoundaryRole
+    || !starts[0].processId
+    || (runRecord.sessionIds?.length > 0
+      && !runRecord.sessionIds.includes(starts[0].sessionId))
+    || completion.length !== 1
     || unblinding.length !== 1
     || boundaries.some((item) =>
       item.blockId !== runRecord.blockId
@@ -183,6 +200,7 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
       || item.role !== expectedBoundaryRole
       || item.sessionId !== boundaries[0].sessionId
       || (expectedBoundarySession && item.sessionId !== expectedBoundarySession)
+      || Date.parse(item.timestamp) <= Date.parse(starts[0]?.timestamp)
       || Date.parse(event.timestamp) <= Date.parse(item.timestamp))) {
     throw new Error(`signed metrics event precedes completion/unblinding for ${runRecord.runId}`);
   }
@@ -623,15 +641,18 @@ export function analyzeStatisticsInput(input) {
   throw new Error("authenticated platform export, signature, public key, run records, metrics artifacts, and isolation contexts are required");
 }
 
-export function assertCompleteRunCoverage(runs, records) {
-  const completeRecordIds = [...records.values()]
-    .filter((record) => record.phase === "complete")
-    .map((record) => record.runId)
+export function assertAuthenticatedRunCoverage(runs, records, authenticated) {
+  const authenticatedMetricRunIds = authenticated.payload.events
+    .filter((event) => event.type === "metrics.computed")
+    .map((event) => event.runId)
     .sort();
   const suppliedRunIds = runs.map((run) => run.runId).sort();
   if (new Set(suppliedRunIds).size !== suppliedRunIds.length
-    || JSON.stringify(suppliedRunIds) !== JSON.stringify(completeRecordIds)) {
-    throw new Error("statistics runs must map one-to-one with every complete run record");
+    || new Set(authenticatedMetricRunIds).size !== authenticatedMetricRunIds.length
+    || JSON.stringify(suppliedRunIds) !== JSON.stringify(authenticatedMetricRunIds)
+    || authenticatedMetricRunIds.some((runId) =>
+      !records.has(runId) || records.get(runId).phase !== "complete")) {
+    throw new Error("statistics runs must map one-to-one with every authenticated metrics artifact");
   }
 }
 
@@ -661,7 +682,11 @@ export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
     records.set(record.runId, record);
   }
   const bindingAvailability = evaluateModelBindings(authenticated, input.runRecords);
-  assertCompleteRunCoverage(input.runs, records);
+  const globalAttribution = evaluateGlobalAttribution(authenticated);
+  if (globalAttribution.status !== "compliant") {
+    throw new Error(`global event attribution failed: ${globalAttribution.violations[0]}`);
+  }
+  assertAuthenticatedRunCoverage(input.runs, records, authenticated);
   const verifiedObservations = input.runs.map((run) => {
     const record = records.get(run.runId);
     if (!record

@@ -292,6 +292,12 @@ identities fail the entire evidence dataset.
 The same dataset-wide attribution pass covers tool calls/results, filesystem
 access, outcome access, delegation, completion, and unblinding events. Every
 event must resolve to exactly one scheduled run and authenticated role/session.
+Arm 0 is mapped separately from its exact scheduled `run.started` baseline role,
+unique session, and unique process boundary. Its completion, unblinding, and
+optional zero-token usage events must retain that mapping and ordered interval;
+baseline model sessions/bindings, MCP tools, filesystem/network events, sandbox
+audits, and delegation are forbidden. Evaluator adapter/metrics identities remain
+outside the baseline role mapping.
 All model generation tools, results, filesystem/network activity, delegation,
 and staging writes must occur strictly before `run.completed`. Exactly one
 evaluator-role `adapter.snapshot` occurs afterward under a session outside the
