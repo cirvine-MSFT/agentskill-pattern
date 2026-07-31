@@ -1,28 +1,30 @@
 import assert from "node:assert/strict";
-import test from "node:test";
 import {
-  chmod,
-  lstat,
   mkdir,
+  mkdtemp,
+  open,
   readFile,
   readdir,
-  rename,
   rm,
   symlink,
-  utimes,
   writeFile,
 } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import test from "node:test";
 import {
-  atomicWriteNewJson,
+  disposePreparedSandbox,
+  prepareSandbox,
+} from "../../tools/semantic-corpus-mcp/launcher.mjs";
+import {
+  atomicWriteNewBytes,
+  canonicalJsonBytes,
   computeRequestHash,
-  CorpusService,
+  validateRequestDocument,
 } from "../../tools/semantic-corpus-mcp/lib.mjs";
 import {
-  baseRequest,
   createRun,
-  encodeJson,
-  scenarioInput,
+  scenario,
 } from "./fixtures.mjs";
 
 async function expectCode(action, code) {
@@ -32,118 +34,152 @@ async function expectCode(action, code) {
   });
 }
 
-async function fillValidCorpus(service, request) {
-  for (const [index, entry] of request.scenarios.entries()) {
-    await service.writeScenarioInput({
-      scenarioId: entry.scenarioId,
-      config: scenarioInput(index + 1),
-    });
-  }
-}
-
-test("writes exact request-defined IDs, categories, count, and quotas", async (t) => {
+test("merged schema dialect accepts metadata, schema-valued additionalProperties, and unbounded fields", async (t) => {
   const run = await createRun();
   const service = await run.open();
   t.after(async () => {
     await service.close();
     await run.cleanup();
   });
-  await fillValidCorpus(service, run.request);
-  const result = await service.writeScenarioManifest({
-    scenarios: [...run.request.scenarios].reverse(),
-  });
-  assert.equal(result.scenarioCount, run.request.targetCount);
-  assert.equal(result.requestHash, run.requestHash);
 
-  const first = JSON.parse(
-    await readFile(path.join(run.staging, "scenarios", "scenario-001.json"), "utf8"),
+  assert.equal(run.request.v1ConfigSchema.$id, "v1-config.schema.json");
+  assert.equal(run.request.v1ConfigSchema.properties.service.properties.name.maxLength, undefined);
+  assert.deepEqual(
+    run.request.v1ConfigSchema.properties.features.properties.flags.additionalProperties,
+    { type: "boolean" },
   );
-  assert.deepEqual(first, scenarioInput(1));
-  const manifest = JSON.parse(
-    await readFile(path.join(run.staging, "manifest.json"), "utf8"),
-  );
-  assert.deepEqual(manifest.scenarios, run.request.scenarios);
-  assert.equal(manifest.requestHash, run.requestHash);
-  assert.equal(JSON.stringify(manifest).includes("summary"), false);
-  assert.equal(JSON.stringify(manifest).includes("rationale"), false);
-});
-
-test("closed v1 schema rejects aliases, confusables, and nested unknowns", async (t) => {
-  const run = await createRun();
-  const service = await run.open();
-  t.after(async () => {
-    await service.close();
-    await run.cleanup();
-  });
-  const attacks = [
-    { ...scenarioInput(1), expectedOutcome: "v2" },
-    { ...scenarioInput(1), oracleVerdict: "pass" },
-    { ...scenarioInput(1), "\u043EracleVerdict": "pass" },
-    { ...scenarioInput(1), "expected.output": "v2" },
-    { ...scenarioInput(1), profile: { ...scenarioInput(1).profile, expected: "v2" } },
-    { ...scenarioInput(1), profile: { ...scenarioInput(1).profile, oracle: {} } },
-    { ...scenarioInput(1), profile: { ...scenarioInput(1).profile, nested: {} } },
-  ];
-  for (const [index, config] of attacks.entries()) {
-    await assert.rejects(
-      () =>
-        service.writeScenarioInput({
-          scenarioId: "scenario-001",
-          config,
-        }),
-      (error) => {
-        assert.equal(error.code, "SCHEMA_ERROR");
-        assert.match(error.message, /unsupported field/);
-        return true;
+  await service.writeScenario({
+    scenario: {
+      ...scenario(0),
+      input: {
+        ...scenario(0).input,
+        features: { flags: { arbitraryRegisteredFlag: true } },
       },
-      `attack ${index}`,
-    );
-  }
+    },
+  });
 });
 
-test("scenario and manifest arguments have strict positive shapes", async (t) => {
+test("strict composed schemas reject unknown fields and invalid dynamic-property values", async (t) => {
   const run = await createRun();
   const service = await run.open();
   t.after(async () => {
     await service.close();
     await run.cleanup();
   });
-  await expectCode(
-    () =>
-      service.writeScenarioInput({
-        scenarioId: "not-request-defined",
-        config: scenarioInput(1),
-      }),
-    "SCHEMA_ERROR",
-  );
-  await expectCode(
-    () =>
-      service.writeScenarioInput({
-        scenarioId: "scenario-001",
-        input: scenarioInput(1),
-      }),
-    "SCHEMA_ERROR",
-  );
-  await expectCode(
-    () =>
-      service.writeScenarioManifest({
-        scenarios: run.request.scenarios,
-        summary: "free form",
-      }),
-    "SCHEMA_ERROR",
-  );
-  await expectCode(
-    () =>
-      service.writeScenarioManifest({
-        scenarios: run.request.scenarios.map((entry, index) =>
-          index === 0 ? { ...entry, category: "cross-field-invariants" } : entry,
-        ),
-      }),
-    "SCHEMA_ERROR",
-  );
+  const baseline = scenario(1);
+  const attacks = [
+    { ...baseline, expected: { status: "ok" } },
+    { ...baseline, trace: [] },
+    { ...baseline, diagnostics: [] },
+    { ...baseline, input: { ...baseline.input, expectedOutcome: "v2" } },
+    {
+      ...baseline,
+      input: {
+        ...baseline.input,
+        service: { ...baseline.input.service, oracleVerdict: "pass" },
+      },
+    },
+    {
+      ...baseline,
+      input: {
+        ...baseline.input,
+        features: { flags: { alpha: "true" } },
+      },
+    },
+  ];
+  for (const attack of attacks) {
+    await expectCode(() => service.writeScenario({ scenario: attack }), "SCHEMA_ERROR");
+  }
 });
 
-test("rejects traversal, absolute paths, separators, Unicode, and case aliases", async (t) => {
+test("generic request validator accepts only the documented 40 and 60 boundaries", async (t) => {
+  const run = await createRun();
+  t.after(() => run.cleanup());
+  for (const targetCount of [40, 60]) {
+    const request = { ...structuredClone(run.request), targetCount };
+    request.requestHash = computeRequestHash(request);
+    assert.equal(validateRequestDocument(request).targetCount, targetCount);
+  }
+  for (const targetCount of [39, 61]) {
+    const request = { ...structuredClone(run.request), targetCount };
+    request.requestHash = computeRequestHash(request);
+    await expectCode(async () => validateRequestDocument(request), "SCHEMA_ERROR");
+  }
+  for (const v1ConfigSchema of [
+    { ...structuredClone(run.request.v1ConfigSchema), additionalProperties: true },
+    (() => {
+      const schema = structuredClone(run.request.v1ConfigSchema);
+      delete schema.additionalProperties;
+      return schema;
+    })(),
+  ]) {
+    const request = { ...structuredClone(run.request), v1ConfigSchema };
+    request.requestHash = computeRequestHash(request);
+    await expectCode(async () => validateRequestDocument(request), "SCHEMA_ERROR");
+  }
+});
+
+test("trusted launcher writes verifiable confinement rather than accepting sandbox-kind claims", async (t) => {
+  const run = await createRun();
+  t.after(() => run.cleanup());
+  assert.equal(Object.hasOwn(run.config, "sandboxKind"), false);
+  assert.equal(run.config.confinement.provider, "trusted-launcher-v1");
+  assert.equal(run.config.confinement.permissionModel, true);
+  assert.equal(run.config.confinement.deniedReadRoot.includes(run.state.sandboxRoot), false);
+  assert.equal(run.config.confinement.sources.length, 3);
+
+  for (const target of [
+    run.configPath,
+    path.join(run.contract, "request.json"),
+    path.join(run.contract, "schemas", "v1-config.schema.json"),
+  ]) {
+    await assert.rejects(async () => {
+      const handle = await open(target, "r+");
+      await handle.close();
+    }, (error) => ["EACCES", "EPERM", "EROFS"].includes(error.code));
+  }
+});
+
+test("concurrent preparation reserves runtime state without deleting the winning launch", async (t) => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), "semantic-prepare-race-"));
+  const options = {
+    statePath: path.join(parent, "state.json"),
+    cleanupTokenPath: path.join(parent, "cleanup.cap"),
+    sandboxParent: parent,
+    metadata: {
+      runId: "B01-A4",
+      armId: 4,
+      blockId: "B01",
+      seed: 20260729,
+    },
+    waitTimeoutMs: 100,
+    staleAfterMs: 1000,
+  };
+  const results = await Promise.allSettled([
+    prepareSandbox(options),
+    prepareSandbox(options),
+  ]);
+  const winner = results.find((result) => result.status === "fulfilled")?.value;
+  t.after(async () => {
+    if (winner) await disposePreparedSandbox(winner).catch(() => {});
+    await rm(parent, { recursive: true, force: true });
+  });
+  assert.ok(winner);
+  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+  assert.equal(
+    results.some(
+      (result) => result.status === "rejected" && result.reason?.code === "EEXIST",
+    ),
+    true,
+  );
+  assert.equal(
+    JSON.parse(await readFile(options.statePath, "utf8")).requestHash,
+    winner.request.requestHash,
+  );
+  assert.equal((await readFile(options.cleanupTokenPath, "utf8")).length >= 40, true);
+});
+
+test("contract reads reject traversal, absolute paths, separators, Unicode, and case aliases", async (t) => {
   const run = await createRun();
   const service = await run.open();
   t.after(async () => {
@@ -151,300 +187,84 @@ test("rejects traversal, absolute paths, separators, Unicode, and case aliases",
     await run.cleanup();
   });
   const attacks = [
-    "../rules.md",
+    "../mapping-spec.json",
     "/etc/passwd",
     "C:/Windows/win.ini",
     "//server/share/file",
-    "schemas\\v1.json",
-    "schemas//v1.json",
+    "schemas\\v1-config.schema.json",
+    "schemas//v1-config.schema.json",
     "e\u0301.md",
-    "schemas\u2215v1.json",
-    "Rules.md",
+    "schemas\u2215v1-config.schema.json",
+    "Arm-contract.json",
   ];
   for (const attack of attacks) {
     await assert.rejects(
       () => service.readContractFile({ path: attack }),
-      (error) => {
-        assert.match(error.code, /^(CASE_MISMATCH|INVALID_PATH|PATH_ESCAPE)$/);
-        return true;
-      },
+      (error) => /^(CASE_MISMATCH|INVALID_PATH|PATH_ESCAPE)$/.test(error.code),
     );
   }
 });
 
-test("rejects request hash errors, replacement, and open schemas", async (t) => {
-  for (const targetCount of [39, 61]) {
-    const countRun = await createRun(baseRequest({ targetCount }));
-    t.after(() => countRun.cleanup());
-    await expectCode(() => countRun.open(), "SCHEMA_ERROR");
-  }
-
-  const badHash = baseRequest();
-  badHash.requestHash = "0".repeat(64);
-  const hashRun = await createRun(badHash);
-  t.after(() => hashRun.cleanup());
-  await expectCode(() => hashRun.open(), "REQUEST_HASH_MISMATCH");
-
-  const invalidRun = await createRun(
-    baseRequest({
-      v1ConfigSchema: {
-        type: "object",
-        properties: { id: { type: "string" } },
-        required: ["id"],
-        additionalProperties: true,
-      },
-    }),
-  );
-  t.after(() => invalidRun.cleanup());
-  await expectCode(() => invalidRun.open(), "SCHEMA_ERROR");
-
+test("staging junctions cannot redirect scenario writes outside the sandbox", async (t) => {
   const run = await createRun();
   const service = await run.open();
-  t.after(async () => {
-    await service.close().catch(() => {});
-    await run.cleanup();
-  });
-  const requestPath = path.join(run.contract, "request.json");
-  const replacement = path.join(run.contract, "request-replacement.json");
-  await writeFile(replacement, encodeJson(run.request));
-  await rm(requestPath);
-  await rename(replacement, requestPath);
-  await expectCode(() => service.listContractFiles(), "REQUEST_CHANGED");
-});
-
-test("requires matching sandbox token and launcher-attested root identities", async (t) => {
-  const tokenRun = await createRun();
-  t.after(() => tokenRun.cleanup());
-  await expectCode(
-    () =>
-      CorpusService.create({
-        environment: {
-          configPath: tokenRun.configPath,
-          token: "x".repeat(64),
-        },
-      }),
-    "SANDBOX_TOKEN_MISMATCH",
-  );
-
-  const pinnedRun = await createRun(undefined, { requestHash: "0".repeat(64) });
-  t.after(() => pinnedRun.cleanup());
-  await expectCode(() => pinnedRun.open(), "REQUEST_HASH_MISMATCH");
-
-  const identityRun = await createRun();
-  t.after(() => identityRun.cleanup());
-  const original = `${identityRun.contract}-original`;
-  await rename(identityRun.contract, original);
-  await mkdir(identityRun.contract);
-  await expectCode(() => identityRun.open(), "ROOT_IDENTITY_CHANGED");
-});
-
-test("fails closed when launcher-owned config or request is writable", async (t) => {
-  const configRun = await createRun();
-  t.after(() => configRun.cleanup());
-  await chmod(configRun.configPath, 0o600);
-  await expectCode(() => configRun.open(), "SANDBOX_UNVERIFIED");
-
-  const requestRun = await createRun();
-  t.after(() => requestRun.cleanup());
-  await chmod(path.join(requestRun.contract, "request.json"), 0o600);
-  await expectCode(() => requestRun.open(), "SANDBOX_UNVERIFIED");
-});
-
-test("rechecks sandbox config and root identity before and after operations", async (t) => {
-  const configRun = await createRun();
-  const configService = await configRun.open();
-  t.after(async () => {
-    await configService.close().catch(() => {});
-    await configRun.cleanup();
-  });
-  const replacement = `${configRun.configPath}.replacement`;
-  await writeFile(replacement, encodeJson(configRun.sandbox));
-  await rm(configRun.configPath);
-  await rename(replacement, configRun.configPath);
-  await expectCode(() => configService.listContractFiles(), "SANDBOX_CONFIG_CHANGED");
-
-  const rootRun = await createRun();
-  const moved = `${rootRun.contract}-moved`;
-  const rootService = await rootRun.open({
-    hooks: {
-      beforeScenarioPublish: async () => {
-        await rename(rootRun.contract, moved);
-        await mkdir(rootRun.contract);
-      },
-    },
-  });
-  t.after(async () => {
-    await rootService.close().catch(() => {});
-    await rootRun.cleanup();
-  });
-  await expectCode(
-    () =>
-      rootService.writeScenarioInput({
-        scenarioId: "scenario-001",
-        config: scenarioInput(1),
-      }),
-    "ROOT_IDENTITY_CHANGED",
-  );
-});
-
-test("rejects contract symlinks and staging junctions", async (t) => {
-  const contractRun = await createRun();
-  const outside = path.join(contractRun.cwd, "outside.md");
-  await writeFile(outside, "secret");
-  await rm(path.join(contractRun.contract, "rules.md"));
+  const outside = path.join(run.parent, "outside-staging");
+  await writeFile(path.join(run.staging, ".placeholder"), "");
+  await mkdir(outside);
+  await rm(path.join(run.staging, ".placeholder"));
   try {
-    await symlink(outside, path.join(contractRun.contract, "rules.md"), "file");
+    await symlink(
+      outside,
+      path.join(run.staging, "scenarios"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
   } catch (error) {
-    await contractRun.cleanup();
+    await service.close();
+    await run.cleanup();
     if (error?.code === "EPERM") {
-      t.skip("file symlinks require an unavailable Windows privilege");
+      t.skip("directory links require an unavailable Windows privilege");
       return;
     }
     throw error;
   }
-  const contractService = await contractRun.open();
   t.after(async () => {
-    await contractService.close();
-    await contractRun.cleanup();
+    await service.close();
+    await run.cleanup();
   });
-  await expectCode(() => contractService.listContractFiles(), "REPARSE_ESCAPE");
-
-  const stagingRun = await createRun();
-  const stagingService = await stagingRun.open();
-  const outsideStaging = path.join(stagingRun.cwd, "outside-staging");
-  await mkdir(outsideStaging);
-  await symlink(
-    outsideStaging,
-    path.join(stagingRun.staging, "scenarios"),
-    process.platform === "win32" ? "junction" : "dir",
-  );
-  t.after(async () => {
-    await stagingService.close();
-    await stagingRun.cleanup();
-  });
-  await expectCode(
-    () =>
-      stagingService.writeScenarioInput({
-        scenarioId: "scenario-001",
-        config: scenarioInput(1),
-      }),
-    "REPARSE_ESCAPE",
-  );
-  assert.deepEqual(await readdir(outsideStaging), []);
+  await expectCode(() => service.writeScenario({ scenario: scenario(0) }), "REPARSE_ESCAPE");
+  assert.deepEqual(await readdir(outside), []);
 });
 
-test("manifest revalidates every staged scenario and closes staging", async (t) => {
+test("finalization is exact-count, canonical, source-only, and write-once", async (t) => {
   const run = await createRun();
   const service = await run.open();
   t.after(async () => {
     await service.close();
     await run.cleanup();
   });
-  await fillValidCorpus(service, run.request);
-  const first = path.join(run.staging, "scenarios", "scenario-001.json");
-  await chmod(first, 0o600);
-  await writeFile(first, encodeJson({ ...scenarioInput(1), oracle: "pass" }));
-  await expectCode(
-    () => service.writeScenarioManifest({ scenarios: run.request.scenarios }),
-    "SCHEMA_ERROR",
-  );
-
-  await writeFile(first, encodeJson(scenarioInput(1)));
-  await service.writeScenarioManifest({ scenarios: run.request.scenarios });
-  await expectCode(
-    () =>
-      service.writeScenarioInput({
-        scenarioId: "scenario-001",
-        config: scenarioInput(1),
-      }),
-    "STAGING_FINALIZED",
-  );
+  await expectCode(() => service.finalizeStaging({}), "SCHEMA_ERROR");
+  for (let index = 0; index < 60; index += 1) {
+    await service.writeScenario({ scenario: scenario(index) });
+  }
+  const result = await service.finalizeStaging({});
+  const payloadBytes = await readFile(run.state.stagingPath);
+  const payload = JSON.parse(payloadBytes);
+  assert.ok(payloadBytes.equals(canonicalJsonBytes(payload)));
+  assert.equal(payload.cases.length, 60);
+  assert.equal(JSON.stringify(payload).includes('"expected"'), false);
+  await expectCode(() => service.finalizeStaging({}), "STAGING_FINALIZED");
+  await expectCode(() => service.writeScenario({ scenario: scenario(0) }), "STAGING_FINALIZED");
+  assert.match(result.payloadSha256, /^[a-f0-9]{64}$/);
 });
 
-test("stale locks fail closed and are never stolen", async (t) => {
-  const run = await createRun();
-  t.after(() => run.cleanup());
-  const lockPath = path.join(run.staging, ".corpus.lock");
-  const owner = {
-    version: 1,
-    pid: 999_999,
-    hostname: "crashed-owner",
-    acquiredAt: "2000-01-01T00:00:00.000Z",
-    nonce: "0".repeat(32),
-  };
-  await writeFile(lockPath, encodeJson(owner));
-  const old = new Date(Date.now() - 120_000);
-  await utimes(lockPath, old, old);
-  await expectCode(() => run.open(), "LOCK_STALE");
-  assert.deepEqual(JSON.parse(await readFile(lockPath, "utf8")), owner);
-});
-
-test("lock release refuses changed owner metadata", async (t) => {
-  const run = await createRun();
-  const lockPath = path.join(run.staging, ".corpus.lock");
-  const service = await run.open({
-    hooks: {
-      beforeScenarioPublish: async () => {
-        const owner = JSON.parse(await readFile(lockPath, "utf8"));
-        await writeFile(lockPath, encodeJson({ ...owner, nonce: "f".repeat(32) }));
-      },
-    },
-  });
-  t.after(() => run.cleanup());
-  await expectCode(
-    () =>
-      service.writeScenarioInput({
-        scenarioId: "scenario-001",
-        config: scenarioInput(1),
-      }),
-    "LOCK_OWNERSHIP_LOST",
-  );
-  assert.equal((await readdir(run.staging)).includes(".corpus.lock"), true);
-});
-
-test("enforces request byte limits and atomic write-once publication", async (t) => {
-  const smallRequest = baseRequest();
-  smallRequest.maxSizes = {
-    ...smallRequest.maxSizes,
-    scenarioBytes: 80,
-  };
-  smallRequest.requestHash = computeRequestHash(smallRequest);
-  const smallRun = await createRun(smallRequest);
-  const smallService = await smallRun.open();
-  t.after(async () => {
-    await smallService.close();
-    await smallRun.cleanup();
-  });
-  await expectCode(
-    () =>
-      smallService.writeScenarioInput({
-        scenarioId: "scenario-001",
-        config: scenarioInput(1),
-      }),
-    "LIMIT_EXCEEDED",
-  );
-
+test("atomic byte publication never replaces an existing artifact", async (t) => {
   const run = await createRun();
   t.after(() => run.cleanup());
   const target = path.join(run.staging, "existing.json");
-  await writeFile(target, '{"stable":true}\n');
+  await writeFile(target, Buffer.from('{"stable":true}\n'));
   await expectCode(
-    () => atomicWriteNewJson(target, { stable: false }, { maximumBytes: 1024 }),
+    () => atomicWriteNewBytes(target, Buffer.from('{"stable":false}\n')),
     "CONFLICT",
   );
   assert.equal(await readFile(target, "utf8"), '{"stable":true}\n');
-
-  const failed = path.join(run.staging, "failed.json");
-  await assert.rejects(
-    () =>
-      atomicWriteNewJson(failed, { complete: true }, {
-        maximumBytes: 1024,
-        beforePublish: async () => {
-          throw new Error("injected failure");
-        },
-      }),
-    /injected failure/,
-  );
-  await assert.rejects(() => lstat(failed), { code: "ENOENT" });
-  assert.deepEqual((await readdir(run.staging)).sort(), ["existing.json"]);
 });

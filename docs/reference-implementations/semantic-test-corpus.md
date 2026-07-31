@@ -1,8 +1,8 @@
 # Reference implementation: `semantic-test-corpus` (GitHub Copilot)
 
-**Status: implemented reference.** AI proposes schema-valid v1 source documents. It
-never computes expected results. Deterministic parent code owns validation, promotion,
-migration execution, the expected-output oracle, traces, and mutant scoring.
+**Status: implemented reference.** AI proposes only schema-valid v1 source scenarios.
+Deterministic parent code owns staging verification, promotion, migration execution, the
+expected-output oracle, traces, and mutant scoring.
 
 ## Components
 
@@ -12,174 +12,171 @@ migration execution, the expected-output oracle, traces, and mutant scoring.
 | Custom agent | [`.github/agents/semantic-test-corpus.agent.md`](../../.github/agents/semantic-test-corpus.agent.md) |
 | Model | `claude-haiku-4.5` |
 | Agent tools | Five namespaced `semantic-corpus/*` MCP tools only |
-| MCP server | [`tools/semantic-corpus-mcp/server.mjs`](../../tools/semantic-corpus-mcp/server.mjs), dependency-free Node 20+ stdio |
+| Trusted launcher | [`tools/semantic-corpus-mcp/launcher.mjs`](../../tools/semantic-corpus-mcp/launcher.mjs) |
+| MCP server | [`tools/semantic-corpus-mcp/server.mjs`](../../tools/semantic-corpus-mcp/server.mjs), never configured directly |
 | Tests | [`tests/semantic-corpus-mcp/`](../../tests/semantic-corpus-mcp/) |
 
 The agent profile has no generic `read`, `edit`, `search`, `execute`, `web`, or `agent`
-tool. Omitting `agent` is the structural recursion guard. All filesystem capability
-comes from the local MCP process.
+tool. Omitting `agent` is the structural recursion guard. All corpus capability comes
+from the local MCP process.
 
-## Mandatory launcher boundary
+## Trusted launcher and confinement
 
-The MCP process **must** run in a container, restricted-mount sandbox, restricted VM, or
-dedicated ACL identity. This is a startup requirement, not optional hardening:
+The custom-agent MCP configuration invokes `launcher.mjs`, not `server.mjs`. Before
+starting MCP, the launcher:
 
-- mount or ACL `corpus-contract/` and the sandbox config read-only;
-- expose only `corpus-staging/` as writable;
-- deny the MCP identity access to repositories, migration source, oracle and expected
-  artifacts, existing tests, parent directories, and sibling worktrees; and
-- use a disposable run directory, not a repository or bare worktree.
+1. reads the merged benchmark arm contract and v1/scenario/staging schemas;
+2. creates a fresh disposable run outside and disjoint from the repository;
+3. copies only the public contract allowlist and records each SHA-256 in an immutable
+   contract manifest;
+4. derives the immutable run request, which pins the manifest hash, request hash, run
+   metadata, schemas, limits, and the registered target of exactly 60;
+5. creates fresh server and cleanup tokens in parent-only runtime files;
+6. rejects symlinks, junctions, and reparse roots;
+7. applies and probes read-only contract/config ACLs on Windows or modes on POSIX, while
+   proving staging remains writable; and
+8. launches the trusted server under Node's permission model with read access only to
+   the three hash-attested MCP sources, config, contract, and staging, and write access
+   only to staging.
 
-After establishing those grants, the trusted launcher writes an immutable sandbox config
-outside both roots and passes its absolute path and a fresh token through
-`SEMANTIC_CORPUS_SANDBOX_CONFIG` and `SEMANTIC_CORPUS_SANDBOX_TOKEN`:
+The launcher also rejects trusted server sources that import network, child-process,
+worker, VM, or related execution modules. Node child, worker, add-on, and WASI
+permissions remain denied. The server rechecks the permission allowlist, source hashes,
+read/write denial, root and file identities, and request/config hashes before serving
+MCP. No caller-provided `sandboxKind` string is accepted as confinement evidence.
 
-```json
-{
-  "version": 1,
-  "sandboxKind": "restricted-mounts",
-  "tokenHash": "sha256:<64-lowercase-hex-characters>",
-  "requestHash": "<request.json requestHash>",
-  "roots": {
-    "contract": {
-      "path": "C:\\isolated-run\\corpus-contract",
-      "access": "read-only",
-      "identity": { "device": "123", "fileId": "456" }
-    },
-    "staging": {
-      "path": "C:\\isolated-run\\corpus-staging",
-      "access": "read-write",
-      "identity": { "device": "123", "fileId": "789" }
-    }
-  },
-  "lock": { "waitTimeoutMs": 5000, "staleAfterMs": 300000 }
-}
+Required run metadata is supplied through the parent environment:
+
+```powershell
+$env:SEMANTIC_CORPUS_STATE_PATH = "C:\benchmark-state\B01-A4.json"
+$env:SEMANTIC_CORPUS_CLEANUP_TOKEN_PATH = "C:\benchmark-state\B01-A4.cleanup.cap"
+$env:SEMANTIC_CORPUS_SANDBOX_PARENT = "C:\benchmark-runs"
+$env:SEMANTIC_CORPUS_RUN_ID = "B01-A4"
+$env:SEMANTIC_CORPUS_ARM_ID = "4"
+$env:SEMANTIC_CORPUS_BLOCK_ID = "B01"
+$env:SEMANTIC_CORPUS_SEED = "20260729"
 ```
 
-`sandboxKind` is `container`, `restricted-mounts`, or `restricted-acl`. `fileId` is
-Node's inode/file-identity value, including the Windows file ID exposed by Node where the
-filesystem provides it. The config contains only the token hash; the token comes from
-the launcher environment. Roots must be absolute, disjoint, canonical non-reparse
-directories with the exact attested device/file identity.
+The cleanup capability path is parent-owned and outside both the state bundle and
+sandbox. State and token files are runtime artifacts and must not be committed. Missing,
+relative, repository-contained, writable-contract, reparse, permission-model, or source
+attestation failures stop before MCP initialization.
 
-Before emitting an MCP response, the server requires the config and token, verifies the
-token hash, launcher-pinned request hash, config identity/content, root identities, and
-the immutable request, and confirms that the config and request deny write opens. Contract
-reads likewise require write denial for the selected file. It
-rechecks config, root, request-file, and opened-file identity around every operation.
-Missing, stale, changed, or unverifiable evidence fails closed.
+## Immutable request and schema dialect
 
-These Node checks are **defense in depth, not a TOCTOU-proof sandbox**. Portable Node
-pathname checks cannot provide race-proof `openat`-style confinement on every platform.
-The implementation uses `O_NOFOLLOW` where Node exposes it, opens only verified regular
-files, rejects symlinks/junctions/case aliases, and rechecks identities before and after
-operations. The container, restricted mounts, or ACL boundary remains the primary access
-control and must stay effective for the process lifetime.
+The benchmark launcher derives `corpus-contract/request.json` from the merged
+[`arm-contract.json`](../../experiments/semantic-test-corpus/design/arm-contract.json)
+and public schemas. The current benchmark request always has `targetCount: 60` and
+publishes `corpus-staging/<run-id>.json`.
 
-## Immutable request
+The generic request validator permits the documented 40-60 range, but only the 40 and
+60 boundaries are regression-tested; the benchmark integration is fixed at 60.
 
-The parent writes read-only `corpus-contract/request.json`. It is a closed object with a
-self-hash over canonical JSON excluding `requestHash`. The following is abbreviated;
-the real `scenarios` array contains exactly 40-60 entries:
+The supported safe schema dialect accepts the actual merged draft-2020-12 documents:
 
-```json
-{
-  "version": 1,
-  "targetCount": 40,
-  "scenarios": [
-    { "scenarioId": "scenario-001", "category": "mapping-rules" },
-    { "scenarioId": "scenario-002", "category": "cross-field-invariants" }
-  ],
-  "categories": [
-    { "category": "mapping-rules", "minQuota": 20 },
-    { "category": "cross-field-invariants", "minQuota": 10 }
-  ],
-  "maxSizes": {
-    "contractFileBytes": 262144,
-    "scenarioBytes": 65536,
-    "manifestBytes": 262144
-  },
-  "v1ConfigSchema": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": ["version", "id", "profile"],
-    "properties": {
-      "version": { "type": "integer", "const": 1 },
-      "id": { "type": "string", "minLength": 1, "maxLength": 40 },
-      "profile": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["region"],
-        "properties": {
-          "region": { "type": "string", "maxLength": 4, "enum": ["us", "eu"] }
-        }
-      }
-    }
-  },
-  "requestHash": "<SHA-256 of canonical request without this field>"
-}
-```
+- `$schema` and `$id`;
+- recursively closed objects;
+- schema-valued `additionalProperties`, such as arbitrary feature-flag names whose
+  values must be boolean;
+- optional bounds on arrays, strings, and numbers;
+- `const`, scalar `enum`, patterns, numeric constraints, and bounded `anyOf`.
 
-`targetCount` must exactly equal the request-defined scenario list. IDs are unique;
-categories are closed and satisfy every minimum quota before delegation. The model cannot
-initialize or change the request. The target must be from 40 through 60.
+The merged scenario schema is composed with the merged v1 schema before any write. The
+v1 root and scenario root must remain `additionalProperties: false`. Nested unknown
+fields, expected outputs, traces, diagnostics, aliases, and confusable keys are rejected.
+Schema-valued `additionalProperties` validates each dynamic value rather than weakening
+unknown-property checks.
 
-The supported schema dialect is deliberately small: recursively closed objects, bounded
-arrays and strings, finite numbers, safe integers, booleans, null, `const`, scalar enums,
-numeric bounds, patterns, and bounded `anyOf`. Every object schema must explicitly set
-`additionalProperties: false`; unsupported schema keywords are rejected.
-
-This positive schema is the structural output-exclusion control. The write tool accepts
-only `scenarioId` plus `config`, and `config` must match the exact v1 schema recursively.
-`expectedOutcome`, `oracleVerdict`, punctuation aliases, Unicode-confusable keys, and
-nested variants are naturally unknown properties. There is no semantic-name denylist or
-unrestricted JSON escape hatch.
-
-## Narrow tools
+## Narrow tools and output
 
 | Tool | Capability |
 | --- | --- |
-| `read_request` | Read the immutable launcher-pinned request, exact ID/category assignments, limits, and closed v1 schema. |
-| `list_contract_files` | List bounded regular files under the attested contract root. |
+| `read_request` | Read the immutable launcher-derived request and retained hashes. |
+| `list_contract_files` | List bounded regular files under the attested read-only contract root. |
 | `read_contract_file` | Read one exact relative contract path. |
-| `write_scenario_input` | Accept only a request-defined `scenarioId` and exact closed-schema `config`; atomically publish the config under the fixed staging path. |
-| `write_scenario_manifest` | Accept only the exact request-defined ID/category pairs; validate every staged config, exact count, and quotas, then publish once. |
+| `write_scenario` | Atomically stage one source-only scenario matching the composed merged schemas. |
+| `finalize_staging` | Require the exact target, revalidate every write, and publish one canonical staging artifact. |
 
-There is no agent corpus-initialization tool, metadata tool, staging read tool, generic
-filesystem tool, free-form summary, rationale, evidence string, path, or output/oracle
-field. The JSON-RPC `initialize` method is MCP protocol negotiation, not an agent
-capability to initialize corpus state.
+Finalization publishes canonical UTF-8 JSON bytes, with recursively sorted object keys,
+LF termination, at:
 
-## Cross-process staging lock
+```text
+corpus-staging/<run-id>.json
+```
 
-Startup atomically acquires `corpus-staging/.corpus.lock` with exclusive-create
-semantics and retains its open handle until the MCP process closes. Initialization and
-request reading, contract reads, scenario count checks, writes, complete manifest
-snapshot validation, and publication all occur while the same owner lock is held. The
-lock records owner PID, hostname, acquisition time, random nonce, and request hash.
+The payload exactly matches the merged staging schema:
 
-Another server/process cannot initialize while that lease exists and fails after the
-launcher-configured bounded interval. A malformed lock fails closed. A lock older than
-`staleAfterMs` returns `LOCK_STALE` and is **never removed or stolen**; the parent must
-destroy or inspect the disposable run. Release verifies the open handle, owner bytes,
-nonce, and pathname still identify the owner's lock before removal.
+```json
+{
+  "formatVersion": 1,
+  "generator": {
+    "armId": 4,
+    "blockId": "B01",
+    "seed": 20260729
+  },
+  "cases": []
+}
+```
 
-Scenario and manifest publication writes a bounded exclusive temporary file in the
-destination directory, flushes it, marks it read-only, and hard-links it to a write-once
-final name. Existing files are never replaced. Manifest publication reopens and validates
-every scenario twice around the snapshot boundary.
+For a successful benchmark run, `cases` contains exactly 60 unique source scenarios and
+no expected output, diagnostics, or traces. The tool returns only compact metadata:
 
-## Parent workflow
+```json
+{
+  "stagingPath": "corpus-staging/B01-A4.json",
+  "payloadSha256": "<sha256-of-exact-canonical-bytes>",
+  "count": 60,
+  "status": "SUCCESS",
+  "requestHash": "<immutable-request-hash>",
+  "manifestHash": "<immutable-contract-manifest-hash>"
+}
+```
 
-1. Create a disposable run and establish container, mount, or ACL confinement.
-2. Write the closed request and contract; compute its canonical request hash.
-3. Record final root identities, write the read-only sandbox config, and launch with a
-   fresh matching token.
-4. Invoke the `semantic-test-corpus` agent. There is no inline fallback.
-5. Independently validate staged v1 documents and promote only accepted inputs.
-6. Run the deterministic oracle, migration, traces, and hidden mutants outside the
-   agent/MCP identity.
-7. Destroy the disposable run, including any stale lock.
+## Parent verification and promotion
+
+The parent must not trust the delegated summary. It re-verifies the exact returned hash,
+canonical bytes, request and manifest hashes, exact count, and the merged staging/v1
+validators:
+
+```powershell
+$env:SEMANTIC_CORPUS_CLEANUP_TOKEN = Get-Content `
+  C:\benchmark-state\B01-A4.cleanup.cap -Raw
+node tools\semantic-corpus-mcp\launcher.mjs verify `
+  --state C:\benchmark-state\B01-A4.json `
+  --payload-sha256 <returned-payload-sha256>
+```
+
+Only a `SUCCESS` result may proceed to the trusted promotion command. The parent then
+computes oracle results, traces, and mutant scores outside the worker identity.
+
+## Lifetime lock and authorized recovery
+
+Server startup atomically creates `corpus-staging/.corpus.lock` and retains its open
+handle for the full MCP lifetime. Every request, read, write, validation, and final
+publication verifies the same open handle, file identity, owner bytes, nonce, and
+request hash.
+
+A contender fails after the bounded wait interval. If the owner terminates abruptly,
+the lock remains. Once it is old enough, every server still returns `LOCK_STALE`; no
+server removes or steals it.
+
+The trusted launcher state is signed with the out-of-band parent-only cleanup
+capability. Only an explicit launcher recovery verifies that authorization, the exact
+root identities, trusted-source hashes, request hash, local hostname, stale interval,
+dead owner PID, and unchanged lock identity. Recovery holds a separate exclusive
+interlock, removes only dead-owner temporary files, quarantines the identity-verified
+stale lock, and then starts the same confined server:
+
+```powershell
+$env:SEMANTIC_CORPUS_CLEANUP_TOKEN = Get-Content `
+  C:\benchmark-state\B01-A4.cleanup.cap -Raw
+node tools\semantic-corpus-mcp\launcher.mjs resume `
+  --state C:\benchmark-state\B01-A4.json
+```
+
+After parent verification and promotion, the parent orchestrator destroys the
+disposable run root and its separately owned state/capability files. The launcher does
+not expose a recursive-delete command driven by a caller-selected state path.
 
 ## Validation
 
@@ -190,7 +187,9 @@ $tests = (Get-ChildItem tests\semantic-corpus-mcp -Filter *.test.mjs).FullName
 node --test $tests
 ```
 
-The suite covers MCP discovery/calls, fail-closed startup, recursively closed schemas,
-oracle/expected aliases and confusables, immutable request and sandbox identity, exact
-counts/quotas, traversal/case/Unicode/symlink/junction attacks, write-once publication,
-stale-lock policy, and a two-process lifetime-lock contention check.
+The suite uses the real merged arm contract and schemas. It covers launcher startup and
+failure, Windows/POSIX access policy probes, permission-model MCP startup, full
+initialize/list/read/write/finalize flow, exact canonical output and parent hash
+verification, strict unknown-property rejection, 40/60 generic boundaries, traversal
+and reparse attacks, write-once publication, bounded contention, abrupt termination,
+fail-closed stale locks, and authorized cleanup/resume.

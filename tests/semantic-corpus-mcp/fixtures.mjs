@@ -1,157 +1,83 @@
-import { chmod, lstat, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
-  computeRequestHash,
-  computeSandboxTokenHash,
-  CorpusService,
-} from "../../tools/semantic-corpus-mcp/lib.mjs";
+  disposePreparedSandbox,
+  prepareSandbox,
+  spawnPreparedServer,
+} from "../../tools/semantic-corpus-mcp/launcher.mjs";
+import { CorpusService } from "../../tools/semantic-corpus-mcp/lib.mjs";
 
-function identity(stats) {
-  return { device: stats.dev.toString(), fileId: stats.ino.toString() };
-}
+const baselinePath = fileURLToPath(
+  new URL(
+    "../../experiments/semantic-test-corpus/staging/baseline.json",
+    import.meta.url,
+  ),
+);
+const baseline = JSON.parse(await readFile(baselinePath, "utf8"));
 
-export function baseRequest(overrides = {}) {
-  const request = {
-    version: 1,
-    targetCount: 40,
-    scenarios: Array.from({ length: 40 }, (_, index) => ({
-      scenarioId: `scenario-${String(index + 1).padStart(3, "0")}`,
-      category: index < 25 ? "mapping-rules" : "cross-field-invariants",
-    })),
-    categories: [
-      { category: "mapping-rules", minQuota: 20 },
-      { category: "cross-field-invariants", minQuota: 10 },
-    ],
-    maxSizes: {
-      contractFileBytes: 262144,
-      scenarioBytes: 65536,
-      manifestBytes: 262144,
-    },
-    v1ConfigSchema: {
-      type: "object",
-      additionalProperties: false,
-      required: ["id", "enabled", "profile"],
-      properties: {
-        id: { type: "string", minLength: 1, maxLength: 40 },
-        enabled: { type: "boolean" },
-        profile: {
-          type: "object",
-          additionalProperties: false,
-          required: ["region", "flags"],
-          properties: {
-            region: { type: "string", enum: ["us", "eu", "apac"], maxLength: 4 },
-            flags: {
-              type: "array",
-              minItems: 0,
-              maxItems: 3,
-              uniqueItems: true,
-              items: {
-                type: "string",
-                enum: ["legacy", "regulated", "preview"],
-                maxLength: 10,
-              },
-            },
-          },
-        },
-      },
-    },
-    ...overrides,
-  };
-  request.requestHash = computeRequestHash(request);
-  return request;
+export function scenario(index) {
+  return structuredClone(baseline.cases[index % baseline.cases.length]);
 }
 
 export function scenarioInput(index) {
-  return {
-    id: `record-${index}`,
-    enabled: index % 2 === 0,
-    profile: {
-      region: ["us", "eu", "apac"][index % 3],
-      flags: index % 2 === 0 ? ["legacy"] : ["regulated"],
-    },
-  };
+  return scenario(index).input;
 }
 
 export function encodeJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-export async function createRun(request = baseRequest(), configOverrides = {}) {
-  const cwd = await mkdtemp(path.join(os.tmpdir(), "semantic-corpus-"));
-  const contract = path.resolve(cwd, "corpus-contract");
-  const staging = path.resolve(cwd, "corpus-staging");
-  const configPath = path.resolve(cwd, "corpus-sandbox.json");
-  const token = "test-launcher-token-0123456789abcdef";
-  await mkdir(contract);
-  await mkdir(staging);
-  await mkdir(path.join(contract, "schemas"));
-  await writeFile(
-    path.join(contract, "request.json"),
-    `${JSON.stringify(request, null, 2)}\n`,
-  );
-  await writeFile(path.join(contract, "rules.md"), "# Rules\n");
-  await writeFile(
-    path.join(contract, "schemas", "v1.json"),
-    `${JSON.stringify(request.v1ConfigSchema)}\n`,
-  );
-  await Promise.all([
-    chmod(path.join(contract, "request.json"), 0o400),
-    chmod(path.join(contract, "rules.md"), 0o400),
-    chmod(path.join(contract, "schemas", "v1.json"), 0o400),
-  ]);
-
-  const config = {
-    version: 1,
-    sandboxKind: "restricted-acl",
-    tokenHash: computeSandboxTokenHash(token),
-    requestHash: request.requestHash,
-    roots: {
-      contract: {
-        path: contract,
-        access: "read-only",
-        identity: identity(await lstat(contract, { bigint: true })),
-      },
-      staging: {
-        path: staging,
-        access: "read-write",
-        identity: identity(await lstat(staging, { bigint: true })),
-      },
+export async function createRun(options = {}) {
+  const parent = await mkdtemp(path.join(os.tmpdir(), "semantic-corpus-test-"));
+  const statePath = path.join(parent, "launcher-state.json");
+  const prepared = await prepareSandbox({
+    statePath,
+    cleanupTokenPath: path.join(parent, "cleanup.cap"),
+    sandboxParent: parent,
+    metadata: {
+      runId: options.runId ?? "B01-A4",
+      armId: options.armId ?? 4,
+      blockId: options.blockId ?? "B01",
+      seed: options.seed ?? 20260729,
     },
-    lock: { waitTimeoutMs: 100, staleAfterMs: 1000 },
-    ...configOverrides,
-  };
-  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
-  await chmod(configPath, 0o400);
+    waitTimeoutMs: options.waitTimeoutMs ?? 100,
+    staleAfterMs: options.staleAfterMs ?? 1000,
+  });
 
   return {
-    cwd,
-    contract,
-    staging,
-    configPath,
-    config,
-    sandbox: config,
-    token,
-    request,
-    requestHash: request.requestHash,
-    environment: { configPath, token },
-    env: {
-      ...process.env,
-      SEMANTIC_CORPUS_SANDBOX_CONFIG: configPath,
-      SEMANTIC_CORPUS_SANDBOX_TOKEN: token,
+    ...prepared,
+    parent,
+    cwd: prepared.state.sandboxRoot,
+    contract: prepared.state.contractRoot,
+    staging: prepared.state.stagingRoot,
+    configPath: prepared.state.configPath,
+    request: prepared.request,
+    requestHash: prepared.request.requestHash,
+    manifestHash: prepared.request.manifestHash,
+    environment: {
+      configPath: prepared.state.configPath,
+      token: prepared.serverToken,
     },
-    async open(options = {}) {
+    env: prepared.env,
+    async open(serviceOptions = {}) {
       return CorpusService.create({
-        environment: { configPath, token },
-        ...options,
+        environment: {
+          configPath: prepared.state.configPath,
+          token: prepared.serverToken,
+        },
+        enforceProcessConfinement: false,
+        ...serviceOptions,
       });
     },
+    spawnServer(stdio) {
+      return spawnPreparedServer(prepared, stdio);
+    },
     async cleanup() {
-      await chmod(configPath, 0o600).catch(() => {});
-      await chmod(path.join(contract, "request.json"), 0o600).catch(() => {});
-      await chmod(path.join(contract, "rules.md"), 0o600).catch(() => {});
-      await chmod(path.join(contract, "schemas", "v1.json"), 0o600).catch(() => {});
-      await rm(cwd, { recursive: true, force: true });
+      await disposePreparedSandbox(prepared).catch(() => {});
+      await rm(parent, { recursive: true, force: true });
     },
   };
 }

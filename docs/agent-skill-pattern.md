@@ -24,10 +24,10 @@ examples below describe the ASCII art reference unless noted otherwise.
 
 The semantic reference keeps the migration and expected-output oracle deterministic;
 AI may only propose semantic v1 source scenarios. Its writes go to isolated staging
-through the [path-constrained MCP server](../tools/semantic-corpus-mcp/server.mjs) and
-[security/protocol tests](../tests/semantic-corpus-mcp/). An enforceable OS sandbox
-(container, restricted mounts, restricted VM, or dedicated ACL identity) is mandatory
-outside the MCP's own defense-in-depth checks. The
+through the [trusted confined MCP launcher](../tools/semantic-corpus-mcp/launcher.mjs) and
+[security/protocol tests](../tests/semantic-corpus-mcp/). The launcher verifies
+ACL/mode, reparse, trusted-source, and Node permission boundaries; a container or
+restricted mount can provide an additional outer boundary. The
 [protocol](../experiments/semantic-test-corpus/protocol.md#arms) fixes five arms: one
 strong deterministic baseline plus a complete 2x2 model-tier-by-delegation design.
 

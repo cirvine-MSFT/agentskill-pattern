@@ -75,9 +75,10 @@ descriptions of both diagrams.
 
 In the semantic reference, migration and expected-output oracle behavior remain
 deterministic. AI is limited to proposing semantic v1 source scenarios, with staged
-writes isolated behind a [path-constrained MCP server](tools/semantic-corpus-mcp/server.mjs)
-and its [tests](tests/semantic-corpus-mcp/). An enforceable OS sandbox is mandatory:
-use a container, restricted mounts, restricted VM, or dedicated ACL identity. The
+writes isolated behind a [trusted confined MCP launcher](tools/semantic-corpus-mcp/launcher.mjs)
+and its [tests](tests/semantic-corpus-mcp/). The launcher verifies ACL/mode, reparse,
+trusted-source, and Node permission boundaries; a container or restricted mount can
+provide an additional outer boundary. The
 [executable protocol](experiments/semantic-test-corpus/protocol.md) compares one strong
 deterministic baseline with a 2x2 model-tier-by-delegation design.
 

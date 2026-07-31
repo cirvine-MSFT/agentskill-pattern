@@ -12,6 +12,7 @@ import {
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const INTERNAL = Symbol("verified sandbox");
 const CONFIG_BYTES = 64 * 1024;
@@ -22,9 +23,15 @@ const RUNTIME_LIMITS = Object.freeze({
   schemaDepth: 24,
   schemaNodes: 2_000,
 });
-const SANDBOX_KINDS = new Set(["container", "restricted-mounts", "restricted-acl"]);
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
+const SOURCE_IMPORT_PATTERN =
+  /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["']node:(?:net|http|https|http2|tls|dgram|dns|child_process|worker_threads|cluster|vm)["']|\b(?:fetch|WebSocket|EventSource)\s*\(|process\.binding\s*\(/u;
+const MODULE_PATHS = Object.freeze([
+  fileURLToPath(import.meta.url),
+  fileURLToPath(new URL("./protocol.mjs", import.meta.url)),
+  fileURLToPath(new URL("./server.mjs", import.meta.url)),
+]);
 
 export class CorpusError extends Error {
   constructor(code, message) {
@@ -82,11 +89,11 @@ function assertString(value, label, minimum, maximum, pattern) {
   }
 }
 
-function validateSlug(value, label) {
-  assertString(value, label, 1, 80, ID_PATTERN);
+function validateRunId(value, label) {
+  assertString(value, label, 1, 80, RUN_ID_PATTERN);
 }
 
-function canonicalJson(value) {
+export function canonicalJson(value) {
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value);
   }
@@ -99,8 +106,12 @@ function canonicalJson(value) {
     .join(",")}}`;
 }
 
-function sha256(value) {
+export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+export function canonicalJsonBytes(value) {
+  return Buffer.from(`${canonicalJson(value)}\n`, "utf8");
 }
 
 export function computeRequestHash(request) {
@@ -221,7 +232,19 @@ async function assertNoReparse(candidate, root, label) {
   if (stats.isSymbolicLink()) {
     fail("REPARSE_ESCAPE", `${label} cannot traverse a symlink, junction, or reparse point`);
   }
-  const canonical = await realpath(candidate);
+  let canonical;
+  try {
+    canonical = await realpath(candidate);
+  } catch (error) {
+    if (
+      error?.code === "EPERM" &&
+      process.permission?.has("fs.read", candidate) &&
+      process.permission?.has("fs.read", root)
+    ) {
+      return stats;
+    }
+    throw error;
+  }
   assertWithin(root, canonical, label);
   if (path.resolve(canonical) !== path.resolve(candidate)) {
     fail("REPARSE_ESCAPE", `${label} must resolve without redirection`);
@@ -355,7 +378,7 @@ async function assertWriteDenied(target, label) {
     if (error instanceof CorpusError) {
       throw error;
     }
-    if (["EACCES", "EPERM", "EROFS"].includes(error?.code)) {
+    if (["EACCES", "EPERM", "EROFS", "ERR_ACCESS_DENIED"].includes(error?.code)) {
       return;
     }
     throw error;
@@ -373,11 +396,16 @@ function parseJson(content, label) {
 function validateSchemaDefinition(schema, label, state = { nodes: 0 }, depth = 0) {
   state.nodes += 1;
   if (state.nodes > RUNTIME_LIMITS.schemaNodes || depth > RUNTIME_LIMITS.schemaDepth) {
-    fail("LIMIT_EXCEEDED", "v1ConfigSchema is too complex");
+    fail("LIMIT_EXCEEDED", `${label} is too complex`);
   }
   assertPlainObject(schema, label);
   if (Object.hasOwn(schema, "anyOf")) {
-    assertExactKeys(schema, new Set(["anyOf"]), new Set(["anyOf"]), label);
+    assertExactKeys(
+      schema,
+      new Set(["$schema", "$id", "anyOf"]),
+      new Set(["anyOf"]),
+      label,
+    );
     if (!Array.isArray(schema.anyOf) || schema.anyOf.length < 2 || schema.anyOf.length > 8) {
       fail("SCHEMA_ERROR", `${label}.anyOf must contain 2-8 closed schemas`);
     }
@@ -387,10 +415,12 @@ function validateSchemaDefinition(schema, label, state = { nodes: 0 }, depth = 0
     return;
   }
 
-  if (typeof schema.type !== "string") {
-    fail("SCHEMA_ERROR", `${label}.type must be a supported single JSON type`);
+  const common = new Set(["$schema", "$id", "type", "const", "enum"]);
+  for (const metadata of ["$schema", "$id"]) {
+    if (schema[metadata] !== undefined) {
+      assertString(schema[metadata], `${label}.${metadata}`, 1, 1024);
+    }
   }
-  const common = new Set(["type", "const", "enum"]);
   if (Object.hasOwn(schema, "const") && Object.hasOwn(schema, "enum")) {
     fail("SCHEMA_ERROR", `${label} cannot combine const and enum`);
   }
@@ -399,23 +429,42 @@ function validateSchemaDefinition(schema, label, state = { nodes: 0 }, depth = 0
       fail("SCHEMA_ERROR", `${label}.enum must contain 1-100 values`);
     }
   }
+  if (typeof schema.type !== "string") {
+    if (Object.hasOwn(schema, "const") || Object.hasOwn(schema, "enum")) {
+      assertExactKeys(schema, common, new Set(), label);
+      return;
+    }
+    fail("SCHEMA_ERROR", `${label}.type must be a supported single JSON type`);
+  }
 
   switch (schema.type) {
     case "object": {
       assertExactKeys(
         schema,
         new Set([...common, "additionalProperties", "properties", "required"]),
-        new Set(["type", "additionalProperties", "properties", "required"]),
+        new Set(["type", "additionalProperties"]),
         label,
       );
-      if (schema.additionalProperties !== false) {
-        fail("SCHEMA_ERROR", `${label}.additionalProperties must be false`);
+      if (
+        schema.additionalProperties !== false &&
+        (
+          schema.additionalProperties === null ||
+          typeof schema.additionalProperties !== "object" ||
+          Array.isArray(schema.additionalProperties)
+        )
+      ) {
+        fail(
+          "SCHEMA_ERROR",
+          `${label}.additionalProperties must be false or a validating schema`,
+        );
       }
-      assertPlainObject(schema.properties, `${label}.properties`);
-      if (!Array.isArray(schema.required)) {
+      const properties = schema.properties ?? {};
+      const required = schema.required ?? [];
+      assertPlainObject(properties, `${label}.properties`);
+      if (!Array.isArray(required)) {
         fail("SCHEMA_ERROR", `${label}.required must be an array`);
       }
-      const propertyNames = Object.keys(schema.properties);
+      const propertyNames = Object.keys(properties);
       if (propertyNames.length > 200) {
         fail("LIMIT_EXCEEDED", `${label}.properties contains too many fields`);
       }
@@ -428,19 +477,27 @@ function validateSchemaDefinition(schema, label, state = { nodes: 0 }, depth = 0
           fail("SCHEMA_ERROR", `${label}.properties contains an unsafe field name`);
         }
         validateSchemaDefinition(
-          schema.properties[name],
+          properties[name],
           `${label}.properties.${name}`,
           state,
           depth + 1,
         );
       }
       if (
-        new Set(schema.required).size !== schema.required.length ||
-        schema.required.some(
-          (name) => typeof name !== "string" || !Object.hasOwn(schema.properties, name),
+        new Set(required).size !== required.length ||
+        required.some(
+          (name) => typeof name !== "string" || !Object.hasOwn(properties, name),
         )
       ) {
         fail("SCHEMA_ERROR", `${label}.required must uniquely reference defined properties`);
+      }
+      if (schema.additionalProperties !== false) {
+        validateSchemaDefinition(
+          schema.additionalProperties,
+          `${label}.additionalProperties`,
+          state,
+          depth + 1,
+        );
       }
       break;
     }
@@ -448,12 +505,14 @@ function validateSchemaDefinition(schema, label, state = { nodes: 0 }, depth = 0
       assertExactKeys(
         schema,
         new Set([...common, "items", "minItems", "maxItems", "uniqueItems"]),
-        new Set(["type", "items", "maxItems"]),
+        new Set(["type", "items"]),
         label,
       );
-      assertInteger(schema.maxItems, `${label}.maxItems`, 0, 10_000);
+      if (schema.maxItems !== undefined) {
+        assertInteger(schema.maxItems, `${label}.maxItems`, 0, 10_000);
+      }
       if (schema.minItems !== undefined) {
-        assertInteger(schema.minItems, `${label}.minItems`, 0, schema.maxItems);
+        assertInteger(schema.minItems, `${label}.minItems`, 0, schema.maxItems ?? 10_000);
       }
       if (schema.uniqueItems !== undefined && typeof schema.uniqueItems !== "boolean") {
         fail("SCHEMA_ERROR", `${label}.uniqueItems must be boolean`);
@@ -464,12 +523,14 @@ function validateSchemaDefinition(schema, label, state = { nodes: 0 }, depth = 0
       assertExactKeys(
         schema,
         new Set([...common, "minLength", "maxLength", "pattern"]),
-        new Set(["type", "maxLength"]),
+        new Set(["type"]),
         label,
       );
-      assertInteger(schema.maxLength, `${label}.maxLength`, 0, 100_000);
+      if (schema.maxLength !== undefined) {
+        assertInteger(schema.maxLength, `${label}.maxLength`, 0, 100_000);
+      }
       if (schema.minLength !== undefined) {
-        assertInteger(schema.minLength, `${label}.minLength`, 0, schema.maxLength);
+        assertInteger(schema.minLength, `${label}.minLength`, 0, schema.maxLength ?? 100_000);
       }
       if (schema.pattern !== undefined) {
         assertString(schema.pattern, `${label}.pattern`, 1, 200);
@@ -526,11 +587,11 @@ function valuesEqual(left, right) {
   return canonicalJson(left) === canonicalJson(right);
 }
 
-function validateConfigValue(value, schema, label = "config") {
+export function validateSchemaValue(value, schema, label = "value") {
   if (schema.anyOf) {
     for (const branch of schema.anyOf) {
       try {
-        validateConfigValue(value, branch, label);
+        validateSchemaValue(value, branch, label);
         return;
       } catch (error) {
         if (!(error instanceof CorpusError)) {
@@ -552,22 +613,33 @@ function validateConfigValue(value, schema, label = "config") {
   ) {
     fail("SCHEMA_ERROR", `${label} is not an allowed value`);
   }
+  if (schema.type === undefined) {
+    return;
+  }
 
   switch (schema.type) {
     case "object": {
       assertPlainObject(value, label);
+      const properties = schema.properties ?? {};
+      const required = schema.required ?? [];
       for (const key of Object.keys(value)) {
-        if (!Object.hasOwn(schema.properties, key)) {
+        if (
+          !Object.hasOwn(properties, key) &&
+          schema.additionalProperties === false
+        ) {
           fail("SCHEMA_ERROR", `${label} contains unsupported field "${key}"`);
         }
       }
-      for (const key of schema.required) {
+      for (const key of required) {
         if (!Object.hasOwn(value, key)) {
           fail("SCHEMA_ERROR", `${label} is missing required field "${key}"`);
         }
       }
       for (const key of Object.keys(value)) {
-        validateConfigValue(value[key], schema.properties[key], `${label}.${key}`);
+        const childSchema = Object.hasOwn(properties, key)
+          ? properties[key]
+          : schema.additionalProperties;
+        validateSchemaValue(value[key], childSchema, `${label}.${key}`);
       }
       break;
     }
@@ -577,7 +649,7 @@ function validateConfigValue(value, schema, label = "config") {
       }
       if (
         value.length < (schema.minItems ?? 0) ||
-        value.length > schema.maxItems
+        value.length > (schema.maxItems ?? 10_000)
       ) {
         fail("SCHEMA_ERROR", `${label} has an invalid number of items`);
       }
@@ -588,7 +660,7 @@ function validateConfigValue(value, schema, label = "config") {
         fail("SCHEMA_ERROR", `${label} must contain unique items`);
       }
       value.forEach((item, index) =>
-        validateConfigValue(item, schema.items, `${label}[${index}]`),
+        validateSchemaValue(item, schema.items, `${label}[${index}]`),
       );
       break;
     case "string": {
@@ -596,7 +668,10 @@ function validateConfigValue(value, schema, label = "config") {
         fail("SCHEMA_ERROR", `${label} must be a string`);
       }
       const length = [...value].length;
-      if (length < (schema.minLength ?? 0) || length > schema.maxLength) {
+      if (
+        length < (schema.minLength ?? 0) ||
+        length > (schema.maxLength ?? 100_000)
+      ) {
         fail("SCHEMA_ERROR", `${label} has an invalid length`);
       }
       if (schema.pattern !== undefined && !new RegExp(schema.pattern, "u").test(value)) {
@@ -651,103 +726,118 @@ function validateConfigValue(value, schema, label = "config") {
   }
 }
 
-function validateRequest(request) {
+function composeScenarioSchema(request) {
+  const schema = cloneJson(request.scenarioSchema);
+  schema.properties.input = cloneJson(request.v1ConfigSchema);
+  return schema;
+}
+
+export function validateStagingPayload(request, payload) {
+  validateRequestDocument(request);
+  validateSchemaValue(payload, composeStagingSchema(request), "staging");
+  const ids = new Set();
+  for (const [index, scenario] of payload.cases.entries()) {
+    if (ids.has(scenario.id)) {
+      fail("SCHEMA_ERROR", `staging.cases[${index}].id must be unique`);
+    }
+    ids.add(scenario.id);
+  }
+  if (!valuesEqual(payload.generator, request.generator)) {
+    fail("SCHEMA_ERROR", "staging.generator must exactly match the launcher request");
+  }
+  return payload;
+}
+
+function composeStagingSchema(request) {
+  const schema = cloneJson(request.stagingSchema);
+  schema.properties.cases.minItems = request.targetCount;
+  schema.properties.cases.maxItems = request.targetCount;
+  schema.properties.cases.items = composeScenarioSchema(request);
+  return schema;
+}
+
+export function validateRequestDocument(request) {
   assertExactKeys(
     request,
     new Set([
       "version",
+      "runId",
       "targetCount",
-      "scenarios",
-      "categories",
+      "generator",
       "maxSizes",
       "v1ConfigSchema",
+      "scenarioSchema",
+      "stagingSchema",
+      "manifestHash",
       "requestHash",
     ]),
     new Set([
       "version",
+      "runId",
       "targetCount",
-      "scenarios",
-      "categories",
+      "generator",
       "maxSizes",
       "v1ConfigSchema",
+      "scenarioSchema",
+      "stagingSchema",
+      "manifestHash",
       "requestHash",
     ]),
     "request",
   );
-  if (request.version !== 1) {
-    fail("SCHEMA_ERROR", "request.version must be 1");
+  if (request.version !== 2) {
+    fail("SCHEMA_ERROR", "request.version must be 2");
   }
+  validateRunId(request.runId, "request.runId");
   assertInteger(request.targetCount, "request.targetCount", 40, 60);
   assertExactKeys(
+    request.generator,
+    new Set(["armId", "blockId", "seed"]),
+    new Set(["armId", "blockId", "seed"]),
+    "request.generator",
+  );
+  assertInteger(request.generator.armId, "request.generator.armId", 0, 4);
+  assertString(request.generator.blockId, "request.generator.blockId", 1, 80, RUN_ID_PATTERN);
+  assertInteger(
+    request.generator.seed,
+    "request.generator.seed",
+    Number.MIN_SAFE_INTEGER,
+    Number.MAX_SAFE_INTEGER,
+  );
+  assertExactKeys(
     request.maxSizes,
-    new Set(["contractFileBytes", "scenarioBytes", "manifestBytes"]),
-    new Set(["contractFileBytes", "scenarioBytes", "manifestBytes"]),
+    new Set(["contractFileBytes", "scenarioBytes", "stagingBytes"]),
+    new Set(["contractFileBytes", "scenarioBytes", "stagingBytes"]),
     "request.maxSizes",
   );
   assertInteger(request.maxSizes.contractFileBytes, "request.maxSizes.contractFileBytes", 1, 1024 * 1024);
   assertInteger(request.maxSizes.scenarioBytes, "request.maxSizes.scenarioBytes", 1, 1024 * 1024);
-  assertInteger(request.maxSizes.manifestBytes, "request.maxSizes.manifestBytes", 1, 1024 * 1024);
-
-  if (!Array.isArray(request.categories) || request.categories.length === 0) {
-    fail("SCHEMA_ERROR", "request.categories must be a non-empty array");
-  }
-  const categories = new Map();
-  for (const [index, entry] of request.categories.entries()) {
-    const label = `request.categories[${index}]`;
-    assertExactKeys(
-      entry,
-      new Set(["category", "minQuota"]),
-      new Set(["category", "minQuota"]),
-      label,
-    );
-    validateSlug(entry.category, `${label}.category`);
-    assertInteger(entry.minQuota, `${label}.minQuota`, 0, request.targetCount);
-    if (categories.has(entry.category)) {
-      fail("SCHEMA_ERROR", `duplicate request category "${entry.category}"`);
-    }
-    categories.set(entry.category, entry.minQuota);
-  }
-  if ([...categories.values()].reduce((sum, value) => sum + value, 0) > request.targetCount) {
-    fail("SCHEMA_ERROR", "request category minimum quotas exceed targetCount");
-  }
-
-  if (
-    !Array.isArray(request.scenarios) ||
-    request.scenarios.length !== request.targetCount
-  ) {
-    fail("SCHEMA_ERROR", "request.scenarios must contain exactly targetCount entries");
-  }
-  const ids = new Set();
-  const actualCounts = new Map([...categories.keys()].map((category) => [category, 0]));
-  for (const [index, entry] of request.scenarios.entries()) {
-    const label = `request.scenarios[${index}]`;
-    assertExactKeys(
-      entry,
-      new Set(["scenarioId", "category"]),
-      new Set(["scenarioId", "category"]),
-      label,
-    );
-    validateSlug(entry.scenarioId, `${label}.scenarioId`);
-    validateSlug(entry.category, `${label}.category`);
-    if (ids.has(entry.scenarioId)) {
-      fail("SCHEMA_ERROR", `duplicate request scenarioId "${entry.scenarioId}"`);
-    }
-    if (!categories.has(entry.category)) {
-      fail("SCHEMA_ERROR", `request scenario category "${entry.category}" is not allowed`);
-    }
-    ids.add(entry.scenarioId);
-    actualCounts.set(entry.category, actualCounts.get(entry.category) + 1);
-  }
-  for (const [category, minimum] of categories) {
-    if (actualCounts.get(category) < minimum) {
-      fail("SCHEMA_ERROR", `request does not satisfy minimum quota for "${category}"`);
-    }
-  }
+  assertInteger(request.maxSizes.stagingBytes, "request.maxSizes.stagingBytes", 1, 4 * 1024 * 1024);
 
   validateSchemaDefinition(request.v1ConfigSchema, "request.v1ConfigSchema");
-  if (request.v1ConfigSchema.type !== "object") {
-    fail("SCHEMA_ERROR", "request.v1ConfigSchema must be a closed object schema");
+  if (
+    request.v1ConfigSchema.type !== "object" ||
+    request.v1ConfigSchema.additionalProperties !== false
+  ) {
+    fail("SCHEMA_ERROR", "request.v1ConfigSchema must be a closed root object schema");
   }
+  const scenarioSchema = composeScenarioSchema(request);
+  validateSchemaDefinition(scenarioSchema, "request.scenarioSchema");
+  if (
+    scenarioSchema.type !== "object" ||
+    scenarioSchema.additionalProperties !== false
+  ) {
+    fail("SCHEMA_ERROR", "request.scenarioSchema must be a closed object schema");
+  }
+  const stagingSchema = composeStagingSchema(request);
+  validateSchemaDefinition(stagingSchema, "request.stagingSchema");
+  if (
+    stagingSchema.type !== "object" ||
+    stagingSchema.additionalProperties !== false
+  ) {
+    fail("SCHEMA_ERROR", "request.stagingSchema must be a closed object schema");
+  }
+  assertString(request.manifestHash, "request.manifestHash", 64, 64, /^[a-f0-9]{64}$/);
   assertString(request.requestHash, "request.requestHash", 64, 64, /^[a-f0-9]{64}$/);
   const computed = computeRequestHash(request);
   if (computed !== request.requestHash) {
@@ -759,15 +849,32 @@ function validateRequest(request) {
 function parseSandboxConfig(value) {
   assertExactKeys(
     value,
-    new Set(["version", "sandboxKind", "tokenHash", "requestHash", "roots", "lock"]),
-    new Set(["version", "sandboxKind", "tokenHash", "requestHash", "roots", "lock"]),
+    new Set([
+      "version",
+      "tokenHash",
+      "requestHash",
+      "manifestHash",
+      "roots",
+      "lock",
+      "confinement",
+    ]),
+    new Set([
+      "version",
+      "tokenHash",
+      "requestHash",
+      "manifestHash",
+      "roots",
+      "lock",
+      "confinement",
+    ]),
     "sandbox config",
   );
-  if (value.version !== 1 || !SANDBOX_KINDS.has(value.sandboxKind)) {
-    fail("SANDBOX_CONFIG_INVALID", "sandbox config has an unsupported version or kind");
+  if (value.version !== 2) {
+    fail("SANDBOX_CONFIG_INVALID", "sandbox config has an unsupported version");
   }
   assertString(value.tokenHash, "sandbox config tokenHash", 71, 71, /^sha256:[a-f0-9]{64}$/);
   assertString(value.requestHash, "sandbox config requestHash", 64, 64, /^[a-f0-9]{64}$/);
+  assertString(value.manifestHash, "sandbox config manifestHash", 64, 64, /^[a-f0-9]{64}$/);
   assertExactKeys(
     value.roots,
     new Set(["contract", "staging"]),
@@ -809,7 +916,113 @@ function parseSandboxConfig(value) {
   if (value.lock.staleAfterMs <= value.lock.waitTimeoutMs) {
     fail("SANDBOX_CONFIG_INVALID", "lock staleAfterMs must exceed waitTimeoutMs");
   }
+  assertExactKeys(
+    value.confinement,
+    new Set([
+      "provider",
+      "platform",
+      "permissionModel",
+      "filesystemPolicy",
+      "networkPolicy",
+      "deniedReadRoot",
+      "sources",
+    ]),
+    new Set([
+      "provider",
+      "platform",
+      "permissionModel",
+      "filesystemPolicy",
+      "networkPolicy",
+      "deniedReadRoot",
+      "sources",
+    ]),
+    "sandbox config confinement",
+  );
+  if (
+    value.confinement.provider !== "trusted-launcher-v1" ||
+    value.confinement.platform !== process.platform ||
+    value.confinement.permissionModel !== true ||
+    value.confinement.filesystemPolicy !== "node-permission-allowlist" ||
+    value.confinement.networkPolicy !== "trusted-source-no-network-imports"
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "launcher confinement policy is not supported");
+  }
+  assertString(
+    value.confinement.deniedReadRoot,
+    "sandbox config confinement.deniedReadRoot",
+    3,
+    1024,
+  );
+  if (
+    !path.isAbsolute(value.confinement.deniedReadRoot) ||
+    path.resolve(value.confinement.deniedReadRoot) !== value.confinement.deniedReadRoot
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "deniedReadRoot must be absolute and normalized");
+  }
+  if (
+    !Array.isArray(value.confinement.sources) ||
+    value.confinement.sources.length !== MODULE_PATHS.length
+  ) {
+    fail("SANDBOX_CONFIG_INVALID", "trusted source attestation is incomplete");
+  }
+  const expectedSources = new Set(MODULE_PATHS.map((entry) => path.resolve(entry)));
+  for (const [index, source] of value.confinement.sources.entries()) {
+    assertExactKeys(
+      source,
+      new Set(["path", "sha256"]),
+      new Set(["path", "sha256"]),
+      `sandbox config confinement.sources[${index}]`,
+    );
+    assertString(source.path, `sandbox config confinement.sources[${index}].path`, 3, 1024);
+    assertString(
+      source.sha256,
+      `sandbox config confinement.sources[${index}].sha256`,
+      64,
+      64,
+      /^[a-f0-9]{64}$/,
+    );
+    if (!expectedSources.delete(path.resolve(source.path))) {
+      fail("SANDBOX_CONFIG_INVALID", "trusted source attestation contains an unknown path");
+    }
+  }
+  if (expectedSources.size !== 0) {
+    fail("SANDBOX_CONFIG_INVALID", "trusted source attestation is incomplete");
+  }
   return value;
+}
+
+async function verifyProcessConfinement(config, configPath) {
+  if (!process.permission || typeof process.permission.has !== "function") {
+    fail("SANDBOX_UNVERIFIED", "Node permission confinement is not active");
+  }
+  const checks = [
+    ["fs.read", configPath, true],
+    ["fs.read", config.roots.contract.path, true],
+    ["fs.read", config.roots.staging.path, true],
+    ["fs.write", config.roots.staging.path, true],
+    ["fs.write", config.roots.contract.path, false],
+    ["fs.write", configPath, false],
+    ["fs.read", config.confinement.deniedReadRoot, false],
+  ];
+  for (const [scope, target, expected] of checks) {
+    if (process.permission.has(scope, target) !== expected) {
+      fail("SANDBOX_UNVERIFIED", `${scope} confinement check failed for ${target}`);
+    }
+  }
+  for (const scope of ["child", "worker", "addons", "wasi"]) {
+    if (process.permission.has(scope)) {
+      fail("SANDBOX_UNVERIFIED", `${scope} permission must remain denied`);
+    }
+  }
+  for (const source of config.confinement.sources) {
+    const loaded = await readStandaloneFile(source.path, CONFIG_BYTES, "trusted MCP source");
+    if (loaded.digest !== source.sha256) {
+      fail("SANDBOX_UNVERIFIED", "trusted MCP source hash changed before startup");
+    }
+    if (SOURCE_IMPORT_PATTERN.test(loaded.content.toString("utf8"))) {
+      fail("SANDBOX_UNVERIFIED", "trusted MCP source imports a network or execution module");
+    }
+  }
 }
 
 async function loadSandboxContext(options) {
@@ -854,6 +1067,9 @@ async function loadSandboxContext(options) {
     config.roots.staging.identity,
     "corpus-staging",
   );
+  if (options.enforceProcessConfinement ?? options.environment === undefined) {
+    await verifyProcessConfinement(config, normalizedConfigPath);
+  }
   return {
     config,
     configPath: normalizedConfigPath,
@@ -866,8 +1082,10 @@ function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export async function atomicWriteNewJson(target, value, options = {}) {
-  const payload = jsonBytes(value);
+export async function atomicWriteNewBytes(target, payload, options = {}) {
+  if (!Buffer.isBuffer(payload)) {
+    fail("SCHEMA_ERROR", "atomic payload must be a Buffer");
+  }
   const maximum = options.maximumBytes ?? 64 * 1024;
   if (payload.length > maximum) {
     fail("LIMIT_EXCEEDED", `JSON document exceeds ${maximum} bytes`);
@@ -915,6 +1133,10 @@ export async function atomicWriteNewJson(target, value, options = {}) {
   return payload.length;
 }
 
+export async function atomicWriteNewJson(target, value, options = {}) {
+  return atomicWriteNewBytes(target, jsonBytes(value), options);
+}
+
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -931,6 +1153,12 @@ export class CorpusService {
           fail(
             "REQUEST_HASH_MISMATCH",
             "request hash does not match the launcher sandbox config",
+          );
+        }
+        if (loaded.request.manifestHash !== sandbox.config.manifestHash) {
+          fail(
+            "MANIFEST_HASH_MISMATCH",
+            "contract manifest hash does not match the launcher sandbox config",
           );
         }
         await assertWriteDenied(
@@ -971,8 +1199,6 @@ export class CorpusService {
     if (!this.request) {
       fail("STARTUP_REQUIRED", "request initialization did not complete");
     }
-    const ids = this.request.scenarios.map((entry) => entry.scenarioId);
-    const categories = this.request.categories.map((entry) => entry.category);
     return [
       {
         name: "read_request",
@@ -995,41 +1221,24 @@ export class CorpusService {
         },
       },
       {
-        name: "write_scenario_input",
-        description: "Write one request-defined scenario whose config exactly matches v1ConfigSchema.",
+        name: "write_scenario",
+        description: "Write one source-only scenario matching the benchmark scenario and v1 schemas.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
-          required: ["scenarioId", "config"],
+          required: ["scenario"],
           properties: {
-            scenarioId: { type: "string", enum: ids },
-            config: cloneJson(this.request.v1ConfigSchema),
+            scenario: composeScenarioSchema(this.request),
           },
         },
       },
       {
-        name: "write_scenario_manifest",
-        description: "Publish the immutable request-defined scenario ID/category manifest.",
+        name: "finalize_staging",
+        description: "Validate and publish the exact canonical benchmark staging artifact.",
         inputSchema: {
           type: "object",
           additionalProperties: false,
-          required: ["scenarios"],
-          properties: {
-            scenarios: {
-              type: "array",
-              minItems: this.request.targetCount,
-              maxItems: this.request.targetCount,
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["scenarioId", "category"],
-                properties: {
-                  scenarioId: { type: "string", enum: ids },
-                  category: { type: "string", enum: categories },
-                },
-              },
-            },
-          },
+          properties: {},
         },
       },
     ];
@@ -1058,12 +1267,11 @@ export class CorpusService {
     const deadline = Date.now() + this.lockConfig.waitTimeoutMs;
     while (true) {
       let handle;
+      let temporaryPath;
+      let openedIdentity;
+      let published = false;
       try {
-        handle = await open(
-          lockPath,
-          constants.O_CREAT | constants.O_EXCL | constants.O_RDWR,
-          0o600,
-        );
+        await this.assertRecoveryInactive();
         const nonce = randomBytes(16).toString("hex");
         const metadata = {
           version: 1,
@@ -1074,13 +1282,29 @@ export class CorpusService {
           requestHash: this.sandbox.config.requestHash,
         };
         const ownerBytes = jsonBytes(metadata);
+        temporaryPath = path.join(
+          this.stagingRoot,
+          `.corpus.lock.${process.pid}.${nonce}.tmp`,
+        );
+        handle = await open(
+          temporaryPath,
+          constants.O_CREAT | constants.O_EXCL | constants.O_RDWR,
+          0o600,
+        );
         await handle.writeFile(ownerBytes);
         await handle.sync();
         const stats = await handle.stat({ bigint: true });
+        openedIdentity = identityFromStats(stats);
+        await this.assertRecoveryInactive();
+        await link(temporaryPath, lockPath);
+        published = true;
+        await rm(temporaryPath);
+        temporaryPath = undefined;
         await assertRoot(this.stagingRoot, this.stagingIdentity, "corpus-staging");
+        await this.assertRecoveryInactive();
         return {
           handle,
-          identity: identityFromStats(stats),
+          identity: openedIdentity,
           lockPath,
           nonce,
           ownerBytes,
@@ -1088,7 +1312,24 @@ export class CorpusService {
       } catch (error) {
         if (handle) {
           await handle.close().catch(() => {});
-          await rm(lockPath, { force: true }).catch(() => {});
+        }
+        if (published && openedIdentity) {
+          const onDisk = await lstat(lockPath, { bigint: true }).catch(() => undefined);
+          if (
+            onDisk &&
+            identitiesEqual(openedIdentity, identityFromStats(onDisk))
+          ) {
+            await rm(lockPath).catch(() => {});
+          }
+        }
+        if (temporaryPath && openedIdentity) {
+          const temporary = await lstat(temporaryPath, { bigint: true }).catch(() => undefined);
+          if (
+            temporary &&
+            identitiesEqual(openedIdentity, identityFromStats(temporary))
+          ) {
+            await rm(temporaryPath).catch(() => {});
+          }
         }
         if (error?.code !== "EEXIST") {
           throw error;
@@ -1113,6 +1354,20 @@ export class CorpusService {
         }
         await sleep(20 + Math.floor(Math.random() * 20));
       }
+    }
+  }
+
+  async assertRecoveryInactive() {
+    const recoveryPath = path.join(this.stagingRoot, ".corpus.recovery.lock");
+    try {
+      const stats = await lstat(recoveryPath);
+      if (stats.isSymbolicLink() || !stats.isFile()) {
+        fail("LOCK_INVALID", "staging recovery lock is not a regular file");
+      }
+      fail("LOCK_RECOVERY_ACTIVE", "authorized staging recovery is in progress");
+    } catch (error) {
+      if (error?.code === "ENOENT") return;
+      throw error;
     }
   }
 
@@ -1203,7 +1458,9 @@ export class CorpusService {
       REQUEST_BYTES,
       "corpus request",
     );
-    const request = validateRequest(parseJson(loaded.content, "corpus-contract/request.json"));
+    const request = validateRequestDocument(
+      parseJson(loaded.content, "corpus-contract/request.json"),
+    );
     return { request, identity: loaded.identity };
   }
 
@@ -1326,69 +1583,127 @@ export class CorpusService {
 
   async assertStagingOpenUnlocked() {
     const entries = await readdir(this.stagingRoot, { withFileTypes: true });
-    const manifest = entries.find((entry) => entry.name === "manifest.json");
-    if (!manifest) {
-      if (entries.some((entry) => entry.name.toLowerCase() === "manifest.json")) {
-        fail("CASE_MISMATCH", "corpus-staging/manifest.json casing is invalid");
+    const outputName = `${this.request.runId}.json`;
+    const output = entries.find((entry) => entry.name === outputName);
+    if (!output) {
+      if (entries.some((entry) => entry.name.toLowerCase() === outputName.toLowerCase())) {
+        fail("CASE_MISMATCH", `corpus-staging/${outputName} casing is invalid`);
       }
       return;
     }
     await assertNoReparse(
-      path.join(this.stagingRoot, manifest.name),
+      path.join(this.stagingRoot, output.name),
       this.stagingRoot,
-      "staging manifest",
+      "staging output",
     );
-    fail("STAGING_FINALIZED", "scenario writes are closed after manifest publication");
+    fail("STAGING_FINALIZED", "scenario writes are closed after staging publication");
   }
 
-  async scenarioIdsUnlocked() {
+  async scenarioFilesUnlocked(request) {
     const directory = await this.scenarioDirectoryUnlocked();
     const entries = await readdir(directory.path, { withFileTypes: true });
-    const ids = [];
+    const files = [];
     for (const entry of entries) {
       const absolute = path.join(directory.path, entry.name);
       const stats = await assertNoReparse(absolute, this.stagingRoot, "staging scenario");
-      const match = /^([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/.exec(entry.name);
+      const match = /^(\d{3})-([A-Z][A-Z0-9-]{2,63})\.json$/.exec(entry.name);
       if (!match || !stats.isFile()) {
         fail("STAGING_INVALID", "corpus-staging/scenarios contains an unexpected entry");
       }
-      ids.push(match[1]);
+      files.push({
+        index: Number(match[1]),
+        id: match[2],
+        relative: `scenarios/${entry.name}`,
+      });
     }
     const afterIdentity = await pathIdentity(directory.path);
     if (!identitiesEqual(afterIdentity, directory.identity)) {
       fail("ROOT_IDENTITY_CHANGED", "staging scenarios directory changed during enumeration");
     }
-    ids.sort();
-    return ids;
+    files.sort((left, right) => left.index - right.index);
+    for (const [index, file] of files.entries()) {
+      if (file.index !== index + 1) {
+        fail("STAGING_INVALID", "staging scenario sequence contains a gap or duplicate");
+      }
+    }
+    if (files.length > request.targetCount) {
+      fail("LIMIT_EXCEEDED", `staging exceeds the target of ${request.targetCount}`);
+    }
+    return files;
   }
 
-  async writeScenarioInput(args) {
-    assertExactKeys(
-      args,
-      new Set(["scenarioId", "config"]),
-      new Set(["scenarioId", "config"]),
-      "arguments",
-    );
-    validateSlug(args.scenarioId, "scenarioId");
-    return this.withOperation(async (request) => {
-      const requested = request.scenarios.find(
-        (entry) => entry.scenarioId === args.scenarioId,
+  async readStagedScenariosUnlocked(request) {
+    const files = await this.scenarioFilesUnlocked(request);
+    const scenarioSchema = composeScenarioSchema(request);
+    const ids = new Set();
+    const scenarios = [];
+    const snapshot = [];
+    for (const file of files) {
+      const loaded = await readVerifiedFile(
+        this.stagingRoot,
+        this.stagingIdentity,
+        file.relative,
+        request.maxSizes.scenarioBytes,
+        "staging scenario",
       );
-      if (!requested) {
-        fail("SCHEMA_ERROR", "scenarioId is not defined by corpus-contract/request.json");
+      const scenario = parseJson(loaded.content, file.relative);
+      validateSchemaValue(scenario, scenarioSchema, `staging scenario ${file.index}`);
+      if (scenario.id !== file.id) {
+        fail("STAGING_INVALID", `${file.relative} does not match its scenario ID`);
       }
-      validateConfigValue(args.config, request.v1ConfigSchema);
-      if (jsonBytes(args.config).length > request.maxSizes.scenarioBytes) {
+      if (ids.has(scenario.id)) {
+        fail("SCHEMA_ERROR", `duplicate scenario ID "${scenario.id}"`);
+      }
+      ids.add(scenario.id);
+      scenarios.push(scenario);
+      snapshot.push({
+        relative: file.relative,
+        identity: loaded.identity,
+        digest: sha256(loaded.content),
+      });
+    }
+    return { scenarios, snapshot };
+  }
+
+  async verifyScenarioSnapshotUnlocked(request, snapshot) {
+    for (const prior of snapshot) {
+      const loaded = await readVerifiedFile(
+        this.stagingRoot,
+        this.stagingIdentity,
+        prior.relative,
+        request.maxSizes.scenarioBytes,
+        "staging scenario",
+      );
+      if (
+        !identitiesEqual(loaded.identity, prior.identity) ||
+        sha256(loaded.content) !== prior.digest
+      ) {
+        fail("SCENARIO_CHANGED", `${prior.relative} changed during staging publication`);
+      }
+    }
+  }
+
+  async writeScenario(args) {
+    assertExactKeys(args, new Set(["scenario"]), new Set(["scenario"]), "arguments");
+    return this.withOperation(async (request) => {
+      validateSchemaValue(args.scenario, composeScenarioSchema(request), "scenario");
+      const scenarioBytes = canonicalJsonBytes(args.scenario);
+      if (scenarioBytes.length > request.maxSizes.scenarioBytes) {
         fail("LIMIT_EXCEEDED", `scenario exceeds ${request.maxSizes.scenarioBytes} bytes`);
       }
       await this.assertStagingOpenUnlocked();
-      const existing = await this.scenarioIdsUnlocked();
-      if (existing.length >= request.targetCount) {
+      const existing = await this.readStagedScenariosUnlocked(request);
+      if (existing.scenarios.length >= request.targetCount) {
         fail("LIMIT_EXCEEDED", `staging already contains the exact target of ${request.targetCount}`);
       }
+      if (existing.scenarios.some((scenario) => scenario.id === args.scenario.id)) {
+        fail("SCHEMA_ERROR", `duplicate scenario ID "${args.scenario.id}"`);
+      }
       const directory = await this.scenarioDirectoryUnlocked();
-      const target = path.join(directory.path, `${args.scenarioId}.json`);
-      const bytes = await atomicWriteNewJson(target, args.config, {
+      const sequence = String(existing.scenarios.length + 1).padStart(3, "0");
+      const fileName = `${sequence}-${args.scenario.id}.json`;
+      const target = path.join(directory.path, fileName);
+      const bytes = await atomicWriteNewBytes(target, scenarioBytes, {
         maximumBytes: request.maxSizes.scenarioBytes,
         beforePublish: this.hooks.beforeScenarioPublish,
         afterPublish: async () => {
@@ -1399,136 +1714,46 @@ export class CorpusService {
         },
       });
       return {
-        path: `corpus-staging/scenarios/${args.scenarioId}.json`,
-        scenarioId: args.scenarioId,
-        category: requested.category,
+        path: `corpus-staging/scenarios/${fileName}`,
+        scenarioId: args.scenario.id,
+        count: existing.scenarios.length + 1,
         bytes,
         status: "written",
       };
     });
   }
 
-  validateManifestArguments(args, request) {
-    assertExactKeys(args, new Set(["scenarios"]), new Set(["scenarios"]), "arguments");
-    if (!Array.isArray(args.scenarios) || args.scenarios.length !== request.targetCount) {
-      fail("SCHEMA_ERROR", `manifest must contain exactly ${request.targetCount} scenarios`);
-    }
-    const supplied = new Map();
-    for (const [index, entry] of args.scenarios.entries()) {
-      const label = `scenarios[${index}]`;
-      assertExactKeys(
-        entry,
-        new Set(["scenarioId", "category"]),
-        new Set(["scenarioId", "category"]),
-        label,
-      );
-      validateSlug(entry.scenarioId, `${label}.scenarioId`);
-      validateSlug(entry.category, `${label}.category`);
-      if (supplied.has(entry.scenarioId)) {
-        fail("SCHEMA_ERROR", `duplicate manifest scenarioId "${entry.scenarioId}"`);
-      }
-      supplied.set(entry.scenarioId, entry.category);
-    }
-    for (const requested of request.scenarios) {
-      if (supplied.get(requested.scenarioId) !== requested.category) {
-        fail(
-          "SCHEMA_ERROR",
-          "manifest IDs and categories must exactly match corpus-contract/request.json",
-        );
-      }
-    }
-    const counts = new Map(request.categories.map((entry) => [entry.category, 0]));
-    for (const category of supplied.values()) {
-      if (!counts.has(category)) {
-        fail("SCHEMA_ERROR", `manifest category "${category}" is not allowed`);
-      }
-      counts.set(category, counts.get(category) + 1);
-    }
-    for (const entry of request.categories) {
-      if (counts.get(entry.category) < entry.minQuota) {
-        fail("SCHEMA_ERROR", `manifest does not satisfy minimum quota for "${entry.category}"`);
-      }
-    }
-  }
-
-  async snapshotScenariosUnlocked(request) {
-    const hashes = new Map();
-    for (const entry of request.scenarios) {
-      const relative = `scenarios/${entry.scenarioId}.json`;
-      const loaded = await readVerifiedFile(
-        this.stagingRoot,
-        this.stagingIdentity,
-        relative,
-        request.maxSizes.scenarioBytes,
-        "staging scenario",
-      );
-      const config = parseJson(loaded.content, relative);
-      validateConfigValue(config, request.v1ConfigSchema);
-      hashes.set(entry.scenarioId, {
-        digest: sha256(loaded.content),
-        identity: loaded.identity,
-      });
-    }
-    return hashes;
-  }
-
-  async verifySnapshotUnlocked(request, snapshot) {
-    for (const entry of request.scenarios) {
-      const relative = `scenarios/${entry.scenarioId}.json`;
-      const loaded = await readVerifiedFile(
-        this.stagingRoot,
-        this.stagingIdentity,
-        relative,
-        request.maxSizes.scenarioBytes,
-        "staging scenario",
-      );
-      const prior = snapshot.get(entry.scenarioId);
-      if (
-        !identitiesEqual(loaded.identity, prior.identity) ||
-        sha256(loaded.content) !== prior.digest
-      ) {
-        fail("SCENARIO_CHANGED", `${relative} changed during manifest publication`);
-      }
-    }
-  }
-
-  async writeScenarioManifest(args) {
+  async finalizeStaging(args) {
+    assertExactKeys(args, new Set(), new Set(), "arguments");
     return this.withOperation(async (request) => {
-      this.validateManifestArguments(args, request);
       await this.assertStagingOpenUnlocked();
-      const stagedIds = await this.scenarioIdsUnlocked();
-      const requestedIds = request.scenarios.map((entry) => entry.scenarioId).sort();
-      if (
-        stagedIds.length !== request.targetCount ||
-        stagedIds.some((scenarioId, index) => scenarioId !== requestedIds[index])
-      ) {
-        fail("SCHEMA_ERROR", "staged scenario IDs must exactly match the request");
+      const staged = await this.readStagedScenariosUnlocked(request);
+      if (staged.scenarios.length !== request.targetCount) {
+        fail("SCHEMA_ERROR", `staging must contain exactly ${request.targetCount} scenarios`);
       }
-      const snapshot = await this.snapshotScenariosUnlocked(request);
       if (this.hooks.beforeManifestPublish) {
         await this.hooks.beforeManifestPublish();
       }
-      await this.verifySnapshotUnlocked(request, snapshot);
-      const manifest = {
-        version: 1,
-        kind: "semantic-source-scenarios",
-        requestHash: request.requestHash,
-        scenarioCount: request.targetCount,
-        scenarios: request.scenarios.map(({ scenarioId, category }) => ({
-          scenarioId,
-          category,
-        })),
+      await this.verifyScenarioSnapshotUnlocked(request, staged.snapshot);
+      const payload = {
+        formatVersion: 1,
+        generator: cloneJson(request.generator),
+        cases: staged.scenarios,
       };
-      const target = path.join(this.stagingRoot, "manifest.json");
-      const bytes = await atomicWriteNewJson(target, manifest, {
-        maximumBytes: request.maxSizes.manifestBytes,
+      validateStagingPayload(request, payload);
+      const payloadBytes = canonicalJsonBytes(payload);
+      const outputName = `${request.runId}.json`;
+      const target = path.join(this.stagingRoot, outputName);
+      await atomicWriteNewBytes(target, payloadBytes, {
+        maximumBytes: request.maxSizes.stagingBytes,
       });
       return {
-        path: "corpus-staging/manifest.json",
+        stagingPath: `corpus-staging/${outputName}`,
+        payloadSha256: sha256(payloadBytes),
+        count: request.targetCount,
+        status: "SUCCESS",
         requestHash: request.requestHash,
-        scenarioCount: request.targetCount,
-        bytes,
-        status: "written",
+        manifestHash: request.manifestHash,
       };
     });
   }
@@ -1543,10 +1768,10 @@ export async function callTool(service, name, args = {}) {
       return service.listContractFiles();
     case "read_contract_file":
       return service.readContractFile(args);
-    case "write_scenario_input":
-      return service.writeScenarioInput(args);
-    case "write_scenario_manifest":
-      return service.writeScenarioManifest(args);
+    case "write_scenario":
+      return service.writeScenario(args);
+    case "finalize_staging":
+      return service.finalizeStaging(args);
     default:
       fail("TOOL_NOT_FOUND", `unknown tool "${name}"`);
   }
