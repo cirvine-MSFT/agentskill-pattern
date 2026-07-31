@@ -27,6 +27,7 @@ import {
   analyzeAuthenticatedStatisticsInput,
   analyzeBaselineComparisons,
   analyzeStatisticsInput,
+  assertCompleteRunCoverage,
   verifyMetricsArtifact
 } from "../statistics.mjs";
 import { canonicalMetricsBytes, deriveMetricsArtifact } from "../metrics.mjs";
@@ -815,6 +816,25 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
       runRecord,
       authenticated
     }), artifact);
+    assert.throws(() => assertCompleteRunCoverage(
+      [],
+      new Map([[runRecord.runId, { ...runRecord, phase: "complete" }]])
+    ), /one-to-one/);
+
+    const wrongBoundaryPayload = structuredClone(payload);
+    wrongBoundaryPayload.events.find((event) =>
+      event.type === "run.completed").armId = 1;
+    const wrongBoundarySigned = signedExport(wrongBoundaryPayload);
+    const wrongBoundaryAuthenticated = authenticateExport(
+      wrongBoundarySigned.bytes,
+      wrongBoundarySigned.signature,
+      wrongBoundarySigned.publicKey
+    );
+    assert.throws(() => verifyMetricsArtifact({
+      metricsPath,
+      runRecord,
+      authenticated: wrongBoundaryAuthenticated
+    }), /precedes completion\/unblinding/);
 
     const tampered = structuredClone(artifact);
     tampered.metrics.promotion.promotionRate = 0.5;

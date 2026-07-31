@@ -4,7 +4,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { authenticateExport } from "./authenticated-export.mjs";
+import { evaluateModelBindings } from "./preflight-models.mjs";
+import { evaluateIsolationEvidence } from "./verify-isolation-evidence.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
+import { verifyMetricsArtifact } from "../evaluator/statistics.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
@@ -97,7 +100,9 @@ export function adaptPlatformAudit({
   rawBytes,
   cell,
   signatureBytes,
-  publicKey
+  publicKey,
+  runRecord,
+  evidenceContext
 }) {
   if (!["inline", "delegated"].includes(cell)) {
     throw new Error("Audit adapter cell must be inline or delegated");
@@ -109,8 +114,53 @@ export function adaptPlatformAudit({
   let output;
   if (signatureBytes && publicKey) {
     const authenticated = authenticateExport(rawBytes, signatureBytes, publicKey);
-    const present = new Set(authenticated.payload.events.map((event) => event.type));
+    if (!runRecord?.runId || !evidenceContext) {
+      throw new Error("Signed audit adaptation requires one run record and evidence context");
+    }
+    const runEvents = authenticated.payload.events.filter((event) =>
+      event.runId === runRecord.runId);
+    const present = new Set(runEvents.map((event) => event.type));
     const missingEvidence = requiredEventTypes.filter((type) => !present.has(type));
+    const verificationFailures = [];
+    const armDelegated = runRecord.armId === 2 || runRecord.armId === 4;
+    if ((cell === "delegated") !== armDelegated) {
+      verificationFailures.push("cell-does-not-match-run-arm");
+    }
+    try {
+      const bindings = evaluateModelBindings(authenticated, [runRecord]);
+      const binding = bindings.runs.find((run) => run.runId === runRecord.runId);
+      if (binding?.status !== "available") {
+        verificationFailures.push("model-binding-unavailable");
+      }
+    } catch (error) {
+      verificationFailures.push(`model-binding:${error.message}`);
+    }
+    try {
+      const isolation = evaluateIsolationEvidence(authenticated, {
+        armId: runRecord.armId,
+        runId: runRecord.runId,
+        contractRoot: evidenceContext.contractRoot,
+        stagingRoot: evidenceContext.stagingRoot,
+        evaluatorRoot: evidenceContext.evaluatorRoot,
+        snapshotPath: runRecord.staging.path
+      });
+      if (isolation.status !== "compliant" || isolation.budgets.met !== true) {
+        verificationFailures.push("isolation-noncompliant");
+      }
+    } catch (error) {
+      verificationFailures.push(`isolation:${error.message}`);
+    }
+    try {
+      verifyMetricsArtifact({
+        metricsPath: runRecord.metrics.path,
+        runRecord,
+        authenticated
+      });
+    } catch (error) {
+      verificationFailures.push(`metrics:${error.message}`);
+    }
+    missingEvidence.push(...verificationFailures);
+    const available = missingEvidence.length === 0;
     output = {
       formatVersion: 1,
       provider: "github-copilot-cli",
@@ -120,14 +170,14 @@ export function adaptPlatformAudit({
         bytes: rawBytes.length,
         sha256: sha256(rawBytes)
       },
-      status: missingEvidence.length === 0 ? "available" : "unavailable",
-      protocolCellAvailable: missingEvidence.length === 0,
+      status: available ? "available" : "unavailable",
+      protocolCellAvailable: available,
       missingEvidence,
       observed: {
-        models: [...new Set(authenticated.payload.events
+        models: [...new Set(runEvents
           .map((event) => event.modelId)
           .filter(Boolean))].sort(),
-        toolCalls: authenticated.payload.events
+        toolCalls: runEvents
           .filter((event) => event.type === "tool.called"
             && event.toolName?.startsWith("semantic-corpus/"))
           .map((event) => ({
@@ -140,17 +190,17 @@ export function adaptPlatformAudit({
             actor: event.actor
           })),
         delegation: {
-          invoked: authenticated.payload.events.some((event) =>
+          invoked: runEvents.some((event) =>
             event.type === "delegation.invoked"),
-          completed: authenticated.payload.events.some((event) =>
+          completed: runEvents.some((event) =>
             event.type === "delegation.completed"),
-          agentName: authenticated.payload.events.find((event) =>
+          agentName: runEvents.find((event) =>
             event.type === "delegation.invoked")?.agentName ?? null,
-          callId: authenticated.payload.events.find((event) =>
+          callId: runEvents.find((event) =>
             event.type === "delegation.invoked")?.callId ?? null
         }
       },
-      normalizedExport: missingEvidence.length === 0 ? authenticated.payload : null
+      normalizedExport: available ? authenticated.payload : null
     };
   } else {
     const events = parseJsonLines(rawBytes);
@@ -186,19 +236,29 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const cell = argument(args, "--cell");
   const outputPath = argument(args, "--out");
   if (!inputPath || !cell || !outputPath) {
-    throw new Error("Usage: node scripts/platform-audit-adapter.mjs --in <capture.jsonl|export.json> --cell <inline|delegated> --out <audit.json> [--signature <sig> --public-key <pem>]");
+    throw new Error("Usage: node scripts/platform-audit-adapter.mjs --in <capture.jsonl|export.json> --cell <inline|delegated> --out <audit.json> [--signature <sig> --public-key <pem> --run-record <record.json> --contract-root <path> --staging-root <path> --evaluator-root <path>]");
   }
   const signaturePath = argument(args, "--signature");
   const publicKeyPath = argument(args, "--public-key");
   if (Boolean(signaturePath) !== Boolean(publicKeyPath)) {
     throw new Error("--signature and --public-key must be supplied together");
   }
+  const runRecordPath = argument(args, "--run-record");
+  const contractRoot = argument(args, "--contract-root");
+  const stagingRoot = argument(args, "--staging-root");
+  const evaluatorRoot = argument(args, "--evaluator-root");
+  if (signaturePath
+    && (!runRecordPath || !contractRoot || !stagingRoot || !evaluatorRoot)) {
+    throw new Error("Signed audit adaptation requires --run-record and all evidence roots");
+  }
   const output = adaptPlatformAudit({
     rawBytes: readFileSync(resolve(inputPath)),
     cell,
     ...(signaturePath ? {
       signatureBytes: readFileSync(resolve(signaturePath)),
-      publicKey: readFileSync(resolve(publicKeyPath))
+      publicKey: readFileSync(resolve(publicKeyPath)),
+      runRecord: JSON.parse(readFileSync(resolve(runRecordPath), "utf8")),
+      evidenceContext: { contractRoot, stagingRoot, evaluatorRoot }
     } : {})
   });
   const target = resolve(outputPath);

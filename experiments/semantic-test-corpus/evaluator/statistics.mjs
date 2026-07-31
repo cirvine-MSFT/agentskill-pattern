@@ -171,9 +171,19 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
   const unblinding = events.filter((item) =>
     item.runId === runRecord.runId && item.type === "outcomes.unblinded");
   const boundaries = [...completion, ...unblinding];
+  const expectedBoundaryRole = runRecord.armId === 0 ? "baseline" : "parent";
+  const expectedBoundarySession = runRecord.armId === 0
+    ? runRecord.sessionIds?.[0]
+    : runRecord.modelEvidence.roles.find((role) => role.role === "parent")?.sessionId;
   if (completion.length !== 1
     || unblinding.length !== 1
-    || boundaries.some((item) => Date.parse(event.timestamp) <= Date.parse(item.timestamp))) {
+    || boundaries.some((item) =>
+      item.blockId !== runRecord.blockId
+      || item.armId !== runRecord.armId
+      || item.role !== expectedBoundaryRole
+      || item.sessionId !== boundaries[0].sessionId
+      || (expectedBoundarySession && item.sessionId !== expectedBoundarySession)
+      || Date.parse(event.timestamp) <= Date.parse(item.timestamp))) {
     throw new Error(`signed metrics event precedes completion/unblinding for ${runRecord.runId}`);
   }
   return artifact;
@@ -613,6 +623,18 @@ export function analyzeStatisticsInput(input) {
   throw new Error("authenticated platform export, signature, public key, run records, metrics artifacts, and isolation contexts are required");
 }
 
+export function assertCompleteRunCoverage(runs, records) {
+  const completeRecordIds = [...records.values()]
+    .filter((record) => record.phase === "complete")
+    .map((record) => record.runId)
+    .sort();
+  const suppliedRunIds = runs.map((run) => run.runId).sort();
+  if (new Set(suppliedRunIds).size !== suppliedRunIds.length
+    || JSON.stringify(suppliedRunIds) !== JSON.stringify(completeRecordIds)) {
+    throw new Error("statistics runs must map one-to-one with every complete run record");
+  }
+}
+
 export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("analysis input must be an object");
@@ -639,6 +661,7 @@ export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
     records.set(record.runId, record);
   }
   const bindingAvailability = evaluateModelBindings(authenticated, input.runRecords);
+  assertCompleteRunCoverage(input.runs, records);
   const verifiedObservations = input.runs.map((run) => {
     const record = records.get(run.runId);
     if (!record
