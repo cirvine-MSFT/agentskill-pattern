@@ -1,0 +1,28 @@
+{
+  "formatVersion": 2,
+  "protocolId": "action-item-extraction-v2",
+  "disposition": "NO-GO",
+  "intentToTreat": true,
+  "thresholdSoftening": false,
+  "retries": 0,
+  "development": {
+    "runId": "DEV-ACTION-V2-A4-7C31",
+    "passed": false,
+    "starts": 1,
+    "abandonmentRuleFired": true
+  },
+  "pilot": {
+    "authorized": false,
+    "starts": 0,
+    "passed": false,
+    "meanTupleF1": null,
+    "operationalAndTreatmentCount": 0,
+    "exactOneViewOneEditCount": 0,
+    "validSchemaCompactReturnIsolationCount": 0,
+    "runs": []
+  },
+  "a0ToA3AiRunsExecuted": 0,
+  "confirmatoryRunsExecuted": 0,
+  "mainRunsExecuted": 0,
+  "authorizationBoundary": "No confirmatory or main execution is authorized."
+}

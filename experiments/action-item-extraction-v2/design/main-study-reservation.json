@@ -1,0 +1,31 @@
+{
+  "formatVersion": 2,
+  "protocolId": "action-item-extraction-v2",
+  "reservationOnly": true,
+  "executionAuthorized": false,
+  "inputsGenerated": false,
+  "inputHashesGenerated": false,
+  "inputHashesExposed": false,
+  "reservedMainIds": [
+    "V2-MAIN-B01-N7Q4",
+    "V2-MAIN-B02-K2R9",
+    "V2-MAIN-B03-W8M6",
+    "V2-MAIN-B04-C5T1",
+    "V2-MAIN-B05-H3P7",
+    "V2-MAIN-B06-X9D2"
+  ],
+  "laterSeparatePrMustFreeze": {
+    "hiddenMainTranscriptHashes": true,
+    "randomizedCompleteBlockSchedule": true,
+    "allFiveArms": ["A0", "A1", "A2", "A3", "A4"],
+    "exactPromptsPinsAndToolSurface": true,
+    "intentToTreatRules": true,
+    "qualityAndReliabilityMetrics": true,
+    "parentCostAndContextTargets": true,
+    "totalTokenAndLatencyCaps": true,
+    "blindedJudging": true,
+    "analysisPlan": true,
+    "closureRules": true
+  },
+  "authorizationBoundary": "A v2 feasibility GO authorizes only a separate confirmatory preregistration pull request. It does not authorize A0-A3 AI, confirmatory, or main execution."
+}

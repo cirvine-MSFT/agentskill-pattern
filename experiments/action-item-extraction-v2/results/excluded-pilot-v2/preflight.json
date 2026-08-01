@@ -1,0 +1,64 @@
+{
+  "formatVersion": 2,
+  "protocolId": "action-item-extraction-v2",
+  "completedBeforeStartIndexAndLifecycle": true,
+  "copilotVersion": "GitHub Copilot CLI 1.0.77.\nRun 'copilot update' to check for updates.",
+  "exactGlobalToolFilter": [
+    "task",
+    "view",
+    "edit"
+  ],
+  "exactCliArgsHash": "a435c3b5f78eb05967abc0f133195f2ed0ab2c95297e2d3bcbe9e8f053d998f0",
+  "candidateManifest": {
+    "files": [
+      {
+        "path": ".github/agents/action-ledger-v2-haiku.agent.md",
+        "bytes": 1689,
+        "sha256": "ea999b33a7ac8fbae96c0164306c88f549e9d44cb7d73b199a7b2b6afdc6dea5"
+      },
+      {
+        "path": ".github/skills/action-ledger-v2/SKILL.md",
+        "bytes": 732,
+        "sha256": "918b5b7910b2efbf471304bb2a15c89dc80a9044aad782253a3b45e194ced3d7"
+      }
+    ],
+    "fileSetSha256": "b7210df308ea17dcfb0d69e8eae01b24a2256a08cbe247006c20519ffb3d6a88"
+  },
+  "foundationValidation": {
+    "transcripts": 4,
+    "goldItems": 48,
+    "candidateFiles": 2
+  },
+  "controls": {
+    "autoUpdate": false,
+    "memory": false,
+    "customAgents": {
+      "defaultLocalOnly": true
+    },
+    "sandbox": {
+      "enabled": true,
+      "addCurrentWorkingDirectory": true,
+      "allowBypass": false,
+      "gitAuth": false,
+      "ghAuth": false,
+      "sandboxMcpServers": true,
+      "sandboxLspServers": true,
+      "userPolicy": {
+        "filesystem": {
+          "readwritePaths": [],
+          "readonlyPaths": [],
+          "deniedPaths": [
+            "X:\\code\\copilot-worktrees\\agentskill-pattern\\cirvine-msft-silver-pancake",
+            "X:\\code\\copilot-worktrees\\agentskill-pattern\\cirvine-msft-silver-pancake\\experiments\\action-item-extraction-v2\\results\\excluded-pilot-v2",
+            "X:\\code\\copilot-worktrees\\agentskill-pattern\\cirvine-msft-silver-pancake\\experiments\\action-item-extraction-v2\\evaluator"
+          ],
+          "clearPolicyOnExit": true
+        },
+        "network": {
+          "allowOutbound": false,
+          "allowLocalNetwork": false
+        }
+      }
+    }
+  }
+}
