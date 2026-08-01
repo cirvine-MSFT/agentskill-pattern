@@ -1,0 +1,333 @@
+{
+  "formatVersion": 3,
+  "schemaVersion": "action-ledger.gold.v3",
+  "protocolId": "action-item-extraction-v3",
+  "evaluatorOnly": true,
+  "transcriptId": "v3-pilot-ember-identity-rollout",
+  "ambiguityPolicy": {
+    "candidateBehavior": "Record materially ambiguous apparent commitments only in ambiguities.",
+    "scoring": "An ambiguity must cite the exact gold line range; omission from items is required."
+  },
+  "omissionPolicy": {
+    "suggestions": "omit",
+    "negations": "omit",
+    "rescindedWithoutReplacement": "omit",
+    "decisionsWithoutAssignedAction": "omit"
+  },
+  "expectedItems": [
+    {
+      "owner": "Mira Patel",
+      "action": "publish the final rollback guide",
+      "dueDate": "2026-10-05",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[007]",
+          "endLineId": "[007]",
+          "quote": "[007] Mira Patel: I will publish the final rollback guide by 2026-10-05."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Leah Kim",
+      "action": "reconcile the entitlement matrix with the approved scope",
+      "dueDate": "2026-10-06",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[010]",
+          "endLineId": "[010]",
+          "quote": "[010] Leah Kim: I will reconcile the entitlement matrix with the approved scope by 2026-10-06."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Oscar Reed",
+      "action": "configure the sign-in alert pack",
+      "dueDate": "2026-10-09",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[012]",
+          "endLineId": "[012]",
+          "quote": "[012] Oscar Reed: I will configure the sign-in alert pack by 2026-10-07."
+        },
+        {
+          "startLineId": "[028]",
+          "endLineId": "[028]",
+          "quote": "[028] Oscar Reed: Correction: move my sign-in alert pack due date from 2026-10-07 to 2026-10-09; I remain the owner."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "date-change",
+        "retained-owner"
+      ]
+    },
+    {
+      "owner": "Nina Alvarez",
+      "action": "approve the security exception",
+      "dueDate": "2026-10-08",
+      "status": "conditional",
+      "condition": "only if the independent retest is green",
+      "sourceCitations": [
+        {
+          "startLineId": "[014]",
+          "endLineId": "[014]",
+          "quote": "[014] Nina Alvarez: I will approve the security exception by 2026-10-08 only if the independent retest is green; until then it is conditional."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "conditional"
+      ]
+    },
+    {
+      "owner": "Carmen Wells",
+      "action": "draft the help-desk bulletin",
+      "dueDate": "2026-10-07",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[016]",
+          "endLineId": "[016]",
+          "quote": "[016] Ben Ito: I will draft the help-desk bulletin by 2026-10-07."
+        },
+        {
+          "startLineId": "[032]",
+          "endLineId": "[032]",
+          "quote": "[032] Carmen Wells: Carmen Wells will own the help-desk bulletin instead of Ben Ito, keeping the due date 2026-10-07; Ben Ito is released."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "reassignment"
+      ]
+    },
+    {
+      "owner": "Theo Grant",
+      "action": "package the tenant enablement build",
+      "dueDate": "2026-10-09",
+      "status": "blocked",
+      "condition": "until the signing service is restored",
+      "sourceCitations": [
+        {
+          "startLineId": "[018]",
+          "endLineId": "[018]",
+          "quote": "[018] Theo Grant: I will package the tenant enablement build by 2026-10-09; this is blocked until the signing service is restored."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "blocked"
+      ]
+    },
+    {
+      "owner": "Drew Singh",
+      "action": "record the final go/no-go decision and distribute the signed decision record",
+      "dueDate": null,
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[020]",
+          "endLineId": "[020]",
+          "quote": "[020] Drew Singh: I will record the final go/no-go decision and distribute the signed decision record; there is no fixed due date."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "explicit-no-date"
+      ]
+    },
+    {
+      "owner": "Nina Alvarez",
+      "action": "complete the launch-blocking privileged-role review",
+      "dueDate": "2026-10-09",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[022]",
+          "endLineId": "[022]",
+          "quote": "[022] Nina Alvarez: I will complete the launch-blocking privileged-role review by 2026-10-09."
+        }
+      ],
+      "criticality": "critical",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Service Operations",
+      "action": "verify the overnight escalation roster",
+      "dueDate": "2026-10-12",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[024]",
+          "endLineId": "[024]",
+          "quote": "[024] Oscar Reed: Service Operations will verify the overnight escalation roster by 2026-10-12."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "team-owner"
+      ]
+    },
+    {
+      "owner": "Leah Kim",
+      "action": "archive the reconciled evidence bundle",
+      "dueDate": "2026-10-13",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[034]",
+          "endLineId": "[034]",
+          "quote": "[034] Leah Kim: I will archive the reconciled evidence bundle by 2026-10-13."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Ben Ito",
+      "action": "publish the customer-blocking escalation matrix",
+      "dueDate": "2026-10-12",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[037]",
+          "endLineId": "[037]",
+          "quote": "[037] Ben Ito: I will publish the customer-blocking escalation matrix by 2026-10-12."
+        }
+      ],
+      "criticality": "critical",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Drew Singh",
+      "action": "circulate the final ownership table",
+      "dueDate": "2026-10-13",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[041]",
+          "endLineId": "[041]",
+          "quote": "[041] Drew Singh: I will circulate the final ownership table by 2026-10-13."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Mira Patel",
+      "action": "authorize tenant enablement",
+      "dueDate": "2026-10-13",
+      "status": "conditional",
+      "condition": "only after the critical privileged-role review closes",
+      "sourceCitations": [
+        {
+          "startLineId": "[045]",
+          "endLineId": "[045]",
+          "quote": "[045] Mira Patel: I will authorize tenant enablement only after the critical privileged-role review closes, with a target of 2026-10-13."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "conditional"
+      ]
+    }
+  ],
+  "expectedOmissions": [
+    {
+      "category": "noncommitment-suggestion",
+      "sourceCitations": [
+        {
+          "startLineId": "[005]",
+          "endLineId": "[005]",
+          "quote": "[005] Ben Ito: It might be useful to add screenshots to the help-desk bulletin, but I am only suggesting it."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "speaker explicitly labels the statement as a suggestion"
+    },
+    {
+      "category": "negation",
+      "sourceCitations": [
+        {
+          "startLineId": "[009]",
+          "endLineId": "[009]",
+          "quote": "[009] Theo Grant: I will not rebuild the retired simulator, and that work has no owner."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "speaker refuses the work and confirms no owner"
+    },
+    {
+      "category": "rescission",
+      "owner": "Ben Ito",
+      "action": "schedule a broad training session",
+      "sourceCitations": [
+        {
+          "startLineId": "[026]",
+          "endLineId": "[026]",
+          "quote": "[026] Ben Ito: I will schedule a broad training session by 2026-10-12."
+        },
+        {
+          "startLineId": "[030]",
+          "endLineId": "[030]",
+          "quote": "[030] Ben Ito: I withdraw the training-session commitment completely; omit it and assign no replacement."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "commitment is fully withdrawn without replacement"
+    },
+    {
+      "category": "decision-only",
+      "sourceCitations": [
+        {
+          "startLineId": "[036]",
+          "endLineId": "[036]",
+          "quote": "[036] Drew Singh: We decided to keep one launch channel. This is a decision only; channel setup is not assigned."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "decision has no assigned implementation action"
+    },
+    {
+      "category": "material-ambiguity",
+      "sourceCitations": [
+        {
+          "startLineId": "[039]",
+          "endLineId": "[039]",
+          "quote": "[039] Theo Grant: I can probably handle the fallback review soon, but I am not confirming ownership or a deadline."
+        }
+      ],
+      "canonicalPolicy": "ambiguity-only",
+      "reason": "speaker disclaims definite ownership and deadline"
+    }
+  ]
+}

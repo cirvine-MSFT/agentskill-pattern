@@ -1,0 +1,357 @@
+{
+  "formatVersion": 3,
+  "protocolId": "action-item-extraction-v3",
+  "uuidNamespace": "d94fca73-b06f-4e21-9f7a-31eb42bf8a6d",
+  "frozenBeforeAnyRun": true,
+  "phase": "excluded-pilot",
+  "arms": [
+    "A4"
+  ],
+  "aiObservationsOutsideA4": 0,
+  "seeds": {
+    "used": false,
+    "value": null
+  },
+  "cli": {
+    "exactVersion": "1.0.77",
+    "parentModel": "gpt-5.6-sol",
+    "outputFormat": "json",
+    "outputSemantics": "JSONL event objects",
+    "logLevel": "debug",
+    "exactGlobalToolFilter": [
+      "task",
+      "view",
+      "edit"
+    ],
+    "allowAllTools": true,
+    "builtinMcpsDisabled": true
+  },
+  "worker": {
+    "agent": "action-ledger-v3-haiku",
+    "model": "claude-haiku-4.5",
+    "exactFrontmatterTools": [
+      "read",
+      "edit"
+    ],
+    "runtimeToolNamesInOrder": [
+      "view",
+      "edit"
+    ],
+    "exactSuccessfulStartsAndCompletions": {
+      "view": 1,
+      "edit": 1
+    },
+    "eventLinkage": "task toolCallId equals worker agentId and subagent toolCallId; every worker tool event carries that parentToolCallId",
+    "exactEventModels": {
+      "parentTask": "gpt-5.6-sol",
+      "workerLifecycleAndTools": "claude-haiku-4.5"
+    },
+    "parentTranscriptOrLedgerCalls": 0,
+    "otherWorkerTools": 0
+  },
+  "candidateLayout": [
+    ".github/agents/action-ledger-v3-haiku.agent.md",
+    ".github/skills/action-ledger-v3/SKILL.md",
+    "input/transcript.txt",
+    "output/ledger.json"
+  ],
+  "sentinel": {
+    "precreated": true,
+    "textSha256": "deac9b7db1a5a9b3e18f2d89d5ad876cce2f462179315fc892dc060b02411938",
+    "replacementRequired": true
+  },
+  "warningRule": {
+    "prospectiveInstrumentationCorrection": true,
+    "v2Reinterpreted": false,
+    "exactToleratedRootWarning": "Unknown tool name in the tool allowlist: \"edit\"",
+    "exactCount": 1,
+    "noWorkerUnknownToolWarning": true,
+    "workerViewStructuredStartAndSuccessfulComplete": 1,
+    "workerEditStructuredStartAndSuccessfulComplete": 1,
+    "sentinelReplacedWithValidArtifact": true,
+    "expectedActorsAndModelsRequired": true,
+    "distinctDebugToolsBlocks": "informative-not-required",
+    "anyOtherWarningOrMissingCall": "fatal"
+  },
+  "scoringDefinitions": {
+    "tuple": "A match requires canonical owner, semantically compatible action similarity at least 0.80, final due date, status, condition, and criticality.",
+    "pairing": "Candidate/gold pairing requires canonical owner, semantically compatible action polarity, and action similarity at least 0.55 before full tuple correctness is evaluated.",
+    "sourceGrounding": "Every matched action tuple and required ambiguity must use the exact gold line/range identifiers and complete prefixed transcript quote.",
+    "ambiguity": "Every required ambiguity needs exact gold citations, compatible semantic polarity, and note-to-gold-reason token F1 of at least 0.55.",
+    "changesAfterPilotStart": "forbidden"
+  },
+  "runs": [
+    {
+      "order": 1,
+      "runId": "PILOT-ACTION-V3-A4-2F6C",
+      "transcriptId": "v3-pilot-ember-identity-rollout",
+      "sessionId": "4d955534-9f54-516a-b019-e8789c0acbf5",
+      "taskEnvelope": {
+        "formatVersion": 3,
+        "protocolId": "action-item-extraction-v3",
+        "phase": "excluded-pilot",
+        "arm": "A4",
+        "order": 1,
+        "runId": "PILOT-ACTION-V3-A4-2F6C",
+        "transcriptId": "v3-pilot-ember-identity-rollout",
+        "transcriptPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-2F6C\\input\\transcript.txt",
+        "ledgerPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-2F6C\\output\\ledger.json",
+        "ledgerSentinel": "{\"sentinel\":\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\"}\n",
+        "statusHash": "e7a073e1afc5a5988ec40bac92f7996ff6a71157bf11e029007a89d62d205cb5",
+        "instruction": "Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.",
+        "schema": {
+          "schemaVersion": "action-ledger.v3",
+          "runId": "exact supplied run ID",
+          "transcriptId": "exact supplied transcript ID",
+          "items": [
+            {
+              "itemId": "AI-001 sequentially",
+              "owner": "canonical person or team",
+              "action": "normalized final action",
+              "dueDate": "YYYY-MM-DD or null",
+              "status": "open|conditional|blocked",
+              "condition": "string or null",
+              "sourceCitations": [
+                {
+                  "startLineId": "[NNN] exact transcript prefix",
+                  "endLineId": "[NNN] exact transcript prefix",
+                  "quote": "complete verbatim prefixed transcript line or contiguous range"
+                }
+              ],
+              "criticality": "critical|normal"
+            }
+          ],
+          "ambiguities": [
+            {
+              "sourceCitations": "non-empty array using the same exact citation schema",
+              "note": "grounded omission or qualification reason"
+            }
+          ]
+        },
+        "policy": [
+          "Include only final explicit commitments with attributable owners.",
+          "Apply the last explicit owner, due date, status, and condition.",
+          "Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.",
+          "Record materially ambiguous apparent commitments only in ambiguities.",
+          "Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.",
+          "A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.",
+          "Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking."
+        ]
+      },
+      "exactCliArgs": [
+        "-p",
+        "{\"arm\":\"A4\",\"formatVersion\":3,\"instruction\":\"Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.\",\"ledgerPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-2F6C\\\\output\\\\ledger.json\",\"ledgerSentinel\":\"{\\\"sentinel\\\":\\\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\\\"}\\n\",\"order\":1,\"phase\":\"excluded-pilot\",\"policy\":[\"Include only final explicit commitments with attributable owners.\",\"Apply the last explicit owner, due date, status, and condition.\",\"Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.\",\"Record materially ambiguous apparent commitments only in ambiguities.\",\"Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.\",\"A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.\",\"Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking.\"],\"protocolId\":\"action-item-extraction-v3\",\"runId\":\"PILOT-ACTION-V3-A4-2F6C\",\"schema\":{\"ambiguities\":[{\"note\":\"grounded omission or qualification reason\",\"sourceCitations\":\"non-empty array using the same exact citation schema\"}],\"items\":[{\"action\":\"normalized final action\",\"condition\":\"string or null\",\"criticality\":\"critical|normal\",\"dueDate\":\"YYYY-MM-DD or null\",\"itemId\":\"AI-001 sequentially\",\"owner\":\"canonical person or team\",\"sourceCitations\":[{\"endLineId\":\"[NNN] exact transcript prefix\",\"quote\":\"complete verbatim prefixed transcript line or contiguous range\",\"startLineId\":\"[NNN] exact transcript prefix\"}],\"status\":\"open|conditional|blocked\"}],\"runId\":\"exact supplied run ID\",\"schemaVersion\":\"action-ledger.v3\",\"transcriptId\":\"exact supplied transcript ID\"},\"statusHash\":\"e7a073e1afc5a5988ec40bac92f7996ff6a71157bf11e029007a89d62d205cb5\",\"transcriptId\":\"v3-pilot-ember-identity-rollout\",\"transcriptPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-2F6C\\\\input\\\\transcript.txt\"}",
+        "--session-id",
+        "4d955534-9f54-516a-b019-e8789c0acbf5",
+        "--model",
+        "gpt-5.6-sol",
+        "--output-format",
+        "json",
+        "--log-level",
+        "debug",
+        "-C",
+        "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-2F6C",
+        "--allow-all-tools",
+        "--available-tools=task,view,edit",
+        "--disable-builtin-mcps",
+        "--disallow-temp-dir",
+        "--no-custom-instructions",
+        "--no-ask-user",
+        "--no-remote-export",
+        "--no-auto-update",
+        "--experimental",
+        "--context",
+        "default",
+        "--effort",
+        "medium",
+        "--secret-env-vars=COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+      ]
+    },
+    {
+      "order": 2,
+      "runId": "PILOT-ACTION-V3-A4-71D9",
+      "transcriptId": "v3-pilot-harbor-billing-migration",
+      "sessionId": "e7dfde00-b6a7-597a-8070-aac1d50ab001",
+      "taskEnvelope": {
+        "formatVersion": 3,
+        "protocolId": "action-item-extraction-v3",
+        "phase": "excluded-pilot",
+        "arm": "A4",
+        "order": 2,
+        "runId": "PILOT-ACTION-V3-A4-71D9",
+        "transcriptId": "v3-pilot-harbor-billing-migration",
+        "transcriptPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-71D9\\input\\transcript.txt",
+        "ledgerPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-71D9\\output\\ledger.json",
+        "ledgerSentinel": "{\"sentinel\":\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\"}\n",
+        "statusHash": "99ecbbb17f60dbc2c47059cb99441a9331f046ceee5be2321471f654e6aa36db",
+        "instruction": "Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.",
+        "schema": {
+          "schemaVersion": "action-ledger.v3",
+          "runId": "exact supplied run ID",
+          "transcriptId": "exact supplied transcript ID",
+          "items": [
+            {
+              "itemId": "AI-001 sequentially",
+              "owner": "canonical person or team",
+              "action": "normalized final action",
+              "dueDate": "YYYY-MM-DD or null",
+              "status": "open|conditional|blocked",
+              "condition": "string or null",
+              "sourceCitations": [
+                {
+                  "startLineId": "[NNN] exact transcript prefix",
+                  "endLineId": "[NNN] exact transcript prefix",
+                  "quote": "complete verbatim prefixed transcript line or contiguous range"
+                }
+              ],
+              "criticality": "critical|normal"
+            }
+          ],
+          "ambiguities": [
+            {
+              "sourceCitations": "non-empty array using the same exact citation schema",
+              "note": "grounded omission or qualification reason"
+            }
+          ]
+        },
+        "policy": [
+          "Include only final explicit commitments with attributable owners.",
+          "Apply the last explicit owner, due date, status, and condition.",
+          "Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.",
+          "Record materially ambiguous apparent commitments only in ambiguities.",
+          "Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.",
+          "A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.",
+          "Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking."
+        ]
+      },
+      "exactCliArgs": [
+        "-p",
+        "{\"arm\":\"A4\",\"formatVersion\":3,\"instruction\":\"Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.\",\"ledgerPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-71D9\\\\output\\\\ledger.json\",\"ledgerSentinel\":\"{\\\"sentinel\\\":\\\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\\\"}\\n\",\"order\":2,\"phase\":\"excluded-pilot\",\"policy\":[\"Include only final explicit commitments with attributable owners.\",\"Apply the last explicit owner, due date, status, and condition.\",\"Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.\",\"Record materially ambiguous apparent commitments only in ambiguities.\",\"Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.\",\"A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.\",\"Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking.\"],\"protocolId\":\"action-item-extraction-v3\",\"runId\":\"PILOT-ACTION-V3-A4-71D9\",\"schema\":{\"ambiguities\":[{\"note\":\"grounded omission or qualification reason\",\"sourceCitations\":\"non-empty array using the same exact citation schema\"}],\"items\":[{\"action\":\"normalized final action\",\"condition\":\"string or null\",\"criticality\":\"critical|normal\",\"dueDate\":\"YYYY-MM-DD or null\",\"itemId\":\"AI-001 sequentially\",\"owner\":\"canonical person or team\",\"sourceCitations\":[{\"endLineId\":\"[NNN] exact transcript prefix\",\"quote\":\"complete verbatim prefixed transcript line or contiguous range\",\"startLineId\":\"[NNN] exact transcript prefix\"}],\"status\":\"open|conditional|blocked\"}],\"runId\":\"exact supplied run ID\",\"schemaVersion\":\"action-ledger.v3\",\"transcriptId\":\"exact supplied transcript ID\"},\"statusHash\":\"99ecbbb17f60dbc2c47059cb99441a9331f046ceee5be2321471f654e6aa36db\",\"transcriptId\":\"v3-pilot-harbor-billing-migration\",\"transcriptPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-71D9\\\\input\\\\transcript.txt\"}",
+        "--session-id",
+        "e7dfde00-b6a7-597a-8070-aac1d50ab001",
+        "--model",
+        "gpt-5.6-sol",
+        "--output-format",
+        "json",
+        "--log-level",
+        "debug",
+        "-C",
+        "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-71D9",
+        "--allow-all-tools",
+        "--available-tools=task,view,edit",
+        "--disable-builtin-mcps",
+        "--disallow-temp-dir",
+        "--no-custom-instructions",
+        "--no-ask-user",
+        "--no-remote-export",
+        "--no-auto-update",
+        "--experimental",
+        "--context",
+        "default",
+        "--effort",
+        "medium",
+        "--secret-env-vars=COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+      ]
+    },
+    {
+      "order": 3,
+      "runId": "PILOT-ACTION-V3-A4-C845",
+      "transcriptId": "v3-pilot-lumen-device-recovery",
+      "sessionId": "15ef4185-b4ec-5aec-b52a-65da4c413526",
+      "taskEnvelope": {
+        "formatVersion": 3,
+        "protocolId": "action-item-extraction-v3",
+        "phase": "excluded-pilot",
+        "arm": "A4",
+        "order": 3,
+        "runId": "PILOT-ACTION-V3-A4-C845",
+        "transcriptId": "v3-pilot-lumen-device-recovery",
+        "transcriptPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-C845\\input\\transcript.txt",
+        "ledgerPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-C845\\output\\ledger.json",
+        "ledgerSentinel": "{\"sentinel\":\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\"}\n",
+        "statusHash": "f993c45170833d7f59fb262d99e615b632903c0b17882b09c59db3997d1998c1",
+        "instruction": "Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.",
+        "schema": {
+          "schemaVersion": "action-ledger.v3",
+          "runId": "exact supplied run ID",
+          "transcriptId": "exact supplied transcript ID",
+          "items": [
+            {
+              "itemId": "AI-001 sequentially",
+              "owner": "canonical person or team",
+              "action": "normalized final action",
+              "dueDate": "YYYY-MM-DD or null",
+              "status": "open|conditional|blocked",
+              "condition": "string or null",
+              "sourceCitations": [
+                {
+                  "startLineId": "[NNN] exact transcript prefix",
+                  "endLineId": "[NNN] exact transcript prefix",
+                  "quote": "complete verbatim prefixed transcript line or contiguous range"
+                }
+              ],
+              "criticality": "critical|normal"
+            }
+          ],
+          "ambiguities": [
+            {
+              "sourceCitations": "non-empty array using the same exact citation schema",
+              "note": "grounded omission or qualification reason"
+            }
+          ]
+        },
+        "policy": [
+          "Include only final explicit commitments with attributable owners.",
+          "Apply the last explicit owner, due date, status, and condition.",
+          "Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.",
+          "Record materially ambiguous apparent commitments only in ambiguities.",
+          "Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.",
+          "A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.",
+          "Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking."
+        ]
+      },
+      "exactCliArgs": [
+        "-p",
+        "{\"arm\":\"A4\",\"formatVersion\":3,\"instruction\":\"Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.\",\"ledgerPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-C845\\\\output\\\\ledger.json\",\"ledgerSentinel\":\"{\\\"sentinel\\\":\\\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\\\"}\\n\",\"order\":3,\"phase\":\"excluded-pilot\",\"policy\":[\"Include only final explicit commitments with attributable owners.\",\"Apply the last explicit owner, due date, status, and condition.\",\"Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.\",\"Record materially ambiguous apparent commitments only in ambiguities.\",\"Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.\",\"A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.\",\"Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking.\"],\"protocolId\":\"action-item-extraction-v3\",\"runId\":\"PILOT-ACTION-V3-A4-C845\",\"schema\":{\"ambiguities\":[{\"note\":\"grounded omission or qualification reason\",\"sourceCitations\":\"non-empty array using the same exact citation schema\"}],\"items\":[{\"action\":\"normalized final action\",\"condition\":\"string or null\",\"criticality\":\"critical|normal\",\"dueDate\":\"YYYY-MM-DD or null\",\"itemId\":\"AI-001 sequentially\",\"owner\":\"canonical person or team\",\"sourceCitations\":[{\"endLineId\":\"[NNN] exact transcript prefix\",\"quote\":\"complete verbatim prefixed transcript line or contiguous range\",\"startLineId\":\"[NNN] exact transcript prefix\"}],\"status\":\"open|conditional|blocked\"}],\"runId\":\"exact supplied run ID\",\"schemaVersion\":\"action-ledger.v3\",\"transcriptId\":\"exact supplied transcript ID\"},\"statusHash\":\"f993c45170833d7f59fb262d99e615b632903c0b17882b09c59db3997d1998c1\",\"transcriptId\":\"v3-pilot-lumen-device-recovery\",\"transcriptPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-C845\\\\input\\\\transcript.txt\"}",
+        "--session-id",
+        "15ef4185-b4ec-5aec-b52a-65da4c413526",
+        "--model",
+        "gpt-5.6-sol",
+        "--output-format",
+        "json",
+        "--log-level",
+        "debug",
+        "-C",
+        "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-C845",
+        "--allow-all-tools",
+        "--available-tools=task,view,edit",
+        "--disable-builtin-mcps",
+        "--disallow-temp-dir",
+        "--no-custom-instructions",
+        "--no-ask-user",
+        "--no-remote-export",
+        "--no-auto-update",
+        "--experimental",
+        "--context",
+        "default",
+        "--effort",
+        "medium",
+        "--secret-env-vars=COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+      ]
+    }
+  ],
+  "thresholds": {
+    "operationalAndTreatmentAdherent": "3/3",
+    "exactOneViewOneEdit": "3/3",
+    "unsupportedCriticalActionsMaximum": 0,
+    "validSchemaCompactReturnIsolation": "3/3",
+    "meanTupleF1Minimum": 0.85,
+    "everyRunTupleF1Minimum": 0.75,
+    "sourceGrounding": "100%",
+    "everyRunTotalModelTokensMaximum": 40000,
+    "everyRunWallTimeMsMaximum": 180000,
+    "thresholdSofteningAllowed": false,
+    "retriesAllowed": false
+  },
+  "executionAuthorizationBoundary": "The design PR and this session authorize no v3 start. After merge, only an explicit operator invocation of the guarded --execute entry point may start the three excluded A4 units. GO authorizes only a separate five-arm main-study preregistration PR, never main execution."
+}

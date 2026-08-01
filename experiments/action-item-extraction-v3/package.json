@@ -1,0 +1,21 @@
+{
+  "name": "action-item-extraction-v3-experiment",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "fixtures": "node scripts/generate-fixtures.mjs",
+    "freeze": "node scripts/freeze-foundation.mjs",
+    "validate": "node scripts/validate-foundation.mjs",
+    "pilot": "node scripts/run-excluded-pilot.mjs",
+    "evidence:check": "node scripts/check-evidence.mjs",
+    "report": "node scripts/generate-report.mjs",
+    "no-run": "node scripts/assert-no-run.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run validate && npm run no-run && npm test",
+    "reproduce": "npm run check"
+  }
+}

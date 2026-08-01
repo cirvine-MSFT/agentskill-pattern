@@ -1,0 +1,333 @@
+{
+  "formatVersion": 3,
+  "schemaVersion": "action-ledger.gold.v3",
+  "protocolId": "action-item-extraction-v3",
+  "evaluatorOnly": true,
+  "transcriptId": "v3-pilot-lumen-device-recovery",
+  "ambiguityPolicy": {
+    "candidateBehavior": "Record materially ambiguous apparent commitments only in ambiguities.",
+    "scoring": "An ambiguity must cite the exact gold line range; omission from items is required."
+  },
+  "omissionPolicy": {
+    "suggestions": "omit",
+    "negations": "omit",
+    "rescindedWithoutReplacement": "omit",
+    "decisionsWithoutAssignedAction": "omit"
+  },
+  "expectedItems": [
+    {
+      "owner": "Iris Novak",
+      "action": "publish the final restore runbook",
+      "dueDate": "2026-11-02",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[007]",
+          "endLineId": "[007]",
+          "quote": "[007] Iris Novak: I will publish the final restore runbook by 2026-11-02."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Mae Okafor",
+      "action": "reconcile the device coverage table with the approved scope",
+      "dueDate": "2026-11-03",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[010]",
+          "endLineId": "[010]",
+          "quote": "[010] Mae Okafor: I will reconcile the device coverage table with the approved scope by 2026-11-03."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Pavel Cruz",
+      "action": "configure the recovery health alerts",
+      "dueDate": "2026-11-06",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[012]",
+          "endLineId": "[012]",
+          "quote": "[012] Pavel Cruz: I will configure the recovery health alerts by 2026-11-04."
+        },
+        {
+          "startLineId": "[028]",
+          "endLineId": "[028]",
+          "quote": "[028] Pavel Cruz: Correction: move my recovery health alerts due date from 2026-11-04 to 2026-11-06; I remain the owner."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "date-change",
+        "retained-owner"
+      ]
+    },
+    {
+      "owner": "Zoe Hart",
+      "action": "approve the security exception",
+      "dueDate": "2026-11-05",
+      "status": "conditional",
+      "condition": "only if the independent retest is green",
+      "sourceCitations": [
+        {
+          "startLineId": "[014]",
+          "endLineId": "[014]",
+          "quote": "[014] Zoe Hart: I will approve the security exception by 2026-11-05 only if the independent retest is green; until then it is conditional."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "conditional"
+      ]
+    },
+    {
+      "owner": "Lena Price",
+      "action": "draft the support handoff",
+      "dueDate": "2026-11-04",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[016]",
+          "endLineId": "[016]",
+          "quote": "[016] Kenji Sato: I will draft the support handoff by 2026-11-04."
+        },
+        {
+          "startLineId": "[032]",
+          "endLineId": "[032]",
+          "quote": "[032] Lena Price: Lena Price will own the support handoff instead of Kenji Sato, keeping the due date 2026-11-04; Kenji Sato is released."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "reassignment"
+      ]
+    },
+    {
+      "owner": "Jonas Blake",
+      "action": "package the recovery launch build",
+      "dueDate": "2026-11-06",
+      "status": "blocked",
+      "condition": "until the signing service is restored",
+      "sourceCitations": [
+        {
+          "startLineId": "[018]",
+          "endLineId": "[018]",
+          "quote": "[018] Jonas Blake: I will package the recovery launch build by 2026-11-06; this is blocked until the signing service is restored."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "blocked"
+      ]
+    },
+    {
+      "owner": "Arun Bose",
+      "action": "record the final go/no-go decision and distribute the signed decision record",
+      "dueDate": null,
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[020]",
+          "endLineId": "[020]",
+          "quote": "[020] Arun Bose: I will record the final go/no-go decision and distribute the signed decision record; there is no fixed due date."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "explicit-no-date"
+      ]
+    },
+    {
+      "owner": "Zoe Hart",
+      "action": "complete the launch-blocking credential escrow review",
+      "dueDate": "2026-11-06",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[022]",
+          "endLineId": "[022]",
+          "quote": "[022] Zoe Hart: I will complete the launch-blocking credential escrow review by 2026-11-06."
+        }
+      ],
+      "criticality": "critical",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Service Operations",
+      "action": "verify the overnight escalation roster",
+      "dueDate": "2026-11-09",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[024]",
+          "endLineId": "[024]",
+          "quote": "[024] Pavel Cruz: Service Operations will verify the overnight escalation roster by 2026-11-09."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "team-owner"
+      ]
+    },
+    {
+      "owner": "Mae Okafor",
+      "action": "archive the reconciled evidence bundle",
+      "dueDate": "2026-11-10",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[034]",
+          "endLineId": "[034]",
+          "quote": "[034] Mae Okafor: I will archive the reconciled evidence bundle by 2026-11-10."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Kenji Sato",
+      "action": "publish the customer-blocking escalation matrix",
+      "dueDate": "2026-11-09",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[037]",
+          "endLineId": "[037]",
+          "quote": "[037] Kenji Sato: I will publish the customer-blocking escalation matrix by 2026-11-09."
+        }
+      ],
+      "criticality": "critical",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Arun Bose",
+      "action": "circulate the final ownership table",
+      "dueDate": "2026-11-10",
+      "status": "open",
+      "condition": null,
+      "sourceCitations": [
+        {
+          "startLineId": "[041]",
+          "endLineId": "[041]",
+          "quote": "[041] Arun Bose: I will circulate the final ownership table by 2026-11-10."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Iris Novak",
+      "action": "authorize recovery launch",
+      "dueDate": "2026-11-10",
+      "status": "conditional",
+      "condition": "only after the critical credential escrow review closes",
+      "sourceCitations": [
+        {
+          "startLineId": "[045]",
+          "endLineId": "[045]",
+          "quote": "[045] Iris Novak: I will authorize recovery launch only after the critical credential escrow review closes, with a target of 2026-11-10."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "conditional"
+      ]
+    }
+  ],
+  "expectedOmissions": [
+    {
+      "category": "noncommitment-suggestion",
+      "sourceCitations": [
+        {
+          "startLineId": "[005]",
+          "endLineId": "[005]",
+          "quote": "[005] Kenji Sato: It might be useful to add screenshots to the support handoff, but I am only suggesting it."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "speaker explicitly labels the statement as a suggestion"
+    },
+    {
+      "category": "negation",
+      "sourceCitations": [
+        {
+          "startLineId": "[009]",
+          "endLineId": "[009]",
+          "quote": "[009] Jonas Blake: I will not rebuild the retired simulator, and that work has no owner."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "speaker refuses the work and confirms no owner"
+    },
+    {
+      "category": "rescission",
+      "owner": "Kenji Sato",
+      "action": "schedule a broad training session",
+      "sourceCitations": [
+        {
+          "startLineId": "[026]",
+          "endLineId": "[026]",
+          "quote": "[026] Kenji Sato: I will schedule a broad training session by 2026-11-09."
+        },
+        {
+          "startLineId": "[030]",
+          "endLineId": "[030]",
+          "quote": "[030] Kenji Sato: I withdraw the training-session commitment completely; omit it and assign no replacement."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "commitment is fully withdrawn without replacement"
+    },
+    {
+      "category": "decision-only",
+      "sourceCitations": [
+        {
+          "startLineId": "[036]",
+          "endLineId": "[036]",
+          "quote": "[036] Arun Bose: We decided to keep one launch channel. This is a decision only; channel setup is not assigned."
+        }
+      ],
+      "canonicalPolicy": "omit",
+      "reason": "decision has no assigned implementation action"
+    },
+    {
+      "category": "material-ambiguity",
+      "sourceCitations": [
+        {
+          "startLineId": "[039]",
+          "endLineId": "[039]",
+          "quote": "[039] Jonas Blake: I can probably handle the fallback review soon, but I am not confirming ownership or a deadline."
+        }
+      ],
+      "canonicalPolicy": "ambiguity-only",
+      "reason": "speaker disclaims definite ownership and deadline"
+    }
+  ]
+}
