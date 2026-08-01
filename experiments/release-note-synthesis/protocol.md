@@ -1,7 +1,7 @@
 # Release-note synthesis protocol foundation
 
-**Protocol ID:** `release-note-synthesis-v0-foundation`  
-**Status:** development plus excluded feasibility pilot only  
+**Protocol ID:** `release-note-synthesis-v0-foundation`
+**Status:** development plus excluded feasibility pilot only
 **Confirmatory status:** prohibited pending a separate merged preregistration
 
 ## 1. Falsifiable hypothesis
