@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v3",
+  "pilotId": "V3-B01",
+  "disposition": "partially-consumed-aborted-non-outcome",
+  "outcomeEligible": false,
+  "reusable": false,
+  "slots": [
+    {"runId": "V3-B01-A4", "state": "started", "reusable": false},
+    {"runId": "V3-B01-A2", "state": "started", "reusable": false},
+    {"runId": "V3-B01-A0", "state": "untouched", "reusable": false},
+    {"runId": "V3-B01-A1", "state": "untouched", "reusable": false},
+    {"runId": "V3-B01-A3", "state": "untouched", "reusable": false},
+    {"runId": "V3-B01-A5", "state": "untouched", "reusable": false}
+  ],
+  "reason": "A4 and A2 consumed the first two global-order identities before runtime and parser defects were established. The remaining block identities were never started but are permanently retired with the partially consumed block."
+}

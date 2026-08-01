@@ -1,10 +1,14 @@
-# Semantic migration corpus benchmark — execution v3
+# Semantic migration corpus benchmark — corrective execution v4
 
-This directory contains the frozen v3 12-block, six-arm descriptive benchmark.
-**No measured v3 units have run.** V2's infeasible `create-session` pilot is archived
-under `design/aborted-v2/` as aborted, non-outcome evidence. `protocol.md` and
-`execution-amendment-v2.md` are historical only; `execution-amendment-v3.md` is
-normative.
+This directory contains the corrective v4 12-block, six-arm descriptive benchmark.
+V2 and v3 evidence is historical and unchanged. V3-B01 is partially consumed and
+aborted: A4 and A2 started, while A0/A1/A3/A5 were untouched; every V3-B01 identity is
+retired. `execution-amendment-v4.md` and `design/v4/` are normative.
+
+**V4 is not executable.** Pilot-only live preflight series R3 passed A1/A2/A3/A5 but
+failed A4's exact Skill ordering and worker-task final byte. No measured v4 unit has
+started, and the harness blocks before slot reservation unless all five live smokes
+pass.
 
 ## Frozen arms
 
@@ -47,8 +51,8 @@ npm run randomize
 
 ## Real preflight
 
-Preflight performs no corpus generation. It verifies Copilot CLI 1.0.77's real prompt
-surface, configured MCP servers, pinned profiles, and local usage-store columns:
+Static preflight performs no corpus generation. It verifies Copilot CLI 1.0.77's real
+prompt surface, configured MCP servers, pinned profiles, and local usage-store columns:
 
 ```powershell
 node .\scripts\preflight-execution.mjs `
@@ -59,26 +63,43 @@ node .\scripts\preflight-execution.mjs `
 
 The command fails closed with exit code 2 unless the exact version, flags, absence of
 the fabricated `create-session` subcommand, MCP isolation controls, profiles, and usage
-schema are present. It starts no measured session.
+schema are present. It starts no measured session. Static preflight alone never enables
+measured execution.
+
+Run the disposable live gate in an empty external root:
+
+```powershell
+node .\scripts\live-preflight.mjs `
+  --cli copilot `
+  --session-store $env:USERPROFILE\.copilot\session-store.db `
+  --pilot-series R1 `
+  --work-root C:\benchmark-pilots\v4-r1 `
+  --out C:\benchmark-pilots\v4-live-preflight-r1.json
+```
+
+This uses the measured materializer, sandbox, MCP probe, command builder, and evidence
+rules with pilot-only IDs. It runs all five AI surfaces and exits 2 unless every one
+passes. Smoke usage and staging are excluded from outcomes.
 
 ## Dry-run and execute
 
 Use empty external candidate and artifact directories. The harness rejects in-repo
 measured candidates, materializes only the immutable commit/tree/blob pin in
-`design/source-pin.json`, writes the seeded task and kickoff bytes, creates contract,
+`design/v4/source-pin.json`, writes the seeded task and kickoff bytes, creates contract,
 staging, MCP, and sandbox configuration, and forms one atomic kickoff command.
 
 ```powershell
 node .\scripts\run-controlled-harness.mjs `
   --cli copilot `
   --session-store $env:USERPROFILE\.copilot\session-store.db `
-  --candidate-root C:\benchmark-candidates\V3-B01-A4 `
-  --artifact-root C:\benchmark-artifacts\V3-B01-A4 `
+  --candidate-root C:\benchmark-candidates\V4-B01-A2 `
+  --artifact-root C:\benchmark-artifacts\V4-B01-A2 `
   --start-index C:\benchmark-artifacts\start-index.json `
-  --block B01 --arm 4 --dry-run
+  --live-preflight C:\benchmark-pilots\v4-live-preflight-r1.json `
+  --block B01 --arm 2 --dry-run
 ```
 
-Remove `--dry-run` only after reviewing preflight. Each AI slot runs one real prompt
+Remove `--dry-run` only after all live arms pass. Each AI slot runs one real prompt
 command with its predetermined UUID, exact parent model, optional frozen top-level
 agent, JSON output, candidate cwd, closed tool list, generated MCP config, and explicit
 disabling of every configured nonsemantic MCP server. The harness machine-generates:

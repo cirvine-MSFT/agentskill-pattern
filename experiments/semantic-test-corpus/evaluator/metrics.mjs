@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
+import { protocolDesign, protocolDesignForRunId } from "../scripts/protocol-design.mjs";
 import { canonicalStagingBytes } from "./adapter.mjs";
 import {
   GENERAL_GENERATOR_DEPENDENCIES,
@@ -22,15 +23,7 @@ const metricsSchema = JSON.parse(
 );
 const mappingSpecPath = resolve(root, "fixture", "spec", "mapping-spec.json");
 const mappingSpec = JSON.parse(readFileSync(mappingSpecPath, "utf8"));
-const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const currentSeeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
-const abortedV2Schedule = JSON.parse(
-  readFileSync(resolve(root, "design", "aborted-v2", "schedule.json"), "utf8")
-);
-const abortedV2Seeds = JSON.parse(
-  readFileSync(resolve(root, "design", "aborted-v2", "seeds.json"), "utf8")
-);
-const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.json"), "utf8"));
+const currentSourcePin = protocolDesign("v4").sourcePin;
 const GENERATOR_FILES = [...GENERAL_GENERATOR_DEPENDENCIES];
 const EVALUATOR_FILES = [
   "baseline/general-generate.mjs",
@@ -89,7 +82,7 @@ function gitBlobHash(bytes, objectFormat) {
     .digest("hex");
 }
 
-function generatorProvenance() {
+function generatorProvenance(sourcePin) {
   const commitSha = sourcePin.generatorCommit;
   const treeSha = sourcePin.generatorTree;
   const repositoryRoot = resolve(root, "..", "..");
@@ -123,9 +116,9 @@ export function canonicalMetricsBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-export function metricsProvenance() {
+export function metricsProvenance(sourcePin = currentSourcePin) {
   return {
-    generator: generatorProvenance(),
+    generator: generatorProvenance(sourcePin),
     evaluator: fileSet(EVALUATOR_FILES),
     spec: {
       path: "fixture/spec/mapping-spec.json",
@@ -145,8 +138,7 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
   if (snapshot.generator?.blockId !== blockId || snapshot.generator?.armId !== armId) {
     throw new Error("Snapshot generator metadata differs from the metrics run");
   }
-  const schedule = runId.startsWith("V3-") ? currentSchedule : abortedV2Schedule;
-  const seeds = runId.startsWith("V3-") ? currentSeeds : abortedV2Seeds;
+  const { schedule, seeds, sourcePin } = protocolDesignForRunId(runId);
   const planned = schedule.runs.find((run) => run.runId === runId);
   const seed = seeds.blocks.find((block) => block.id === blockId)?.seed;
   if (!planned
@@ -171,7 +163,7 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
     blockId,
     armId,
     snapshotSha256,
-    provenance: metricsProvenance(),
+    provenance: metricsProvenance(sourcePin),
     metrics: {
       promotion: {
         targetCases: report.corpus.targetCases,

@@ -11,8 +11,12 @@ import {
 import { validateStaging } from "../validators/staging.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.json"), "utf8"));
+const schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+);
+const sourcePin = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "source-pin.json"), "utf8")
+);
 const repositoryRoot = resolve(root, "..", "..");
 
 function sha256(bytes) {

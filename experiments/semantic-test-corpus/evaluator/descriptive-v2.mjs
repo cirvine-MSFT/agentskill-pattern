@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
+import { protocolDesignForId, protocolDesignForRunId } from "../scripts/protocol-design.mjs";
 import { canonicalMetricsBytes, deriveMetricsArtifact } from "./metrics.mjs";
 import { canonicalStagingBytes, verifyLocalSnapshotWrites } from "./adapter.mjs";
 import { preflightLocalModel } from "../scripts/preflight-local-model.mjs";
@@ -35,10 +36,6 @@ const runAttemptSchema = JSON.parse(
 );
 const usageExportSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "local-usage-export.schema.json"), "utf8")
-);
-const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const abortedV2Schedule = JSON.parse(
-  readFileSync(resolve(root, "design", "aborted-v2", "schedule.json"), "utf8")
 );
 const contrastContract = JSON.parse(
   readFileSync(resolve(root, "design", "descriptive-contrasts.json"), "utf8")
@@ -319,7 +316,7 @@ function recomputePartialMetrics(partialUsage, partialUsagePath) {
       resolve(dirname(partialUsagePath), responseSource.path),
       "utf8"
     );
-    if (partialUsage.protocolId === "semantic-test-corpus-execution-v3") {
+    if (partialUsage.protocolId !== "semantic-test-corpus-execution-v2") {
       response = responseText.split(/\r?\n/u).filter(Boolean).map(JSON.parse);
       const results = response.filter((event) => event.type === "result");
       if (results.length !== 1 || response.at(-1) !== results[0]
@@ -372,7 +369,7 @@ function recomputePartialMetrics(partialUsage, partialUsagePath) {
   if (eventsSource.available) {
     events = readFileSync(resolve(dirname(partialUsagePath), eventsSource.path), "utf8")
       .split(/\r?\n/u).filter(Boolean).map(JSON.parse);
-    if (partialUsage.protocolId === "semantic-test-corpus-execution-v3") {
+    if (partialUsage.protocolId !== "semantic-test-corpus-execution-v2") {
       const results = events.filter((event) => event.type === "result");
       if (results.length !== 1 || events.at(-1) !== results[0]
         || typeof results[0].sessionId !== "string"
@@ -389,11 +386,12 @@ function recomputePartialMetrics(partialUsage, partialUsagePath) {
     }
   }
   if (rows) {
-    const eventSessionId = partialUsage.protocolId === "semantic-test-corpus-execution-v3"
+    const eventSessionId = partialUsage.protocolId !== "semantic-test-corpus-execution-v2"
       ? events?.find((event) => event.type === "result")?.sessionId
       : events?.find((event) => event.type === "session.start")?.data?.sessionId;
-    const plannedSessionId = partialUsage.protocolId === "semantic-test-corpus-execution-v3"
-      ? currentSchedule.runs.find((run) => run.runId === partialUsage.runId)?.sessionId
+    const plannedSessionId = partialUsage.protocolId !== "semantic-test-corpus-execution-v2"
+      ? protocolDesignForRunId(partialUsage.runId).schedule.runs
+          .find((run) => run.runId === partialUsage.runId)?.sessionId
       : null;
     const expectedSessionId = plannedSessionId ?? responseSessionId ?? eventSessionId;
     if (expectedSessionId && usageSessionId !== expectedSessionId) {
@@ -457,9 +455,7 @@ function readExecutionRecords(evidence, evidencePath) {
 }
 
 export function buildDescriptiveRuns(input, artifactRoot) {
-  const schedule = input.protocolId === "semantic-test-corpus-execution-v2"
-    ? abortedV2Schedule
-    : currentSchedule;
+  const schedule = protocolDesignForId(input.protocolId).schedule;
   const errors = validateJsonSchema(input, artifactSchema, { schemaDir: schemaRoot });
   if (errors.length > 0) {
     throw new Error(`Descriptive artifact manifest is invalid: ${errors[0].path} ${errors[0].message}`);
@@ -1015,9 +1011,7 @@ export function summarizeDescriptive(runs) {
     status: "eligible",
     reason: null
   }));
-  const schedule = units[0]?.runId?.startsWith("V3-")
-    ? currentSchedule
-    : abortedV2Schedule;
+  const schedule = protocolDesignForRunId(units[0]?.runId).schedule;
   if (units.length !== schedule.runs.length) {
     throw new Error("Exactly 72 validated unit records are required; omissions are invalid");
   }

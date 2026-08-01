@@ -8,7 +8,7 @@ import {
   PROTOCOL_ID,
   inspectHelp,
   parseMcpList
-} from "./copilot-cli-v3.mjs";
+} from "./copilot-cli-v4.mjs";
 import { USAGE_COLUMNS } from "./export-local-usage.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 
@@ -16,7 +16,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = resolve(root, "..", "..");
 const schemaRoot = resolve(root, "schemas");
 const schema = JSON.parse(readFileSync(resolve(schemaRoot, "execution-preflight.schema.json"), "utf8"));
-const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.json"), "utf8"));
+const sourcePin = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "source-pin.json"), "utf8")
+);
 
 function commandParts(command) {
   return command.toLowerCase().endsWith(".mjs")
@@ -188,6 +190,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, `${JSON.stringify(output, null, 2)}\n`, { flag: "wx" });
   const unavailable = output.arms.filter((arm) => arm.status === "unavailable");
-  process.stdout.write(`${6 - unavailable.length}/6 arms available under v3 preflight\n`);
+  process.stdout.write(`${6 - unavailable.length}/6 arms available under v4 static preflight\n`);
   if (unavailable.length > 0) process.exitCode = 2;
 }

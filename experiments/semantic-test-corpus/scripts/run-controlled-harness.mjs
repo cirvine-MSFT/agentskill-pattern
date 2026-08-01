@@ -26,13 +26,14 @@ import { collectLocalEvidence } from "./collect-local-evidence.mjs";
 import { exportLocalUsage } from "./export-local-usage.mjs";
 import { preflightLocalModel } from "./preflight-local-model.mjs";
 import { preflightExecution } from "./preflight-execution.mjs";
+import { validateLivePreflight } from "./validate-live-preflight.mjs";
 import {
   MCP_TOOL_NAMES,
   availableToolsForArm,
   buildCopilotArgs,
   parseCopilotJsonl,
   resultEvent
-} from "./copilot-cli-v3.mjs";
+} from "./copilot-cli-v4.mjs";
 import { validateStartOrder } from "./validate-start-order.mjs";
 import { runDeterministicBlock } from "./run-deterministic-block.mjs";
 import { snapshotLocalCorpusStaging } from "../evaluator/adapter.mjs";
@@ -40,9 +41,15 @@ import { canonicalMetricsBytes, deriveMetricsArtifact } from "../evaluator/metri
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const contract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
-const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.json"), "utf8"));
+const schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+);
+const contract = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "arm-contract.json"), "utf8")
+);
+const sourcePin = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "source-pin.json"), "utf8")
+);
 const partialUsageSchema = JSON.parse(
   readFileSync(resolve(root, "schemas", "partial-usage.schema.json"), "utf8")
 );
@@ -88,7 +95,7 @@ function identity(path) {
   return { device: stats.dev.toString(), fileId: stats.ino.toString() };
 }
 
-function createSandbox(candidateRoot) {
+export function createSandbox(candidateRoot) {
   const runtimeRoot = resolve(candidateRoot, ".benchmark-runtime");
   const stagingRoot = resolve(runtimeRoot, "corpus-staging");
   const configPath = resolve(runtimeRoot, "corpus-sandbox.json");
@@ -104,8 +111,16 @@ function createSandbox(candidateRoot) {
     tokenHash: `sha256:${sha256(Buffer.from(token, "utf8"))}`,
     requestHash: request.requestHash,
     roots: {
-      contract: { path: contractRoot, identity: identity(contractRoot) },
-      staging: { path: stagingRoot, identity: identity(stagingRoot) }
+      contract: {
+        path: contractRoot,
+        access: "read-only",
+        identity: identity(contractRoot)
+      },
+      staging: {
+        path: stagingRoot,
+        access: "read-write",
+        identity: identity(stagingRoot)
+      }
     },
     lock: { waitTimeoutMs: 5000, staleAfterMs: 60000 }
   };
@@ -819,6 +834,7 @@ export function buildHarnessPlan({
       prompt: kickoffBytesForRun(armId, planned.seed).toString("utf8"),
       sessionId: planned.sessionId,
       model: arm.model,
+      reasoningEffort: arm.reasoningEffort,
       topLevelAgent: arm.topLevelAgent,
       candidateRoot: resolve(candidateRoot),
       mcpConfigPath: resolve(candidateRoot, ".benchmark-runtime", "mcp-config.json"),
@@ -857,7 +873,25 @@ export function runControlledHarness(options) {
   const planned = schedule.runs.find((run) => run.runId === plan.runId);
   const arm = contract.arms.find((item) => item.id === plan.armId);
   const armPreflight = preflight.arms.find((item) => item.armId === plan.armId);
-  if (options.dryRun) return { status: "dry-run", plan, preflight };
+  const livePreflightReasons = options.livePreflight
+    ? validateLivePreflight(options.livePreflight)
+    : ["a passing pilot-only live preflight artifact is required"];
+  if (options.dryRun) {
+    return {
+      status: "dry-run",
+      plan,
+      preflight,
+      livePreflight: {
+        status: livePreflightReasons.length === 0 ? "pass" : "unavailable",
+        reasons: livePreflightReasons
+      }
+    };
+  }
+  if (livePreflightReasons.length > 0) {
+    throw new Error(
+      `Measured execution is blocked before slot reservation: ${livePreflightReasons.join("; ")}`
+    );
+  }
   if (existsSync(plan.artifactRoot) && readdirSync(plan.artifactRoot).length > 0) {
     return recoverInterruptedSlot(plan, planned, preflight);
   }
@@ -1241,6 +1275,7 @@ export function runControlledHarness(options) {
       cwd: plan.candidateRoot,
       candidate_commit: boundary.terminalCommit,
       model: arm.model,
+      reasoningEffort: arm.reasoningEffort,
       agent: arm.topLevelAgent,
       prompt: kickoffBytes.toString("utf8"),
       prompt_sha256: plan.kickoffSha256,
@@ -1504,14 +1539,16 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     ["candidateRoot", "--candidate-root"],
     ["artifactRoot", "--artifact-root"],
     ["startIndexPath", "--start-index"],
+    ["livePreflightPath", "--live-preflight"],
     ["blockId", "--block"],
     ["arm", "--arm"]
   ].map(([key, flag]) => [key, argument(args, flag)]));
   if (Object.values(required).some((value) => value === undefined)) {
-    throw new Error("Usage: node scripts/run-controlled-harness.mjs --cli <copilot> --session-store <session-store.db> --candidate-root <external-empty-directory> --artifact-root <external-empty-directory> --start-index <external-index.json> --block <B01..B12> --arm <0..5> [--dry-run]");
+    throw new Error("Usage: node scripts/run-controlled-harness.mjs --cli <copilot> --session-store <session-store.db> --candidate-root <external-empty-directory> --artifact-root <external-empty-directory> --start-index <external-index.json> --live-preflight <passing-live-preflight.json> --block <B01..B12> --arm <0..5> [--dry-run]");
   }
   const output = runControlledHarness({
     ...required,
+    livePreflight: JSON.parse(readFileSync(resolve(required.livePreflightPath), "utf8")),
     armId: Number(required.arm),
     dryRun: args.includes("--dry-run")
   });

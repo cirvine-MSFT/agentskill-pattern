@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "live-preflight.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "pilotNamespace", "pilotSeries", "outcomeEligible",
+    "capturedAt", "cliVersion", "expectedTools", "builderBindings", "arms"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v4"},
+    "pilotNamespace": {"const": "semantic-test-corpus-v4-pilot-only"},
+    "pilotSeries": {"type": "string", "pattern": "^R[1-9][0-9]*$"},
+    "outcomeEligible": {"const": false},
+    "capturedAt": {"type": "string", "format": "date-time"},
+    "cliVersion": {"const": "1.0.77"},
+    "expectedTools": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "list_contract_files",
+          "read_contract_file",
+          "write_scenario_input",
+          "write_scenario_manifest"
+        ]
+      }
+    },
+    "builderBindings": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "arms": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "armId", "pilotId", "sessionId", "parentModel", "workerModel",
+          "reasoningEffort", "mechanism", "agentName", "status", "reasons",
+          "mcpHandshake", "terminalReturn", "eventsSha256", "usageSha256",
+          "stagingSha256", "commandSha256", "usage", "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "armId": {"type": "integer", "minimum": 1, "maximum": 5},
+          "pilotId": {"type": "string", "pattern": "^P4-SMOKE-R[1-9][0-9]*-A[1-5]$"},
+          "sessionId": {"type": "string", "format": "uuid"},
+          "parentModel": {"type": "string", "minLength": 1},
+          "workerModel": {"type": ["string", "null"]},
+          "reasoningEffort": {"type": ["string", "null"]},
+          "mechanism": {
+            "type": "string",
+            "enum": ["inline", "delegated-inherited", "delegated-fixed-model-profile"]
+          },
+          "agentName": {"type": ["string", "null"]},
+          "status": {"type": "string", "enum": ["pass", "fail"]},
+          "reasons": {"type": "array", "items": {"type": "string"}},
+          "mcpHandshake": {"type": "string", "enum": ["pass", "fail"]},
+          "terminalReturn": {"type": ["string", "null"]},
+          "eventsSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "usageSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "stagingSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "commandSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "usage": {
+            "type": "object",
+            "required": [
+              "parentCompletions", "workerCompletions", "inputTokens",
+              "outputTokens", "reasoningTokens", "nanoAiu", "durationMs"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "parentCompletions": {"type": "integer", "minimum": 0},
+              "workerCompletions": {"type": "integer", "minimum": 0},
+              "inputTokens": {"type": "integer", "minimum": 0},
+              "outputTokens": {"type": "integer", "minimum": 0},
+              "reasoningTokens": {"type": "integer", "minimum": 0},
+              "nanoAiu": {"type": "number", "minimum": 0},
+              "durationMs": {"type": "number", "minimum": 0}
+            }
+          },
+          "evidence": {
+            "type": "object",
+            "required": [
+              "eventsPath", "usagePath", "scenarioPath", "manifestPath", "commandPath"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "eventsPath": {"type": "string", "minLength": 1},
+              "usagePath": {"type": "string", "minLength": 1},
+              "scenarioPath": {"type": "string", "minLength": 1},
+              "manifestPath": {"type": "string", "minLength": 1},
+              "commandPath": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    }
+  }
+}

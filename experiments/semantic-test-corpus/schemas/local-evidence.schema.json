@@ -10,9 +10,9 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3"]},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
     "evidenceTier": {"const": "descriptive-local-v1"},
-    "runId": {"type": "string", "pattern": "^(?:B|V3-B)\\d{2}-A[0-5]$"},
+    "runId": {"type": "string", "pattern": "^(?:B|V[34]-B)\\d{2}-A[0-5]$"},
     "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
     "armId": {"type": "integer", "minimum": 1, "maximum": 5},
     "identity": {
@@ -248,6 +248,23 @@
         "invoked": {"type": "boolean"},
         "completed": {"type": "boolean"},
         "agentName": {"type": ["string", "null"]},
+        "skillCallId": {"type": ["string", "null"]},
+        "skillArgumentsSha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "skillResultSha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "skillContextSha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "taskPromptSha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
         "compactReturn": {"type": ["string", "null"]}
         ,"compactReturnBytes": {"type": ["integer", "null"], "minimum": 0}
       }

@@ -4,23 +4,18 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readAuthenticatedExport } from "./authenticated-export.mjs";
+import { protocolDesign, protocolDesignForRunId } from "./protocol-design.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const armContract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
-const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const currentSeeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
-const abortedV2Schedule = JSON.parse(
-  readFileSync(resolve(root, "design", "aborted-v2", "schedule.json"), "utf8")
-);
-const abortedV2Seeds = JSON.parse(
-  readFileSync(resolve(root, "design", "aborted-v2", "seeds.json"), "utf8")
-);
-const schedule = { runs: [...currentSchedule.runs, ...abortedV2Schedule.runs] };
+const designs = ["v2", "v3", "v4"].map(protocolDesign);
+const schedule = { runs: designs.flatMap((design) => design.schedule.runs) };
 const frozenRequest = JSON.parse(readFileSync(resolve(root, "design", "corpus-request.json"), "utf8"));
 const delegatedSkillSha256 = createHash("sha256")
   .update(readFileSync(resolve(root, "..", "..", ".github", "skills", "semantic-test-corpus", "SKILL.md")))
   .digest("hex");
-const MCP_TOOLS = new Set(armContract.commonContract.toolSurface);
+const MCP_TOOLS = new Set(
+  designs.flatMap((design) => design.contract.commonContract.toolSurface)
+);
 
 function argument(args, name) {
   const index = args.indexOf(name);
@@ -56,18 +51,19 @@ function expectedRoles(arm) {
 }
 
 function protocolSchedule(runId) {
-  return runId?.startsWith("V3-") ? currentSchedule : abortedV2Schedule;
+  return protocolDesignForRunId(runId).schedule;
 }
 
 function protocolSeeds(runId) {
-  return runId?.startsWith("V3-") ? currentSeeds : abortedV2Seeds;
+  return protocolDesignForRunId(runId).seeds;
 }
 
 function authenticatedRunMappings(payload) {
   const mappings = [];
   for (const creation of payload.events.filter((event) => event.type === "session.created")) {
     const planned = schedule.runs.find((run) => run.runId === creation.runId);
-    const arm = armContract.arms.find((item) => item.id === creation.armId);
+    const arm = protocolDesignForRunId(creation.runId).contract.arms
+      .find((item) => item.id === creation.armId);
     if (!planned
       || planned.armId === 0
       || planned.armId !== creation.armId
@@ -437,6 +433,9 @@ export function evaluateIsolationEvidence(authenticated, {
   snapshotPath
 }) {
   const { payload, authentication } = authenticated;
+  const design = protocolDesignForRunId(runId);
+  const armContract = design.contract;
+  const schedule = design.schedule;
   const arm = armContract.arms.find((item) => item.id === armId);
   const planned = schedule.runs.find((run) => run.runId === runId);
   const contract = resolve(contractRoot);

@@ -23,7 +23,7 @@
   ],
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3"]},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
     "attemptId": {"type": "string", "minLength": 1},
     "runId": {"type": "string"},
     "attemptNumber": {"const": 1},

@@ -1,0 +1,180 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v4",
+  "pilotNamespace": "semantic-test-corpus-v4-pilot-only",
+  "pilotSeries": "R3",
+  "outcomeEligible": false,
+  "capturedAt": "2026-08-01T04:14:28.704Z",
+  "cliVersion": "1.0.77",
+  "expectedTools": [
+    "list_contract_files",
+    "read_contract_file",
+    "write_scenario_input",
+    "write_scenario_manifest"
+  ],
+  "builderBindings": [
+    {
+      "path": "design/v4/condition-instructions.json",
+      "sha256": "f5233fa2274e721b998d3f4ee7b66ef90826ef8b0f6da391338f7e315b89f713"
+    },
+    {
+      "path": "scripts/collect-local-evidence.mjs",
+      "sha256": "372af1ae6d24b6d91c9f14c93837ac9471ae2e391c9d7e14e45b3cee62166a5f"
+    },
+    {
+      "path": "scripts/copilot-cli-v4.mjs",
+      "sha256": "738520f5b5fbfb13bb13d8c4ddf300efa4675253afa352a36c84514024119165"
+    },
+    {
+      "path": "scripts/execution-contract.mjs",
+      "sha256": "090dc8905d0008c052b1ea3381fc1d156320d3b6dd6e28482e7fb80100bbc8bc"
+    },
+    {
+      "path": "scripts/materialize-candidate.mjs",
+      "sha256": "6ba169fef1f5a37a67ef42296d772d62516fa8b8e77d7aeb8c65cabd454437f1"
+    },
+    {
+      "path": "scripts/mcp-live-probe.mjs",
+      "sha256": "5c90e358db6ea3b9a4ca8d76e90954e0e380642d49caded4cce546deb5a5aaf8"
+    },
+    {
+      "path": "scripts/run-controlled-harness.mjs",
+      "sha256": "59c68252750e98c6b258ceca886d9df4bb27187f9c266edb25983f624a4c9e36"
+    }
+  ],
+  "arms": [
+    {
+      "armId": 1,
+      "pilotId": "P4-SMOKE-R3-A1",
+      "sessionId": "02513361-f501-55c7-8878-33969a1c16a1",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": null,
+      "reasoningEffort": "medium",
+      "mechanism": "inline",
+      "agentName": null,
+      "status": "pass",
+      "reasons": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "1df667ad4bdc4148552020c18e36db1af6d8c8f4ff85aefb5a2dc62524192672",
+      "usageSha256": "355ba7f9a0298c070109654f80acefea67267523efb3580092392bc9d6699be4",
+      "stagingSha256": "cdd139139aa1e664c8c78ed643adc0a3faafcb04c1f9805673e9b37e517d3fc3",
+      "usage": {
+        "parentCompletions": 5,
+        "workerCompletions": 0,
+        "inputTokens": 36239,
+        "outputTokens": 278,
+        "reasoningTokens": 64,
+        "nanoAiu": 7867375000,
+        "durationMs": 11716
+      }
+    },
+    {
+      "armId": 2,
+      "pilotId": "P4-SMOKE-R3-A2",
+      "sessionId": "b0ae46e8-7d50-58bb-be6c-fa20f9afc3f2",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": "gpt-5.6-sol",
+      "reasoningEffort": "medium",
+      "mechanism": "delegated-inherited",
+      "agentName": "semantic-test-corpus",
+      "status": "pass",
+      "reasons": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "44d0b961027f9fb383a0dc9a69828ad998342e3182c002b1b0a11b63db093d87",
+      "usageSha256": "8bb1ff32f3678095eef744856c2b1826ab4f6e882d24e272b1b4e51a6c39a4d5",
+      "stagingSha256": "6bf1f66c798cbdfcedf4296c217cef93e74838acc6d6cb38f3f0d49dd3126fe5",
+      "usage": {
+        "parentCompletions": 3,
+        "workerCompletions": 5,
+        "inputTokens": 48801,
+        "outputTokens": 472,
+        "reasoningTokens": 65,
+        "nanoAiu": 12926550000,
+        "durationMs": 14863
+      }
+    },
+    {
+      "armId": 3,
+      "pilotId": "P4-SMOKE-R3-A3",
+      "sessionId": "7b832e84-7976-5a28-8b9b-b53efa899191",
+      "parentModel": "claude-haiku-4.5",
+      "workerModel": null,
+      "reasoningEffort": null,
+      "mechanism": "inline",
+      "agentName": null,
+      "status": "pass",
+      "reasons": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "3dc45254de299419a37ca8c2326110f2fd51cb8177092e6f5a499b5bed8da6c9",
+      "usageSha256": "b455e5285777389c21509cbee6447426500a3b663de8aa7ce4f5a90b34fcd0db",
+      "stagingSha256": "cdd139139aa1e664c8c78ed643adc0a3faafcb04c1f9805673e9b37e517d3fc3",
+      "usage": {
+        "parentCompletions": 5,
+        "workerCompletions": 0,
+        "inputTokens": 39662,
+        "outputTokens": 685,
+        "reasoningTokens": 300,
+        "nanoAiu": 2384070000,
+        "durationMs": 10813
+      }
+    },
+    {
+      "armId": 4,
+      "pilotId": "P4-SMOKE-R3-A4",
+      "sessionId": "3b73e9ce-3d9a-55d8-a9c5-74972e78d123",
+      "parentModel": "claude-haiku-4.5",
+      "workerModel": "claude-haiku-4.5",
+      "reasoningEffort": null,
+      "mechanism": "delegated-inherited",
+      "agentName": "semantic-test-corpus",
+      "status": "fail",
+      "reasons": [
+        "Skill context injection provenance is invalid",
+        "Task invocation differs from the exact per-block worker prompt bytes"
+      ],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "68c57d02cb39cf80fe55330c0b021fc7ca869f95057b9149f28b53e4a9cd482a",
+      "usageSha256": "538343c7b87083941bcd927193201ebd3d8c0e78d74888aedca7560980cea44b",
+      "stagingSha256": "6bf1f66c798cbdfcedf4296c217cef93e74838acc6d6cb38f3f0d49dd3126fe5",
+      "usage": {
+        "parentCompletions": 2,
+        "workerCompletions": 5,
+        "inputTokens": 48990,
+        "outputTokens": 1523,
+        "reasoningTokens": 783,
+        "nanoAiu": 3324335000,
+        "durationMs": 20243
+      }
+    },
+    {
+      "armId": 5,
+      "pilotId": "P4-SMOKE-R3-A5",
+      "sessionId": "a004b6ba-af82-5d62-8052-1684dce45caf",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": "claude-haiku-4.5",
+      "reasoningEffort": "medium",
+      "mechanism": "delegated-fixed-model-profile",
+      "agentName": "semantic-test-corpus-haiku",
+      "status": "pass",
+      "reasons": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "919e1702d40cf4be2fadaf2a0504cdeb9bff493eec04e846e226c69fe9dbf2d4",
+      "usageSha256": "58eb15570970a9fb73aa0a2dc3f652dff83614a66c65d79df1f7eefb734f66c0",
+      "stagingSha256": "50289b88ede42b84f537a8a3d5e9ed73dda8adf9a0c257949ee969aa868792ce",
+      "usage": {
+        "parentCompletions": 3,
+        "workerCompletions": 5,
+        "inputTokens": 57682,
+        "outputTokens": 792,
+        "reasoningTokens": 186,
+        "nanoAiu": 10018075000,
+        "durationMs": 15349
+      }
+    }
+  ]
+}
