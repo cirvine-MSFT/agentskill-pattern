@@ -7,8 +7,15 @@ import { readAuthenticatedExport } from "./authenticated-export.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const armContract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const seeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
+const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const currentSeeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
+const abortedV2Schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "aborted-v2", "schedule.json"), "utf8")
+);
+const abortedV2Seeds = JSON.parse(
+  readFileSync(resolve(root, "design", "aborted-v2", "seeds.json"), "utf8")
+);
+const schedule = { runs: [...currentSchedule.runs, ...abortedV2Schedule.runs] };
 const frozenRequest = JSON.parse(readFileSync(resolve(root, "design", "corpus-request.json"), "utf8"));
 const delegatedSkillSha256 = createHash("sha256")
   .update(readFileSync(resolve(root, "..", "..", ".github", "skills", "semantic-test-corpus", "SKILL.md")))
@@ -46,6 +53,14 @@ function argumentsSha256(value) {
 
 function expectedRoles(arm) {
   return arm.delegated ? ["parent", "worker"] : ["parent"];
+}
+
+function protocolSchedule(runId) {
+  return runId?.startsWith("V3-") ? currentSchedule : abortedV2Schedule;
+}
+
+function protocolSeeds(runId) {
+  return runId?.startsWith("V3-") ? currentSeeds : abortedV2Seeds;
 }
 
 function authenticatedRunMappings(payload) {
@@ -315,7 +330,8 @@ export function evaluateStartOrder(payload, blockId) {
   const violations = [];
   const starts = payload.events.filter((event) =>
     event.type === "run.started" && event.blockId === blockId);
-  const plannedStarts = schedule.runs.filter((run) => run.blockId === blockId);
+  const selectedSchedule = protocolSchedule(starts[0]?.runId);
+  const plannedStarts = selectedSchedule.runs.filter((run) => run.blockId === blockId);
   if (starts.length !== plannedStarts.length) {
     violations.push(`block ${blockId} requires exactly ${plannedStarts.length} signed run starts`);
   }
@@ -340,7 +356,7 @@ export function evaluateStartOrder(payload, blockId) {
     }
   }
   for (const event of starts) {
-    const planned = schedule.runs.find((run) => run.runId === event.runId);
+    const planned = selectedSchedule.runs.find((run) => run.runId === event.runId);
     if (!planned
       || event.blockId !== planned.blockId
       || event.armId !== planned.armId
@@ -770,7 +786,8 @@ export function evaluateIsolationEvidence(authenticated, {
       || successfulScenarioWrites.some((tool) => !snapshotCases.has(tool.scenarioId))) {
       violations.push("adapter snapshot successful-write count differs from authenticated MCP results");
     }
-    const expectedSeed = seeds.blocks.find((block) => block.id === planned?.blockId)?.seed;
+    const expectedSeed = protocolSeeds(runId).blocks
+      .find((block) => block.id === planned?.blockId)?.seed;
     const contractRequest = JSON.parse(readFileSync(resolve(contract, "request.json"), "utf8"));
     if (snapshotDocument.generator?.armId !== armId
       || snapshotDocument.generator?.blockId !== planned?.blockId

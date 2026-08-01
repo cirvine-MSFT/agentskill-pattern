@@ -48,7 +48,8 @@ export function preflightLocalModel(evidence, evidenceBytes) {
     mechanism: evidence.availability.mechanism.status === "available",
     tools: evidence.tools.callCount > 0
       && evidence.tools.resultCount === evidence.tools.callCount
-      && evidence.tools.calls.length > 0,
+      && evidence.tools.calls.length > 0
+      && evidence.availability.mechanism.status === "available",
     roles: mismatchReasons.length === 0
       && !evidence.availability.model.reasons.some((reason) =>
         reason.includes("lifecycle") || reason.includes("role")),
@@ -76,7 +77,12 @@ export function preflightLocalModel(evidence, evidenceBytes) {
     reasons.push(...missingReasons, ...evidence.availability.model.reasons);
   }
   for (const [name, passed] of Object.entries(checks)) {
-    if (!passed) reasons.push(`${name} eligibility evidence is unavailable or nonconforming`);
+    if (!passed) {
+      reasons.push(`${name} eligibility evidence is unavailable or nonconforming`);
+      if (["mechanism", "tools"].includes(name)) {
+        reasons.push(...evidence.availability.mechanism.reasons);
+      }
+    }
   }
   if (reasons.length > 0) status = "unavailable";
   const output = {

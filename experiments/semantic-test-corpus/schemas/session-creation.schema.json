@@ -1,59 +1,121 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "session-creation.schema.json",
-  "type": "object",
-  "required": ["formatVersion", "operation", "capturedAt", "request", "response"],
-  "additionalProperties": false,
-  "properties": {
-    "formatVersion": {"const": 1},
-    "operation": {"const": "create_session"},
-    "capturedAt": {"type": "string"},
-    "request": {
+  "oneOf": [
+    {
       "type": "object",
-      "required": [
-        "project_id", "execution_location", "coordinate_with_creator",
-        "kickoff", "candidate_commit"
-      ],
+      "required": ["formatVersion", "operation", "capturedAt", "request", "response"],
       "additionalProperties": false,
       "properties": {
-        "project_id": {"type": "string", "minLength": 1},
-        "execution_location": {"const": "local"},
-        "coordinate_with_creator": {"const": false},
-        "candidate_commit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
-        "kickoff": {
+        "formatVersion": {"const": 1},
+        "operation": {"const": "create_session"},
+        "capturedAt": {"type": "string"},
+        "request": {
           "type": "object",
           "required": [
-            "mode", "model", "prompt", "agent", "context_tier", "reasoning_effort"
+            "project_id", "execution_location", "coordinate_with_creator",
+            "kickoff", "candidate_commit"
           ],
           "additionalProperties": false,
           "properties": {
-            "mode": {"const": "autopilot"},
-            "model": {"type": "string", "minLength": 1},
-            "prompt": {"type": "string", "minLength": 1},
-            "agent": {"type": "null"},
-            "context_tier": {"const": "default"},
-            "reasoning_effort": {"const": "medium"}
+            "project_id": {"type": "string", "minLength": 1},
+            "execution_location": {"const": "local"},
+            "coordinate_with_creator": {"const": false},
+            "candidate_commit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+            "kickoff": {
+              "type": "object",
+              "required": [
+                "mode", "model", "prompt", "agent", "context_tier", "reasoning_effort"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "mode": {"const": "autopilot"},
+                "model": {"type": "string", "minLength": 1},
+                "prompt": {"type": "string", "minLength": 1},
+                "agent": {"type": "null"},
+                "context_tier": {"const": "default"},
+                "reasoning_effort": {"const": "medium"}
+              }
+            }
+          }
+        },
+        "response": {
+          "type": "object",
+          "required": [
+            "project_session_id", "project_id", "execution_location",
+            "kickoff_mode", "kickoff_model", "kickoff_consumed",
+            "kickoff_prompt_sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "project_session_id": {"type": "string", "minLength": 1},
+            "project_id": {"type": "string", "minLength": 1},
+            "execution_location": {"const": "local"},
+            "kickoff_mode": {"const": "autopilot"},
+            "kickoff_model": {"type": "string", "minLength": 1},
+            "kickoff_consumed": {"const": true},
+            "kickoff_prompt_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
           }
         }
       }
     },
-    "response": {
+    {
       "type": "object",
-      "required": [
-        "project_session_id", "project_id", "execution_location",
-        "kickoff_mode", "kickoff_model", "kickoff_consumed",
-        "kickoff_prompt_sha256"
-      ],
+      "required": ["formatVersion", "operation", "capturedAt", "request", "response"],
       "additionalProperties": false,
       "properties": {
-        "project_session_id": {"type": "string", "minLength": 1},
-        "project_id": {"type": "string", "minLength": 1},
-        "execution_location": {"const": "local"},
-        "kickoff_mode": {"const": "autopilot"},
-        "kickoff_model": {"type": "string", "minLength": 1}
-        ,"kickoff_consumed": {"const": true}
-        ,"kickoff_prompt_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        "formatVersion": {"const": 2},
+        "operation": {"const": "copilot_prompt"},
+        "capturedAt": {"type": "string"},
+        "request": {
+          "type": "object",
+          "required": [
+            "session_id", "cwd", "candidate_commit", "model", "agent", "prompt",
+            "prompt_sha256", "output_format", "available_tools",
+            "disabled_mcp_servers", "mcp_config_path", "mcp_config_sha256",
+            "command_args"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "session_id": {"type": "string", "format": "uuid"},
+            "cwd": {"type": "string", "minLength": 1},
+            "candidate_commit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+            "model": {"type": "string", "minLength": 1},
+            "agent": {"type": ["string", "null"]},
+            "prompt": {"type": "string", "minLength": 1},
+            "prompt_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "output_format": {"const": "json"},
+            "available_tools": {
+              "type": "array",
+              "minItems": 4,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "disabled_mcp_servers": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "mcp_config_path": {"type": "string", "minLength": 1},
+            "mcp_config_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "command_args": {
+              "type": "array",
+              "minItems": 20,
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "response": {
+          "type": "object",
+          "required": ["result_session_id", "exit_code", "result_timestamp"],
+          "additionalProperties": false,
+          "properties": {
+            "result_session_id": {"type": "string", "format": "uuid"},
+            "exit_code": {"const": 0},
+            "result_timestamp": {"type": "string"}
+          }
+        }
       }
     }
-  }
+  ]
 }

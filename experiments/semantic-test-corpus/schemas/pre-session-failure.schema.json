@@ -9,36 +9,98 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3"]},
     "failureId": {"type": "string", "minLength": 1},
-    "runId": {"type": "string", "pattern": "^B\\d{2}-A[1-5]$"},
+    "runId": {"type": "string", "pattern": "^(?:B|V3-B)\\d{2}-A[1-5]$"},
     "attemptedAt": {"type": "string"},
-    "phase": {"const": "create_session"},
+    "phase": {
+      "enum": [
+        "create_session", "preflight", "candidate-materialization",
+        "sandbox-preparation", "kickoff-preparation"
+      ]
+    },
     "kickoffStarted": {"const": false},
     "sessionCreated": {"const": false},
     "reason": {"type": "string", "minLength": 1},
-    "receipt": {
-      "type": "object",
-      "required": ["receiptKind", "receiptId", "path", "sha256"],
-      "additionalProperties": false,
-      "properties": {
-        "receiptKind": {"const": "authoritative-pre-session-failure"},
-        "receiptId": {"type": "string", "minLength": 1},
-        "path": {"type": "string", "pattern": "^[^/\\\\]+\\.receipt\\.json$"},
-        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "bytes"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "bytes": {"type": "integer", "minimum": 0}
+        }
       }
     },
+    "receipt": {
+      "type": ["object", "null"]
+    },
     "usage": {
-      "type": "object",
-      "required": ["aiCredits", "premiumRequests", "nanoAiu", "modelTokens", "completionCount"],
-      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  "oneOf": [
+    {
       "properties": {
-        "aiCredits": {"const": 0},
-        "premiumRequests": {"type": "null"},
-        "nanoAiu": {"const": 0},
-        "modelTokens": {"const": 0},
-        "completionCount": {"const": 0}
+        "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+        "phase": {"const": "create_session"},
+        "evidence": {"maxItems": 0},
+        "receipt": {
+          "type": "object",
+          "required": ["receiptKind", "receiptId", "path", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "receiptKind": {"const": "authoritative-pre-session-failure"},
+            "receiptId": {"type": "string", "minLength": 1},
+            "path": {"type": "string", "pattern": "^[^/\\\\]+\\.receipt\\.json$"},
+            "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }
+        },
+        "usage": {
+          "type": "object",
+          "required": ["aiCredits", "premiumRequests", "nanoAiu", "modelTokens", "completionCount"],
+          "additionalProperties": false,
+          "properties": {
+            "aiCredits": {"const": 0},
+            "premiumRequests": {"type": "null"},
+            "nanoAiu": {"const": 0},
+            "modelTokens": {"const": 0},
+            "completionCount": {"const": 0}
+          }
+        }
+      }
+    },
+    {
+      "required": ["evidence"],
+      "properties": {
+        "protocolId": {"const": "semantic-test-corpus-execution-v3"},
+        "phase": {
+          "enum": [
+            "preflight", "candidate-materialization",
+            "sandbox-preparation", "kickoff-preparation"
+          ]
+        },
+        "receipt": {"type": "null"},
+        "usage": {
+          "type": "object",
+          "required": [
+            "aiCredits", "premiumRequests", "nanoAiu", "modelTokens",
+            "completionCount", "unavailableReason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "aiCredits": {"type": "null"},
+            "premiumRequests": {"type": "null"},
+            "nanoAiu": {"type": "null"},
+            "modelTokens": {"type": "null"},
+            "completionCount": {"type": "null"},
+            "unavailableReason": {"type": "string", "minLength": 1}
+          }
+        }
       }
     }
-  }
+  ]
 }

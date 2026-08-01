@@ -27,7 +27,7 @@ function verifyPinnedGenerator() {
   if (tree.status !== 0 || tree.stdout.trim() !== sourcePin.generatorTree) {
     throw new Error("Arm 0 generator commit/tree pin is unavailable");
   }
-  for (const path of [...GENERAL_GENERATOR_DEPENDENCIES, "design/schedule.json", "design/seeds.json"]) {
+  for (const path of GENERAL_GENERATOR_DEPENDENCIES) {
     const absolute = resolve(root, path);
     const repositoryPath = relative(repositoryRoot, absolute).replaceAll("\\", "/");
     const pinnedBlob = sourcePin.generatorBlobs[repositoryPath];
