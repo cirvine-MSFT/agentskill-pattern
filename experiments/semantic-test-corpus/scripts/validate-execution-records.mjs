@@ -73,17 +73,22 @@ export function validateExecutionRecords({
   } catch (error) {
     errors.push(`model preflight evidence is invalid: ${error.message}`);
   }
-  if (preflight.status !== "pass" && attempt.evaluatorSnapshotPath !== null) {
+  const v5 = attempt.protocolId === "semantic-test-corpus-execution-v5";
+  if (!v5 && preflight.status !== "pass" && attempt.evaluatorSnapshotPath !== null) {
     errors.push("non-passing model preflight cannot have an evaluator snapshot");
   }
   if (preflight.status === "pass") {
     if (attempt.status === "excluded") {
       errors.push("passing model preflight cannot have an excluded attempt");
     }
+  } else if (v5) {
+    if (attempt.status !== "measured-failure" || attempt.outcomesOpenedAt !== null) {
+      errors.push("v5 non-passing treatment evidence requires a measured failure");
+    }
   } else if (attempt.status !== "excluded"
     || attempt.evaluatorSnapshotPath !== null
     || attempt.outcomesOpenedAt !== null) {
-    errors.push("unavailable model preflight requires exclusion with no snapshot/outcome access");
+    errors.push("legacy unavailable model preflight requires exclusion with no snapshot/outcome access");
   }
   if (manifest.appProjectSessionId !== attempt.appProjectSessionId
     || manifest.cliSessionId !== attempt.cliSessionId) {

@@ -9,9 +9,9 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4", "semantic-test-corpus-execution-v5"]},
     "failureId": {"type": "string", "minLength": 1},
-    "runId": {"type": "string", "pattern": "^(?:B|V[34]-B)\\d{2}-A[1-5]$"},
+    "runId": {"type": "string", "pattern": "^(?:B|V[345]-B)\\d{2}-A[1-5]$"},
     "attemptedAt": {"type": "string"},
     "phase": {
       "enum": [
@@ -76,7 +76,7 @@
     {
       "required": ["evidence"],
       "properties": {
-        "protocolId": {"enum": ["semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
+        "protocolId": {"enum": ["semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4", "semantic-test-corpus-execution-v5"]},
         "phase": {
           "enum": [
             "preflight", "candidate-materialization",

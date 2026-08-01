@@ -1,0 +1,240 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v5",
+  "pilotNamespace": "semantic-test-corpus-v5-pilot-only-8c705727-fd93-47f7-9c72-f8cff3442523",
+  "pilotSeries": "R1",
+  "outcomeEligible": false,
+  "capturedAt": "2026-08-01T06:34:27.306Z",
+  "cliVersion": "1.0.77",
+  "expectedTools": [
+    "list_contract_files",
+    "read_contract_file",
+    "write_scenario_input",
+    "write_scenario_manifest"
+  ],
+  "builderBindings": [
+    {
+      "path": "design/v5/condition-instructions.json",
+      "sha256": "08e61486b8093ddb9ccfa20fa756f80c73acaec97c009408c16ad6b65ae7b727"
+    },
+    {
+      "path": "scripts/collect-local-evidence.mjs",
+      "sha256": "b09968e92563989bf2f88fb8707bcdb003b3288aeff5207076768833eeb8a8dc"
+    },
+    {
+      "path": "scripts/copilot-cli-v5.mjs",
+      "sha256": "9a6a327bd7ff3a32d72d0c64a842bef7b5fbc69d251946ca56203bb03e363559"
+    },
+    {
+      "path": "scripts/execution-contract.mjs",
+      "sha256": "30d395bfc9f4b438c69df7579123a3d625219a6c9cf27c4e736faa839eec59f8"
+    },
+    {
+      "path": "scripts/live-preflight.mjs",
+      "sha256": "6cbb67f68f58f9f1191277af125f63abd23f6a0a234b20cb9bd9f72b05681d68"
+    },
+    {
+      "path": "scripts/materialize-candidate.mjs",
+      "sha256": "ea83db4b7de4e2c59a1feb6fef4ac29f89875cdb7f26682f866bc928d30a64d3"
+    },
+    {
+      "path": "scripts/mcp-live-probe.mjs",
+      "sha256": "842c4d5bcf892cec1468013cb1d43482d3afa9da4d7489a8dd42bd731fa63740"
+    },
+    {
+      "path": "scripts/preflight-execution.mjs",
+      "sha256": "36e963e0d35364d9bbfb242bde091cace1a8a9fcc2ed3c5009b67642b6df5cd6"
+    },
+    {
+      "path": "scripts/run-controlled-harness.mjs",
+      "sha256": "1e1bff7e125cb9eed3f3d68b17e317e6b33d74fa30cae1c4f0b8aab89f86160b"
+    },
+    {
+      "path": "scripts/validate-live-preflight.mjs",
+      "sha256": "46332cd333bd4b9e45481aa21c7bfd0d2d9680d1ce31e4803803c86806266b03"
+    },
+    {
+      "path": "schemas/live-preflight.schema.json",
+      "sha256": "4750b25ebc84ad033df66d189aa7025b30ec3e634c095cf732043840ae26353e"
+    }
+  ],
+  "arms": [
+    {
+      "armId": 1,
+      "pilotId": "P5-SMOKE-R1-A1",
+      "sessionId": "48721aa0-4204-50d8-9657-ebc4c51b0e51",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": null,
+      "reasoningEffort": "medium",
+      "mechanism": "inline",
+      "agentName": null,
+      "status": "eligible",
+      "reasons": [],
+      "treatmentObservations": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "c7141ff135ef1d51e135e6376fd665902e1574e24fda03784fba9d9b4e764e03",
+      "usageSha256": "482ca5a7484c2e6074fc446a27ab20061a542ea9a0fb04f45afe61fe97a17233",
+      "stagingSha256": "cdd139139aa1e664c8c78ed643adc0a3faafcb04c1f9805673e9b37e517d3fc3",
+      "commandSha256": "e30fc06c834c4e896fcebf401f92d15df07568a451136ee8a922f5dfc96a7868",
+      "usage": {
+        "parentCompletions": 5,
+        "workerCompletions": 0,
+        "inputTokens": 36378,
+        "outputTokens": 299,
+        "reasoningTokens": 85,
+        "nanoAiu": 7958600000,
+        "durationMs": 8791
+      },
+      "evidence": {
+        "eventsPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A1\\artifacts\\stdout.jsonl",
+        "usagePath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A1\\artifacts\\usage.json",
+        "scenarioPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A1\\candidate\\.benchmark-runtime\\corpus-staging\\scenarios\\pilot-scenario-001.json",
+        "manifestPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A1\\candidate\\.benchmark-runtime\\corpus-staging\\manifest.json",
+        "commandPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A1\\artifacts\\command.json"
+      }
+    },
+    {
+      "armId": 2,
+      "pilotId": "P5-SMOKE-R1-A2",
+      "sessionId": "70a758e4-be7b-5421-a345-e00f200f07e8",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": "gpt-5.6-sol",
+      "reasoningEffort": "medium",
+      "mechanism": "delegated-inherited",
+      "agentName": "semantic-test-corpus",
+      "status": "eligible",
+      "reasons": [],
+      "treatmentObservations": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "f418f724dfbddcd3b04e595f7cb91785f18f52c8ecb7e5f8f36b11bacccd364e",
+      "usageSha256": "7002b7c743e5c9af0860271ae104ce254111a9b6c8360f6785b91d6bb80d7d46",
+      "stagingSha256": "f7f25783ad0a857033bf05800fda1ea1c8777b5368068abd788a3c22cabd794f",
+      "commandSha256": "084c55dac945cb0919b02502826091fe8cc29c54921de0dc8700bbbd514422eb",
+      "usage": {
+        "parentCompletions": 3,
+        "workerCompletions": 5,
+        "inputTokens": 48951,
+        "outputTokens": 494,
+        "reasoningTokens": 87,
+        "nanoAiu": 13029950000,
+        "durationMs": 15235
+      },
+      "evidence": {
+        "eventsPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A2\\artifacts\\stdout.jsonl",
+        "usagePath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A2\\artifacts\\usage.json",
+        "scenarioPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A2\\candidate\\.benchmark-runtime\\corpus-staging\\scenarios\\pilot-scenario-001.json",
+        "manifestPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A2\\candidate\\.benchmark-runtime\\corpus-staging\\manifest.json",
+        "commandPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A2\\artifacts\\command.json"
+      }
+    },
+    {
+      "armId": 3,
+      "pilotId": "P5-SMOKE-R1-A3",
+      "sessionId": "f25739ed-deac-59dc-943b-2bca8ae30bb7",
+      "parentModel": "claude-haiku-4.5",
+      "workerModel": null,
+      "reasoningEffort": null,
+      "mechanism": "inline",
+      "agentName": null,
+      "status": "eligible",
+      "reasons": [],
+      "treatmentObservations": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "896d609ce7e3ac0cdf4a31b7c4bed9611f5c8eb401d6e0f9382137b86ad9a2b7",
+      "usageSha256": "36edc94ef5c55073ad7628be1e12388e110bdc7f5dfc3049bb18177b76583ab6",
+      "stagingSha256": "cdd139139aa1e664c8c78ed643adc0a3faafcb04c1f9805673e9b37e517d3fc3",
+      "commandSha256": "e27a191f234a0decdbdc06b4696d615d41d6db25d3842fa7086752b08b3b596c",
+      "usage": {
+        "parentCompletions": 5,
+        "workerCompletions": 0,
+        "inputTokens": 39105,
+        "outputTokens": 748,
+        "reasoningTokens": 277,
+        "nanoAiu": 1968875000,
+        "durationMs": 15373
+      },
+      "evidence": {
+        "eventsPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A3\\artifacts\\stdout.jsonl",
+        "usagePath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A3\\artifacts\\usage.json",
+        "scenarioPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A3\\candidate\\.benchmark-runtime\\corpus-staging\\scenarios\\pilot-scenario-001.json",
+        "manifestPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A3\\candidate\\.benchmark-runtime\\corpus-staging\\manifest.json",
+        "commandPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A3\\artifacts\\command.json"
+      }
+    },
+    {
+      "armId": 4,
+      "pilotId": "P5-SMOKE-R1-A4",
+      "sessionId": "8c40f7e3-59dc-52a5-9e02-fb79742ec09c",
+      "parentModel": "claude-haiku-4.5",
+      "workerModel": "claude-haiku-4.5",
+      "reasoningEffort": null,
+      "mechanism": "delegated-inherited",
+      "agentName": "semantic-test-corpus",
+      "status": "eligible",
+      "reasons": [],
+      "treatmentObservations": [
+        "Task invocation differs from the exact per-block worker prompt bytes"
+      ],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "5a4c5db4834d443ee76105a9c5aaea86bd52368c67b71d864875c938ec9c25e1",
+      "usageSha256": "0aad25e16b54e3799b2770a8997883c7b73d152a10a523847202d87c117a5e60",
+      "stagingSha256": "6bf1f66c798cbdfcedf4296c217cef93e74838acc6d6cb38f3f0d49dd3126fe5",
+      "commandSha256": "59fffd33ca2f13d83c7e3ea3b2a2281cdee5161e81c903c86c4fc6b3483a1653",
+      "usage": {
+        "parentCompletions": 3,
+        "workerCompletions": 5,
+        "inputTokens": 59616,
+        "outputTokens": 1601,
+        "reasoningTokens": 816,
+        "nanoAiu": 4069315000,
+        "durationMs": 22205
+      },
+      "evidence": {
+        "eventsPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A4\\artifacts\\stdout.jsonl",
+        "usagePath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A4\\artifacts\\usage.json",
+        "scenarioPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A4\\candidate\\.benchmark-runtime\\corpus-staging\\scenarios\\pilot-scenario-001.json",
+        "manifestPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A4\\candidate\\.benchmark-runtime\\corpus-staging\\manifest.json",
+        "commandPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A4\\artifacts\\command.json"
+      }
+    },
+    {
+      "armId": 5,
+      "pilotId": "P5-SMOKE-R1-A5",
+      "sessionId": "71971731-ff04-5f3e-866a-64c6ec6ec08a",
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": "claude-haiku-4.5",
+      "reasoningEffort": "medium",
+      "mechanism": "delegated-fixed-model-profile",
+      "agentName": "semantic-test-corpus-haiku",
+      "status": "eligible",
+      "reasons": [],
+      "treatmentObservations": [],
+      "mcpHandshake": "pass",
+      "terminalReturn": "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
+      "eventsSha256": "535099bfc4eb5e6cdd50aca47f5465bf6970c4efa7d5acb44e92745679f41ab7",
+      "usageSha256": "f911ee8472a6587fe224b5d1b5ae4573546be23a9c349e74fec97a8cae03ecb6",
+      "stagingSha256": "cdd139139aa1e664c8c78ed643adc0a3faafcb04c1f9805673e9b37e517d3fc3",
+      "commandSha256": "025932a12b7cc698f4ec220959af02e4d008b3024e9880425aef81df3e745562",
+      "usage": {
+        "parentCompletions": 3,
+        "workerCompletions": 5,
+        "inputTokens": 58389,
+        "outputTokens": 849,
+        "reasoningTokens": 216,
+        "nanoAiu": 10149655000,
+        "durationMs": 19105
+      },
+      "evidence": {
+        "eventsPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A5\\artifacts\\stdout.jsonl",
+        "usagePath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A5\\artifacts\\usage.json",
+        "scenarioPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A5\\candidate\\.benchmark-runtime\\corpus-staging\\scenarios\\pilot-scenario-001.json",
+        "manifestPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A5\\candidate\\.benchmark-runtime\\corpus-staging\\manifest.json",
+        "commandPath": "C:\\Users\\cirvine\\.copilot\\session-state\\4962b87f-80f4-4f42-9eb4-98584d19b3a0\\files\\protocol-v5-smoke-r1\\P5-SMOKE-R1-A5\\artifacts\\command.json"
+      }
+    }
+  ]
+}

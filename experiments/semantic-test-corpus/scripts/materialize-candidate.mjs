@@ -106,11 +106,11 @@ export function materializeCandidate(destination, {
   allowTestDestination = false,
   blockId,
   abortedV2 = false,
-  protocolVersion = "v4"
+  protocolVersion = "v5"
 } = {}) {
   const version = abortedV2 ? "v2" : protocolVersion;
   const { candidateManifest: manifest, sourcePin, seeds } = protocolDesign(version);
-  const legacyTask = version !== "v4";
+  const legacyTask = !["v4", "v5"].includes(version);
   const block = seeds.blocks.find((item) => item.id === blockId);
   if (!block) throw new Error("A frozen block ID from design/seeds.json is required");
   const observedTree = runGit(repositoryRoot, [

@@ -7,7 +7,7 @@ import { readAuthenticatedExport } from "./authenticated-export.mjs";
 import { protocolDesign, protocolDesignForRunId } from "./protocol-design.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const designs = ["v2", "v3", "v4"].map(protocolDesign);
+const designs = ["v2", "v3", "v4", "v5"].map(protocolDesign);
 const schedule = { runs: designs.flatMap((design) => design.schedule.runs) };
 const frozenRequest = JSON.parse(readFileSync(resolve(root, "design", "corpus-request.json"), "utf8"));
 const delegatedSkillSha256 = createHash("sha256")

@@ -13,11 +13,12 @@ function design(version, parts) {
     ? ["design", "aborted-v2"]
     : version === "v3"
       ? ["design"]
-      : ["design", "v4"];
+      : ["design", version];
   return read(...prefix, ...parts);
 }
 
 export function protocolVersionForRunId(runId) {
+  if (/^V5-B/u.test(runId ?? "")) return "v5";
   if (/^V4-B/u.test(runId ?? "")) return "v4";
   if (/^V3-B/u.test(runId ?? "")) return "v3";
   if (/^B\d{2}-A/u.test(runId ?? "")) return "v2";
@@ -25,6 +26,7 @@ export function protocolVersionForRunId(runId) {
 }
 
 export function protocolVersionForId(protocolId) {
+  if (protocolId === "semantic-test-corpus-execution-v5") return "v5";
   if (protocolId === "semantic-test-corpus-execution-v4") return "v4";
   if (protocolId === "semantic-test-corpus-execution-v3") return "v3";
   if (protocolId === "semantic-test-corpus-execution-v2") return "v2";
@@ -32,7 +34,7 @@ export function protocolVersionForId(protocolId) {
 }
 
 export function protocolDesign(version) {
-  if (!["v2", "v3", "v4"].includes(version)) {
+  if (!["v2", "v3", "v4", "v5"].includes(version)) {
     throw new Error(`Unknown protocol version: ${version}`);
   }
   return {

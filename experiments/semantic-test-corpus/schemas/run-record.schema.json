@@ -11,8 +11,12 @@
       "else": {"properties": {"modelEvidence": {"type": "object"}}}
     },
     {
-      "if": {"properties": {"phase": {"enum": ["promoted", "complete"]}}},
+      "if": {"properties": {"phase": {"const": "promoted"}}},
       "then": {"required": ["staging", "metrics"]}
+    },
+    {
+      "if": {"properties": {"phase": {"const": "complete"}}},
+      "then": {"required": ["metrics"]}
     }
   ],
   "properties": {
@@ -73,10 +77,26 @@
       "properties": {
         "path": {"type": "string"},
         "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "snapshotSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
         "eventId": {"type": "string", "minLength": 1},
         "evaluatorSessionId": {"type": "string", "minLength": 1},
         "evaluatorProcessId": {"type": "string", "minLength": 1}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "required": [
+        "finalDisposition", "started", "treatmentAdherent",
+        "operationalSuccess", "failureKinds", "retryCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "finalDisposition": {"type": "string", "enum": ["success", "measured-failure", "unavailable"]},
+        "started": {"type": "boolean"},
+        "treatmentAdherent": {"type": ["boolean", "null"]},
+        "operationalSuccess": {"type": ["boolean", "null"]},
+        "failureKinds": {"type": "array", "items": {"type": "string"}},
+        "retryCount": {"const": 0}
       }
     },
     "timing": {

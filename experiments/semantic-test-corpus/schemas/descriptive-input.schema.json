@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4", "semantic-test-corpus-execution-v5"]},
     "runs": {
       "type": "array",
       "minItems": 0,
@@ -16,9 +16,47 @@
         "required": ["runId", "blockId", "armId", "endpoints"],
         "additionalProperties": false,
         "properties": {
-          "runId": {"type": "string", "pattern": "^(?:B|V[34]-B)\\d{2}-A[0-5]$"},
+          "runId": {"type": "string", "pattern": "^(?:B|V[345]-B)\\d{2}-A[0-5]$"},
           "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
           "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+          "outcome": {
+            "type": ["object", "null"],
+            "required": [
+              "disposition", "started", "treatmentAdherent", "operationalSuccess",
+              "semanticQualityScored", "scoringSource", "failureKinds",
+              "partialScenarioCount"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "disposition": {"type": "string", "enum": ["success", "measured-failure"]},
+              "started": {"const": true},
+              "treatmentAdherent": {"type": "boolean"},
+              "operationalSuccess": {"type": "boolean"},
+              "semanticQualityScored": {"const": true},
+              "scoringSource": {
+                "type": "string",
+                "enum": [
+                  "authenticated-snapshot",
+                  "authenticated-partial-snapshot",
+                  "zero-no-authenticated-snapshot"
+                ]
+              },
+              "failureKinds": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "model", "mechanism", "skill-order", "task-bytes",
+                    "worker-identity", "mcp", "terminal", "partial-staging",
+                    "budget", "timeout", "tool-misuse", "post-start-infrastructure",
+                    "unknown"
+                  ]
+                }
+              },
+              "partialScenarioCount": {"type": "integer", "minimum": 0, "maximum": 60}
+            }
+          },
           "endpoints": {
             "type": "object",
             "required": [

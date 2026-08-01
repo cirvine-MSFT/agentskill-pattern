@@ -8,7 +8,7 @@ import {
   PROTOCOL_ID,
   inspectHelp,
   parseMcpList
-} from "./copilot-cli-v4.mjs";
+} from "./copilot-cli-v5.mjs";
 import { USAGE_COLUMNS } from "./export-local-usage.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 
@@ -17,7 +17,7 @@ const repositoryRoot = resolve(root, "..", "..");
 const schemaRoot = resolve(root, "schemas");
 const schema = JSON.parse(readFileSync(resolve(schemaRoot, "execution-preflight.schema.json"), "utf8"));
 const sourcePin = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "source-pin.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "source-pin.json"), "utf8")
 );
 
 function commandParts(command) {

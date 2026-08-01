@@ -46,9 +46,10 @@ import {
   parseCopilotJsonl,
   predeterminedSessionId,
   resultEvent
-} from "../../scripts/copilot-cli-v4.mjs";
+} from "../../scripts/copilot-cli-v5.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
 import {
+  classifyMeasuredFailure,
   createSandbox,
   runControlledHarness
 } from "../../scripts/run-controlled-harness.mjs";
@@ -71,7 +72,11 @@ import {
   snapshotCorpusStaging,
   snapshotLocalCorpusStaging
 } from "../adapter.mjs";
-import { buildDescriptiveRuns, summarizeDescriptive } from "../descriptive-v2.mjs";
+import {
+  analyzeDescriptiveArtifacts,
+  buildDescriptiveRuns,
+  summarizeDescriptive
+} from "../descriptive-v2.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
 import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
@@ -82,7 +87,11 @@ import {
   assertAuthenticatedRunCoverage,
   verifyMetricsArtifact
 } from "../statistics.mjs";
-import { canonicalMetricsBytes, deriveMetricsArtifact } from "../metrics.mjs";
+import {
+  canonicalMetricsBytes,
+  deriveFailureMetricsArtifact,
+  deriveMetricsArtifact
+} from "../metrics.mjs";
 import { validateJsonSchema } from "../../validators/json-schema.mjs";
 import { validateStaging } from "../../validators/staging.mjs";
 import { createDispatcher } from "../../../../tools/semantic-corpus-mcp/protocol.mjs";
@@ -94,10 +103,10 @@ const evaluatorRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = resolve(evaluatorRoot, "..");
 const readRootJson = (...parts) => JSON.parse(readFileSync(resolve(root, ...parts), "utf8"));
 const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluatorRoot, ...parts), "utf8"));
-const frozenSchedule = readRootJson("design", "v4", "schedule.json");
-const frozenSeeds = readRootJson("design", "v4", "seeds.json");
-const frozenContract = readRootJson("design", "v4", "arm-contract.json");
-const frozenConditions = readRootJson("design", "v4", "condition-instructions.json");
+const frozenSchedule = readRootJson("design", "v5", "schedule.json");
+const frozenSeeds = readRootJson("design", "v5", "seeds.json");
+const frozenContract = readRootJson("design", "v5", "arm-contract.json");
+const frozenConditions = readRootJson("design", "v5", "condition-instructions.json");
 const tests = [];
 const liveEvidenceRoot = resolve(
   process.env.TEMP ?? resolve(root, ".."),
@@ -131,8 +140,8 @@ function fixtureLivePreflight(capturedAt = "2026-08-01T00:00:00.000Z") {
   mkdirSync(liveEvidenceRoot, { recursive: true });
   return {
     formatVersion: 1,
-    protocolId: "semantic-test-corpus-execution-v4",
-    pilotNamespace: "semantic-test-corpus-v4-pilot-only",
+    protocolId: "semantic-test-corpus-execution-v5",
+    pilotNamespace: "semantic-test-corpus-v5-pilot-only-8c705727-fd93-47f7-9c72-f8cff3442523",
     pilotSeries: "R1",
     outcomeEligible: false,
     capturedAt,
@@ -147,9 +156,9 @@ function fixtureLivePreflight(capturedAt = "2026-08-01T00:00:00.000Z") {
     arms: [1, 2, 3, 4, 5].map((armId) => {
       const arm = frozenContract.arms.find((item) => item.id === armId);
       const condition = frozenConditions.conditions.find((item) => item.armId === armId);
-      const pilotId = `P4-SMOKE-R1-A${armId}`;
+      const pilotId = `P5-SMOKE-R1-A${armId}`;
       const sessionId = predeterminedSessionId(
-        "semantic-test-corpus-v4-pilot-only",
+        "semantic-test-corpus-v5-pilot-only-8c705727-fd93-47f7-9c72-f8cff3442523",
         pilotId
       );
       const workerCallId = arm.delegated ? `worker-${armId}` : null;
@@ -378,8 +387,9 @@ function fixtureLivePreflight(capturedAt = "2026-08-01T00:00:00.000Z") {
         reasoningEffort: arm.reasoningEffort,
         mechanism: condition.execution,
         agentName: arm.agentName ?? null,
-        status: "pass",
+        status: "eligible",
         reasons: [],
+        treatmentObservations: [],
         mcpHandshake: "pass",
         terminalReturn: "corpus-staging/manifest.json - 1 scenarios - SUCCESS",
         eventsSha256: createHash("sha256").update(eventsBytes).digest("hex"),
@@ -805,15 +815,15 @@ test("baseline is deterministic and staging-valid", () => {
 
 test("randomized complete-block schedule is frozen", () => {
   const schedule = createSchedule();
-  assert.deepEqual(schedule, readRootJson("design", "v4", "schedule.json"));
-  assert.equal(schedule.protocolId, "semantic-test-corpus-execution-v4");
+  assert.deepEqual(schedule, readRootJson("design", "v5", "schedule.json"));
+  assert.equal(schedule.protocolId, "semantic-test-corpus-execution-v5");
   assert.equal(schedule.runNamespace,
-    "semantic-test-corpus-v4-6f7b153a-3790-4a95-b4b0-f4b40a9b4472");
+    "semantic-test-corpus-v5-0eb04ca0-7474-4fcc-9c2f-41802423e8d8");
   assert.equal(new Set(schedule.runs.filter((run) => run.armId !== 0)
     .map((run) => run.sessionId)).size, 60);
   assert(schedule.runs.filter((run) => run.armId === 0)
     .every((run) => run.sessionId === null));
-  assert(schedule.runs.every((run) => /^V4-B\d{2}-A[0-5]$/u.test(run.runId)));
+  assert(schedule.runs.every((run) => /^V5-B\d{2}-A[0-5]$/u.test(run.runId)));
   assert.equal(schedule.runs.length, 72);
   assert.equal(schedule.runs.filter((run) => run.armId === 0).length, 12);
   assert.equal(schedule.runs.filter((run) => run.armId !== 0).length, 60);
@@ -825,9 +835,98 @@ test("randomized complete-block schedule is frozen", () => {
   }
   assert.deepEqual(schedule.runs.map((run) => run.globalOrder),
     Array.from({ length: 72 }, (_, index) => index + 1));
+  const historical = ["B01-A1", "V3-B01-A1", "V4-B01-A1"]
+    .map((runId) => protocolDesignForRunId(runId));
+  const priorRunIds = new Set(historical.flatMap((design) =>
+    design.schedule.runs.map((run) => run.runId)));
+  const priorSessionIds = new Set(historical.flatMap((design) =>
+    design.schedule.runs.map((run) => run.sessionId).filter(Boolean)));
+  const priorSeeds = new Set(historical.flatMap((design) => [
+    design.schedule.randomizationSeed,
+    ...design.seeds.blocks.map((block) => block.seed)
+  ]));
+  assert(schedule.runs.every((run) => !priorRunIds.has(run.runId)));
+  assert(schedule.runs.filter((run) => run.sessionId)
+    .every((run) => !priorSessionIds.has(run.sessionId)));
+  assert(!priorSeeds.has(schedule.randomizationSeed));
+  assert(frozenSeeds.blocks.every((block) => !priorSeeds.has(block.seed)));
 });
 
-test("Copilot v4 command uses model-capable effort and predetermined identity", () => {
+test("v5 started failure taxonomy produces zero ITT quality without invented output", () => {
+  const cases = [
+    ["model completion failed", "model"],
+    ["delegation mechanism routing failed", "mechanism"],
+    ["Task invoked before Skill context", "skill-order"],
+    ["task bytes omitted terminal LF", "task-bytes"],
+    ["worker model identity mismatch", "worker-identity"],
+    ["MCP tool completion missing", "mcp"],
+    ["invalid terminal result event", "terminal"],
+    ["partial staging manifest", "partial-staging"],
+    ["token budget exceeded", "budget"],
+    ["session timed out", "timeout"],
+    ["forbidden tool misuse", "tool-misuse"]
+  ];
+  const failureKinds = cases.map(([reason, expected]) => {
+    const kinds = classifyMeasuredFailure(reason);
+    assert(kinds.includes(expected), `${reason}: ${kinds.join(", ")}`);
+    return expected;
+  });
+  const metrics = deriveFailureMetricsArtifact({
+    runId: "V5-B01-A2",
+    blockId: "B01",
+    armId: 2,
+    failureKinds
+  });
+  assert.equal(metrics.outcome.disposition, "measured-failure");
+  assert.equal(metrics.outcome.started, true);
+  assert.equal(metrics.outcome.treatmentAdherent, false);
+  assert.equal(metrics.outcome.operationalSuccess, false);
+  assert.equal(metrics.outcome.scoringSource, "zero-no-authenticated-snapshot");
+  assert.equal(metrics.outcome.partialScenarioCount, 0);
+  assert.equal(metrics.metrics.promotion.promotionRate, 0);
+  assert.equal(metrics.metrics.coverage.paths.rate, 0);
+  assert.equal(metrics.metrics.mutation.killRate, 0);
+});
+
+test("v5 complete blocks retain measured failures in paired descriptive contrasts", () => {
+  const observations = frozenSchedule.runs
+    .filter((run) => run.blockId === "B01")
+    .map((run) => ({
+      runId: run.runId,
+      blockId: run.blockId,
+      armId: run.armId,
+      disposition: run.armId === 2 ? "measured-failure" : "success",
+      ...(run.armId === 0 ? {} : { isolationVerified: true }),
+      promotionRate: run.armId === 2 ? 0 : 0.5,
+      semanticPathCoverage: run.armId === 2 ? 0 : 0.5,
+      mutantKillRate: run.armId === 2 ? 0 : 0.5
+    }));
+  const availabilityRows = frozenSchedule.runs.map((run) => ({
+    runId: run.runId,
+    blockId: run.blockId,
+    armId: run.armId,
+    promotionRate: 0,
+    semanticPathCoverage: 0,
+    mutantKillRate: 0
+  }));
+  const result = analyzeBaselineComparisons(observations, {
+    bindingAvailability: bindingAvailabilityFor(availabilityRows, ["V5-B01-A2"])
+  });
+  assert.deepEqual(result.analysisEligibility.completeBlocks, ["B01"]);
+  assert.equal(result.analysisEligibility.confirmatoryAvailable, false);
+  assert.match(result.analysisEligibility.unavailableReason, /descriptive ITT contrasts only/);
+  const failedArm = result.comparisons.find((comparison) =>
+    comparison.armId === 2 && comparison.endpoint === "promotionRate");
+  assert.deepEqual(failedArm.pairedBlocks, ["B01"]);
+  assert.deepEqual(failedArm.differences, [-0.5]);
+  assert.equal("noninferiority" in failedArm, false);
+  assert.equal("families" in result, false);
+  assert.equal("bootstrap" in result, false);
+  assert.doesNotMatch(JSON.stringify(result),
+    /pValue|confidenceInterval|noninferior|bootstrap|holm/i);
+});
+
+test("Copilot v5 command uses model-capable effort and predetermined identity", () => {
   const first = frozenSchedule.runs[0];
   assert.equal(
     predeterminedSessionId(frozenSchedule.runNamespace, first.runId),
@@ -891,7 +990,7 @@ test("Copilot v4 command uses model-capable effort and predetermined identity", 
   assert.equal(resultEvent(events, first.sessionId).exitCode, 0);
   assert.throws(() => resultEvent(events, randomUUID()), /predetermined UUID/);
 
-  const sourcePin = readRootJson("design", "v4", "source-pin.json");
+  const sourcePin = readRootJson("design", "v5", "source-pin.json");
   assert.match(
     sourcePin.sourceBlobs[".github/agents/semantic-test-corpus-haiku.agent.md"],
     /^[a-f0-9]{40,64}$/u
@@ -929,7 +1028,7 @@ test("captured timestamps enforce the strict 72-run global start order", () => {
     });
     const index = {
       formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v4",
+      protocolId: "semantic-test-corpus-execution-v5",
       captures
     };
     assert.deepEqual(validateStartOrder(index, { baseDir: temporary }), []);
@@ -1153,16 +1252,17 @@ test("sanitized A2 replay accepts Skill provenance and exact task bytes but pres
   assert(reordered.reasons.includes("Skill context injection provenance is invalid"));
 });
 
-test("fake CLI preflight and harness capture a complete immutable run", () => {
+test("fake CLI preflight and harness capture immutable success and failure outcomes", () => {
   const fakeCli = resolve(root, "fixtures", "fake-copilot-cli.mjs");
   const available = fixturePreflight(fakeCli, "2026-08-01T00:00:00.000Z");
   assert(available.arms.every((arm) => arm.status === "available"));
   const live = fixtureLivePreflight();
   assert.deepEqual(validateLivePreflight(live), []);
   const failedLive = structuredClone(live);
-  failedLive.arms[2].status = "fail";
+  failedLive.arms[2].status = "infrastructure-failure";
   failedLive.arms[2].reasons.push("fixture incompatibility");
-  assert(validateLivePreflight(failedLive).includes("every AI arm must pass live preflight"));
+  assert(validateLivePreflight(failedLive).includes(
+    "every AI arm must pass outcome-independent infrastructure eligibility"));
   const forgedLive = structuredClone(live);
   forgedLive.arms[0].usage.inputTokens += 1;
   assert(validateLivePreflight(forgedLive).some((reason) =>
@@ -1182,8 +1282,7 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
   writeFileSync(commandPath, originalCommandBytes);
   const capturedLive = readRootJson("design", "v4", "live-preflight-r3-summary.json");
   const capturedReasons = validateLivePreflight(capturedLive);
-  assert(capturedReasons.includes("every AI arm must pass live preflight"));
-  assert(capturedReasons.some((reason) => reason.includes("evidence is required")));
+  assert(capturedReasons.length > 0);
   process.env.FAKE_COPILOT_MCP_LIST_FAILURE = "1";
   const failedMcpList = fixturePreflight(fakeCli, "2026-08-01T00:00:00.000Z");
   delete process.env.FAKE_COPILOT_MCP_LIST_FAILURE;
@@ -1266,11 +1365,17 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       capturedAt: "2026-07-31T20:00:00.000Z",
       livePreflight: fixtureLivePreflight()
     });
-    assert.equal(result.status, "complete",
-      result.modelPreflight?.reasons.join("\n")
-      ?? result.disposition?.reason
-      ?? result.reason);
+    assert.equal(result.status, "measured-failure",
+      JSON.stringify({
+        preflight: result.modelPreflight?.reasons,
+        disposition: result.disposition?.reason,
+        reason: result.reason,
+        uncertainty: result.uncertainty?.reason
+      }));
     assert.equal(result.modelPreflight.status, "pass");
+    assert.equal(result.evaluation.treatmentAdherent, true);
+    assert.equal(result.evaluation.operationalSuccess, false);
+    assert(result.evaluation.failureKinds.includes("terminal"));
     assert.equal(result.evidence.trust.signed, false);
     assert.equal(result.evidence.trust.complianceProof, false);
     assert.equal(result.evidence.delegation.agentName, "semantic-test-corpus");
@@ -1299,10 +1404,10 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
         armId,
         capturedAt: "2026-07-31T20:00:00.000Z"
       });
-      assert.equal(armResult.status, "complete");
+      assert.equal(armResult.status, armId === 0 ? "complete" : "measured-failure");
       if (armId === 5) targetResult = armResult;
     }
-    assert.equal(targetResult.status, "complete");
+    assert.equal(targetResult.status, "measured-failure");
     assert.equal(targetResult.evidence.delegation.agentName,
       "semantic-test-corpus-haiku");
     assert.deepEqual(targetResult.evidence.models.observed.worker,
@@ -1325,9 +1430,61 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
         capturedAt: "2026-07-31T20:00:00.000Z"
       });
       delete process.env[variable];
-      assert.equal(rejected.status, "unavailable");
+      assert.equal(rejected.status, "measured-failure");
+      assert.equal(rejected.disposition.evidenceKind, "model-failure");
       assert(rejected.modelPreflight.reasons.some((reason) => reason.includes(expectedReason)));
     }
+
+    process.env.FAKE_COPILOT_MISSING_EVENT_MODEL = "1";
+    process.env.FAKE_COPILOT_PARTIAL_STAGING = "1";
+    const partialFailureRoot = resolve(temporary, "partial-treatment-failure");
+    const partialFailure = runFixtureHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(partialFailureRoot, "candidate"),
+      artifactRoot: resolve(partialFailureRoot, "artifacts"),
+      startIndexPath: resolve(partialFailureRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 2,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MISSING_EVENT_MODEL;
+    delete process.env.FAKE_COPILOT_PARTIAL_STAGING;
+    assert.equal(partialFailure.status, "measured-failure");
+    const partialFailureMetrics = JSON.parse(
+      readFileSync(partialFailure.evaluation.metricsPath, "utf8")
+    );
+    assert.equal(partialFailureMetrics.outcome.scoringSource,
+      "authenticated-partial-snapshot");
+    assert.equal(partialFailureMetrics.outcome.partialScenarioCount, 1);
+    assert.equal(partialFailureMetrics.outcome.treatmentAdherent, false);
+    assert.equal(partialFailureMetrics.outcome.operationalSuccess, true);
+    assert.equal(partialFailureMetrics.metrics.promotion.submittedCases, 1);
+    assert.equal(partialFailure.evidence.usage.total.aiCredits, 2);
+    assert.equal(partialFailure.evaluation.retryCount, 0);
+
+    process.env.FAKE_COPILOT_PARTIAL_STAGING = "1";
+    process.env.FAKE_COPILOT_NONZERO_EXIT = "1";
+    const nonzeroRoot = resolve(temporary, "nonzero-partial-failure");
+    const nonzero = runFixtureHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(nonzeroRoot, "candidate"),
+      artifactRoot: resolve(nonzeroRoot, "artifacts"),
+      startIndexPath: resolve(nonzeroRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 2,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_PARTIAL_STAGING;
+    delete process.env.FAKE_COPILOT_NONZERO_EXIT;
+    assert.equal(nonzero.status, "measured-failure");
+    const nonzeroMetrics = JSON.parse(readFileSync(nonzero.evaluation.metricsPath, "utf8"));
+    assert.equal(nonzeroMetrics.outcome.scoringSource, "authenticated-partial-snapshot");
+    assert.equal(nonzeroMetrics.outcome.partialScenarioCount, 1);
+    assert.equal(nonzeroMetrics.outcome.operationalSuccess, false);
+    assert.equal(nonzero.evidence.usage.total.aiCredits, 2);
+    assert(nonzero.evaluation.failureKinds.includes("terminal"));
 
     process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
     const failureRoot = resolve(temporary, "failure");
@@ -1342,8 +1499,8 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_CREATE_FAILURE;
-    assert.equal(failure.status, "started-uncertain");
-    assert.equal(failure.disposition.evidenceKind, "started-uncertain");
+    assert.equal(failure.status, "measured-failure");
+    assert.equal(failure.disposition.evidenceKind, "started-failure");
     assert.equal(failure.partialUsage.attempt.available, true);
     assert.equal(failure.partialUsage.attempt.path, "attempt-start.json");
     assert(existsSync(resolve(failureRoot, "artifacts", "attempt-start.json")));
@@ -1352,23 +1509,18 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert(existsSync(resolve(failureRoot, "artifacts", "process-result.json")));
     assert.equal(existsSync(resolve(failureRoot, "artifacts", "pre-session-failure-1.json")), false);
     rmSync(resolve(failureRoot, "start-index.json"));
-    const recoveredFailure = runFixtureHarness({
-      cli: fakeCli,
-      projectId: "fixture-project",
-      candidateRoot: resolve(failureRoot, "candidate"),
-      artifactRoot: resolve(failureRoot, "artifacts"),
-      startIndexPath: resolve(failureRoot, "start-index.json"),
-      blockId: "B01",
-      armId: 2,
-      capturedAt: "2026-07-31T20:00:00.000Z"
-    });
-    assert.equal(recoveredFailure.status, "started-uncertain");
-    assert.equal(recoveredFailure.recovered, true);
-    assert.equal(recoveredFailure.partialUsage.attempt.available, true);
-    assert.equal(
-      JSON.parse(readFileSync(resolve(failureRoot, "start-index.json"), "utf8"))
-        .captures[0].runId,
-      "V4-B01-A2"
+    assert.throws(
+      () => runFixtureHarness({
+        cli: fakeCli,
+        projectId: "fixture-project",
+        candidateRoot: resolve(failureRoot, "candidate"),
+        artifactRoot: resolve(failureRoot, "artifacts"),
+        startIndexPath: resolve(failureRoot, "start-index.json"),
+        blockId: "B01",
+        armId: 2,
+        capturedAt: "2026-07-31T20:00:00.000Z"
+      }),
+      /finalized slot and cannot be resumed/
     );
 
     const prelaunchRoot = resolve(temporary, "prelaunch-failure");
@@ -1415,7 +1567,7 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert.equal(existsSync(`${prelaunchIndexPath}.next`), false);
     assert.equal(
       JSON.parse(readFileSync(prelaunchIndexPath, "utf8")).captures[0].runId,
-      "V4-B01-A2"
+      "V5-B01-A2"
     );
     assert.equal(existsSync(
       resolve(prelaunchRoot, "start-index.json.slot-01.lock")
@@ -1456,7 +1608,7 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_MISSING_USAGE;
-    assert.equal(uncertain.status, "started-uncertain");
+    assert.equal(uncertain.status, "measured-failure");
     assert(existsSync(resolve(uncertainRoot, "artifacts", "lifecycle-start.json")));
     assert(existsSync(resolve(uncertainRoot, "artifacts", "captured.events.jsonl")));
     assert(existsSync(resolve(uncertainRoot, "artifacts", "unit-disposition.json")));
@@ -1490,18 +1642,16 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
-    assert.equal(partial.status, "started-uncertain");
-    assert.equal(partial.partialUsage.metrics.aiCredits.value, 2);
-    assert.equal(partial.partialUsage.metrics.nanoAiu.value, 2_000_000_000);
-    assert.equal(partial.partialUsage.metrics.inputTokens.value, 300);
-    assert.equal(partial.partialUsage.metrics.outputTokens.value, 30);
-    assert.equal(partial.partialUsage.metrics.modelTokens.value, 330);
-    assert.equal(partial.partialUsage.metrics.completionCount.value, 2);
-    assert.equal(partial.partialUsage.metrics.durationMs.value, 1000);
-    assert.equal(partial.partialUsage.metrics.toolCallCount.value, 4);
-    assert.equal(partial.partialUsage.metrics.toolResultCount.value, 4);
-    assert.equal(partial.partialUsage.attempt.available, true);
-    assert.equal(partial.partialUsage.attempt.attemptId, "V4-B01-A2-attempt-1");
+    assert.equal(partial.status, "measured-failure");
+    assert.equal(partial.evidence.usage.total.aiCredits, 2);
+    assert.equal(partial.evidence.usage.total.nanoAiu, 2_000_000_000);
+    assert.equal(partial.evidence.usage.total.inputTokens, 300);
+    assert.equal(partial.evidence.usage.total.outputTokens, 30);
+    assert.equal(partial.evidence.usage.total.modelTokens, 330);
+    assert.equal(partial.evidence.usage.total.completionCount, 2);
+    assert.equal(partial.evaluation.treatmentAdherent, true);
+    assert.equal(partial.evaluation.operationalSuccess, false);
+    assert(partial.evaluation.failureKinds.includes("partial-staging"));
 
     for (const [environmentName, invalidKind, costsAvailable] of [
       ["FAKE_COPILOT_MALFORMED_USAGE", "usage", false],
@@ -1522,7 +1672,7 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
         capturedAt: "2026-07-31T20:00:00.000Z"
       });
       delete process.env[environmentName];
-      assert.equal(invalid.status, "started-uncertain", environmentName);
+      assert.equal(invalid.status, "measured-failure", environmentName);
       assert(existsSync(invalid.dispositionPath), environmentName);
       const invalidSource = invalid.partialUsage.invalidSources.find((source) =>
         source.kind === invalidKind);
@@ -1550,14 +1700,16 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     delete process.env.FAKE_COPILOT_MCP_LIST_FAILURE;
     delete process.env.FAKE_COPILOT_MCP_COLLISION;
     delete process.env.FAKE_COPILOT_MISSING_EVENT_MODEL;
+    delete process.env.FAKE_COPILOT_PARTIAL_STAGING;
+    delete process.env.FAKE_COPILOT_NONZERO_EXIT;
     delete process.env.FAKE_COPILOT_DUPLICATE_TOOL_COMPLETION;
     rmSync(temporary, { recursive: true, force: true });
   }
 });
 
 test("condition instructions freeze the generated fixed-Haiku target mechanism", () => {
-  const conditions = readRootJson("design", "v4", "condition-instructions.json");
-  assert.equal(conditions.protocolId, "semantic-test-corpus-execution-v4");
+  const conditions = readRootJson("design", "v5", "condition-instructions.json");
+  assert.equal(conditions.protocolId, "semantic-test-corpus-execution-v5");
   assert.deepEqual(conditions.conditions.map((condition) => condition.armId), [0, 1, 2, 3, 4, 5]);
   assert.equal(conditions.conditions.find((condition) => condition.armId === 5).workerModel,
     "claude-haiku-4.5");
@@ -1655,7 +1807,6 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     const partialIndexPath = resolve(temporary, "partial-start-index.json");
     process.env.FAKE_COPILOT_START_ISO = new Date(Date.now() - 30_000)
       .toISOString();
-    process.env.FAKE_COPILOT_UNEXPECTED_STAGING = "1";
     const partialUncertain = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
@@ -1666,7 +1817,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       armId: 2,
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
-    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    process.env.FAKE_COPILOT_PARTIAL_STAGING = "1";
     const completeAi = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
@@ -1677,6 +1828,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       armId: 5,
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
+    delete process.env.FAKE_COPILOT_PARTIAL_STAGING;
     process.env.FAKE_COPILOT_MISSING_USAGE = "1";
     const noUsageUncertain = runFixtureHarness({
       cli: fakeCli,
@@ -1724,76 +1876,80 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_START_ISO;
-    assert.equal(partialUncertain.status, "started-uncertain");
-    assert.equal(completeAi.status, "complete");
+    assert.equal(partialUncertain.status, "measured-failure");
+    assert.equal(partialUncertain.disposition.evidenceKind, "model-failure");
+    assert.equal(partialUncertain.modelPreflight.status, "pass");
+    assert.equal(partialUncertain.evaluation.treatmentAdherent, true);
+    assert.equal(partialUncertain.evaluation.operationalSuccess, false);
+    assert.equal(completeAi.status, "measured-failure");
     assert.equal(completeBaseline.status, "complete");
-    assert.equal(noUsageUncertain.status, "started-uncertain");
-    assert.equal(malformedUsageUncertain.status, "started-uncertain");
-    assert.equal(mismatchedEventsUncertain.status, "started-uncertain");
+    assert.equal(noUsageUncertain.status, "measured-failure");
+    assert.equal(malformedUsageUncertain.status, "measured-failure");
+    assert.equal(mismatchedEventsUncertain.status, "measured-failure");
     const partialCaptures = JSON.parse(
       readFileSync(partialIndexPath, "utf8")
     ).captures;
     const uncertainDefinitions = new Map([
-      ["V4-B01-A2", {
-        runId: "V4-B01-A2",
+      ["V5-B01-A2", {
+        runId: "V5-B01-A2",
         blockId: "B01",
         armId: 2,
-        status: "unavailable",
-        snapshotPath: null,
-        metricsPath: null,
+        status: "measured-failure",
+        snapshotPath: partialUncertain.evaluation.snapshotPath,
+        metricsPath: partialUncertain.evaluation.metricsPath,
         executionPath: null,
-        localEvidencePath: null,
-        modelPreflightPath: null,
-        candidateRoot: null,
-        evaluationPath: null,
+        localEvidencePath: resolve(partialUncertain.plan.artifactRoot, "local-evidence.json"),
+        modelPreflightPath: resolve(partialUncertain.plan.artifactRoot, "model-preflight.json"),
+        candidateRoot: partialUncertain.plan.candidateRoot,
+        evaluationPath: resolve(partialUncertain.plan.artifactRoot, "evaluation.json"),
         startEvidencePath: null,
         endEvidencePath: null,
         dispositionPath: partialUncertain.dispositionPath
       }],
-      ["V4-B01-A1", {
-        runId: "V4-B01-A1",
+      ["V5-B01-A1", {
+        runId: "V5-B01-A1",
         blockId: "B01",
         armId: 1,
-        status: "unavailable",
+        status: "measured-failure",
         snapshotPath: null,
-        metricsPath: null,
+        metricsPath: noUsageUncertain.metricsPath,
         executionPath: null,
         localEvidencePath: null,
         modelPreflightPath: null,
         candidateRoot: null,
-        evaluationPath: null,
+        evaluationPath: noUsageUncertain.evaluationPath,
         startEvidencePath: null,
         endEvidencePath: null,
         dispositionPath: noUsageUncertain.dispositionPath
       }],
-      ["V4-B01-A3", {
-        runId: "V4-B01-A3",
+      ["V5-B01-A3", {
+        runId: "V5-B01-A3",
         blockId: "B01",
         armId: 3,
-        status: "unavailable",
+        status: "measured-failure",
         snapshotPath: null,
-        metricsPath: null,
+        metricsPath: malformedUsageUncertain.metricsPath,
         executionPath: null,
         localEvidencePath: null,
         modelPreflightPath: null,
         candidateRoot: null,
-        evaluationPath: null,
+        evaluationPath: malformedUsageUncertain.evaluationPath,
         startEvidencePath: null,
         endEvidencePath: null,
         dispositionPath: malformedUsageUncertain.dispositionPath
       }],
-      ["V4-B01-A4", {
-        runId: "V4-B01-A4",
+      ["V5-B01-A4", {
+        runId: "V5-B01-A4",
         blockId: "B01",
         armId: 4,
-        status: "unavailable",
+        status: "measured-failure",
         snapshotPath: null,
-        metricsPath: null,
+        metricsPath: mismatchedEventsUncertain.metricsPath,
         executionPath: null,
         localEvidencePath: null,
         modelPreflightPath: null,
         candidateRoot: null,
-        evaluationPath: null,
+        evaluationPath: mismatchedEventsUncertain.evaluationPath,
         startEvidencePath: null,
         endEvidencePath: null,
         dispositionPath: mismatchedEventsUncertain.dispositionPath
@@ -1803,8 +1959,8 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     const baselineRoot = completeBaseline.plan.artifactRoot;
     const aiRoot = completeAi.plan.artifactRoot;
     const eligibleDefinitions = new Map([
-      ["V4-B01-A0", {
-          runId: "V4-B01-A0",
+      ["V5-B01-A0", {
+          runId: "V5-B01-A0",
           blockId: "B01",
           armId: 0,
           status: "eligible",
@@ -1819,11 +1975,11 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
           endEvidencePath: resolve(baselineRoot, "lifecycle-end.json"),
           dispositionPath: null
         }],
-      ["V4-B01-A5", {
-          runId: "V4-B01-A5",
+      ["V5-B01-A5", {
+          runId: "V5-B01-A5",
           blockId: "B01",
           armId: 5,
-          status: "eligible",
+          status: "measured-failure",
           snapshotPath: resolve(aiRoot, "staging.json"),
           metricsPath: resolve(aiRoot, "metrics.json"),
           executionPath: null,
@@ -1833,7 +1989,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
           evaluationPath: resolve(aiRoot, "evaluation.json"),
           startEvidencePath: null,
           endEvidencePath: null,
-          dispositionPath: null
+          dispositionPath: completeAi.dispositionPath
         }]
     ]);
     const captures = [];
@@ -1853,15 +2009,40 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         orderBaseMs + index
       ).toISOString();
       const disposition = "unavailable";
+      const preSessionFailure = planned.runId === "V5-B02-A1";
       const syntheticSourcePath = resolve(temporary, `${planned.runId}.order-source.json`);
-      const syntheticSourceBytes = Buffer.from(`${JSON.stringify({
-        runId: planned.runId,
-        blockId: planned.blockId,
-        armId: planned.armId,
-        disposition,
-        recordedAt,
-        startedAt: null
-      })}\n`);
+      const syntheticSourceBytes = Buffer.from(`${JSON.stringify(
+        preSessionFailure
+          ? {
+              formatVersion: 1,
+              protocolId: "semantic-test-corpus-execution-v5",
+              failureId: `${planned.runId}-pre-session`,
+              runId: planned.runId,
+              attemptedAt: recordedAt,
+              phase: "preflight",
+              kickoffStarted: false,
+              sessionCreated: false,
+              reason: "fixture pre-session infrastructure failure",
+              evidence: [],
+              receipt: null,
+              usage: {
+                aiCredits: null,
+                premiumRequests: null,
+                nanoAiu: null,
+                modelTokens: null,
+                completionCount: null,
+                unavailableReason: "No session started"
+              }
+            }
+          : {
+              runId: planned.runId,
+              blockId: planned.blockId,
+              armId: planned.armId,
+              disposition,
+              recordedAt,
+              startedAt: null
+            }
+      )}\n`);
       const sourcePath = syntheticSourcePath;
       const sourceBytes = syntheticSourceBytes;
       writeFileSync(sourcePath, sourceBytes);
@@ -1879,13 +2060,13 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       const dispositionPath = resolve(temporary, `${planned.runId}.disposition.json`);
       writeFileSync(dispositionPath, `${JSON.stringify({
        formatVersion: 1,
-       protocolId: "semantic-test-corpus-execution-v4",
+       protocolId: "semantic-test-corpus-execution-v5",
        runId: planned.runId,
        blockId: planned.blockId,
        armId: planned.armId,
        status: "unavailable",
        reason: "fixture unavailable evidence",
-       evidenceKind: "preflight-unavailable",
+       evidenceKind: preSessionFailure ? "pre-session-failure" : "preflight-unavailable",
        sourcePath: sourcePath.slice(temporary.length + 1),
        sourceSha256: createHash("sha256").update(sourceBytes).digest("hex"),
        orderSourcePath: sourcePath.slice(temporary.length + 1),
@@ -1913,7 +2094,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     const startIndexPath = resolve(temporary, "start-index.json");
     const startIndexBytes = Buffer.from(`${JSON.stringify({
       formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v4",
+      protocolId: "semantic-test-corpus-execution-v5",
       captures
     }, null, 2)}\n`);
     writeFileSync(startIndexPath, startIndexBytes);
@@ -1924,13 +2105,13 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     );
     const definitions = {
       formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v4",
+      protocolId: "semantic-test-corpus-execution-v5",
       startIndexPath,
       startIndexSha256Path,
       runs: unitDefinitions
     };
     const runs = buildDescriptiveRuns(definitions, temporary);
-    assert.equal(runs.length, 2);
+    assert.equal(runs.length, 6);
     assert.equal(runs.find((run) => run.armId === 0).endpoints.totalModelTokens, 0);
     assert.equal(runs.find((run) => run.armId === 0)
       .endpoints.sessionEvidenceAvailable, 0);
@@ -1940,9 +2121,20 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       .endpoints.mechanismEvidenceAvailable, 0);
     assert.equal(runs.find((run) => run.armId === 5).endpoints.totalModelTokens, 330);
     assert.equal(runs.find((run) => run.armId === 5).endpoints.modelEvidenceAvailable, 1);
-    assert.equal(runs.find((run) => run.armId === 5).endpoints.mechanismEvidenceAvailable, 1);
-    const operationalSummary = summarizeDescriptive(runs)
-      .allAttemptOperationalUsage;
+    assert.equal(runs.find((run) => run.armId === 5).endpoints.mechanismEvidenceAvailable, 0);
+    const descriptiveSummary = summarizeDescriptive(runs);
+    assert.deepEqual(descriptiveSummary.completeBlocks, ["B01"]);
+    assert.equal(descriptiveSummary.outcomes.runs.length, 6);
+    assert.equal(descriptiveSummary.outcomes.byArm.find((arm) => arm.armId === 2)
+      .measuredFailures, 1);
+    assert.equal(descriptiveSummary.outcomes.byArm.find((arm) => arm.armId === 2)
+      .treatmentAdherent, 1);
+    assert.equal(descriptiveSummary.outcomes.byArm.find((arm) => arm.armId === 2)
+      .operationallySuccessful, 0);
+    const artifactSummary = analyzeDescriptiveArtifacts(definitions, temporary);
+    assert.equal(artifactSummary.fieldAvailabilityByRun.find((run) =>
+      run.runId === "V5-B01-A1").fields.sourceReadOnly.status, "unavailable");
+    const operationalSummary = descriptiveSummary.allAttemptOperationalUsage;
     assert.equal(operationalSummary.totals.aiCredits.value, 6);
     assert.equal(operationalSummary.totals.nanoAiu.value, 6_000_000_000);
     assert.equal(operationalSummary.totals.inputTokens.value, 900);
@@ -1954,12 +2146,12 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     assert.equal(operationalSummary.totals.toolResultCount.value, 16);
     assert.deepEqual(
       operationalSummary.totals.aiCredits.unavailableRunIds,
-      ["V4-B01-A1", "V4-B01-A3"]
+      ["V5-B01-A1", "V5-B01-A3"]
     );
     const partialRun = operationalSummary.runs.find((run) =>
-      run.runId === "V4-B01-A2");
+      run.runId === "V5-B01-A2");
     const noUsageRun = operationalSummary.runs.find((run) =>
-      run.runId === "V4-B01-A1");
+      run.runId === "V5-B01-A1");
     assert.equal(partialRun.metrics.aiCredits.available, true);
     assert.equal(noUsageRun.metrics.aiCredits.available, false);
     assert.match(noUsageRun.metrics.aiCredits.reason, /usage export was not produced/);
@@ -1970,7 +2162,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
 
     const unavailableDefinition = definitions.runs.find((run) =>
       run.status === "unavailable"
-      && !["V4-B01-A2", "V4-B01-A1", "V4-B01-A3", "V4-B01-A4"].includes(run.runId));
+      && !["V5-B01-A2", "V5-B01-A1", "V5-B01-A3", "V5-B01-A4"].includes(run.runId));
     const dispositionBytes = readFileSync(unavailableDefinition.dispositionPath);
     const forgedDisposition = JSON.parse(dispositionBytes);
     forgedDisposition.orderSourceSha256 = "0".repeat(64);
@@ -3035,7 +3227,7 @@ test("reproduction rejects JSON formatting, key-order, and newline tampering", (
 });
 
 test("delegated arms use one Skill and normalized byte-identical profiles", () => {
-  const contract = readRootJson("design", "v4", "arm-contract.json");
+  const contract = readRootJson("design", "v5", "arm-contract.json");
   const frontier = contract.arms.find((arm) => arm.id === 2);
   const cheap = contract.arms.find((arm) => arm.id === 4);
   const target = contract.arms.find((arm) => arm.id === 5);
@@ -3053,14 +3245,14 @@ test("delegated arms use one Skill and normalized byte-identical profiles", () =
     ["semantic-test-corpus", "semantic-test-corpus-haiku"]);
   assert(contract.commonContract.toolSurface.every((name) => name.startsWith("semantic-corpus/")));
   assert.equal(existsSync(resolve(root, "design", "delegated-worker-skill.md")), false);
-  assert(!readRootJson("design", "v4", "candidate-manifest.json").files.some((file) =>
+  assert(!readRootJson("design", "v5", "candidate-manifest.json").files.some((file) =>
     file.source === "design/delegated-worker-skill.md"));
-  assert(readRootJson("design", "v4", "candidate-manifest.json").files.some((file) =>
+  assert(readRootJson("design", "v5", "candidate-manifest.json").files.some((file) =>
     file.destination === ".github/agents/semantic-test-corpus-haiku.agent.md"));
 });
 
 test("synthetic signed-event unit enforces the common delegated mechanism", () => {
-  const current = readRootJson("design", "v4", "arm-contract.json");
+  const current = readRootJson("design", "v5", "arm-contract.json");
   assert.deepEqual(current.delegationContract.toolSurface, current.commonContract.toolSurface);
   assert(!current.commonContract.toolSurface.some((name) =>
     ["file.read", "file.write", "staging.validate"].includes(name)));
@@ -3077,7 +3269,7 @@ async function runSyntheticCorpusArm({ armId, runId, delegated }) {
     const profile = readFileSync(resolve(root, "..", "..", ".github", "agents", "semantic-test-corpus.agent.md"), "utf8");
     assert.match(profile, /^name: semantic-test-corpus$/m);
     assert.doesNotMatch(profile.split("---")[1], /^model:/m);
-    for (const tool of readRootJson("design", "v4", "arm-contract.json").commonContract.toolSurface) {
+    for (const tool of readRootJson("design", "v5", "arm-contract.json").commonContract.toolSurface) {
       assert(profile.includes(tool), `profile missing ${tool}`);
     }
 
@@ -3313,13 +3505,13 @@ async function runSyntheticCorpusArm({ armId, runId, delegated }) {
 }
 
 test("synthetic event units cover partial and rejected inline/delegated MCP runs", async () => {
-  const inline = await runSyntheticCorpusArm({ armId: 1, runId: "V4-B01-A1", delegated: false });
-  const delegated = await runSyntheticCorpusArm({ armId: 2, runId: "V4-B01-A2", delegated: true });
+  const inline = await runSyntheticCorpusArm({ armId: 1, runId: "V5-B01-A1", delegated: false });
+  const delegated = await runSyntheticCorpusArm({ armId: 2, runId: "V5-B01-A2", delegated: true });
   try {
     const spoofed = structuredClone(delegated.payload);
     for (const event of spoofed.events.filter((item) =>
       ["tool.called", "tool.result", "fs.access"].includes(item.type))) {
-      event.sessionId = "V4-B01-A2-parent";
+      event.sessionId = "V5-B01-A2-parent";
       event.role = "parent";
       event.actor = "parent";
     }
@@ -3328,7 +3520,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       authenticateExport(signed.bytes, signed.signature, signed.publicKey),
       {
         armId: 2,
-        runId: "V4-B01-A2",
+        runId: "V5-B01-A2",
         contractRoot: delegated.run.contract,
         stagingRoot: delegated.run.staging,
         evaluatorRoot,
@@ -3347,7 +3539,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       authenticateExport(zeroSigned.bytes, zeroSigned.signature, zeroSigned.publicKey),
       {
         armId: 1,
-        runId: "V4-B01-A1",
+        runId: "V5-B01-A1",
         contractRoot: inline.run.contract,
         stagingRoot: inline.run.staging,
         evaluatorRoot,
@@ -3372,7 +3564,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       ),
       {
         armId: 1,
-        runId: "V4-B01-A1",
+        runId: "V5-B01-A1",
         contractRoot: inline.run.contract,
         stagingRoot: inline.run.staging,
         evaluatorRoot,
@@ -3396,7 +3588,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       ),
       {
         armId: 2,
-        runId: "V4-B01-A2",
+        runId: "V5-B01-A2",
         contractRoot: delegated.run.contract,
         stagingRoot: delegated.run.staging,
         evaluatorRoot,
@@ -3417,7 +3609,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
 
     const mismappedBaseline = structuredClone(inline.payload);
     mismappedBaseline.events.find((event) =>
-      event.eventId === "V4-B01-A0-completed").armId = 1;
+      event.eventId === "V5-B01-A0-completed").armId = 1;
     const mismappedBaselineSigned = signedExport(mismappedBaseline);
     const mismappedBaselineGlobal = evaluateGlobalAttribution(authenticateExport(
       mismappedBaselineSigned.bytes,
@@ -3426,15 +3618,15 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
     ));
     assert.equal(mismappedBaselineGlobal.status, "noncompliant");
     assert(mismappedBaselineGlobal.violations.some((violation) =>
-      violation.includes("baseline event V4-B01-A0-completed")));
+      violation.includes("baseline event V5-B01-A0-completed")));
 
     const modelBackedBaseline = structuredClone(inline.payload);
     modelBackedBaseline.events.push({
-      eventId: "V4-B01-A0-created",
+      eventId: "V5-B01-A0-created",
       type: "session.created",
       timestamp: "2026-07-29T00:00:30Z",
-      sessionId: "V4-B01-A0-process",
-      runId: "V4-B01-A0",
+      sessionId: "V5-B01-A0-process",
+      runId: "V5-B01-A0",
       blockId: "B01",
       armId: 0,
       role: "baseline"
@@ -3455,10 +3647,10 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
 });
 
 test("statistics accepts a full export containing authenticated baseline and AI events", async () => {
-  const ai = await runSyntheticCorpusArm({ armId: 1, runId: "V4-B01-A1", delegated: false });
+  const ai = await runSyntheticCorpusArm({ armId: 1, runId: "V5-B01-A1", delegated: false });
   try {
-    const baselineRun = frozenSchedule.runs.find((run) => run.runId === "V4-B01-A0");
-    const baselineSnapshotPath = resolve(ai.run.cwd, "benchmark-staging", "V4-B01-A0.json");
+    const baselineRun = frozenSchedule.runs.find((run) => run.runId === "V5-B01-A0");
+    const baselineSnapshotPath = resolve(ai.run.cwd, "benchmark-staging", "V5-B01-A0.json");
     const baselineSnapshot = generateBaseline({
       blockId: "B01",
       seed: baselineRun.seed
@@ -3467,7 +3659,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
     writeFileSync(baselineSnapshotPath, baselineSnapshotBytes);
     const definitions = [
       {
-        runId: "V4-B01-A0",
+        runId: "V5-B01-A0",
         blockId: "B01",
         armId: 0,
         snapshotPath: baselineSnapshotPath,
@@ -3475,7 +3667,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
         metricsTimestamp: "2026-07-29T00:04:25Z"
       },
       {
-        runId: "V4-B01-A1",
+        runId: "V5-B01-A1",
         blockId: "B01",
         armId: 1,
         snapshotPath: ai.outputPath,
@@ -3545,6 +3737,14 @@ test("statistics accepts a full export containing authenticated baseline and AI 
         evaluatorSessionId: definition.evaluatorSessionId,
         evaluatorProcessId: definition.evaluatorProcessId
       },
+      outcome: {
+        finalDisposition: definition.artifact.outcome.disposition,
+        started: true,
+        treatmentAdherent: definition.artifact.outcome.treatmentAdherent,
+        operationalSuccess: definition.artifact.outcome.operationalSuccess,
+        failureKinds: definition.artifact.outcome.failureKinds,
+        retryCount: 0
+      },
       timing: {
         startedAt: "2026-07-29T00:00:54Z",
         endedAt: "2026-07-29T00:04:10Z",
@@ -3568,7 +3768,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
     const aiDefinition = definitions.find((definition) => definition.armId === 1);
     const baselineRecord = {
       ...commonRecord(baselineDefinition),
-      sessionIds: ["V4-B01-A0-process"],
+      sessionIds: ["V5-B01-A0-process"],
       modelEvidence: null
     };
     const aiRoles = ["parent"].map((role) => {
@@ -3619,7 +3819,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
 
     const mismappedPayload = structuredClone(payload);
     mismappedPayload.events.find((event) =>
-      event.eventId === "V4-B01-A0-completed").armId = 1;
+      event.eventId === "V5-B01-A0-completed").armId = 1;
     const mismappedSigned = signedExport(mismappedPayload);
     const mismappedAuthenticated = authenticateExport(
       mismappedSigned.bytes,
@@ -3640,15 +3840,15 @@ test("statistics accepts a full export containing authenticated baseline and AI 
     const overDurationPayload = structuredClone(payload);
     overDurationPayload.exportedAt = "2026-07-29T01:00:00Z";
     overDurationPayload.events.find((event) =>
-      event.eventId === "V4-B01-A0-completed").timestamp = "2026-07-29T00:31:00Z";
+      event.eventId === "V5-B01-A0-completed").timestamp = "2026-07-29T00:31:00Z";
     overDurationPayload.events.find((event) =>
-      event.eventId === "V4-B01-A0-unblinded").timestamp = "2026-07-29T00:31:05Z";
+      event.eventId === "V5-B01-A0-unblinded").timestamp = "2026-07-29T00:31:05Z";
     const baselineUsage = overDurationPayload.events.find((event) =>
-      event.eventId === "V4-B01-A0-usage");
+      event.eventId === "V5-B01-A0-usage");
     baselineUsage.timestamp = "2026-07-29T00:31:06Z";
     baselineUsage.intervalEnd = "2026-07-29T00:31:05Z";
     overDurationPayload.events.find((event) =>
-      event.eventId === "V4-B01-A0-metrics").timestamp = "2026-07-29T00:31:10Z";
+      event.eventId === "V5-B01-A0-metrics").timestamp = "2026-07-29T00:31:10Z";
     const overDurationSigned = signedExport(overDurationPayload);
     const overDurationAuthenticated = authenticateExport(
       overDurationSigned.bytes,
@@ -3738,17 +3938,17 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
       totalTokens: null
     }])),
     staging: {
-      path: "staging/V4-B01-A1.json",
+      path: "staging/V5-B01-A1.json",
       sha256: "d".repeat(64),
       sourceRoot: "corpus-staging/"
     },
     metrics: {
-      path: "metrics/V4-B01-A1.json",
+      path: "metrics/V5-B01-A1.json",
       sha256: "e".repeat(64),
       snapshotSha256: "d".repeat(64),
-      eventId: "V4-B01-A1-metrics",
-      evaluatorSessionId: "V4-B01-A1-evaluator",
-      evaluatorProcessId: "V4-B01-A1-evaluator-process"
+      eventId: "V5-B01-A1-metrics",
+      evaluatorSessionId: "V5-B01-A1-evaluator",
+      evaluatorProcessId: "V5-B01-A1-evaluator-process"
     },
     tools: { surface: [], calls: [] },
     compliance: {
@@ -3784,8 +3984,8 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
 
   const reusedPayload = modelEvidencePayload();
   for (const event of reusedPayload.events.filter((item) =>
-    item.runId === "V4-B02-A4" && item.role === "worker")) {
-    event.sessionId = "V4-B01-A2-worker";
+    item.runId === "V5-B02-A4" && item.role === "worker")) {
+    event.sessionId = "V5-B01-A2-worker";
   }
   const reusedSigned = signedExport(reusedPayload);
   const reusedAuthenticated = authenticateExport(reusedSigned.bytes, reusedSigned.signature, reusedSigned.publicKey);
@@ -3794,38 +3994,38 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
   assert(reused.runs.some((run) => run.reasons.some((reason) => reason.includes("reused"))));
 
   const missingPayload = modelEvidencePayload();
-  missingPayload.events = missingPayload.events.filter((event) => event.runId !== "V4-B12-A4");
+  missingPayload.events = missingPayload.events.filter((event) => event.runId !== "V5-B12-A4");
   const missingSigned = signedExport(missingPayload);
   const missingAuthenticated = authenticateExport(missingSigned.bytes, missingSigned.signature, missingSigned.publicKey);
   const missing = evaluateModelBindings(missingAuthenticated, modelRunRecords(missingAuthenticated));
   assert.equal(missing.allRunsAvailable, false);
-  assert.equal(missing.runs.find((run) => run.runId === "V4-B12-A4").status, "unavailable");
+  assert.equal(missing.runs.find((run) => run.runId === "V5-B12-A4").status, "unavailable");
 
   const stalePayload = modelEvidencePayload();
   stalePayload.events.find((event) =>
-    event.eventId === "V4-B01-A1-parent-created").timestamp = "2026-07-28T00:01:00Z";
+    event.eventId === "V5-B01-A1-parent-created").timestamp = "2026-07-28T00:01:00Z";
   const staleSigned = signedExport(stalePayload);
   const staleAuthenticated = authenticateExport(staleSigned.bytes, staleSigned.signature, staleSigned.publicKey);
   const stale = evaluateModelBindings(staleAuthenticated, modelRunRecords(staleAuthenticated));
   assert.equal(stale.allRunsAvailable, false);
   assert(stale.runs.find((run) =>
-    run.runId === "V4-B01-A1").reasons.some((reason) => reason.includes("too old")));
+    run.runId === "V5-B01-A1").reasons.some((reason) => reason.includes("too old")));
 
   const mismatchPayload = modelEvidencePayload();
   mismatchPayload.events.find((event) =>
-    event.runId === "V4-B03-A3" && event.type === "model.bound").modelId = "gpt-5.6-sol";
+    event.runId === "V5-B03-A3" && event.type === "model.bound").modelId = "gpt-5.6-sol";
   const mismatchSigned = signedExport(mismatchPayload);
   const mismatchAuthenticated = authenticateExport(
     mismatchSigned.bytes, mismatchSigned.signature, mismatchSigned.publicKey);
   const mismatch = evaluateModelBindings(mismatchAuthenticated, modelRunRecords(mismatchAuthenticated));
-  assert.equal(mismatch.runs.find((run) => run.runId === "V4-B03-A3").status, "unavailable");
+  assert.equal(mismatch.runs.find((run) => run.runId === "V5-B03-A3").status, "unavailable");
 
   const wrongHashRecords = structuredClone(runRecords);
   wrongHashRecords.find((record) =>
-    record.runId === "V4-B04-A1").modelEvidence.payloadSha256 = "0".repeat(64);
+    record.runId === "V5-B04-A1").modelEvidence.payloadSha256 = "0".repeat(64);
   const wrongHash = evaluateModelBindings(authenticated, wrongHashRecords);
-  assert.equal(wrongHash.runs.find((run) => run.runId === "V4-B04-A1").status, "unavailable");
-  assert(wrongHash.runs.find((run) => run.runId === "V4-B04-A1").reasons
+  assert.equal(wrongHash.runs.find((run) => run.runId === "V5-B04-A1").status, "unavailable");
+  assert(wrongHash.runs.find((run) => run.runId === "V5-B04-A1").reasons
     .some((reason) => reason.includes("exact authenticated raw export")));
 
   const invalidTimestampPayload = modelEvidencePayload();
@@ -3855,11 +4055,11 @@ test("candidate materialization excludes evaluator assets in an external reposit
       blockId: "B01"
     });
     assert.equal(boundary.files.length,
-      readRootJson("design", "v4", "candidate-manifest.json").files.length);
-    assert.equal(boundary.protocolId, "semantic-test-corpus-execution-v4");
+      readRootJson("design", "v5", "candidate-manifest.json").files.length);
+    assert.equal(boundary.protocolId, "semantic-test-corpus-execution-v5");
     assert.match(boundary.boundarySha256, /^[a-f0-9]{64}$/);
     assert.match(boundary.terminalCommit, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
-    const sourcePin = readRootJson("design", "v4", "source-pin.json");
+    const sourcePin = readRootJson("design", "v5", "source-pin.json");
     assert.equal(boundary.sourceCommit, sourcePin.sourceCommit);
     assert.equal(boundary.sourceTree, sourcePin.sourceTree);
     assert(boundary.files.every((file) =>
@@ -4101,7 +4301,8 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
 
 test("factorial summaries and missingness sensitivity match known synthetic values", () => {
   const armValues = new Map([[0, 0.5], [1, 0.6], [2, 0.7], [3, 0.4], [4, 0.45], [5, 0.45]]);
-  const observations = frozenSchedule.runs.map((run) => ({
+  const historicalSchedule = protocolDesignForRunId("V4-B01-A0").schedule;
+  const observations = historicalSchedule.runs.map((run) => ({
     runId: run.runId,
     blockId: run.blockId,
     armId: run.armId,

@@ -12,7 +12,7 @@
   "additionalProperties": false,
   "allOf": [
     {
-      "if": {"properties": {"status": {"enum": ["completed", "excluded", "evaluated"]}}},
+      "if": {"properties": {"status": {"enum": ["completed", "excluded", "evaluated", "measured-failure"]}}},
       "then": {
         "properties": {
           "localEvidencePath": {"type": "string", "minLength": 1},
@@ -23,7 +23,7 @@
   ],
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4", "semantic-test-corpus-execution-v5"]},
     "attemptId": {"type": "string", "minLength": 1},
     "runId": {"type": "string"},
     "attemptNumber": {"const": 1},
@@ -33,7 +33,7 @@
     "requestedWorkerModel": {"type": ["string", "null"]},
     "status": {
       "type": "string",
-      "enum": ["created", "completed", "excluded", "evaluated"]
+      "enum": ["created", "completed", "excluded", "evaluated", "measured-failure"]
     },
     "startedAt": {"type": "string"},
     "endedAt": {"type": ["string", "null"]},

@@ -9,7 +9,45 @@
     "runId": {"type": "string", "minLength": 1},
     "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
     "armId": {"type": "integer", "minimum": 0, "maximum": 5},
-    "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "snapshotSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "outcome": {
+      "type": "object",
+      "required": [
+        "disposition", "started", "treatmentAdherent", "operationalSuccess",
+        "semanticQualityScored", "scoringSource", "failureKinds",
+        "partialScenarioCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {"type": "string", "enum": ["success", "measured-failure"]},
+        "started": {"const": true},
+        "treatmentAdherent": {"type": "boolean"},
+        "operationalSuccess": {"type": "boolean"},
+        "semanticQualityScored": {"const": true},
+        "scoringSource": {
+          "type": "string",
+          "enum": [
+            "authenticated-snapshot",
+            "authenticated-partial-snapshot",
+            "zero-no-authenticated-snapshot"
+          ]
+        },
+        "failureKinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "model", "mechanism", "skill-order", "task-bytes",
+              "worker-identity", "mcp", "terminal", "partial-staging",
+              "budget", "timeout", "tool-misuse", "post-start-infrastructure",
+              "unknown"
+            ]
+          }
+        },
+        "partialScenarioCount": {"type": "integer", "minimum": 0, "maximum": 60}
+      }
+    },
     "provenance": {
       "type": "object",
       "required": ["generator", "evaluator", "spec", "oracle", "mutants"],

@@ -11,15 +11,15 @@ import {
   parseCopilotJsonl,
   predeterminedSessionId,
   resultEvent
-} from "./copilot-cli-v4.mjs";
+} from "./copilot-cli-v5.mjs";
 import { protocolDesign } from "./protocol-design.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
 const schema = JSON.parse(readFileSync(resolve(schemaRoot, "live-preflight.schema.json"), "utf8"));
-const contract = protocolDesign("v4").contract;
-const conditions = protocolDesign("v4").conditions;
-const PILOT_NAMESPACE = "semantic-test-corpus-v4-pilot-only";
+const contract = protocolDesign("v5").contract;
+const conditions = protocolDesign("v5").conditions;
+const PILOT_NAMESPACE = contract.commonContract.livePreflight.namespace;
 const EXPECTED_TERMINAL = "corpus-staging/manifest.json - 1 scenarios - SUCCESS";
 export const PILOT_TASK = [
   "Generate the immutable request's one pilot-only v1 configuration scenario.",
@@ -37,9 +37,9 @@ export const PILOT_TASK = [
   ""
 ].join("\n");
 const BOUND_PATHS = [
-  "design/v4/condition-instructions.json",
+  "design/v5/condition-instructions.json",
   "scripts/collect-local-evidence.mjs",
-  "scripts/copilot-cli-v4.mjs",
+  "scripts/copilot-cli-v5.mjs",
   "scripts/execution-contract.mjs",
   "scripts/live-preflight.mjs",
   "scripts/materialize-candidate.mjs",
@@ -176,11 +176,11 @@ function auditInline(events, usageRows, kickoff, arm) {
   return reasons;
 }
 
-function verifyArmEvidence(record, pilotSeries) {
+function verifyInfrastructureEvidence(record, pilotSeries) {
   const reasons = [];
   const arm = contract.arms.find((item) => item.id === record.armId);
   const condition = conditions.conditions.find((item) => item.armId === record.armId);
-  const expectedPilotId = `P4-SMOKE-${pilotSeries}-A${record.armId}`;
+  const expectedPilotId = `P5-SMOKE-${pilotSeries}-A${record.armId}`;
   if (!arm || !condition
     || record.pilotId !== expectedPilotId
     || record.sessionId !== predeterminedSessionId(PILOT_NAMESPACE, record.pilotId)
@@ -189,69 +189,59 @@ function verifyArmEvidence(record, pilotSeries) {
     || record.reasoningEffort !== arm.reasoningEffort
     || record.mechanism !== condition.execution
     || record.agentName !== (arm.agentName ?? null)) {
-    reasons.push("arm identity differs from the frozen pilot treatment");
+    reasons.push("arm identity differs from the frozen pilot surface");
+    return reasons;
   }
   const paths = record.evidence ?? {};
-  for (const name of [
-    "eventsPath", "usagePath", "scenarioPath", "manifestPath", "commandPath"
-  ]) {
-    const path = paths[name];
-    if (typeof path !== "string" || path.length === 0) {
+  for (const name of ["eventsPath", "usagePath", "commandPath"]) {
+    if (typeof paths[name] !== "string" || !existsSync(paths[name])) {
       reasons.push(`${name} is missing`);
-      continue;
     }
-    if (!existsSync(path)) reasons.push(`${name} is missing`);
   }
-  if (reasons.some((reason) => reason.endsWith(" is missing"))) return reasons;
+  if (reasons.length > 0) return reasons;
   const eventsBytes = readFileSync(paths.eventsPath);
   const usageBytes = readFileSync(paths.usagePath);
-  const scenarioBytes = readFileSync(paths.scenarioPath);
-  const manifestBytes = readFileSync(paths.manifestPath);
   const commandBytes = readFileSync(paths.commandPath);
   if (sha256(eventsBytes) !== record.eventsSha256) reasons.push("events SHA-256 differs");
   if (sha256(usageBytes) !== record.usageSha256) reasons.push("usage SHA-256 differs");
-  if (sha256(Buffer.concat([scenarioBytes, manifestBytes])) !== record.stagingSha256) {
-    reasons.push("staging SHA-256 differs");
-  }
   if (sha256(commandBytes) !== record.commandSha256) reasons.push("command SHA-256 differs");
   let events;
-  let usageExport;
-  let scenario;
-  let manifest;
+  let usage;
   let command;
   try {
     events = parseCopilotJsonl(eventsBytes);
-    usageExport = JSON.parse(usageBytes);
-    scenario = JSON.parse(scenarioBytes);
-    manifest = JSON.parse(manifestBytes);
+    usage = JSON.parse(usageBytes);
     command = JSON.parse(commandBytes);
   } catch (error) {
-    reasons.push(`evidence parsing failed: ${error.message}`);
+    reasons.push(`infrastructure evidence parsing failed: ${error.message}`);
     return reasons;
   }
-  try {
-    const result = resultEvent(events, record.sessionId);
-    if (result.exitCode !== 0) reasons.push("terminal result exit code is nonzero");
-  } catch (error) {
-    reasons.push(error.message);
+  const rows = usage.rows ?? [];
+  const parentRows = rows.filter((row) =>
+    row.session_id === record.sessionId
+    && row.agent_id === null
+    && row.parent_tool_call_id === null);
+  if (usage.source?.cliSessionId !== record.sessionId
+    || parentRows.length === 0
+    || parentRows.some((row) => row.model !== arm.model)) {
+    reasons.push("predetermined parent session/model usage did not start");
   }
-  const usageRows = usageExport.rows ?? [];
-  if (usageExport.source?.cliSessionId !== record.sessionId
-    || usageRows.length === 0
-    || usageRows.some((row) => row.session_id !== record.sessionId)) {
-    reasons.push("usage evidence is missing or cross-session");
+  const task = events.find((event) =>
+    event.type === "tool.execution_start" && event.data?.toolName === "task");
+  if (JSON.stringify(record.usage)
+    !== JSON.stringify(usageSummary(rows, task?.data?.toolCallId ?? null))) {
+    reasons.push("usage summary differs from raw usage evidence");
   }
-  const kickoff = `${condition.kickoff}\n\n${PILOT_TASK}`;
-  const candidateRoot = resolve(dirname(paths.scenarioPath), "..", "..", "..");
-  const expectedMcpConfigPath = resolve(candidateRoot, ".benchmark-runtime", "mcp-config.json");
+  const candidateRoot = command.candidateRoot;
   const expectedTools = availableToolsForArm(arm);
-  if (command.candidateRoot !== candidateRoot
-    || command.mcpConfigPath !== expectedMcpConfigPath
+  if (!candidateRoot
+    || command.mcpConfigPath !== resolve(candidateRoot, ".benchmark-runtime", "mcp-config.json")
     || JSON.stringify(command.availableTools) !== JSON.stringify(expectedTools)
     || !Array.isArray(command.disabledMcpServers)
     || command.disabledMcpServers.includes("semantic-corpus")) {
     reasons.push("command construction inputs differ from the frozen pilot surface");
   } else {
+    const kickoff = `${condition.kickoff}\n\n${PILOT_TASK}`;
     const expectedArgs = buildCopilotArgs({
       prompt: kickoff,
       sessionId: record.sessionId,
@@ -259,7 +249,7 @@ function verifyArmEvidence(record, pilotSeries) {
       reasoningEffort: arm.reasoningEffort,
       topLevelAgent: arm.topLevelAgent,
       candidateRoot,
-      mcpConfigPath: expectedMcpConfigPath,
+      mcpConfigPath: command.mcpConfigPath,
       disabledMcpServers: command.disabledMcpServers,
       availableTools: expectedTools
     });
@@ -267,32 +257,14 @@ function verifyArmEvidence(record, pilotSeries) {
       reasons.push("spawned CLI arguments differ from the frozen command builder");
     }
   }
-  const taskBytes = Buffer.from(PILOT_TASK, "utf8");
-  const delegatedAudit = arm.delegated
-    ? auditDelegatedEventSequence({
-        events,
-        usageRows,
-        expectedKickoff: kickoff,
-        expectedTaskBytes: taskBytes,
-        expectedParentModel: arm.model,
-        expectedWorkerModel: arm.workerModel,
-        expectedAgent: arm.agentName
-      })
-    : { reasons: auditInline(events, usageRows, kickoff, arm), workerCallId: null };
-  reasons.push(...delegatedAudit.reasons);
-  reasons.push(...auditMcp(events, {
-    delegated: arm.delegated,
-    workerCallId: delegatedAudit.workerCallId,
-    scenario,
-    manifest
-  }));
-  const terminal = terminalReturn(events, arm.delegated);
-  if (terminal !== EXPECTED_TERMINAL || record.terminalReturn !== terminal) {
-    reasons.push("terminal return differs from pilot contract or summary");
-  }
-  if (JSON.stringify(record.usage)
-    !== JSON.stringify(usageSummary(usageRows, delegatedAudit.workerCallId))) {
-    reasons.push("usage summary differs from raw usage evidence");
+  if (arm.delegated) {
+    const workerRows = rows.filter((row) =>
+      row.session_id === record.sessionId
+      && row.agent_id === task?.data?.toolCallId
+      && row.parent_tool_call_id === task?.data?.toolCallId);
+    if (!task || workerRows.length === 0) {
+      reasons.push("delegated parent/worker start surface was not observed");
+    }
   }
   return reasons;
 }
@@ -317,17 +289,17 @@ export function validateLivePreflight(value) {
     reasons.push("live preflight arms must be ordered 1 through 5");
   }
   if (value?.arms?.some((arm) =>
-    arm.pilotId !== `P4-SMOKE-${value.pilotSeries}-A${arm.armId}`)) {
+    arm.pilotId !== `P5-SMOKE-${value.pilotSeries}-A${arm.armId}`)) {
     reasons.push("live preflight pilot IDs must bind the declared pilot series and arm");
   }
-  if (value?.arms?.some((arm) => arm.status !== "pass" || arm.reasons.length > 0
+  if (value?.arms?.some((arm) => arm.status !== "eligible" || arm.reasons.length > 0
     || arm.mcpHandshake !== "pass")) {
-    reasons.push("every AI arm must pass live preflight");
+    reasons.push("every AI arm must pass outcome-independent infrastructure eligibility");
   }
   for (const arm of value?.arms ?? []) {
-    const evidenceReasons = verifyArmEvidence(arm, value.pilotSeries);
+    const evidenceReasons = verifyInfrastructureEvidence(arm, value.pilotSeries);
     if (evidenceReasons.length > 0) {
-      reasons.push(`arm ${arm.armId} raw evidence failed: ${evidenceReasons.join("; ")}`);
+      reasons.push(`arm ${arm.armId} infrastructure evidence failed: ${evidenceReasons.join("; ")}`);
     }
   }
   return reasons;

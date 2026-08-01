@@ -8,15 +8,30 @@
     "executionSha256", "localEvidenceSha256", "modelPreflightSha256", "createdAt"
   ],
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "protocolId": {"const": "semantic-test-corpus-execution-v5"}
+        }
+      },
+      "then": {
+        "required": [
+          "disposition", "treatmentAdherent", "operationalSuccess",
+          "failureKinds", "retryCount"
+        ]
+      }
+    }
+  ],
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
-    "runId": {"type": "string", "pattern": "^(?:B|V[34]-B)\\d{2}-A[0-5]$"},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4", "semantic-test-corpus-execution-v5"]},
+    "runId": {"type": "string", "pattern": "^(?:B|V[345]-B)\\d{2}-A[0-5]$"},
     "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
     "armId": {"type": "integer", "minimum": 0, "maximum": 5},
     "attemptId": {"type": ["string", "null"]},
-    "snapshotPath": {"type": "string", "minLength": 1},
-    "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "snapshotPath": {"type": ["string", "null"], "minLength": 1},
+    "snapshotSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
     "metricsPath": {"type": "string", "minLength": 1},
     "metricsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "executionSha256": {
@@ -37,6 +52,11 @@
         {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       ]
     },
-    "createdAt": {"type": "string"}
+    "createdAt": {"type": "string"},
+    "disposition": {"type": "string", "enum": ["success", "measured-failure"]},
+    "treatmentAdherent": {"type": "boolean"},
+    "operationalSuccess": {"type": "boolean"},
+    "failureKinds": {"type": "array", "items": {"type": "string"}},
+    "retryCount": {"type": "integer", "const": 0}
   }
 }

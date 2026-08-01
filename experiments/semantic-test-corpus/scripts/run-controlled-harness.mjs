@@ -33,22 +33,26 @@ import {
   buildCopilotArgs,
   parseCopilotJsonl,
   resultEvent
-} from "./copilot-cli-v4.mjs";
+} from "./copilot-cli-v5.mjs";
 import { validateStartOrder } from "./validate-start-order.mjs";
 import { runDeterministicBlock } from "./run-deterministic-block.mjs";
 import { snapshotLocalCorpusStaging } from "../evaluator/adapter.mjs";
-import { canonicalMetricsBytes, deriveMetricsArtifact } from "../evaluator/metrics.mjs";
+import {
+  canonicalMetricsBytes,
+  deriveFailureMetricsArtifact,
+  deriveMetricsArtifact
+} from "../evaluator/metrics.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schedule = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "schedule.json"), "utf8")
 );
 const contract = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "arm-contract.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "arm-contract.json"), "utf8")
 );
 const sourcePin = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "source-pin.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "source-pin.json"), "utf8")
 );
 const partialUsageSchema = JSON.parse(
   readFileSync(resolve(root, "schemas", "partial-usage.schema.json"), "utf8")
@@ -58,6 +62,9 @@ const usageExportSchema = JSON.parse(
 );
 const unitDispositionSchema = JSON.parse(
   readFileSync(resolve(root, "schemas", "unit-disposition.schema.json"), "utf8")
+);
+const evaluationRecordSchema = JSON.parse(
+  readFileSync(resolve(root, "schemas", "evaluation-record.schema.json"), "utf8")
 );
 const preSessionFailureSchema = JSON.parse(
   readFileSync(resolve(root, "schemas", "pre-session-failure.schema.json"), "utf8")
@@ -262,6 +269,53 @@ function partialMeasurement(value, reason) {
     : { available: false, value: null, reason };
 }
 
+export function classifyMeasuredFailure(reason) {
+  const text = String(reason).toLowerCase();
+  const kinds = [];
+  if (/model|completion|usage model/u.test(text)) kinds.push("model");
+  if (/skill.*(?:order|before|context)|before skill/u.test(text)) kinds.push("skill-order");
+  if (/task.*(?:byte|prompt|newline|terminal lf)|sha-256/u.test(text)) kinds.push("task-bytes");
+  if (/worker.*(?:model|identity|agent|attribut)|agent identity/u.test(text)) {
+    kinds.push("worker-identity");
+  }
+  if (/mechanism|delegat|routing/u.test(text)) kinds.push("mechanism");
+  if (/\bmcp\b|semantic-corpus|tool completion/u.test(text)) kinds.push("mcp");
+  if (/terminal|exit|result event|process=/u.test(text)) kinds.push("terminal");
+  if (/staging|manifest|scenario/u.test(text)) kinds.push("partial-staging");
+  if (/budget|token limit|tool call limit/u.test(text)) kinds.push("budget");
+  if (/timeout|timed out|etimedout/u.test(text)) kinds.push("timeout");
+  if (/tool misuse|forbidden tool|tool surface/u.test(text)) kinds.push("tool-misuse");
+  if (/spawn|process|filesystem|artifact/u.test(text)) kinds.push("post-start-infrastructure");
+  return kinds.length > 0 ? [...new Set(kinds)].sort() : ["unknown"];
+}
+
+function exportUsageAfterSettlement(options, plan) {
+  const exporter = options.usageExporter ?? exportLocalUsage;
+  if (options.usageExporter) {
+    return exporter({
+      database: options.sessionStore,
+      cliSessionId: plan.cliSessionId,
+      exportedAt: new Date().toISOString()
+    });
+  }
+  let latest = null;
+  let stableSamples = 0;
+  let previousHash = null;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    latest = exporter({
+      database: options.sessionStore,
+      cliSessionId: plan.cliSessionId,
+      exportedAt: new Date().toISOString()
+    });
+    const rowsHash = sha256(Buffer.from(JSON.stringify(latest.rows), "utf8"));
+    stableSamples = rowsHash === previousHash ? stableSamples + 1 : 1;
+    previousHash = rowsHash;
+    if (latest.rows.length > 0 && stableSamples >= 3) return latest;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+  }
+  return latest;
+}
+
 function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
   const usageSource = partialSource(
     plan,
@@ -431,7 +485,7 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
     runId: plan.runId,
     blockId: plan.blockId,
     armId: plan.armId,
-    status: "started-uncertain",
+    status: "measured-failure",
     lifecycle: {
       available: true,
       path: relative(plan.artifactRoot, lifecyclePath).replaceAll("\\", "/"),
@@ -481,7 +535,11 @@ function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes, {
   orderSourcePath = sourcePath,
   orderSourceBytes = sourceBytes,
   partialUsagePath = null,
-  partialUsageBytes = null
+  partialUsageBytes = null,
+  metricsPath = null,
+  metricsBytes = null,
+  evaluationPath = null,
+  evaluationBytes = null
 }) {
   const disposition = {
     formatVersion: 1,
@@ -503,6 +561,16 @@ function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes, {
       ? relative(plan.artifactRoot, partialUsagePath).replaceAll("\\", "/")
       : null,
     partialUsageSha256: partialUsageBytes ? sha256(partialUsageBytes) : null
+    ,
+    metricsPath: metricsPath
+      ? relative(plan.artifactRoot, metricsPath).replaceAll("\\", "/")
+      : null,
+    metricsSha256: metricsBytes ? sha256(metricsBytes) : null,
+    evaluationPath: evaluationPath
+      ? relative(plan.artifactRoot, evaluationPath).replaceAll("\\", "/")
+      : null,
+    evaluationSha256: evaluationBytes ? sha256(evaluationBytes) : null,
+    retryCount: 0
   };
   const errors = validateJsonSchema(disposition, unitDispositionSchema, {
     schemaDir: resolve(root, "schemas")
@@ -581,6 +649,141 @@ function persistPreSessionFailure(plan, startIndex, phase, reason) {
   };
 }
 
+function recoveredOutcomeDimensions(plan) {
+  const evaluationPath = resolve(plan.artifactRoot, "evaluation.json");
+  if (existsSync(evaluationPath)) {
+    const evaluation = JSON.parse(readFileSync(evaluationPath, "utf8"));
+    return {
+      treatmentAdherent: evaluation.treatmentAdherent === true,
+      operationalSuccess: evaluation.operationalSuccess === true
+    };
+  }
+  const modelPreflightPath = resolve(plan.artifactRoot, "model-preflight.json");
+  const treatmentAdherent = plan.armId === 0
+    ? existsSync(resolve(plan.artifactRoot, "execution.json"))
+    : existsSync(modelPreflightPath)
+      && JSON.parse(readFileSync(modelPreflightPath, "utf8")).status === "pass";
+  const processResultPath = resolve(plan.artifactRoot, "process-result.json");
+  const sessionCreationPath = resolve(plan.artifactRoot, "session-creation.json");
+  const attemptPath = resolve(plan.artifactRoot, "attempt-1.json");
+  const processSucceeded = existsSync(processResultPath)
+    && JSON.parse(readFileSync(processResultPath, "utf8")).status === 0
+    && existsSync(sessionCreationPath)
+    && JSON.parse(readFileSync(sessionCreationPath, "utf8")).response.exit_code === 0;
+  const terminalReturn = existsSync(attemptPath)
+    ? JSON.parse(readFileSync(attemptPath, "utf8")).terminalReturn
+    : null;
+  const operationalSuccess = plan.armId === 0
+    ? existsSync(resolve(plan.artifactRoot, "lifecycle-end.json"))
+    : processSucceeded
+      && typeof terminalReturn === "string"
+      && /^corpus-staging\/manifest\.json - \d+ scenarios - SUCCESS$/u.test(terminalReturn);
+  return { treatmentAdherent, operationalSuccess };
+}
+
+function persistExactOrAlternate(primaryPath, alternateName, bytes) {
+  if (!existsSync(primaryPath)) {
+    writeOnce(primaryPath, bytes);
+    return { path: primaryPath, bytes };
+  }
+  const persisted = readFileSync(primaryPath);
+  if (persisted.equals(bytes)) return { path: primaryPath, bytes: persisted };
+  const alternatePath = resolve(dirname(primaryPath), alternateName);
+  if (!existsSync(alternatePath)) writeOnce(alternatePath, bytes);
+  const alternateBytes = readFileSync(alternatePath);
+  if (!alternateBytes.equals(bytes)) {
+    throw new Error(`Existing ${alternateName} differs from deterministic recovery output`);
+  }
+  return { path: alternatePath, bytes: alternateBytes };
+}
+
+function exactArtifact(path, expectedSha256) {
+  return typeof path === "string"
+    && typeof expectedSha256 === "string"
+    && existsSync(path)
+    && sha256(readFileSync(path)) === expectedSha256;
+}
+
+function validDispositionBundle(plan, validEvaluation, evaluationBytes) {
+  const dispositionPath = resolve(plan.artifactRoot, "unit-disposition.json");
+  if (!existsSync(dispositionPath)) return false;
+  const disposition = JSON.parse(readFileSync(dispositionPath, "utf8"));
+  const errors = validateJsonSchema(disposition, unitDispositionSchema, {
+    schemaDir: resolve(root, "schemas")
+  });
+  const bindings = [
+    [resolve(plan.artifactRoot, disposition.sourcePath), disposition.sourceSha256],
+    [resolve(dirname(plan.startIndexPath), disposition.orderSourcePath),
+      disposition.orderSourceSha256],
+    [disposition.partialUsagePath
+      ? resolve(plan.artifactRoot, disposition.partialUsagePath)
+      : null, disposition.partialUsageSha256],
+    [disposition.metricsPath
+      ? resolve(plan.artifactRoot, disposition.metricsPath)
+      : null, disposition.metricsSha256],
+    [disposition.evaluationPath
+      ? resolve(plan.artifactRoot, disposition.evaluationPath)
+      : null, disposition.evaluationSha256]
+  ];
+  return errors.length === 0
+    && disposition.protocolId === contract.protocolId
+    && disposition.runId === plan.runId
+    && disposition.blockId === plan.blockId
+    && disposition.armId === plan.armId
+    && disposition.status === "measured-failure"
+    && disposition.retryCount === 0
+    && bindings.every(([path, digest]) =>
+      path === null ? digest === null : exactArtifact(path, digest))
+    && bindings[4][0] === validEvaluation
+    && disposition.evaluationSha256 === sha256(evaluationBytes);
+}
+
+function validSuccessBundle(plan, validEvaluation, evaluation) {
+  const provenancePath = resolve(plan.artifactRoot, "capture-provenance.json");
+  if (evaluation.disposition !== "success" || !existsSync(provenancePath)) return false;
+  const provenance = JSON.parse(readFileSync(provenancePath, "utf8"));
+  const expected = new Map(provenance.files.map((file) => [file.path, file.sha256]));
+  return [
+    validEvaluation,
+    evaluation.metricsPath,
+    evaluation.snapshotPath
+  ].every((path) => {
+    const relativePath = relative(plan.artifactRoot, path).replaceAll("\\", "/");
+    return exactArtifact(path, expected.get(relativePath));
+  });
+}
+
+function hasValidatedFinalBundle(plan) {
+  const evaluationCandidates = ["failure-evaluation.json", "evaluation.json"]
+    .map((name) => resolve(plan.artifactRoot, name))
+    .filter((path) => existsSync(path));
+  return evaluationCandidates.some((path) => {
+    try {
+      const evaluationBytes = readFileSync(path);
+      const evaluation = JSON.parse(evaluationBytes);
+      const errors = validateJsonSchema(evaluation, evaluationRecordSchema, {
+        schemaDir: resolve(root, "schemas")
+      });
+      if (errors.length > 0
+        || evaluation.protocolId !== contract.protocolId
+        || evaluation.runId !== plan.runId
+        || evaluation.blockId !== plan.blockId
+        || evaluation.armId !== plan.armId
+        || !exactArtifact(evaluation.metricsPath, evaluation.metricsSha256)
+        || (evaluation.snapshotPath === null
+          ? evaluation.snapshotSha256 !== null
+          : !exactArtifact(evaluation.snapshotPath, evaluation.snapshotSha256))) {
+        return false;
+      }
+      return evaluation.disposition === "measured-failure"
+        ? validDispositionBundle(plan, path, evaluationBytes)
+        : validSuccessBundle(plan, path, evaluation);
+    } catch {
+      return false;
+    }
+  });
+}
+
 function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reason) {
   const current = existsSync(plan.startIndexPath)
     ? JSON.parse(readFileSync(plan.startIndexPath, "utf8"))
@@ -600,21 +803,119 @@ function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reaso
   } else if (current.captures.at(-1)?.runId !== plan.runId) {
     throw new Error("Cannot preserve uncertain attempt because global order advanced unexpectedly");
   }
-  const partialUsage = derivePartialUsage(plan, lifecyclePath, lifecycleBytes);
+  let partialUsage = derivePartialUsage(plan, lifecyclePath, lifecycleBytes);
   const partialUsagePath = resolve(plan.artifactRoot, "partial-usage.json");
-  const partialUsageBytes = jsonBytes(partialUsage);
-  if (!existsSync(partialUsagePath)) writeOnce(partialUsagePath, partialUsageBytes);
+  let partialUsageBytes = jsonBytes(partialUsage);
+  if (!existsSync(partialUsagePath)) {
+    writeOnce(partialUsagePath, partialUsageBytes);
+  } else {
+    partialUsageBytes = readFileSync(partialUsagePath);
+    partialUsage = JSON.parse(partialUsageBytes);
+    const errors = validateJsonSchema(partialUsage, partialUsageSchema, {
+      schemaDir: resolve(root, "schemas")
+    });
+    if (errors.length > 0
+      || partialUsage.protocolId !== contract.protocolId
+      || partialUsage.runId !== plan.runId
+      || partialUsage.blockId !== plan.blockId
+      || partialUsage.armId !== plan.armId) {
+      throw new Error("Existing partial usage does not bind the interrupted slot");
+    }
+  }
   immutable(partialUsagePath);
+  const snapshotPath = resolve(plan.artifactRoot, "staging.json");
+  let snapshot = null;
+  let snapshotFailure = null;
+  const evidencePath = resolve(plan.artifactRoot, "local-evidence.json");
+  const modelPreflightPath = resolve(plan.artifactRoot, "model-preflight.json");
+  if (existsSync(evidencePath) && existsSync(modelPreflightPath)) {
+    try {
+      const evidenceBytes = readFileSync(evidencePath);
+      snapshot = snapshotLocalCorpusStaging({
+        corpusContractRoot: resolve(plan.candidateRoot, "corpus-contract"),
+        corpusStagingRoot: resolve(
+          plan.candidateRoot,
+          ".benchmark-runtime",
+          "corpus-staging"
+        ),
+        localEvidence: JSON.parse(evidenceBytes),
+        localEvidenceBytes: evidenceBytes,
+        modelPreflight: JSON.parse(readFileSync(modelPreflightPath, "utf8")),
+        sourceArtifactRoot: plan.artifactRoot,
+        sourceCandidateRoot: plan.candidateRoot,
+        outputPath: snapshotPath,
+        allowTreatmentFailure: true,
+        reuseExisting: true
+      });
+      immutable(snapshotPath);
+    } catch (error) {
+      snapshotFailure = error instanceof Error ? error.message : String(error);
+    }
+  }
   const filesBeforeRecord = readdirSync(plan.artifactRoot)
     .map((name) => resolve(plan.artifactRoot, name))
     .filter((path) => statSync(path).isFile());
-  const uncertainty = {
+  const failureKinds = classifyMeasuredFailure(
+    snapshotFailure ? `${reason}; partial staging: ${snapshotFailure}` : reason
+  );
+  const { treatmentAdherent, operationalSuccess } = recoveredOutcomeDimensions(plan);
+  const metrics = deriveFailureMetricsArtifact({
+    runId: plan.runId,
+    blockId: plan.blockId,
+    armId: plan.armId,
+    failureKinds,
+    snapshotBytes: snapshot?.bytes ?? null,
+    treatmentAdherent,
+    operationalSuccess
+  });
+  const metricsResult = persistExactOrAlternate(
+    resolve(plan.artifactRoot, "metrics.json"),
+    "failure-metrics.json",
+    canonicalMetricsBytes(metrics)
+  );
+  const metricsPath = metricsResult.path;
+  const metricsBytes = metricsResult.bytes;
+  immutable(metricsPath);
+  const evaluation = {
     formatVersion: 1,
     protocolId: contract.protocolId,
     runId: plan.runId,
     blockId: plan.blockId,
     armId: plan.armId,
-    status: "started-uncertain",
+    attemptId: partialUsage.attempt.attemptId,
+    snapshotPath: snapshot ? snapshotPath : null,
+    snapshotSha256: snapshot ? sha256(snapshot.bytes) : null,
+    metricsPath,
+    metricsSha256: sha256(metricsBytes),
+    executionSha256: null,
+    localEvidenceSha256: existsSync(evidencePath)
+      ? sha256(readFileSync(evidencePath))
+      : null,
+    modelPreflightSha256: existsSync(modelPreflightPath)
+      ? sha256(readFileSync(modelPreflightPath))
+      : null,
+    createdAt: JSON.parse(lifecycleBytes.toString("utf8")).recordedAt,
+    disposition: "measured-failure",
+    treatmentAdherent,
+    operationalSuccess,
+    failureKinds,
+    retryCount: 0
+  };
+  const evaluationResult = persistExactOrAlternate(
+    resolve(plan.artifactRoot, "evaluation.json"),
+    "failure-evaluation.json",
+    jsonBytes(evaluation)
+  );
+  const evaluationPath = evaluationResult.path;
+  const evaluationBytes = evaluationResult.bytes;
+  immutable(evaluationPath);
+  let uncertainty = {
+    formatVersion: 1,
+    protocolId: contract.protocolId,
+    runId: plan.runId,
+    blockId: plan.blockId,
+    armId: plan.armId,
+    status: "measured-failure",
     reason,
     lifecycleSha256: sha256(lifecycleBytes),
     preservedFiles: filesBeforeRecord.map((path) => {
@@ -627,27 +928,48 @@ function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reaso
     })
   };
   const uncertaintyPath = resolve(plan.artifactRoot, "uncertainty.json");
-  const uncertaintyBytes = jsonBytes(uncertainty);
-  if (!existsSync(uncertaintyPath)) writeOnce(uncertaintyPath, uncertaintyBytes);
+  let uncertaintyBytes = jsonBytes(uncertainty);
+  if (!existsSync(uncertaintyPath)) {
+    writeOnce(uncertaintyPath, uncertaintyBytes);
+  } else {
+    uncertaintyBytes = readFileSync(uncertaintyPath);
+    uncertainty = JSON.parse(uncertaintyBytes);
+    if (uncertainty.protocolId !== contract.protocolId
+      || uncertainty.runId !== plan.runId
+      || uncertainty.blockId !== plan.blockId
+      || uncertainty.armId !== plan.armId
+      || uncertainty.status !== "measured-failure"
+      || uncertainty.lifecycleSha256 !== sha256(lifecycleBytes)) {
+      throw new Error("Existing uncertainty record does not bind the interrupted slot");
+    }
+  }
   const disposition = existsSync(resolve(plan.artifactRoot, "unit-disposition.json"))
     ? null
     : writeUnitDisposition(
-      plan, "unavailable", reason, uncertaintyPath, uncertaintyBytes, {
-        evidenceKind: "started-uncertain",
+      plan, "measured-failure", uncertainty.reason, uncertaintyPath, uncertaintyBytes, {
+        evidenceKind: "started-failure",
         orderSourcePath: lifecyclePath,
         orderSourceBytes: lifecycleBytes,
         partialUsagePath,
-        partialUsageBytes
+        partialUsageBytes,
+        metricsPath,
+        metricsBytes,
+        evaluationPath,
+        evaluationBytes
       }
     );
   for (const path of [...filesBeforeRecord, uncertaintyPath]) immutable(path);
   return {
-    status: "started-uncertain",
+    status: "measured-failure",
     plan,
     uncertainty,
     uncertaintyPath,
     partialUsage,
     partialUsagePath,
+    metrics,
+    metricsPath,
+    evaluation,
+    evaluationPath,
     ...disposition
   };
 }
@@ -741,10 +1063,7 @@ function recoverInterruptedSlot(plan, planned, preflight) {
       recovered: true
     };
   }
-  const finalizedMarkers = ["evaluation.json", "run-manifest.json"];
-  if (finalizedMarkers.some((name) => existsSync(resolve(plan.artifactRoot, name)))
-    || (existsSync(resolve(plan.artifactRoot, "unit-disposition.json"))
-      && !existsSync(resolve(plan.artifactRoot, "uncertainty.json")))) {
+  if (hasValidatedFinalBundle(plan)) {
     throw new Error("Artifact root contains a finalized slot and cannot be resumed");
   }
   if (!existsSync(lifecyclePath)) {
@@ -1003,7 +1322,12 @@ export function runControlledHarness(options) {
       executionSha256: sha256(executionBytes),
       localEvidenceSha256: null,
       modelPreflightSha256: null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      disposition: "success",
+      treatmentAdherent: true,
+      operationalSuccess: true,
+      failureKinds: [],
+      retryCount: 0
     };
     for (const [path, bytes] of [
       [snapshotPath, result.bytes],
@@ -1229,20 +1553,14 @@ export function runControlledHarness(options) {
   immutable(processResultPath);
   const stdoutBytes = readFileSync(stdoutPath);
   writeOnce(eventsPath, stdoutBytes);
-  const exportedUsage = (options.usageExporter ?? exportLocalUsage)({
-    database: options.sessionStore,
-    cliSessionId: plan.cliSessionId,
-    exportedAt: new Date().toISOString()
-  });
+  const exportedUsage = exportUsageAfterSettlement(options, plan);
   const usageBytes = jsonBytes(exportedUsage);
   writeOnce(usagePath, usageBytes);
   if (execution.error && execution.status === null) throw execution.error;
   const eventsBytes = stdoutBytes;
   const events = parseCopilotJsonl(eventsBytes);
   const result = resultEvent(events, plan.cliSessionId);
-  if (execution.status !== 0 || result.exitCode !== 0) {
-    throw new Error(`Copilot prompt failed after the durable start marker (process=${execution.status}, result=${result.exitCode})`);
-  }
+  const processSucceeded = execution.status === 0 && result.exitCode === 0;
   const topLevelMessages = events.filter((event) =>
     event.type === "assistant.message" && !event.agentId);
   const taskStart = events.find((event) =>
@@ -1381,7 +1699,7 @@ export function runControlledHarness(options) {
   let evidenceBytes = jsonBytes(evidence);
   let modelPreflight = preflightLocalModel(evidence, evidenceBytes);
   if (modelPreflight.status !== "pass") {
-    attempt.status = "excluded";
+    attempt.status = "measured-failure";
     attemptBytes = jsonBytes(attempt);
     evidence = collectLocalEvidence({
       eventsBytes,
@@ -1423,25 +1741,29 @@ export function runControlledHarness(options) {
       ? [startStored.finalization.indexPath, startStored.finalization.shaPath]
       : [])
   ];
-  const disposition = modelPreflight.status === "pass"
-    ? null
-    : writeUnitDisposition(
-      plan,
-      "excluded",
-      modelPreflight.reasons.join("; ") || "local model/mechanism preflight failed",
-      modelPreflightPath,
-      modelPreflightBytes,
-      {
-        evidenceKind: "model-excluded",
-        orderSourcePath: lifecyclePath,
-        orderSourceBytes: lifecycleBytes
-      }
-    );
-  if (disposition) produced.push(disposition.dispositionPath);
-  let evaluation = null;
-  if (modelPreflight.status === "pass") {
-    const snapshotPath = resolve(plan.artifactRoot, "staging.json");
-    const snapshot = snapshotLocalCorpusStaging({
+  const treatmentAdherent = modelPreflight.status === "pass";
+  const terminalSuccess = typeof terminalReturn === "string"
+    && /^corpus-staging\/manifest\.json - \d+ scenarios - SUCCESS$/u.test(terminalReturn);
+  const terminalFailure = typeof terminalReturn === "string"
+    && /^corpus-staging - \d+ scenarios - FAILURE: .+/u.test(terminalReturn);
+  const terminalValid = terminalSuccess || terminalFailure;
+  const operationalSuccess = processSucceeded && terminalSuccess;
+  const failureReasons = [
+    ...modelPreflight.reasons,
+    ...(!processSucceeded
+      ? [`Copilot process/result failure (process=${execution.status}, result=${result.exitCode})`]
+      : []),
+    ...(!terminalValid ? ["invalid terminal return"] : []),
+    ...(terminalFailure ? [`terminal reported failure: ${terminalReturn}`] : [])
+  ];
+  const failureReason = failureReasons.join("; ") || "local execution failed";
+  const measuredFailure = !treatmentAdherent || !operationalSuccess;
+  const failureKinds = measuredFailure ? classifyMeasuredFailure(failureReason) : [];
+  const snapshotPath = resolve(plan.artifactRoot, "staging.json");
+  let snapshot = null;
+  let snapshotFailure = null;
+  try {
+    snapshot = snapshotLocalCorpusStaging({
       corpusContractRoot: sandbox.contractRoot,
       corpusStagingRoot: sandbox.stagingRoot,
       localEvidence: evidence,
@@ -1449,36 +1771,77 @@ export function runControlledHarness(options) {
       modelPreflight,
       sourceArtifactRoot: plan.artifactRoot,
       sourceCandidateRoot: plan.candidateRoot,
-      outputPath: snapshotPath
+      outputPath: snapshotPath,
+      allowTreatmentFailure: measuredFailure
     });
-    const metricsPath = resolve(plan.artifactRoot, "metrics.json");
-    const metrics = deriveMetricsArtifact(snapshot.bytes, {
-      runId: plan.runId,
-      blockId: plan.blockId,
-      armId: plan.armId
-    });
-    const metricsBytes = canonicalMetricsBytes(metrics);
-    writeOnce(metricsPath, metricsBytes);
-    evaluation = {
+  } catch (error) {
+    if (!measuredFailure) throw error;
+    snapshotFailure = error instanceof Error ? error.message : String(error);
+  }
+  const metricsPath = resolve(plan.artifactRoot, "metrics.json");
+  const metrics = !measuredFailure
+    ? deriveMetricsArtifact(snapshot.bytes, {
+       runId: plan.runId,
+       blockId: plan.blockId,
+       armId: plan.armId
+     })
+    : deriveFailureMetricsArtifact({
+       runId: plan.runId,
+       blockId: plan.blockId,
+       armId: plan.armId,
+       failureKinds: snapshotFailure
+         ? [...failureKinds, "partial-staging"]
+         : failureKinds,
+       snapshotBytes: snapshot?.bytes ?? null,
+       treatmentAdherent,
+       operationalSuccess
+     });
+  const metricsBytes = canonicalMetricsBytes(metrics);
+  writeOnce(metricsPath, metricsBytes);
+  const evaluation = {
       formatVersion: 1,
       protocolId: contract.protocolId,
       runId: plan.runId,
       blockId: plan.blockId,
       armId: plan.armId,
       attemptId: attempt.attemptId,
-      snapshotPath,
-      snapshotSha256: sha256(snapshot.bytes),
+      snapshotPath: snapshot ? snapshotPath : null,
+      snapshotSha256: snapshot ? sha256(snapshot.bytes) : null,
       metricsPath,
       metricsSha256: sha256(metricsBytes),
       executionSha256: null,
       localEvidenceSha256: sha256(evidenceBytes),
       modelPreflightSha256: sha256(modelPreflightBytes),
-      createdAt: response.ended_at
-    };
-    const evaluationPath = resolve(plan.artifactRoot, "evaluation.json");
-    writeOnce(evaluationPath, jsonBytes(evaluation));
-    produced.push(snapshotPath, metricsPath, evaluationPath);
-  }
+      createdAt: response.ended_at,
+      disposition: measuredFailure ? "measured-failure" : "success",
+      treatmentAdherent,
+      operationalSuccess,
+      failureKinds: metrics.outcome?.failureKinds ?? [],
+      retryCount: 0
+  };
+  const evaluationPath = resolve(plan.artifactRoot, "evaluation.json");
+  const evaluationBytes = jsonBytes(evaluation);
+  writeOnce(evaluationPath, evaluationBytes);
+  produced.push(...(snapshot ? [snapshotPath] : []), metricsPath, evaluationPath);
+  const disposition = measuredFailure
+   ? writeUnitDisposition(
+       plan,
+       "measured-failure",
+       snapshotFailure ? `${failureReason}; evaluator snapshot unavailable: ${snapshotFailure}` : failureReason,
+       modelPreflightPath,
+       modelPreflightBytes,
+       {
+         evidenceKind: "model-failure",
+         orderSourcePath: lifecyclePath,
+         orderSourceBytes: lifecycleBytes,
+         metricsPath,
+         metricsBytes,
+         evaluationPath,
+         evaluationBytes
+       }
+     )
+    : null;
+  if (disposition) produced.push(disposition.dispositionPath);
   const provenance = {
     formatVersion: 1,
     protocolId: contract.protocolId,
@@ -1504,7 +1867,7 @@ export function runControlledHarness(options) {
   produced.push(provenancePath);
   for (const path of produced) immutable(path);
   return {
-    status: modelPreflight.status === "pass" ? "complete" : "unavailable",
+    status: measuredFailure ? "measured-failure" : "complete",
     plan,
     preflight,
     evidence,

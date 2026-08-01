@@ -405,7 +405,9 @@ export function snapshotLocalCorpusStaging({
   modelPreflight,
   sourceArtifactRoot,
   sourceCandidateRoot,
-  outputPath
+  outputPath,
+  allowTreatmentFailure = false,
+  reuseExisting = false
 }) {
   const evidenceErrors = validateJsonSchema(localEvidence, localEvidenceSchema, {
     schemaDir: schemaRoot
@@ -428,7 +430,8 @@ export function snapshotLocalCorpusStaging({
   }
   const recomputedPreflight = preflightLocalModel(localEvidence, localEvidenceBytes);
   if (JSON.stringify(modelPreflight) !== JSON.stringify(recomputedPreflight)
-    || modelPreflight.status !== "pass"
+    || (!allowTreatmentFailure && modelPreflight.status !== "pass")
+    || (allowTreatmentFailure && !/^V5-/u.test(localEvidence.runId))
     || modelPreflight.beforeOutcomesOpened !== true
     || localEvidence.attempt.outcomesOpened !== false
     || modelPreflight.runId !== localEvidence.runId
@@ -494,13 +497,21 @@ export function snapshotLocalCorpusStaging({
   verifyLocalSnapshotWrites(bytes, localEvidence);
   const target = resolve(outputPath);
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, bytes, { flag: "wx" });
+  if (reuseExisting && existsSync(target)) {
+    const persistedBytes = readFileSync(target);
+    if (!persistedBytes.equals(bytes)) {
+      throw new Error("Existing local benchmark staging differs from authenticated recovery output");
+    }
+  } else {
+    writeFileSync(target, bytes, { flag: "wx" });
+  }
+  const persistedBytes = readFileSync(target);
   return {
     evidenceTier: "descriptive-local-v1",
     staging,
-    bytes,
+    bytes: persistedBytes,
     stagingPath: target,
-    snapshotSha256: sha256(bytes),
+    snapshotSha256: sha256(persistedBytes),
     submittedCases: cases.length,
     toolErrorCount: localEvidence.toolErrors.length
   };

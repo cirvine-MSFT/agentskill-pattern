@@ -15,7 +15,7 @@ import {
 import {
   availableToolsForArm,
   buildCopilotArgs
-} from "./copilot-cli-v4.mjs";
+} from "./copilot-cli-v5.mjs";
 import { buildCopilotArgs as buildCopilotArgsV3 } from "./copilot-cli-v3.mjs";
 import { protocolDesignForId } from "./protocol-design.mjs";
 
@@ -31,7 +31,7 @@ const preSessionFailureSchema = JSON.parse(
 const sessionCreationSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "session-creation.schema.json"), "utf8")
 );
-const currentContract = protocolDesignForId("semantic-test-corpus-execution-v4").contract;
+const currentContract = protocolDesignForId("semantic-test-corpus-execution-v5").contract;
 const repositoryRoot = resolve(root, "..", "..");
 const MCP_TOOLS = new Set(currentContract.commonContract.toolSurface);
 
@@ -45,7 +45,9 @@ function sha256(bytes) {
 }
 
 function expectedKickoffBytes(armId, seed, protocolVersion, conditions) {
-  if (protocolVersion === "v4") return kickoffBytesForRun(armId, seed);
+  if (protocolVersion === "v4" || protocolVersion === "v5") {
+    return kickoffBytesForRun(armId, seed);
+  }
   const condition = conditions.conditions.find((item) => item.armId === armId);
   if (!condition?.kickoff) throw new Error(`No ${protocolVersion} kickoff for arm ${armId}`);
   return Buffer.concat([
@@ -391,7 +393,7 @@ export function collectLocalEvidence({
   const sessionCreation = JSON.parse(sessionCreationBytes);
   const design = protocolDesignForId(runManifest.protocolId);
   const abortedV2 = design.version === "v2";
-  const legacyTask = design.version !== "v4";
+  const legacyTask = design.version === "v2" || design.version === "v3";
   const expectedTaskBytesForSeed = legacyTask ? legacyTaskBytesForSeed : taskBytesForSeed;
   const expectedTaskSha256ForSeed = legacyTask
     ? legacyTaskSha256ForSeed
@@ -610,11 +612,12 @@ export function collectLocalEvidence({
     }
   } else {
     const expectedAvailableTools = availableToolsForArm(arm);
-    const expectedArgs = (design.version === "v4" ? buildCopilotArgs : buildCopilotArgsV3)({
+    const usesCurrentCli = design.version === "v4" || design.version === "v5";
+    const expectedArgs = (usesCurrentCli ? buildCopilotArgs : buildCopilotArgsV3)({
       prompt: capturedPrompt,
       sessionId: cliSessionId,
       model: arm.model,
-      ...(design.version === "v4" ? { reasoningEffort: arm.reasoningEffort } : {}),
+      ...(usesCurrentCli ? { reasoningEffort: arm.reasoningEffort } : {}),
       topLevelAgent: arm.topLevelAgent,
       candidateRoot: resolve(candidateRoot),
       mcpConfigPath: sessionCreation.request.mcp_config_path,

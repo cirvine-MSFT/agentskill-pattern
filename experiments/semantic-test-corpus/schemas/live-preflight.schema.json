@@ -9,8 +9,8 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"const": "semantic-test-corpus-execution-v4"},
-    "pilotNamespace": {"const": "semantic-test-corpus-v4-pilot-only"},
+    "protocolId": {"const": "semantic-test-corpus-execution-v5"},
+    "pilotNamespace": {"const": "semantic-test-corpus-v5-pilot-only-8c705727-fd93-47f7-9c72-f8cff3442523"},
     "pilotSeries": {"type": "string", "pattern": "^R[1-9][0-9]*$"},
     "outcomeEligible": {"const": false},
     "capturedAt": {"type": "string", "format": "date-time"},
@@ -53,13 +53,14 @@
         "required": [
           "armId", "pilotId", "sessionId", "parentModel", "workerModel",
           "reasoningEffort", "mechanism", "agentName", "status", "reasons",
+          "treatmentObservations",
           "mcpHandshake", "terminalReturn", "eventsSha256", "usageSha256",
           "stagingSha256", "commandSha256", "usage", "evidence"
         ],
         "additionalProperties": false,
         "properties": {
           "armId": {"type": "integer", "minimum": 1, "maximum": 5},
-          "pilotId": {"type": "string", "pattern": "^P4-SMOKE-R[1-9][0-9]*-A[1-5]$"},
+          "pilotId": {"type": "string", "pattern": "^P5-SMOKE-R[1-9][0-9]*-A[1-5]$"},
           "sessionId": {"type": "string", "format": "uuid"},
           "parentModel": {"type": "string", "minLength": 1},
           "workerModel": {"type": ["string", "null"]},
@@ -69,8 +70,9 @@
             "enum": ["inline", "delegated-inherited", "delegated-fixed-model-profile"]
           },
           "agentName": {"type": ["string", "null"]},
-          "status": {"type": "string", "enum": ["pass", "fail"]},
+          "status": {"type": "string", "enum": ["eligible", "infrastructure-failure"]},
           "reasons": {"type": "array", "items": {"type": "string"}},
+          "treatmentObservations": {"type": "array", "items": {"type": "string"}},
           "mcpHandshake": {"type": "string", "enum": ["pass", "fail"]},
           "terminalReturn": {"type": ["string", "null"]},
           "eventsSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
@@ -103,8 +105,8 @@
             "properties": {
               "eventsPath": {"type": "string", "minLength": 1},
               "usagePath": {"type": "string", "minLength": 1},
-              "scenarioPath": {"type": "string", "minLength": 1},
-              "manifestPath": {"type": "string", "minLength": 1},
+              "scenarioPath": {"type": ["string", "null"], "minLength": 1},
+              "manifestPath": {"type": ["string", "null"], "minLength": 1},
               "commandPath": {"type": "string", "minLength": 1}
             }
           }
