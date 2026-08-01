@@ -13,5 +13,18 @@
     {"runId": "V3-B01-A3", "state": "untouched", "reusable": false},
     {"runId": "V3-B01-A5", "state": "untouched", "reusable": false}
   ],
+  "forensics": {
+    "mcpStartupError": "SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\"",
+    "affectedLaunches": ["V3-B01-A4", "V3-B01-A2-parent", "V3-B01-A2-worker"],
+    "environmentPropagation": "correct",
+    "a2TaskTreatment": {
+      "capturedBytes": 1051,
+      "capturedSha256": "1cb6fc5c7f62601b745c2f8f19c4cf961277044e0614b4dc8b34551e914fc8c8",
+      "frozenBytes": 1050,
+      "frozenSha256": "2640c358a7c72890d0fd00ffc5a72a4e5e687d0a462632ed29070988f253f0b8",
+      "difference": "one terminal LF appended by the parent before worker execution",
+      "causedByMcpOutage": false
+    }
+  },
   "reason": "A4 and A2 consumed the first two global-order identities before runtime and parser defects were established. The remaining block identities were never started but are permanently retired with the partially consumed block."
 }

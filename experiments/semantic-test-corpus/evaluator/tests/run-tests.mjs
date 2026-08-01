@@ -34,6 +34,7 @@ import {
 import {
   kickoffBytesForRun,
   kickoffSha256ForRun,
+  legacyTaskBytesForSeed,
   legacyTaskSha256ForSeed,
   taskBytesForSeed
 } from "../../scripts/execution-contract.mjs";
@@ -993,13 +994,72 @@ test("sanitized A2 replay accepts Skill provenance and exact task bytes but pres
   assert.match(audit.binding.skillArgumentsSha256, /^[a-f0-9]{64}$/u);
   assert.match(audit.binding.skillResultSha256, /^[a-f0-9]{64}$/u);
   assert.match(audit.binding.skillContextSha256, /^[a-f0-9]{64}$/u);
+  assert.equal(replay.events.some((event) => event.type === "skill.invoked"), false);
+  assert.equal(replay.events.filter((event) =>
+    event.type === "tool.execution_start"
+    && event.data?.toolName === "skill"
+    && event.data?.arguments?.skill === "semantic-test-corpus").length, 1);
+  assert.equal(replay.events.filter((event) =>
+    event.type === "tool.execution_complete"
+    && event.data?.toolCallId === audit.binding.skillCallId
+    && event.data?.success === true).length, 1);
   assert.equal(audit.binding.taskPromptSha256,
     createHash("sha256").update(taskBytesForSeed(replay.expected.seed)).digest("hex"));
   assert.equal(audit.binding.taskPromptSha256, replay.expected.capturedTaskSha256);
+  assert.equal(Buffer.byteLength(
+    replay.events.find((event) => event.data?.toolName === "task").data.arguments.prompt,
+    "utf8"
+  ), replay.expected.capturedTaskBytes);
+  assert.equal(taskBytesForSeed(replay.expected.seed).length, replay.expected.capturedTaskBytes);
+  assert.equal(legacyTaskBytesForSeed(replay.expected.seed).length,
+    replay.expected.frozenV3TaskBytes);
   assert.equal(legacyTaskSha256ForSeed(replay.expected.seed),
     replay.expected.frozenV3TaskSha256);
   assert.notEqual(replay.expected.capturedTaskSha256, replay.expected.frozenV3TaskSha256);
   assert.match(replay.expected.byteDisposition, /does not retroactively.*outcome-eligible/u);
+  assert.equal(replay.expected.environmentPropagation, "correct");
+  assert.deepEqual(
+    replay.mcpLaunches.map(({ attempt, environmentPropagated, startupError }) => ({
+      attempt,
+      environmentPropagated,
+      startupError
+    })),
+    [
+      {
+        attempt: "V3-B01-A4",
+        environmentPropagated: true,
+        startupError: replay.expected.mcpStartupError
+      },
+      {
+        attempt: "V3-B01-A2-parent",
+        environmentPropagated: true,
+        startupError: replay.expected.mcpStartupError
+      },
+      {
+        attempt: "V3-B01-A2-worker",
+        environmentPropagated: true,
+        startupError: replay.expected.mcpStartupError
+      }
+    ]
+  );
+  const mcpStarts = replay.events.filter((event) =>
+    event.type === "tool.execution_start"
+    && event.data?.mcpServerName === "semantic-corpus");
+  const successfulMcpCalls = mcpStarts.filter((start) =>
+    replay.events.some((event) =>
+      event.type === "tool.execution_complete"
+      && event.data?.toolCallId === start.data.toolCallId
+      && event.data?.success === true));
+  assert.equal(successfulMcpCalls.length, 0);
+  assert.equal(
+    replay.events.find((event) =>
+      event.type === "tool.execution_complete"
+      && event.data?.toolCallId === "a2-list").data.result.content,
+    replay.expected.cliSurfaceError
+  );
+  assert.equal(replay.events.some((event) =>
+    event.type === "tool.execution_complete"
+    && event.data?.toolCallId === "a2-worker"), false);
   const reorderedEvents = structuredClone(replay.events);
   const skillCompleteIndex = reorderedEvents.findIndex((event) =>
     event.type === "tool.execution_complete" && event.data?.toolCallId === "a2-skill");

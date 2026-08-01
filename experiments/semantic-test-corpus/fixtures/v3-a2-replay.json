@@ -6,10 +6,20 @@
     "workerModel": "gpt-5.6-sol",
     "agent": "semantic-test-corpus",
     "seed": 2504740569,
+    "capturedTaskBytes": 1051,
+    "frozenV3TaskBytes": 1050,
     "capturedTaskSha256": "1cb6fc5c7f62601b745c2f8f19c4cf961277044e0614b4dc8b34551e914fc8c8",
     "frozenV3TaskSha256": "2640c358a7c72890d0fd00ffc5a72a4e5e687d0a462632ed29070988f253f0b8",
-    "byteDisposition": "The captured A2 task ended with a newline, unlike the frozen v3 artifact. V4 preserves the captured worker bytes as the corrected exact per-block contract; this fixture does not retroactively make V3-B01-A2 outcome-eligible."
+    "byteDisposition": "The parent appended exactly one terminal LF before worker execution. This treatment nonconformance is independent of the MCP outage. V4 freezes that LF in the worker artifact and still requires byte equality; this fixture does not retroactively make V3-B01-A2 outcome-eligible.",
+    "mcpStartupError": "SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\"",
+    "cliSurfaceError": "connection closed: initialize response",
+    "environmentPropagation": "correct"
   },
+  "mcpLaunches": [
+    {"attempt":"V3-B01-A4","environmentPropagated":true,"startupError":"SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\""},
+    {"attempt":"V3-B01-A2-parent","environmentPropagated":true,"startupError":"SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\""},
+    {"attempt":"V3-B01-A2-worker","environmentPropagated":true,"startupError":"SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\""}
+  ],
   "events": [
     {"type":"user.message","data":{"content":"Load the semantic-test-corpus Skill and delegate the exact worker task."},"timestamp":"2026-07-31T20:00:00.000Z"},
     {"type":"model.call_start","data":{"model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.100Z"},

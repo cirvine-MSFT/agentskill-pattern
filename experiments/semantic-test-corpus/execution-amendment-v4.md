@@ -17,6 +17,22 @@ six V3-B01 identities are permanently retired and none may be reused.
 No v2 or v3 run ID, session ID, candidate, staging root, artifact root, or global-order
 slot is reusable by v4.
 
+Retained V3-B01 logs establish the MCP startup cause exactly:
+`SCHEMA_ERROR: sandbox config roots.contract is missing required field "access"`.
+Environment propagation was correct for A4 and the A2 parent and worker launches. The
+CLI-facing `connection closed: initialize response`, absence of successful MCP calls,
+and failure-terminal mismatch are downstream startup consequences, but remain strict
+fail-closed conditions.
+
+V3-B01-A2 also had an independent treatment nonconformance. The Task tool transmitted
+1,051 bytes with SHA-256
+`1cb6fc5c7f62601b745c2f8f19c4cf961277044e0614b4dc8b34551e914fc8c8`; the frozen v3
+per-block task was 1,050 bytes with SHA-256
+`2640c358a7c72890d0fd00ffc5a72a4e5e687d0a462632ed29070988f253f0b8`. The parent
+appended exactly one terminal LF before worker execution. V4 redesigns the frozen
+worker artifact to include that LF and verifies it byte-for-byte in disposable smoke;
+no parser may trim or normalize it.
+
 ## Corrective runtime contract
 
 Generated sandbox configuration declares contract access `read-only` and staging
