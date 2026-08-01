@@ -980,6 +980,13 @@ test("generated sandbox schema starts the real MCP and lists exactly four tools"
 });
 
 test("sanitized A2 replay accepts Skill provenance and exact task bytes but preserves MCP failure", () => {
+  const replayBytes = readFileSync(resolve(root, "fixtures", "v3-a2-replay.json"), "utf8");
+  for (const forbidden of [
+    "reasoningOpaque", "encryptedContent", "requestId", "request_id", "serviceId", "service_id"
+  ]) {
+    assert.equal(replayBytes.includes(forbidden), false,
+      `sanitized replay must not contain ${forbidden}`);
+  }
   const replay = readRootJson("fixtures", "v3-a2-replay.json");
   const audit = auditDelegatedEventSequence({
     events: replay.events,
@@ -990,7 +997,14 @@ test("sanitized A2 replay accepts Skill provenance and exact task bytes but pres
     expectedWorkerModel: replay.expected.workerModel,
     expectedAgent: replay.expected.agent
   });
-  assert.equal(audit.status, "pass", audit.reasons.join("\n"));
+  assert.equal(audit.status, "fail");
+  assert.deepEqual(audit.reasons, ["no semantic-corpus MCP calls were observed"]);
+  assert.equal(audit.reasons.some((reason) =>
+    reason.includes("external user steering")), false);
+  assert.equal(audit.reasons.some((reason) =>
+    reason.includes("Task invocation differs")), false);
+  assert.equal(audit.reasons.some((reason) =>
+    reason.includes("model attribution")), false);
   assert.match(audit.binding.skillArgumentsSha256, /^[a-f0-9]{64}$/u);
   assert.match(audit.binding.skillResultSha256, /^[a-f0-9]{64}$/u);
   assert.match(audit.binding.skillContextSha256, /^[a-f0-9]{64}$/u);
@@ -1006,6 +1020,54 @@ test("sanitized A2 replay accepts Skill provenance and exact task bytes but pres
   assert.equal(audit.binding.taskPromptSha256,
     createHash("sha256").update(taskBytesForSeed(replay.expected.seed)).digest("hex"));
   assert.equal(audit.binding.taskPromptSha256, replay.expected.capturedTaskSha256);
+  assert.deepEqual({
+    sessionId: replay.expected.sessionId,
+    eventCount: replay.expected.capturedEventCount,
+    kickoffBytes: replay.expected.capturedTopLevelKickoffBytes,
+    kickoffSha256: replay.expected.capturedTopLevelKickoffSha256,
+    skillResultBytes: replay.expected.capturedSkillResultBytes,
+    skillResultSha256: replay.expected.capturedSkillResultSha256,
+    skillContextBytes: replay.expected.capturedSkillContextBytes,
+    skillContextSha256: replay.expected.capturedSkillContextSha256,
+    taskResultBytes: replay.expected.capturedTaskResultBytes,
+    taskResultSha256: replay.expected.capturedTaskResultSha256,
+    parentUsageRows: replay.expected.capturedParentUsageRows,
+    workerUsageRows: replay.expected.capturedWorkerUsageRows,
+    mcpExecutionStarts: replay.expected.capturedMcpExecutionStarts
+  }, {
+    sessionId: "12f0afdc-2c0b-55d7-9dec-624398c73827",
+    eventCount: 353,
+    kickoffBytes: 1303,
+    kickoffSha256: "2b781420e7deefc82c5d185e6221d1d2f7901f6d97c40b4491c2bc63517a8330",
+    skillResultBytes: 95,
+    skillResultSha256: "703d63914cb13d536242b1573a4642b6d609363f3ab72118303fa03fc6c6bcb8",
+    skillContextBytes: 2671,
+    skillContextSha256: "92230ce5b2ff36a36a8b2f45cdd8de0bfd026528fa8abdfbe3d65470b21a2d20",
+    taskResultBytes: 73,
+    taskResultSha256: "888b2fd6028cf41a879e82b59adfe280a3314f94d9a5af87c48ef51ac38cd614",
+    parentUsageRows: 3,
+    workerUsageRows: 1,
+    mcpExecutionStarts: 0
+  });
+  assert.match(replay.expected.sourceMetadataDisposition,
+    /replaced in replay events and must not reproduce those source hashes/u);
+  assert(replay.expected.capturedEventCount > replay.events.length);
+  const sanitizedKickoff = replay.events.find((event) =>
+    event.type === "user.message" && !event.agentId && event.data?.source === undefined);
+  const sanitizedTaskResult = replay.events.find((event) =>
+    event.type === "tool.execution_complete" && event.data?.toolCallId === "a2-worker");
+  assert.notEqual(
+    createHash("sha256").update(sanitizedKickoff.data.content).digest("hex"),
+    replay.expected.capturedTopLevelKickoffSha256
+  );
+  assert.notEqual(audit.binding.skillResultSha256,
+    replay.expected.capturedSkillResultSha256);
+  assert.notEqual(audit.binding.skillContextSha256,
+    replay.expected.capturedSkillContextSha256);
+  assert.notEqual(
+    createHash("sha256").update(sanitizedTaskResult.data.result.content).digest("hex"),
+    replay.expected.capturedTaskResultSha256
+  );
   assert.equal(Buffer.byteLength(
     replay.events.find((event) => event.data?.toolName === "task").data.arguments.prompt,
     "utf8"
@@ -1018,6 +1080,9 @@ test("sanitized A2 replay accepts Skill provenance and exact task bytes but pres
   assert.notEqual(replay.expected.capturedTaskSha256, replay.expected.frozenV3TaskSha256);
   assert.match(replay.expected.byteDisposition, /does not retroactively.*outcome-eligible/u);
   assert.equal(replay.expected.environmentPropagation, "correct");
+  assert.equal(replay.expected.mcpStartupError,
+    "SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\"");
+  assert.equal(replay.expected.cliSurfaceError, "connection closed: initialize response");
   assert.deepEqual(
     replay.mcpLaunches.map(({ attempt, environmentPropagated, startupError }) => ({
       attempt,
@@ -1045,21 +1110,29 @@ test("sanitized A2 replay accepts Skill provenance and exact task bytes but pres
   const mcpStarts = replay.events.filter((event) =>
     event.type === "tool.execution_start"
     && event.data?.mcpServerName === "semantic-corpus");
+  assert.equal(mcpStarts.length, replay.expected.capturedMcpExecutionStarts);
   const successfulMcpCalls = mcpStarts.filter((start) =>
     replay.events.some((event) =>
       event.type === "tool.execution_complete"
       && event.data?.toolCallId === start.data.toolCallId
       && event.data?.success === true));
   assert.equal(successfulMcpCalls.length, 0);
-  assert.equal(
-    replay.events.find((event) =>
-      event.type === "tool.execution_complete"
-      && event.data?.toolCallId === "a2-list").data.result.content,
-    replay.expected.cliSurfaceError
-  );
-  assert.equal(replay.events.some((event) =>
+  assert.equal(replay.events.filter((event) =>
     event.type === "tool.execution_complete"
-    && event.data?.toolCallId === "a2-worker"), false);
+    && event.data?.toolCallId === "a2-worker"
+    && event.data?.success === true).length, 1);
+  assert.equal(replay.events.filter((event) =>
+    event.type === "result"
+    && event.sessionId === replay.expected.sessionId
+    && event.exitCode === 0).length, 1);
+  assert.equal(replay.usageRows.filter((row) =>
+    row.agent_id === null && row.parent_tool_call_id === null).length,
+  replay.expected.capturedParentUsageRows);
+  assert.equal(replay.usageRows.filter((row) =>
+    row.agent_id === "a2-worker"
+    && row.parent_tool_call_id === "a2-worker"
+    && row.initiator === "sub-agent").length,
+  replay.expected.capturedWorkerUsageRows);
   const reorderedEvents = structuredClone(replay.events);
   const skillCompleteIndex = reorderedEvents.findIndex((event) =>
     event.type === "tool.execution_complete" && event.data?.toolCallId === "a2-skill");
@@ -1078,20 +1151,6 @@ test("sanitized A2 replay accepts Skill provenance and exact task bytes but pres
   });
   assert.equal(reordered.status, "fail");
   assert(reordered.reasons.includes("Skill context injection provenance is invalid"));
-  const withoutMcp = replay.events.filter((event) =>
-    event.data?.mcpServerName !== "semantic-corpus"
-    && event.data?.toolCallId !== "a2-list");
-  const missing = auditDelegatedEventSequence({
-    events: withoutMcp,
-    usageRows: replay.usageRows,
-    expectedKickoff: replay.expected.kickoff,
-    expectedTaskBytes: taskBytesForSeed(replay.expected.seed),
-    expectedParentModel: replay.expected.parentModel,
-    expectedWorkerModel: replay.expected.workerModel,
-    expectedAgent: replay.expected.agent
-  });
-  assert.equal(missing.status, "fail");
-  assert(missing.reasons.includes("no semantic-corpus MCP calls were observed"));
 });
 
 test("fake CLI preflight and harness capture a complete immutable run", () => {
