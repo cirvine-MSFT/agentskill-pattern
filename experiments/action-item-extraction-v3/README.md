@@ -1,6 +1,8 @@
 # Action-item extraction v3 preregistration
 
-**Status: design frozen; no v3 AI unit has started.** Protocol ID:
+**Status: design frozen; no v3 AI unit has started.** This outcome-independent
+checkout correction only forces LF-pinned v3 text inputs to LF on every
+platform. The original three-unit schedule remains unconsumed. Protocol ID:
 `action-item-extraction-v3`. This namespace is separate from immutable v1 and v2
 inputs, IDs, sessions, schedules, hashes, evidence, thresholds, and dispositions.
 
@@ -36,11 +38,15 @@ npm run validate
 npm test
 npm run check
 npm run reproduce
+node --test ..\..\tests\action-item-v3-checkout.test.mjs
 ```
 
 `npm run fixtures` and `npm run freeze` are write-once and have already produced
 the checked-in foundation. `npm run pilot -- --execute` is the only AI lifecycle
 entry point. It is not authorized in this session and was not invoked.
+The checkout regression creates and removes a temporary checkout with
+`core.autocrlf=true`; it does not invoke the lifecycle entry point or consume an
+ID.
 
 See [protocol-amendment-v3.md](protocol-amendment-v3.md),
 [design/execution-plan.json](design/execution-plan.json), and
