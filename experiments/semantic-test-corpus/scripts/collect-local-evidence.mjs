@@ -7,10 +7,13 @@ import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import {
   kickoffBytesForRun,
-  kickoffSha256ForRun,
   taskBytesForSeed,
   taskSha256ForSeed
 } from "./execution-contract.mjs";
+import {
+  availableToolsForArm,
+  buildCopilotArgs
+} from "./copilot-cli-v3.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
@@ -24,14 +27,32 @@ const preSessionFailureSchema = JSON.parse(
 const sessionCreationSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "session-creation.schema.json"), "utf8")
 );
-const contract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const candidateManifest = JSON.parse(
+const currentContract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
+const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const currentCandidateManifest = JSON.parse(
   readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8")
 );
-const sourcePin = JSON.parse(readFileSync(resolve(root, candidateManifest.sourcePin), "utf8"));
+const currentSourcePin = JSON.parse(
+  readFileSync(resolve(root, currentCandidateManifest.sourcePin), "utf8")
+);
+const abortedV2Root = resolve(root, "design", "aborted-v2");
+const abortedV2Contract = JSON.parse(
+  readFileSync(resolve(abortedV2Root, "arm-contract.json"), "utf8")
+);
+const abortedV2Schedule = JSON.parse(
+  readFileSync(resolve(abortedV2Root, "schedule.json"), "utf8")
+);
+const abortedV2CandidateManifest = JSON.parse(
+  readFileSync(resolve(abortedV2Root, "candidate-manifest.json"), "utf8")
+);
+const abortedV2SourcePin = JSON.parse(
+  readFileSync(resolve(abortedV2Root, "source-pin.json"), "utf8")
+);
+const abortedV2Conditions = JSON.parse(
+  readFileSync(resolve(abortedV2Root, "condition-instructions.json"), "utf8")
+);
 const repositoryRoot = resolve(root, "..", "..");
-const MCP_TOOLS = new Set(contract.commonContract.toolSurface);
+const MCP_TOOLS = new Set(currentContract.commonContract.toolSurface);
 
 function argument(args, name) {
   const index = args.indexOf(name);
@@ -40,6 +61,20 @@ function argument(args, name) {
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+function expectedKickoffBytes(armId, seed, abortedV2) {
+  if (!abortedV2) return kickoffBytesForRun(armId, seed);
+  const condition = abortedV2Conditions.conditions.find((item) => item.armId === armId);
+  if (!condition?.kickoff) throw new Error(`No aborted v2 kickoff for arm ${armId}`);
+  return Buffer.concat([
+    Buffer.from(`${condition.kickoff}\n\n`, "utf8"),
+    taskBytesForSeed(seed)
+  ]);
+}
+
+function expectedKickoffSha256(armId, seed, abortedV2) {
+  return sha256(expectedKickoffBytes(armId, seed, abortedV2));
 }
 
 function git(candidateRoot, args) {
@@ -54,7 +89,7 @@ function git(candidateRoot, args) {
   return result.stdout;
 }
 
-function committedSource(sourcePath) {
+function committedSource(sourcePath, sourcePin) {
   const repositoryPath = relative(repositoryRoot, resolve(root, sourcePath))
     .replaceAll("\\", "/");
   const blobId = sourcePin.sourceBlobs[repositoryPath];
@@ -206,9 +241,11 @@ function eventRole(event) {
 function contractToolName(event) {
   const server = event.data?.mcpServerName;
   const tool = event.data?.mcpToolName;
-  return typeof server === "string" && typeof tool === "string"
-    ? `${server}/${tool}`
-    : event.data?.toolName;
+  if (typeof server === "string" && typeof tool === "string") return `${server}/${tool}`;
+  const name = event.data?.toolName;
+  return typeof name === "string" && name.startsWith("semantic-corpus-")
+    ? `semantic-corpus/${name.slice("semantic-corpus-".length)}`
+    : name;
 }
 
 function timing(events, parentRows, workerRows, delegated) {
@@ -256,6 +293,13 @@ export function collectLocalEvidence({
 }) {
   const usageExport = JSON.parse(usageBytes);
   const sessionCreation = JSON.parse(sessionCreationBytes);
+  const abortedV2 = runManifest.protocolId === "semantic-test-corpus-execution-v2";
+  const contract = abortedV2 ? abortedV2Contract : currentContract;
+  const schedule = abortedV2 ? abortedV2Schedule : currentSchedule;
+  const candidateManifest = abortedV2
+    ? abortedV2CandidateManifest
+    : currentCandidateManifest;
+  const sourcePin = abortedV2 ? abortedV2SourcePin : currentSourcePin;
   const usageErrors = validateJsonSchema(usageExport, usageSchema, { schemaDir: schemaRoot });
   if (usageErrors.length > 0) {
     throw new Error(`Usage export is invalid: ${usageErrors[0].path} ${usageErrors[0].message}`);
@@ -288,9 +332,10 @@ export function collectLocalEvidence({
     || planned.order !== runManifest.scheduleOrder
     || planned.globalOrder !== runManifest.globalOrder
     || planned.taskSha256 !== taskSha256ForSeed(runManifest.seed)
-    || planned.kickoffSha256 !== kickoffSha256ForRun(
+    || planned.kickoffSha256 !== expectedKickoffSha256(
       runManifest.armId,
-      runManifest.seed
+      runManifest.seed,
+      abortedV2
     )) {
     throw new Error("Run manifest differs from the frozen schedule");
   }
@@ -309,7 +354,7 @@ export function collectLocalEvidence({
     throw new Error("Candidate boundary is not the frozen v2 materialization format");
   }
   const expectedCandidateFiles = candidateManifest.files.map((entry) => {
-    const source = committedSource(entry.source);
+    const source = committedSource(entry.source, sourcePin);
     const bytes = entry.transform === "append-block-seed"
       ? taskBytesForSeed(runManifest.seed)
       : source.bytes;
@@ -383,7 +428,7 @@ export function collectLocalEvidence({
     || runAttempt.treatment.candidateSnapshotSha256 !== runManifest.candidateSnapshotSha256
     || runAttempt.treatment.sharedTaskSha256 !== taskFile.sha256
     || runAttempt.treatment.kickoffSha256
-      !== kickoffSha256ForRun(runManifest.armId, runManifest.seed)
+      !== expectedKickoffSha256(runManifest.armId, runManifest.seed, abortedV2)
     || runAttempt.treatment.wallLimitMs !== contract.commonContract.wallClockMinutes * 60_000
     || runAttempt.treatment.toolCallLimit !== contract.commonContract.maximumToolCalls
     || runAttempt.treatment.modelTokenLimit !== contract.commonContract.maximumTotalModelTokens) {
@@ -422,32 +467,84 @@ export function collectLocalEvidence({
   }
   const events = parseJsonLines(eventsBytes);
   const starts = events.filter((event) => event.type === "session.start");
+  const results = events.filter((event) => event.type === "result");
   const cliSessionId = runManifest.cliSessionId;
   const sessionReasons = [];
-  if (starts.length !== 1) sessionReasons.push(`expected one session.start event; found ${starts.length}`);
-  const capturedKickoffBytes = Buffer.from(sessionCreation.request.kickoff.prompt, "utf8");
-  if (sessionCreation.response.project_session_id !== runManifest.appProjectSessionId
-    || sessionCreation.response.project_id !== sessionCreation.request.project_id
-    || sessionCreation.response.execution_location !== contract.commonContract.executionLocation
-    || sessionCreation.response.kickoff_mode !== contract.commonContract.kickoffMode
-    || sessionCreation.response.kickoff_model !== arm.model
-    || sessionCreation.response.kickoff_consumed !== true
-    || sessionCreation.response.kickoff_prompt_sha256
-      !== runAttempt.treatment.kickoffSha256
-    || sessionCreation.request.execution_location !== contract.commonContract.executionLocation
-    || sessionCreation.request.kickoff.mode !== contract.commonContract.kickoffMode
-    || sessionCreation.request.kickoff.model !== arm.model
-    || sessionCreation.request.kickoff.agent !== null
-    || sessionCreation.request.candidate_commit !== runManifest.terminalCommit
-    || sha256(capturedKickoffBytes) !== runAttempt.treatment.kickoffSha256
-    || !capturedKickoffBytes.equals(
-      kickoffBytesForRun(runManifest.armId, runManifest.seed)
-    )) {
-    sessionReasons.push("captured atomic create_session request/response differs from the frozen attempt");
+  const capturedPrompt = abortedV2
+    ? sessionCreation.request.kickoff.prompt
+    : sessionCreation.request.prompt;
+  const capturedKickoffBytes = Buffer.from(capturedPrompt, "utf8");
+  if (abortedV2) {
+    if (starts.length !== 1) {
+      sessionReasons.push(`expected one session.start event; found ${starts.length}`);
+    }
+    if (sessionCreation.response.project_session_id !== runManifest.appProjectSessionId
+      || sessionCreation.response.project_id !== sessionCreation.request.project_id
+      || sessionCreation.response.execution_location !== contract.commonContract.executionLocation
+      || sessionCreation.response.kickoff_mode !== contract.commonContract.kickoffMode
+      || sessionCreation.response.kickoff_model !== arm.model
+      || sessionCreation.response.kickoff_consumed !== true
+      || sessionCreation.response.kickoff_prompt_sha256
+        !== runAttempt.treatment.kickoffSha256
+      || sessionCreation.request.execution_location !== contract.commonContract.executionLocation
+      || sessionCreation.request.kickoff.mode !== contract.commonContract.kickoffMode
+      || sessionCreation.request.kickoff.model !== arm.model
+      || sessionCreation.request.kickoff.agent !== null
+      || sessionCreation.request.candidate_commit !== runManifest.terminalCommit) {
+      sessionReasons.push("captured atomic create_session request/response differs from the frozen attempt");
+    }
+    if (starts[0]?.data?.sessionId !== cliSessionId) {
+      sessionReasons.push("session.start CLI session ID differs from the run manifest");
+    }
+    if (starts[0]?.data?.context?.headCommit !== runManifest.terminalCommit) {
+      sessionReasons.push("session.start head commit differs from the terminal candidate commit");
+    }
+  } else {
+    const expectedAvailableTools = availableToolsForArm(arm);
+    const expectedArgs = buildCopilotArgs({
+      prompt: capturedPrompt,
+      sessionId: cliSessionId,
+      model: arm.model,
+      topLevelAgent: arm.topLevelAgent,
+      candidateRoot: resolve(candidateRoot),
+      mcpConfigPath: sessionCreation.request.mcp_config_path,
+      disabledMcpServers: sessionCreation.request.disabled_mcp_servers,
+      availableTools: expectedAvailableTools
+    });
+    if (starts.length !== 0) {
+      sessionReasons.push("real prompt-mode JSONL unexpectedly emitted session.start");
+    }
+    if (results.length !== 1 || events.at(-1) !== results[0]) {
+      sessionReasons.push(`expected one terminal result event; found ${results.length}`);
+    }
+    if (results[0]?.sessionId !== cliSessionId
+      || results[0]?.exitCode !== 0
+      || sessionCreation.response.result_session_id !== cliSessionId
+      || sessionCreation.response.exit_code !== 0
+      || sessionCreation.request.session_id !== cliSessionId
+      || runManifest.appProjectSessionId !== null
+      || runAttempt.appProjectSessionId !== null) {
+      sessionReasons.push("predetermined CLI identity or prompt result binding differs from the run manifest");
+    }
+    if (sessionCreation.request.model !== arm.model
+      || sessionCreation.request.agent !== (arm.topLevelAgent ?? null)
+      || sessionCreation.request.output_format !== "json"
+      || resolve(sessionCreation.request.cwd) !== resolve(candidateRoot)
+      || sessionCreation.request.candidate_commit !== runManifest.terminalCommit
+      || JSON.stringify(sessionCreation.request.available_tools)
+        !== JSON.stringify(expectedAvailableTools)
+      || JSON.stringify(sessionCreation.request.command_args) !== JSON.stringify(expectedArgs)
+      || sessionCreation.request.disabled_mcp_servers.includes("semantic-corpus")
+      || sha256(readFileSync(sessionCreation.request.mcp_config_path))
+        !== sessionCreation.request.mcp_config_sha256) {
+      sessionReasons.push("captured Copilot prompt invocation differs from the frozen attempt");
+    }
   }
-  if (starts[0]?.data?.sessionId !== cliSessionId) sessionReasons.push("session.start CLI session ID differs from the run manifest");
-  if (starts[0]?.data?.context?.headCommit !== runManifest.terminalCommit) {
-    sessionReasons.push("session.start head commit differs from the terminal candidate commit");
+  if (sha256(capturedKickoffBytes) !== runAttempt.treatment.kickoffSha256
+    || !capturedKickoffBytes.equals(
+      expectedKickoffBytes(runManifest.armId, runManifest.seed, abortedV2)
+    )) {
+    sessionReasons.push("captured kickoff bytes differ from the frozen attempt");
   }
   if (usageExport.source.cliSessionId !== cliSessionId) sessionReasons.push("usage export CLI session ID differs from the run manifest");
   if (usageExport.rows.some((row) => row.session_id !== cliSessionId)) {
@@ -459,20 +556,18 @@ export function collectLocalEvidence({
     event.type === "assistant.turn_end" && !event.agentId);
   const topLevelUserMessages = events.filter((event) =>
     event.type === "user.message" && !event.agentId);
-  if (topLevelTurnStarts.length !== 1 || topLevelTurnEnds.length !== 1) {
-    sessionReasons.push("attempt must contain exactly one top-level assistant kickoff turn");
+  if (topLevelTurnStarts.length === 0
+    || topLevelTurnStarts.length !== topLevelTurnEnds.length) {
+    sessionReasons.push("attempt must contain one or more complete top-level assistant turns");
   }
   if (topLevelUserMessages.length > 1) {
     sessionReasons.push("attempt contains follow-up user steering after kickoff");
   } else if (topLevelUserMessages.length === 1
     && topLevelUserMessages[0]?.data?.content
-    !== sessionCreation.request.kickoff.prompt) {
-    sessionReasons.push("captured user kickoff differs from the atomic create_session prompt");
-  } else if (topLevelUserMessages.length === 0
-    && (sessionCreation.response.kickoff_consumed !== true
-      || sessionCreation.response.kickoff_prompt_sha256
-        !== runAttempt.treatment.kickoffSha256)) {
-    sessionReasons.push("attempt lacks captured kickoff consumption evidence");
+    !== capturedPrompt) {
+    sessionReasons.push("captured user kickoff differs from the atomic prompt");
+  } else if (topLevelUserMessages.length === 0 && !abortedV2) {
+    sessionReasons.push("attempt lacks a captured top-level kickoff message");
   }
 
   const toolStarts = events.filter((event) => event.type === "tool.execution_start");
@@ -509,6 +604,33 @@ export function collectLocalEvidence({
     worker: [...new Set(workerRows.map((row) => row.model))].sort()
   };
   const modelReasons = [...usageRoleReasons];
+  const parentModelEvents = events.filter((event) =>
+    !event.agentId && ["model.call_start", "assistant.message"].includes(event.type));
+  const workerModelEvents = events.filter((event) =>
+    event.agentId === workerCallId
+    && ["model.call_start", "assistant.message", "subagent.started", "subagent.completed"]
+      .includes(event.type));
+  const parentEventModels = [...new Set(parentModelEvents
+    .map((event) => event.data?.model)
+    .filter((model) => typeof model === "string"))].sort();
+  const workerEventModels = [...new Set(workerModelEvents
+    .map((event) => event.data?.model)
+    .filter((model) => typeof model === "string"))].sort();
+  if (!abortedV2 && parentModelEvents.some((event) => typeof event.data?.model !== "string")) {
+    modelReasons.push("one or more parent JSONL model events lack data.model");
+  }
+  if (!abortedV2 && arm.delegated
+    && workerModelEvents.some((event) => typeof event.data?.model !== "string")) {
+    modelReasons.push("one or more worker JSONL model events lack data.model");
+  }
+  if (!abortedV2 && (parentEventModels.length === 0
+    || parentEventModels.some((model) => model !== arm.model))) {
+    modelReasons.push(`parent JSONL model mismatch: expected ${arm.model}, observed ${parentEventModels.join(",")}`);
+  }
+  if (!abortedV2 && arm.delegated && (workerEventModels.length === 0
+    || workerEventModels.some((model) => model !== arm.workerModel))) {
+    modelReasons.push(`worker JSONL model mismatch: expected ${arm.workerModel}, observed ${workerEventModels.join(",")}`);
+  }
   for (const role of ["parent", "worker"]) {
     const expected = requested[role];
     const actual = observed[role];
@@ -531,6 +653,30 @@ export function collectLocalEvidence({
     return { role, name, count };
   }).sort((left, right) => `${left.role}/${left.name}`.localeCompare(`${right.role}/${right.name}`));
   const mechanismReasons = [];
+  if (!abortedV2) {
+    const startIds = toolStarts.map((event) => event.data?.toolCallId);
+    const completeIds = toolCompletes.map((event) => event.data?.toolCallId);
+    if (startIds.some((id) => typeof id !== "string" || id.length === 0)
+      || new Set(startIds).size !== startIds.length) {
+      mechanismReasons.push("tool starts require unique nonempty toolCallId values");
+    }
+    if (completeIds.some((id) => typeof id !== "string" || id.length === 0)
+      || new Set(completeIds).size !== completeIds.length) {
+      mechanismReasons.push("tool completions require unique nonempty toolCallId values");
+    }
+    if (startIds.length !== completeIds.length
+      || startIds.some((id) => !completeIds.includes(id))
+      || completeIds.some((id) => !startIds.includes(id))) {
+      mechanismReasons.push("tool starts and completions are not a bijective lifecycle");
+    }
+    for (const start of toolStarts) {
+      const complete = toolCompletes.find((event) =>
+        event.data?.toolCallId === start.data?.toolCallId);
+      if (complete && Date.parse(complete.timestamp) < Date.parse(start.timestamp)) {
+        mechanismReasons.push(`tool completion precedes start for ${start.data?.toolCallId}`);
+      }
+    }
+  }
   if (arm.delegated) {
     if (subagentStarts.length !== 1 || subagentCompletes.length !== 1) {
       mechanismReasons.push("delegated arm lacks one complete local subagent lifecycle");
@@ -645,7 +791,11 @@ export function collectLocalEvidence({
       };
     })
     .filter(Boolean);
-  const compact = subagentCompletes[0]?.data?.result
+  const taskCompletion = workerCallId === null
+    ? null
+    : toolCompletes.find((event) => event.data?.toolCallId === workerCallId);
+  const compact = taskCompletion?.data?.result?.content
+    ?? subagentCompletes[0]?.data?.result
     ?? subagentCompletes[0]?.data?.response
     ?? null;
   const compactReturn = typeof compact === "string" ? compact : compact === null ? null : JSON.stringify(compact);
@@ -784,7 +934,10 @@ export function collectLocalEvidence({
       limitations: [
         "No detached platform signature or external trust anchor",
         "No signed sandbox, filesystem, network, run, adapter, or metrics envelope",
-        "Local hashes establish byte identity only"
+        "Local hashes establish byte identity only",
+        ...(abortedV2
+          ? []
+          : ["Direct Copilot prompt mode exposes no app project-session identity; appProjectSessionId is null"])
       ]
     },
     availability: {
@@ -794,7 +947,9 @@ export function collectLocalEvidence({
       fields: {
         premiumRequests: available("unavailable", "assistant_usage_events has no premium-request field"),
         toolSchemas: available("unavailable", "local events do not expose the complete tool schema payload"),
-        exposedTools: available("unavailable", "local events do not expose the complete configured tool list"),
+        exposedTools: abortedV2
+          ? available("unavailable", "local events do not expose the complete configured tool list")
+          : available("available"),
         compaction: available("unavailable", "local events do not expose an authoritative compaction counter"),
         reasoningTokens: available(total.reasoningTokens === null ? "unavailable" : "available",
           total.reasoningTokens === null ? "one or more usage rows omit reasoning_tokens" : null),
@@ -838,7 +993,9 @@ export function collectLocalEvidence({
     },
     tools: {
       schemas: { available: false, count: null, names: null },
-      exposed: { available: false, names: null },
+      exposed: abortedV2
+        ? { available: false, names: null }
+        : { available: true, names: sessionCreation.request.available_tools },
       calls,
       callCount: toolStarts.length,
       resultCount: toolCompletes.length,

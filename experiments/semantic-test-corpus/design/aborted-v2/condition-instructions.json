@@ -1,10 +1,10 @@
 {
-  "protocolId": "semantic-test-corpus-execution-v3",
-  "version": 3,
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "version": 2,
   "sharedTask": "task/shared-task-prompt.txt",
   "executionLocation": "local",
-  "kickoffMode": "noninteractive-prompt",
-  "sessionCreation": "atomic-copilot-prompt-with-predetermined-session-id",
+  "kickoffMode": "autopilot",
+  "sessionCreation": "atomic-create-session-with-seeded-kickoff",
   "conditions": [
     {
       "armId": 0,

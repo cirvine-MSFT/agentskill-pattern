@@ -1,8 +1,8 @@
 {
-  "protocolId": "semantic-test-corpus-execution-v3",
-  "preregistrationVersion": "3.0.0",
-  "amends": "execution-amendment-v2.md",
-  "normativeAmendment": "execution-amendment-v3.md",
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "preregistrationVersion": "2.0.0",
+  "amends": "protocol.md v1.4.0",
+  "normativeAmendment": "execution-amendment-v2.md",
   "fixedModels": {
     "frontier": "gpt-5.6-sol",
     "cheap": "claude-haiku-4.5"
@@ -15,12 +15,10 @@
     "maximumToolCalls": 120,
     "maximumTotalModelTokens": 100000,
     "executionLocation": "local",
-    "kickoffMode": "noninteractive-prompt",
-    "sessionCreation": "copilot-prompt-with-predetermined-session-id",
-    "cliVersion": "1.0.77",
-    "cliSurface": "copilot -p <prompt> --session-id <uuid> --model <model> --output-format json -C <candidate>",
+    "kickoffMode": "autopilot",
+    "sessionCreation": "atomic-create-session-with-seeded-kickoff",
     "sourcePin": "design/source-pin.json",
-    "freshSessionEvidence": "predetermined UUID echoed by the sole terminal JSONL result event and exact local usage rows",
+    "freshSessionEvidence": "exact app project session ID plus internal CLI session ID",
     "acceptanceBoundary": "external-evaluator-not-mounted",
     "expectedOutputPolicy": "oracle-after-promotion-only",
     "taskArtifact": "task/shared-task-prompt.txt",
@@ -58,6 +56,7 @@
       "signed": false,
       "complianceProof": false,
       "requiredBindings": [
+        "appProjectSessionId",
         "cliSessionId",
         "eventsSha256",
         "usageSha256",
@@ -73,9 +72,9 @@
       "capturedFixtures": "fixtures/platform-audit/captures.json",
       "unsignedJsonlPolicy": "protocol-cell-unavailable",
       "currentSmokeAvailability": {
-      "inline": true,
-      "delegated": true,
-      "reason": "Local descriptive event and usage collection is available; detached signature and compliance proof remain unavailable"
+        "inline": false,
+        "delegated": false,
+        "reason": "Copilot CLI JSONL lacks detached signature and signed policy/filesystem/run boundaries"
       }
     }
   },
@@ -100,11 +99,11 @@
     ]
   },
   "arms": [
-    {"id": 0, "name": "general deterministic script", "modelTier": "none", "delegated": false, "model": null, "topLevelAgent": null, "generator": "scripts/run-controlled-harness.mjs#arm0", "pinnedImplementation": "baseline/general-generate.mjs"},
-    {"id": 1, "name": "frontier inline", "modelTier": "frontier", "delegated": false, "model": "gpt-5.6-sol", "topLevelAgent": null},
-    {"id": 2, "name": "frontier same-model delegated", "modelTier": "frontier", "delegated": true, "model": "gpt-5.6-sol", "workerModel": "gpt-5.6-sol", "agentName": "semantic-test-corpus", "topLevelAgent": null, "delegationContract": "delegationContract"},
-    {"id": 3, "name": "cheap inline", "modelTier": "cheap", "delegated": false, "model": "claude-haiku-4.5", "topLevelAgent": null},
-    {"id": 4, "name": "cheap delegated via Skill/agent", "modelTier": "cheap", "delegated": true, "model": "claude-haiku-4.5", "workerModel": "claude-haiku-4.5", "agentName": "semantic-test-corpus", "topLevelAgent": null, "delegationContract": "delegationContract"},
+    {"id": 0, "name": "general deterministic script", "modelTier": "none", "delegated": false, "model": null, "generator": "scripts/run-controlled-harness.mjs#arm0", "pinnedImplementation": "baseline/general-generate.mjs"},
+    {"id": 1, "name": "frontier inline", "modelTier": "frontier", "delegated": false, "model": "gpt-5.6-sol"},
+    {"id": 2, "name": "frontier same-model delegated", "modelTier": "frontier", "delegated": true, "model": "gpt-5.6-sol", "workerModel": "gpt-5.6-sol", "agentName": "semantic-test-corpus", "delegationContract": "delegationContract"},
+    {"id": 3, "name": "cheap inline", "modelTier": "cheap", "delegated": false, "model": "claude-haiku-4.5"},
+    {"id": 4, "name": "cheap delegated via Skill/agent", "modelTier": "cheap", "delegated": true, "model": "claude-haiku-4.5", "workerModel": "claude-haiku-4.5", "agentName": "semantic-test-corpus", "delegationContract": "delegationContract"},
     {
       "id": 5,
       "name": "frontier parent to generated fixed-Haiku worker",
@@ -115,7 +114,6 @@
       "delegationContract": "delegationContract",
       "agentName": "semantic-test-corpus-haiku",
       "profileModel": "claude-haiku-4.5",
-      "topLevelAgent": null,
       "unavailablePolicy": "If real atomic preflight cannot select semantic-test-corpus-haiku and observe claude-haiku-4.5, the run is unavailable; no alternate agent or mechanism is permitted."
     }
   ]

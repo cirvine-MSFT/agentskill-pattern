@@ -3,57 +3,63 @@
   "$id": "execution-preflight.schema.json",
   "type": "object",
   "required": [
-    "formatVersion", "protocolId", "capturedAt", "cli", "capabilities", "arm5Probe", "arms"
+    "formatVersion", "protocolId", "capturedAt", "cli", "surface",
+    "configuredMcpServers", "usageStore", "profiles", "arms"
   ],
   "additionalProperties": false,
   "properties": {
-    "formatVersion": {"const": 1},
-    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "formatVersion": {"const": 2},
+    "protocolId": {"const": "semantic-test-corpus-execution-v3"},
     "capturedAt": {"type": "string"},
     "cli": {
       "type": "object",
-      "required": ["command", "version", "capabilityExitCode"],
+      "required": [
+        "command", "version", "versionExitCode", "helpExitCode", "mcpListExitCode"
+      ],
       "additionalProperties": false,
       "properties": {
         "command": {"type": "string", "minLength": 1},
         "version": {"type": ["string", "null"]},
-        "capabilityExitCode": {"type": ["integer", "null"]}
+        "versionExitCode": {"type": ["integer", "null"]},
+        "helpExitCode": {"type": ["integer", "null"]},
+        "mcpListExitCode": {"type": ["integer", "null"]}
       }
     },
-    "capabilities": {
+    "surface": {
       "type": "object",
       "required": [
-        "atomicCreateSession", "localExecution", "promptFile", "parentModel",
-        "customAgent", "fixedModelCustomAgent", "rawEvents", "usageExport",
-        "preSessionFailureReceipt", "zeroUsageReceipt"
+        "requiredFlagsPresent", "missingFlags", "fabricatedCreateSessionPresent"
       ],
       "additionalProperties": false,
       "properties": {
-        "atomicCreateSession": {"type": "boolean"},
-        "localExecution": {"type": "boolean"},
-        "promptFile": {"type": "boolean"},
-        "parentModel": {"type": "boolean"},
-        "customAgent": {"type": "boolean"},
-        "fixedModelCustomAgent": {"type": "boolean"},
-        "rawEvents": {"type": "boolean"},
-        "usageExport": {"type": "boolean"},
-        "preSessionFailureReceipt": {"type": "boolean"},
-        "zeroUsageReceipt": {"type": "boolean"}
+        "requiredFlagsPresent": {"type": "boolean"},
+        "missingFlags": {"type": "array", "items": {"type": "string"}},
+        "fabricatedCreateSessionPresent": {"const": false}
       }
     },
-    "arm5Probe": {
+    "configuredMcpServers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "usageStore": {
       "type": "object",
-      "required": [
-        "exitCode", "atomicKickoff", "selectedAgent", "observedWorkerModel",
-        "workerSessionId"
-      ],
+      "required": ["path", "status", "columns", "reason"],
       "additionalProperties": false,
       "properties": {
-        "exitCode": {"type": ["integer", "null"]},
-        "atomicKickoff": {"type": "boolean"},
-        "selectedAgent": {"type": ["string", "null"]},
-        "observedWorkerModel": {"type": ["string", "null"]},
-        "workerSessionId": {"type": ["string", "null"]}
+        "path": {"type": ["string", "null"]},
+        "status": {"type": "string", "enum": ["available", "unavailable"]},
+        "columns": {"type": "array", "items": {"type": "string"}},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "required": ["normalPinned", "fixedHaikuPinned"],
+      "additionalProperties": false,
+      "properties": {
+        "normalPinned": {"type": "boolean"},
+        "fixedHaikuPinned": {"type": "boolean"}
       }
     },
     "arms": {

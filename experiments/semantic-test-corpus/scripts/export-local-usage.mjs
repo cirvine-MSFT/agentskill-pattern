@@ -8,7 +8,7 @@ import { validateJsonSchema } from "../validators/json-schema.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
 const schema = JSON.parse(readFileSync(resolve(schemaRoot, "local-usage-export.schema.json"), "utf8"));
-const COLUMNS = [
+export const USAGE_COLUMNS = [
   "id", "session_id", "turn_index", "agent_id", "parent_tool_call_id", "model",
   "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens",
   "reasoning_tokens", "total_nano_aiu", "request_multiplier", "duration_ms",
@@ -16,7 +16,7 @@ const COLUMNS = [
   "reasoning_effort", "finish_reason", "content_filter_triggered",
   "token_details_json", "created_at"
 ];
-const QUERY = `SELECT ${COLUMNS.join(", ")} FROM assistant_usage_events WHERE session_id = ? ORDER BY id`;
+const QUERY = `SELECT ${USAGE_COLUMNS.join(", ")} FROM assistant_usage_events WHERE session_id = ? ORDER BY id`;
 
 function argument(args, name) {
   const index = args.indexOf(name);

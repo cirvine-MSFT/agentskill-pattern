@@ -10,7 +10,7 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3"]},
     "runId": {"type": "string"},
     "attemptNumber": {"const": 1},
     "evidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},

@@ -10,9 +10,9 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3"]},
     "evidenceTier": {"const": "descriptive-local-v1"},
-    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "runId": {"type": "string", "pattern": "^(?:B|V3-B)\\d{2}-A[0-5]$"},
     "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
     "armId": {"type": "integer", "minimum": 1, "maximum": 5},
     "identity": {
@@ -23,7 +23,7 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "appProjectSessionId": {"type": "string", "minLength": 1},
+        "appProjectSessionId": {"type": ["string", "null"], "minLength": 1},
         "cliSessionId": {"type": "string", "minLength": 1},
         "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
         "sourceTree": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
@@ -180,8 +180,8 @@
           "required": ["available", "names"],
           "additionalProperties": false,
           "properties": {
-            "available": {"const": false},
-            "names": {"type": "null"}
+            "available": {"type": "boolean"},
+            "names": {"type": ["array", "null"], "items": {"type": "string"}}
           }
         },
         "calls": {

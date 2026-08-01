@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { createHash, generateKeyPairSync, sign } from "node:crypto";
+import { createHash, generateKeyPairSync, randomUUID, sign } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -33,6 +33,13 @@ import {
   kickoffSha256ForRun
 } from "../../scripts/execution-contract.mjs";
 import { preflightExecution } from "../../scripts/preflight-execution.mjs";
+import {
+  buildCopilotArgs,
+  inspectHelp,
+  parseCopilotJsonl,
+  predeterminedSessionId,
+  resultEvent
+} from "../../scripts/copilot-cli-v3.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
 import { runControlledHarness } from "../../scripts/run-controlled-harness.mjs";
 import { runDeterministicBlock } from "../../scripts/run-deterministic-block.mjs";
@@ -64,25 +71,59 @@ import { validateJsonSchema } from "../../validators/json-schema.mjs";
 import { validateStaging } from "../../validators/staging.mjs";
 import { createDispatcher } from "../../../../tools/semantic-corpus-mcp/protocol.mjs";
 import { createRun as createCorpusRun } from "../../../../tests/semantic-corpus-mcp/fixtures.mjs";
+import { fakeUsageExporter } from "../../fixtures/fake-usage-exporter.mjs";
 
 const evaluatorRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = resolve(evaluatorRoot, "..");
 const readRootJson = (...parts) => JSON.parse(readFileSync(resolve(root, ...parts), "utf8"));
 const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluatorRoot, ...parts), "utf8"));
 const frozenSchedule = readRootJson("design", "schedule.json");
+const frozenSeeds = readRootJson("design", "seeds.json");
 const frozenContract = readRootJson("design", "arm-contract.json");
 const tests = [];
 const evidenceCandidateRoot = resolve(
   process.env.TEMP ?? resolve(root, ".."),
   `semantic-evidence-candidate-${process.pid}`
 );
+const fixtureUsageStoreInspection = {
+  status: "available",
+  columns: [
+    "id", "session_id", "turn_index", "agent_id", "parent_tool_call_id", "model",
+    "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens",
+    "reasoning_tokens", "total_nano_aiu", "request_multiplier", "duration_ms",
+    "time_to_first_token_ms", "inter_token_latency_ms", "initiator", "api_endpoint",
+    "reasoning_effort", "finish_reason", "content_filter_triggered",
+    "token_details_json", "created_at"
+  ],
+  reason: null
+};
+
+function fixturePreflight(cli, capturedAt = "2026-08-01T00:00:00.000Z") {
+  return preflightExecution(cli, {
+    capturedAt,
+    usageStoreInspection: fixtureUsageStoreInspection
+  });
+}
+
+function runFixtureHarness(options) {
+  return runControlledHarness({
+    ...options,
+    preflight: fixturePreflight(options.cli, options.capturedAt),
+    usageExporter: fakeUsageExporter
+  });
+}
 
 function ensureEvidenceCandidate() {
+  const boundaryPath = resolve(evidenceCandidateRoot, ".benchmark-boundary.json");
+  const legacyBoundary = existsSync(boundaryPath)
+    && JSON.parse(readFileSync(boundaryPath, "utf8")).protocolId
+      === "semantic-test-corpus-execution-v2";
   if (!existsSync(resolve(evidenceCandidateRoot, ".git"))
-    || !existsSync(resolve(evidenceCandidateRoot, ".benchmark-boundary.json"))) {
+    || !legacyBoundary) {
     rmSync(evidenceCandidateRoot, { recursive: true, force: true });
     materializeCandidate(evidenceCandidateRoot, {
-      blockId: "B01"
+      blockId: "B01",
+      abortedV2: true
     });
   }
   return evidenceCandidateRoot;
@@ -467,7 +508,14 @@ test("baseline is deterministic and staging-valid", () => {
 test("randomized complete-block schedule is frozen", () => {
   const schedule = createSchedule();
   assert.deepEqual(schedule, readRootJson("design", "schedule.json"));
-  assert.equal(schedule.protocolId, "semantic-test-corpus-execution-v2");
+  assert.equal(schedule.protocolId, "semantic-test-corpus-execution-v3");
+  assert.equal(schedule.runNamespace,
+    "semantic-test-corpus-v3-9ac4ed02-a291-4923-acc3-9220c73d044d");
+  assert.equal(new Set(schedule.runs.filter((run) => run.armId !== 0)
+    .map((run) => run.sessionId)).size, 60);
+  assert(schedule.runs.filter((run) => run.armId === 0)
+    .every((run) => run.sessionId === null));
+  assert(schedule.runs.every((run) => /^V3-B\d{2}-A[0-5]$/u.test(run.runId)));
   assert.equal(schedule.runs.length, 72);
   assert.equal(schedule.runs.filter((run) => run.armId === 0).length, 12);
   assert.equal(schedule.runs.filter((run) => run.armId !== 0).length, 60);
@@ -479,6 +527,65 @@ test("randomized complete-block schedule is frozen", () => {
   }
   assert.deepEqual(schedule.runs.map((run) => run.globalOrder),
     Array.from({ length: 72 }, (_, index) => index + 1));
+});
+
+test("Copilot v3 command uses the real prompt surface and predetermined identity", () => {
+  const first = frozenSchedule.runs[0];
+  assert.equal(
+    predeterminedSessionId(frozenSchedule.runNamespace, first.runId),
+    first.sessionId
+  );
+  const args = buildCopilotArgs({
+    prompt: "fixture prompt",
+    sessionId: first.sessionId,
+    model: "gpt-5.6-sol",
+    topLevelAgent: "fixture-agent",
+    candidateRoot: "C:\\fixture\\candidate",
+    mcpConfigPath: "C:\\fixture\\mcp.json",
+    disabledMcpServers: ["azure", "playwright"],
+    availableTools: ["skill", "task", "semantic-corpus-list_contract_files"]
+  });
+  assert.deepEqual(args.slice(0, 10), [
+    "-p", "fixture prompt",
+    "--session-id", first.sessionId,
+    "--model", "gpt-5.6-sol",
+    "--agent", "fixture-agent",
+    "--output-format", "json"
+  ]);
+  assert(args.includes("-C"));
+  assert(args.includes("--allow-all-tools"));
+  assert(args.includes("--disable-builtin-mcps"));
+  assert.equal(args.filter((item) => item === "--disable-mcp-server").length, 2);
+  assert.equal(args.includes("create-session"), false);
+  const help = inspectHelp(spawnSync(process.execPath, [
+    resolve(root, "fixtures", "fake-copilot-cli.mjs"), "--help"
+  ], { encoding: "utf8" }).stdout);
+  assert.equal(help.requiredFlagsPresent, true);
+  assert.equal(help.fabricatedCreateSessionPresent, false);
+
+  const bytes = Buffer.from([
+    JSON.stringify({
+      type: "model.call_start",
+      data: { turnId: "0", model: "gpt-5.6-sol" },
+      timestamp: "2026-08-01T00:00:00.000Z"
+    }),
+    JSON.stringify({
+      type: "result",
+      timestamp: "2026-08-01T00:00:01.000Z",
+      sessionId: first.sessionId,
+      exitCode: 0
+    }),
+    ""
+  ].join("\n"));
+  const events = parseCopilotJsonl(bytes);
+  assert.equal(resultEvent(events, first.sessionId).exitCode, 0);
+  assert.throws(() => resultEvent(events, randomUUID()), /predetermined UUID/);
+
+  const sourcePin = readRootJson("design", "source-pin.json");
+  assert.match(
+    sourcePin.sourceBlobs[".github/agents/semantic-test-corpus-haiku.agent.md"],
+    /^[a-f0-9]{40,64}$/u
+  );
 });
 
 test("captured timestamps enforce the strict 72-run global start order", () => {
@@ -512,7 +619,7 @@ test("captured timestamps enforce the strict 72-run global start order", () => {
     });
     const index = {
       formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
+      protocolId: "semantic-test-corpus-execution-v3",
       captures
     };
     assert.deepEqual(validateStartOrder(index, { baseDir: temporary }), []);
@@ -535,13 +642,27 @@ test("captured timestamps enforce the strict 72-run global start order", () => {
 
 test("fake CLI preflight and harness capture a complete immutable run", () => {
   const fakeCli = resolve(root, "fixtures", "fake-copilot-cli.mjs");
-  const available = preflightExecution(fakeCli, "2026-07-31T20:00:00.000Z");
+  const available = fixturePreflight(fakeCli, "2026-08-01T00:00:00.000Z");
   assert(available.arms.every((arm) => arm.status === "available"));
-  const unsupported = preflightExecution(process.execPath, "2026-07-31T20:00:00.000Z");
+  process.env.FAKE_COPILOT_MCP_LIST_FAILURE = "1";
+  const failedMcpList = fixturePreflight(fakeCli, "2026-08-01T00:00:00.000Z");
+  delete process.env.FAKE_COPILOT_MCP_LIST_FAILURE;
+  assert(failedMcpList.arms.slice(1).every((arm) => arm.status === "unavailable"));
+  assert(failedMcpList.arms[1].reasons.some((reason) =>
+    reason.includes("could not be enumerated")));
+  process.env.FAKE_COPILOT_MCP_COLLISION = "1";
+  const collidingMcp = fixturePreflight(fakeCli, "2026-08-01T00:00:00.000Z");
+  delete process.env.FAKE_COPILOT_MCP_COLLISION;
+  assert(collidingMcp.arms.slice(1).every((arm) => arm.status === "unavailable"));
+  assert(collidingMcp.arms[1].reasons.some((reason) => reason.includes("collides")));
+  const unsupported = preflightExecution(process.execPath, {
+    capturedAt: "2026-08-01T00:00:00.000Z",
+    usageStoreInspection: fixtureUsageStoreInspection
+  });
   assert.equal(unsupported.arms[5].status, "unavailable");
   assert(unsupported.arms[5].reasons.some((reason) =>
-    reason.includes("fixed-model custom-agent")
-      || reason.includes("real atomic probe")));
+    reason.includes("exact GitHub Copilot CLI")
+      || reason.includes("missing required flags")));
 
   const repositoryRoot = resolve(root, "..", "..");
   const temporary = resolve(repositoryRoot, "..", `.semantic-harness-${process.pid}`);
@@ -551,7 +672,7 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
   rmSync(temporary, { recursive: true, force: true });
   mkdirSync(temporary, { recursive: true });
   try {
-    const dryRun = runControlledHarness({
+    const dryRun = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot,
@@ -563,10 +684,12 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     assert.equal(dryRun.status, "dry-run");
-    assert(dryRun.plan.atomicCommand.args.includes("--prompt-file"));
+    assert(dryRun.plan.atomicCommand.args.includes("-p"));
+    assert(dryRun.plan.atomicCommand.args.includes("--session-id"));
     assert(dryRun.plan.atomicCommand.args.includes("--model"));
+    assert.equal(dryRun.plan.atomicCommand.args.includes("create-session"), false);
     assert.equal(dryRun.plan.atomicCommand.args.includes("--worker-model"), false);
-    const targetDryRun = runControlledHarness({
+    const targetDryRun = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: resolve(temporary, "target-candidate"),
@@ -578,12 +701,10 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     assert.equal(targetDryRun.plan.atomicCommand.args.includes("--worker-model"), false);
-    assert.equal(targetDryRun.preflight.arm5Probe.selectedAgent,
-      "semantic-test-corpus-haiku");
-    assert.equal(targetDryRun.preflight.arm5Probe.observedWorkerModel,
-      "claude-haiku-4.5");
+    assert.equal(targetDryRun.preflight.profiles.fixedHaikuPinned, true);
+    assert.equal(targetDryRun.plan.atomicCommand.args.includes("--agent"), false);
 
-    const result = runControlledHarness({
+    const result = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot,
@@ -608,9 +729,12 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert(existsSync(resolve(artifactRoot, "staging.json")));
     assert(existsSync(resolve(artifactRoot, "metrics.json")));
     assert(existsSync(resolve(artifactRoot, "capture-provenance.json")));
+    assert(existsSync(resolve(artifactRoot, "attempt-start.json")));
+    assert(existsSync(resolve(artifactRoot, "process-result.json")));
 
-    for (const armId of [1, 3]) {
-      runControlledHarness({
+    let targetResult;
+    for (const armId of [2, 0, 1, 5, 3]) {
+      const armResult = runFixtureHarness({
         cli: fakeCli,
         projectId: "fixture-project",
         candidateRoot: resolve(temporary, `candidate-arm-${armId}`),
@@ -620,26 +744,39 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
         armId,
         capturedAt: "2026-07-31T20:00:00.000Z"
       });
+      assert.equal(armResult.status, "complete");
+      if (armId === 5) targetResult = armResult;
     }
-    const targetResult = runControlledHarness({
-      cli: fakeCli,
-      projectId: "fixture-project",
-      candidateRoot: resolve(temporary, "candidate-arm-5"),
-      artifactRoot: resolve(temporary, "artifacts-arm-5"),
-      startIndexPath,
-      blockId: "B01",
-      armId: 5,
-      capturedAt: "2026-07-31T20:00:00.000Z"
-    });
     assert.equal(targetResult.status, "complete");
     assert.equal(targetResult.evidence.delegation.agentName,
       "semantic-test-corpus-haiku");
     assert.deepEqual(targetResult.evidence.models.observed.worker,
       ["claude-haiku-4.5"]);
 
+    for (const [variable, expectedReason] of [
+      ["FAKE_COPILOT_MISSING_EVENT_MODEL", "lack data.model"],
+      ["FAKE_COPILOT_DUPLICATE_TOOL_COMPLETION", "unique nonempty toolCallId"]
+    ]) {
+      process.env[variable] = "1";
+      const rejectedRoot = resolve(temporary, variable.toLowerCase());
+      const rejected = runFixtureHarness({
+        cli: fakeCli,
+        projectId: "fixture-project",
+        candidateRoot: resolve(rejectedRoot, "candidate"),
+        artifactRoot: resolve(rejectedRoot, "artifacts"),
+        startIndexPath: resolve(rejectedRoot, "start-index.json"),
+        blockId: "B01",
+        armId: 4,
+        capturedAt: "2026-07-31T20:00:00.000Z"
+      });
+      delete process.env[variable];
+      assert.equal(rejected.status, "unavailable");
+      assert(rejected.modelPreflight.reasons.some((reason) => reason.includes(expectedReason)));
+    }
+
     process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
     const failureRoot = resolve(temporary, "failure");
-    const failure = runControlledHarness({
+    const failure = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: resolve(failureRoot, "candidate"),
@@ -650,61 +787,40 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_CREATE_FAILURE;
-    assert.equal(failure.status, "pre-session-failure");
-    assert.equal(failure.failure.kickoffStarted, false);
-    assert.equal(failure.failure.usage.modelTokens, 0);
-    const failureReceiptPath = resolve(
-      dirname(failure.failurePath),
-      failure.failure.receipt.path
-    );
-    assert(existsSync(failureReceiptPath));
-
-    process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
-    const retryRoot = resolve(temporary, "retry-exhausted");
-    const retry = runControlledHarness({
+    assert.equal(failure.status, "started-uncertain");
+    assert.equal(failure.disposition.evidenceKind, "started-uncertain");
+    assert.equal(failure.partialUsage.attempt.available, true);
+    assert.equal(failure.partialUsage.attempt.path, "attempt-start.json");
+    assert(existsSync(resolve(failureRoot, "artifacts", "attempt-start.json")));
+    assert(existsSync(resolve(failureRoot, "artifacts", "process-stdout.txt")));
+    assert(existsSync(resolve(failureRoot, "artifacts", "process-stderr.txt")));
+    assert(existsSync(resolve(failureRoot, "artifacts", "process-result.json")));
+    assert.equal(existsSync(resolve(failureRoot, "artifacts", "pre-session-failure-1.json")), false);
+    rmSync(resolve(failureRoot, "start-index.json"));
+    const recoveredFailure = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
-      candidateRoot: resolve(retryRoot, "candidate"),
-      artifactRoot: resolve(retryRoot, "artifacts"),
-      startIndexPath: resolve(retryRoot, "start-index.json"),
+      candidateRoot: resolve(failureRoot, "candidate"),
+      artifactRoot: resolve(failureRoot, "artifacts"),
+      startIndexPath: resolve(failureRoot, "start-index.json"),
       blockId: "B01",
       armId: 4,
-      preSessionFailurePath: failure.failurePath,
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
-    delete process.env.FAKE_COPILOT_CREATE_FAILURE;
-    assert.equal(retry.status, "unavailable");
-    assert.equal(retry.disposition.evidenceKind, "retry-exhausted");
-
-    const tamperedRoot = resolve(temporary, "tampered-receipt");
-    mkdirSync(tamperedRoot, { recursive: true });
-    const tamperedFailurePath = resolve(tamperedRoot, "failure.json");
-    writeFileSync(tamperedFailurePath, readFileSync(failure.failurePath));
-    writeFileSync(
-      resolve(tamperedRoot, failure.failure.receipt.path),
-      Buffer.from('{"receiptKind":"authoritative-pre-session-failure"}\n')
+    assert.equal(recoveredFailure.status, "started-uncertain");
+    assert.equal(recoveredFailure.recovered, true);
+    assert.equal(recoveredFailure.partialUsage.attempt.available, true);
+    assert.equal(
+      JSON.parse(readFileSync(resolve(failureRoot, "start-index.json"), "utf8"))
+        .captures[0].runId,
+      "V3-B01-A4"
     );
-    const rejectedRetryRoot = resolve(temporary, "rejected-retry");
-    assert.throws(() => runControlledHarness({
-      cli: fakeCli,
-      projectId: "fixture-project",
-      candidateRoot: resolve(rejectedRetryRoot, "candidate"),
-      artifactRoot: resolve(rejectedRetryRoot, "artifacts"),
-      startIndexPath: resolve(rejectedRetryRoot, "start-index.json"),
-      blockId: "B01",
-      armId: 4,
-      preSessionFailurePath: tamperedFailurePath,
-      capturedAt: "2026-07-31T20:00:00.000Z"
-    }), /Prior pre-session failure is invalid/);
-    assert.equal(existsSync(
-      resolve(rejectedRetryRoot, "start-index.json.slot-01.lock")
-    ), false);
 
     const prelaunchRoot = resolve(temporary, "prelaunch-failure");
     const nonemptyCandidate = resolve(prelaunchRoot, "candidate");
     mkdirSync(nonemptyCandidate, { recursive: true });
     writeFileSync(resolve(nonemptyCandidate, "occupied.txt"), "occupied");
-    assert.throws(() => runControlledHarness({
+    const prelaunch = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: nonemptyCandidate,
@@ -713,7 +829,39 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
       blockId: "B01",
       armId: 4,
       capturedAt: "2026-07-31T20:00:00.000Z"
-    }), /Candidate root must be absent or empty/);
+    });
+    assert.equal(prelaunch.status, "unavailable");
+    assert.equal(prelaunch.failure.phase, "candidate-materialization");
+    assert.equal(prelaunch.failure.kickoffStarted, false);
+    assert.equal(prelaunch.failure.receipt, null);
+    assert.equal(prelaunch.disposition.evidenceKind, "pre-session-failure");
+    assert(existsSync(resolve(prelaunchRoot, "artifacts", "pre-session-failure.json")));
+    assert.equal(
+      JSON.parse(readFileSync(resolve(prelaunchRoot, "start-index.json"), "utf8"))
+        .captures[0].disposition,
+      "unavailable"
+    );
+    const prelaunchIndexPath = resolve(prelaunchRoot, "start-index.json");
+    const prelaunchIndexBytes = readFileSync(prelaunchIndexPath);
+    rmSync(prelaunchIndexPath);
+    writeFileSync(`${prelaunchIndexPath}.next`, prelaunchIndexBytes);
+    const recoveredPrelaunch = runFixtureHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: nonemptyCandidate,
+      artifactRoot: resolve(prelaunchRoot, "artifacts"),
+      startIndexPath: prelaunchIndexPath,
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(recoveredPrelaunch.status, "unavailable");
+    assert.equal(recoveredPrelaunch.recovered, true);
+    assert.equal(existsSync(`${prelaunchIndexPath}.next`), false);
+    assert.equal(
+      JSON.parse(readFileSync(prelaunchIndexPath, "utf8")).captures[0].runId,
+      "V3-B01-A4"
+    );
     assert.equal(existsSync(
       resolve(prelaunchRoot, "start-index.json.slot-01.lock")
     ), false);
@@ -736,10 +884,12 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert.equal(unavailableIndex.captures.length, 1);
     assert.equal(unavailableIndex.captures[0].disposition, "unavailable");
     assert(existsSync(resolve(unavailableRoot, "artifacts", "unit-disposition.json")));
+    assert.equal(unavailable.failure.phase, "preflight");
+    assert.equal(unavailable.failure.usage.nanoAiu, null);
 
     process.env.FAKE_COPILOT_MISSING_USAGE = "1";
     const uncertainRoot = resolve(temporary, "started-uncertain");
-    const uncertain = runControlledHarness({
+    const uncertain = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: resolve(uncertainRoot, "candidate"),
@@ -764,7 +914,8 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert.equal(uncertain.partialUsage.metrics.completionCount.available, false);
     assert.equal(uncertain.partialUsage.metrics.durationMs.available, false);
     assert.equal(uncertain.partialUsage.metrics.toolCallCount.available, true);
-    assert.equal(uncertain.partialUsage.attempt.available, false);
+    assert.equal(uncertain.partialUsage.attempt.available, true);
+    assert.equal(uncertain.partialUsage.attempt.path, "attempt-start.json");
     assert.equal(
       uncertain.disposition.partialUsageSha256,
       createHash("sha256")
@@ -772,7 +923,7 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     );
     process.env.FAKE_COPILOT_UNEXPECTED_STAGING = "1";
     const partialRoot = resolve(temporary, "started-uncertain-partial");
-    const partial = runControlledHarness({
+    const partial = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: resolve(partialRoot, "candidate"),
@@ -794,17 +945,17 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert.equal(partial.partialUsage.metrics.toolCallCount.value, 4);
     assert.equal(partial.partialUsage.metrics.toolResultCount.value, 4);
     assert.equal(partial.partialUsage.attempt.available, true);
-    assert.equal(partial.partialUsage.attempt.attemptId, "B01-A4-attempt-1");
+    assert.equal(partial.partialUsage.attempt.attemptId, "V3-B01-A4-attempt-1");
 
     for (const [environmentName, invalidKind, costsAvailable] of [
       ["FAKE_COPILOT_MALFORMED_USAGE", "usage", false],
       ["FAKE_COPILOT_USAGE_SESSION_MISMATCH", "usage", false],
       ["FAKE_COPILOT_MALFORMED_EVENTS", "events", true],
-      ["FAKE_COPILOT_EVENTS_SESSION_MISMATCH", "events", true]
+      ["FAKE_COPILOT_EVENTS_SESSION_MISMATCH", "response", true]
     ]) {
       process.env[environmentName] = "1";
       const invalidRoot = resolve(temporary, environmentName.toLowerCase());
-      const invalid = runControlledHarness({
+      const invalid = runFixtureHarness({
         cli: fakeCli,
         projectId: "fixture-project",
         candidateRoot: resolve(invalidRoot, "candidate"),
@@ -840,13 +991,17 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     delete process.env.FAKE_COPILOT_USAGE_SESSION_MISMATCH;
     delete process.env.FAKE_COPILOT_MALFORMED_EVENTS;
     delete process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH;
+    delete process.env.FAKE_COPILOT_MCP_LIST_FAILURE;
+    delete process.env.FAKE_COPILOT_MCP_COLLISION;
+    delete process.env.FAKE_COPILOT_MISSING_EVENT_MODEL;
+    delete process.env.FAKE_COPILOT_DUPLICATE_TOOL_COMPLETION;
     rmSync(temporary, { recursive: true, force: true });
   }
 });
 
 test("condition instructions freeze the generated fixed-Haiku target mechanism", () => {
   const conditions = readRootJson("design", "condition-instructions.json");
-  assert.equal(conditions.protocolId, "semantic-test-corpus-execution-v2");
+  assert.equal(conditions.protocolId, "semantic-test-corpus-execution-v3");
   assert.deepEqual(conditions.conditions.map((condition) => condition.armId), [0, 1, 2, 3, 4, 5]);
   assert.equal(conditions.conditions.find((condition) => condition.armId === 5).workerModel,
     "claude-haiku-4.5");
@@ -945,7 +1100,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     process.env.FAKE_COPILOT_START_ISO = new Date(Date.now() - 30_000)
       .toISOString();
     process.env.FAKE_COPILOT_UNEXPECTED_STAGING = "1";
-    const partialUncertain = runControlledHarness({
+    const partialUncertain = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: resolve(temporary, "partial-candidate"),
@@ -956,8 +1111,28 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    const completeAi = runFixtureHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "complete-ai-candidate"),
+      artifactRoot: resolve(temporary, "complete-ai-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 2,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    const completeBaseline = runFixtureHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "complete-baseline-candidate"),
+      artifactRoot: resolve(temporary, "complete-baseline-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 0,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
     process.env.FAKE_COPILOT_MISSING_USAGE = "1";
-    const noUsageUncertain = runControlledHarness({
+    const noUsageUncertain = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: resolve(temporary, "no-usage-candidate"),
@@ -968,20 +1143,8 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_MISSING_USAGE;
-    process.env.FAKE_COPILOT_MALFORMED_USAGE = "1";
-    const malformedUsageUncertain = runControlledHarness({
-      cli: fakeCli,
-      projectId: "fixture-project",
-      candidateRoot: resolve(temporary, "malformed-usage-candidate"),
-      artifactRoot: resolve(temporary, "malformed-usage-artifacts"),
-      startIndexPath: partialIndexPath,
-      blockId: "B01",
-      armId: 3,
-      capturedAt: "2026-07-31T20:00:00.000Z"
-    });
-    delete process.env.FAKE_COPILOT_MALFORMED_USAGE;
     process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH = "1";
-    const mismatchedEventsUncertain = runControlledHarness({
+    const mismatchedEventsUncertain = runFixtureHarness({
       cli: fakeCli,
       projectId: "fixture-project",
       candidateRoot: resolve(temporary, "mismatched-events-candidate"),
@@ -992,8 +1155,22 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH;
+    process.env.FAKE_COPILOT_MALFORMED_USAGE = "1";
+    const malformedUsageUncertain = runFixtureHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "malformed-usage-candidate"),
+      artifactRoot: resolve(temporary, "malformed-usage-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 3,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MALFORMED_USAGE;
     delete process.env.FAKE_COPILOT_START_ISO;
     assert.equal(partialUncertain.status, "started-uncertain");
+    assert.equal(completeAi.status, "complete");
+    assert.equal(completeBaseline.status, "complete");
     assert.equal(noUsageUncertain.status, "started-uncertain");
     assert.equal(malformedUsageUncertain.status, "started-uncertain");
     assert.equal(mismatchedEventsUncertain.status, "started-uncertain");
@@ -1001,8 +1178,8 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       readFileSync(partialIndexPath, "utf8")
     ).captures;
     const uncertainDefinitions = new Map([
-      ["B01-A4", {
-        runId: "B01-A4",
+      ["V3-B01-A4", {
+        runId: "V3-B01-A4",
         blockId: "B01",
         armId: 4,
         status: "unavailable",
@@ -1017,8 +1194,8 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         endEvidencePath: null,
         dispositionPath: partialUncertain.dispositionPath
       }],
-      ["B01-A1", {
-        runId: "B01-A1",
+      ["V3-B01-A1", {
+        runId: "V3-B01-A1",
         blockId: "B01",
         armId: 1,
         status: "unavailable",
@@ -1033,8 +1210,8 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         endEvidencePath: null,
         dispositionPath: noUsageUncertain.dispositionPath
       }],
-      ["B01-A3", {
-        runId: "B01-A3",
+      ["V3-B01-A3", {
+        runId: "V3-B01-A3",
         blockId: "B01",
         armId: 3,
         status: "unavailable",
@@ -1049,8 +1226,8 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         endEvidencePath: null,
         dispositionPath: malformedUsageUncertain.dispositionPath
       }],
-      ["B01-A5", {
-        runId: "B01-A5",
+      ["V3-B01-A5", {
+        runId: "V3-B01-A5",
         blockId: "B01",
         armId: 5,
         status: "unavailable",
@@ -1066,134 +1243,38 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         dispositionPath: mismatchedEventsUncertain.dispositionPath
       }]
     ]);
-    const orderBaseMs = Date.parse(partialCaptures.at(-1).recordedAt) - 1;
-    const baselineStartedAt = new Date(orderBaseMs + 5).toISOString();
-    const baselinePlan = frozenSchedule.runs.find((run) => run.runId === "B01-A0");
-    const baseline = runDeterministicBlock("B01", {
-      startEvidence: {
-        formatVersion: 1,
-        protocolId: "semantic-test-corpus-execution-v2",
-        runId: baselinePlan.runId,
-        blockId: baselinePlan.blockId,
-        armId: 0,
-        seed: baselinePlan.seed,
-        scheduleOrder: baselinePlan.order,
-        globalOrder: baselinePlan.globalOrder,
-        disposition: "started",
-        recordedAt: baselineStartedAt,
-        startedAt: baselineStartedAt
-      }
-    });
-    const baselineSnapshotPath = resolve(temporary, "B01-A0.json");
-    const baselineExecutionPath = resolve(temporary, "B01-A0.execution.json");
-    const baselineMetricsPath = resolve(temporary, "B01-A0.metrics.json");
-    const baselineEvaluationPath = resolve(temporary, "B01-A0.evaluation.json");
-    const baselineStartPath = resolve(temporary, "B01-A0.start.json");
-    const baselineEndPath = resolve(temporary, "B01-A0.end.json");
-    writeFileSync(baselineSnapshotPath, baseline.bytes);
-    writeFileSync(baselineExecutionPath, `${JSON.stringify(baseline.execution, null, 2)}\n`);
-    writeFileSync(baselineStartPath, baseline.startBytes);
-    writeFileSync(baselineEndPath, baseline.endBytes);
-    const baselineMetrics = deriveMetricsArtifact(baseline.bytes, {
-      runId: "B01-A0",
-      blockId: "B01",
-      armId: 0
-    });
-    const baselineMetricsBytes = canonicalMetricsBytes(baselineMetrics);
-    writeFileSync(baselineMetricsPath, baselineMetricsBytes);
-    writeFileSync(baselineEvaluationPath, `${JSON.stringify({
-      formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
-      runId: "B01-A0",
-      blockId: "B01",
-      armId: 0,
-      attemptId: null,
-      snapshotPath: baselineSnapshotPath,
-      snapshotSha256: createHash("sha256").update(baseline.bytes).digest("hex"),
-      metricsPath: baselineMetricsPath,
-      metricsSha256: createHash("sha256").update(baselineMetricsBytes).digest("hex"),
-      executionSha256: createHash("sha256")
-        .update(readFileSync(baselineExecutionPath)).digest("hex"),
-      localEvidenceSha256: null,
-      modelPreflightSha256: null,
-      createdAt: "2026-07-31T08:00:00.000Z"
-    }, null, 2)}\n`);
-
-    const aiSnapshot = {
-      formatVersion: 1,
-      generator: { armId: 2, blockId: "B01", seed: 1812433253 },
-      adapter: {
-        version: 1,
-        requestHash: readRootJson("design", "corpus-request.json").requestHash,
-        sourceRoot: "corpus-staging/",
-        successfulWrites: 0,
-        toolErrorCount: 0,
-        manifest: null
-      },
-      cases: [],
-      toolErrors: []
-    };
-    const aiSnapshotBytes = canonicalStagingBytes(aiSnapshot);
-    const aiSnapshotPath = resolve(temporary, "B01-A2.json");
-    const aiMetricsPath = resolve(temporary, "B01-A2.metrics.json");
-    const aiEvaluationPath = resolve(temporary, "B01-A2.evaluation.json");
-    writeFileSync(aiSnapshotPath, aiSnapshotBytes);
-    const aiMetrics = deriveMetricsArtifact(aiSnapshotBytes, {
-      runId: "B01-A2",
-      blockId: "B01",
-      armId: 2
-    });
-    const aiMetricsBytes = canonicalMetricsBytes(aiMetrics);
-    writeFileSync(aiMetricsPath, aiMetricsBytes);
-    const fixtureRoot = resolve(root, "fixtures", "local-evidence");
-    const fixtureEvidenceBytes = readFileSync(resolve(fixtureRoot, "expected.json"));
-    const fixturePreflightBytes = readFileSync(resolve(fixtureRoot, "model-preflight.json"));
-    const aiEvaluation = {
-      formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
-      runId: "B01-A2",
-      blockId: "B01",
-      armId: 2,
-      attemptId: "B01-A2-attempt-1",
-      snapshotPath: aiSnapshotPath,
-      snapshotSha256: createHash("sha256").update(aiSnapshotBytes).digest("hex"),
-      metricsPath: aiMetricsPath,
-      metricsSha256: createHash("sha256").update(aiMetricsBytes).digest("hex"),
-      executionSha256: null,
-      localEvidenceSha256: createHash("sha256").update(fixtureEvidenceBytes).digest("hex"),
-      modelPreflightSha256: createHash("sha256").update(fixturePreflightBytes).digest("hex"),
-      createdAt: "2026-07-31T08:00:00.000Z"
-    };
-    writeFileSync(aiEvaluationPath, `${JSON.stringify(aiEvaluation, null, 2)}\n`);
+    const orderBaseMs = Date.parse(partialCaptures.at(-1).recordedAt);
+    const baselineRoot = completeBaseline.plan.artifactRoot;
+    const aiRoot = completeAi.plan.artifactRoot;
     const eligibleDefinitions = new Map([
-      ["B01-A0", {
-          runId: "B01-A0",
+      ["V3-B01-A0", {
+          runId: "V3-B01-A0",
           blockId: "B01",
           armId: 0,
           status: "eligible",
-          snapshotPath: baselineSnapshotPath,
-          metricsPath: baselineMetricsPath,
-          executionPath: baselineExecutionPath,
+          snapshotPath: resolve(baselineRoot, "staging.json"),
+          metricsPath: resolve(baselineRoot, "metrics.json"),
+          executionPath: resolve(baselineRoot, "execution.json"),
           localEvidencePath: null,
           modelPreflightPath: null,
           candidateRoot: null,
-          evaluationPath: baselineEvaluationPath,
-          startEvidencePath: baselineStartPath,
-          endEvidencePath: baselineEndPath,
+          evaluationPath: resolve(baselineRoot, "evaluation.json"),
+          startEvidencePath: resolve(baselineRoot, "lifecycle-start.json"),
+          endEvidencePath: resolve(baselineRoot, "lifecycle-end.json"),
           dispositionPath: null
         }],
-      ["B01-A2", {
-          runId: "B01-A2",
+      ["V3-B01-A2", {
+          runId: "V3-B01-A2",
           blockId: "B01",
           armId: 2,
           status: "eligible",
-          snapshotPath: aiSnapshotPath,
-          metricsPath: aiMetricsPath,
+          snapshotPath: resolve(aiRoot, "staging.json"),
+          metricsPath: resolve(aiRoot, "metrics.json"),
           executionPath: null,
-          localEvidencePath: resolve(fixtureRoot, "expected.json"),
-          modelPreflightPath: resolve(fixtureRoot, "model-preflight.json"),
-          candidateRoot: ensureEvidenceCandidate(),
-          evaluationPath: aiEvaluationPath,
+          localEvidencePath: resolve(aiRoot, "local-evidence.json"),
+          modelPreflightPath: resolve(aiRoot, "model-preflight.json"),
+          candidateRoot: completeAi.plan.candidateRoot,
+          evaluationPath: resolve(aiRoot, "evaluation.json"),
           startEvidencePath: null,
           endEvidencePath: null,
           dispositionPath: null
@@ -1206,11 +1287,16 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
           capture.runId === planned.runId));
         return uncertainDefinitions.get(planned.runId);
       }
+      const eligible = eligibleDefinitions.get(planned.runId);
+      if (eligible) {
+        captures.push(partialCaptures.find((capture) =>
+          capture.runId === planned.runId));
+        return eligible;
+      }
       const recordedAt = new Date(
         orderBaseMs + index
       ).toISOString();
-      const eligible = eligibleDefinitions.get(planned.runId);
-      const disposition = eligible ? "started" : "unavailable";
+      const disposition = "unavailable";
       const syntheticSourcePath = resolve(temporary, `${planned.runId}.order-source.json`);
       const syntheticSourceBytes = Buffer.from(`${JSON.stringify({
         runId: planned.runId,
@@ -1218,15 +1304,11 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         armId: planned.armId,
         disposition,
         recordedAt,
-        startedAt: eligible ? recordedAt : null
+        startedAt: null
       })}\n`);
-      const sourcePath = planned.runId === "B01-A0"
-        ? baselineStartPath
-        : syntheticSourcePath;
-      const sourceBytes = planned.runId === "B01-A0"
-        ? baseline.startBytes
-        : syntheticSourceBytes;
-      if (sourcePath === syntheticSourcePath) writeFileSync(sourcePath, sourceBytes);
+      const sourcePath = syntheticSourcePath;
+      const sourceBytes = syntheticSourceBytes;
+      writeFileSync(sourcePath, sourceBytes);
       captures.push({
         runId: planned.runId,
         blockId: planned.blockId,
@@ -1234,15 +1316,14 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         sequence: planned.globalOrder,
         disposition,
         recordedAt,
-        startedAt: eligible ? recordedAt : null,
+        startedAt: null,
         sourcePath: sourcePath.slice(temporary.length + 1),
         sourceSha256: createHash("sha256").update(sourceBytes).digest("hex")
       });
-      if (eligible) return eligible;
       const dispositionPath = resolve(temporary, `${planned.runId}.disposition.json`);
       writeFileSync(dispositionPath, `${JSON.stringify({
        formatVersion: 1,
-       protocolId: "semantic-test-corpus-execution-v2",
+       protocolId: "semantic-test-corpus-execution-v3",
        runId: planned.runId,
        blockId: planned.blockId,
        armId: planned.armId,
@@ -1276,7 +1357,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     const startIndexPath = resolve(temporary, "start-index.json");
     const startIndexBytes = Buffer.from(`${JSON.stringify({
       formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
+      protocolId: "semantic-test-corpus-execution-v3",
       captures
     }, null, 2)}\n`);
     writeFileSync(startIndexPath, startIndexBytes);
@@ -1287,7 +1368,7 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     );
     const definitions = {
       formatVersion: 1,
-      protocolId: "semantic-test-corpus-execution-v2",
+      protocolId: "semantic-test-corpus-execution-v3",
       startIndexPath,
       startIndexSha256Path,
       runs: unitDefinitions
@@ -1301,39 +1382,39 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       .endpoints.modelEvidenceAvailable, 0);
     assert.equal(runs.find((run) => run.armId === 0)
       .endpoints.mechanismEvidenceAvailable, 0);
-    assert.equal(runs.find((run) => run.armId === 2).endpoints.totalModelTokens, 1850);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.totalModelTokens, 330);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.modelEvidenceAvailable, 1);
     assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 1);
     const operationalSummary = summarizeDescriptive(runs)
       .allAttemptOperationalUsage;
-    assert.equal(operationalSummary.totals.aiCredits.value, 10);
-    assert.equal(operationalSummary.totals.nanoAiu.value, 10_000_000_000);
-    assert.equal(operationalSummary.totals.inputTokens.value, 2300);
-    assert.equal(operationalSummary.totals.outputTokens.value, 210);
-    assert.equal(operationalSummary.totals.modelTokens.value, 2510);
+    assert.equal(operationalSummary.totals.aiCredits.value, 6);
+    assert.equal(operationalSummary.totals.nanoAiu.value, 6_000_000_000);
+    assert.equal(operationalSummary.totals.inputTokens.value, 900);
+    assert.equal(operationalSummary.totals.outputTokens.value, 90);
+    assert.equal(operationalSummary.totals.modelTokens.value, 990);
     assert.equal(operationalSummary.totals.completionCount.value, 6);
-    assert.equal(operationalSummary.totals.durationMs.value, 7200);
+    assert.equal(operationalSummary.totals.durationMs.value, 3000);
     assert.equal(operationalSummary.totals.toolCallCount.value, 16);
     assert.equal(operationalSummary.totals.toolResultCount.value, 16);
     assert.deepEqual(
       operationalSummary.totals.aiCredits.unavailableRunIds,
-      ["B01-A1", "B01-A3"]
+      ["V3-B01-A1", "V3-B01-A3"]
     );
     const partialRun = operationalSummary.runs.find((run) =>
-      run.runId === "B01-A4");
+      run.runId === "V3-B01-A4");
     const noUsageRun = operationalSummary.runs.find((run) =>
-      run.runId === "B01-A1");
+      run.runId === "V3-B01-A1");
     assert.equal(partialRun.metrics.aiCredits.available, true);
     assert.equal(noUsageRun.metrics.aiCredits.available, false);
     assert.match(noUsageRun.metrics.aiCredits.reason, /usage export was not produced/);
     assert.deepEqual(
       operationalSummary.totals.toolCallCount.unavailableRunIds,
-      ["B01-A5"]
+      []
     );
 
     const unavailableDefinition = definitions.runs.find((run) =>
       run.status === "unavailable"
-      && !["B01-A4", "B01-A1", "B01-A3", "B01-A5"].includes(run.runId));
+      && !["V3-B01-A4", "V3-B01-A1", "V3-B01-A3", "V3-B01-A5"].includes(run.runId));
     const dispositionBytes = readFileSync(unavailableDefinition.dispositionPath);
     const forgedDisposition = JSON.parse(dispositionBytes);
     forgedDisposition.orderSourceSha256 = "0".repeat(64);
@@ -1345,8 +1426,11 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       /lacks exact evidence binding/);
     writeFileSync(unavailableDefinition.dispositionPath, dispositionBytes);
 
+    const aiMetricsPath = resolve(aiRoot, "metrics.json");
+    const aiMetrics = JSON.parse(readFileSync(aiMetricsPath, "utf8"));
     const tampered = structuredClone(aiMetrics);
     tampered.metrics.promotion.promotionRate = -1;
+    chmodSync(aiMetricsPath, 0o644);
     writeFileSync(aiMetricsPath, canonicalMetricsBytes(tampered));
     assert.throws(() => buildDescriptiveRuns(definitions, temporary),
       /Evaluation record|not exact deterministic output/);
@@ -2601,7 +2685,7 @@ async function runSyntheticCorpusArm({ armId, runId, delegated }) {
       runId,
       blockId,
       armId,
-      seed: 1812433253,
+      seed: frozenSeeds.blocks.find((block) => block.id === blockId).seed,
       outputPath
     });
     assert.equal(adapted.submittedCases, 2);
@@ -2661,13 +2745,13 @@ async function runSyntheticCorpusArm({ armId, runId, delegated }) {
 }
 
 test("synthetic event units cover partial and rejected inline/delegated MCP runs", async () => {
-  const inline = await runSyntheticCorpusArm({ armId: 1, runId: "B01-A1", delegated: false });
-  const delegated = await runSyntheticCorpusArm({ armId: 2, runId: "B01-A2", delegated: true });
+  const inline = await runSyntheticCorpusArm({ armId: 1, runId: "V3-B01-A1", delegated: false });
+  const delegated = await runSyntheticCorpusArm({ armId: 2, runId: "V3-B01-A2", delegated: true });
   try {
     const spoofed = structuredClone(delegated.payload);
     for (const event of spoofed.events.filter((item) =>
       ["tool.called", "tool.result", "fs.access"].includes(item.type))) {
-      event.sessionId = "B01-A2-parent";
+      event.sessionId = "V3-B01-A2-parent";
       event.role = "parent";
       event.actor = "parent";
     }
@@ -2676,7 +2760,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       authenticateExport(signed.bytes, signed.signature, signed.publicKey),
       {
         armId: 2,
-        runId: "B01-A2",
+        runId: "V3-B01-A2",
         contractRoot: delegated.run.contract,
         stagingRoot: delegated.run.staging,
         evaluatorRoot,
@@ -2695,7 +2779,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       authenticateExport(zeroSigned.bytes, zeroSigned.signature, zeroSigned.publicKey),
       {
         armId: 1,
-        runId: "B01-A1",
+        runId: "V3-B01-A1",
         contractRoot: inline.run.contract,
         stagingRoot: inline.run.staging,
         evaluatorRoot,
@@ -2720,7 +2804,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       ),
       {
         armId: 1,
-        runId: "B01-A1",
+        runId: "V3-B01-A1",
         contractRoot: inline.run.contract,
         stagingRoot: inline.run.staging,
         evaluatorRoot,
@@ -2744,7 +2828,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
       ),
       {
         armId: 2,
-        runId: "B01-A2",
+        runId: "V3-B01-A2",
         contractRoot: delegated.run.contract,
         stagingRoot: delegated.run.staging,
         evaluatorRoot,
@@ -2765,7 +2849,7 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
 
     const mismappedBaseline = structuredClone(inline.payload);
     mismappedBaseline.events.find((event) =>
-      event.eventId === "B01-A0-completed").armId = 1;
+      event.eventId === "V3-B01-A0-completed").armId = 1;
     const mismappedBaselineSigned = signedExport(mismappedBaseline);
     const mismappedBaselineGlobal = evaluateGlobalAttribution(authenticateExport(
       mismappedBaselineSigned.bytes,
@@ -2774,15 +2858,15 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
     ));
     assert.equal(mismappedBaselineGlobal.status, "noncompliant");
     assert(mismappedBaselineGlobal.violations.some((violation) =>
-      violation.includes("baseline event B01-A0-completed")));
+      violation.includes("baseline event V3-B01-A0-completed")));
 
     const modelBackedBaseline = structuredClone(inline.payload);
     modelBackedBaseline.events.push({
-      eventId: "B01-A0-created",
+      eventId: "V3-B01-A0-created",
       type: "session.created",
       timestamp: "2026-07-29T00:00:30Z",
-      sessionId: "B01-A0-process",
-      runId: "B01-A0",
+      sessionId: "V3-B01-A0-process",
+      runId: "V3-B01-A0",
       blockId: "B01",
       armId: 0,
       role: "baseline"
@@ -2803,10 +2887,10 @@ test("synthetic event units cover partial and rejected inline/delegated MCP runs
 });
 
 test("statistics accepts a full export containing authenticated baseline and AI events", async () => {
-  const ai = await runSyntheticCorpusArm({ armId: 1, runId: "B01-A1", delegated: false });
+  const ai = await runSyntheticCorpusArm({ armId: 1, runId: "V3-B01-A1", delegated: false });
   try {
-    const baselineRun = frozenSchedule.runs.find((run) => run.runId === "B01-A0");
-    const baselineSnapshotPath = resolve(ai.run.cwd, "benchmark-staging", "B01-A0.json");
+    const baselineRun = frozenSchedule.runs.find((run) => run.runId === "V3-B01-A0");
+    const baselineSnapshotPath = resolve(ai.run.cwd, "benchmark-staging", "V3-B01-A0.json");
     const baselineSnapshot = generateBaseline({
       blockId: "B01",
       seed: baselineRun.seed
@@ -2815,7 +2899,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
     writeFileSync(baselineSnapshotPath, baselineSnapshotBytes);
     const definitions = [
       {
-        runId: "B01-A0",
+        runId: "V3-B01-A0",
         blockId: "B01",
         armId: 0,
         snapshotPath: baselineSnapshotPath,
@@ -2823,7 +2907,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
         metricsTimestamp: "2026-07-29T00:04:25Z"
       },
       {
-        runId: "B01-A1",
+        runId: "V3-B01-A1",
         blockId: "B01",
         armId: 1,
         snapshotPath: ai.outputPath,
@@ -2916,7 +3000,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
     const aiDefinition = definitions.find((definition) => definition.armId === 1);
     const baselineRecord = {
       ...commonRecord(baselineDefinition),
-      sessionIds: ["B01-A0-process"],
+      sessionIds: ["V3-B01-A0-process"],
       modelEvidence: null
     };
     const aiRoles = ["parent"].map((role) => {
@@ -2967,7 +3051,7 @@ test("statistics accepts a full export containing authenticated baseline and AI 
 
     const mismappedPayload = structuredClone(payload);
     mismappedPayload.events.find((event) =>
-      event.eventId === "B01-A0-completed").armId = 1;
+      event.eventId === "V3-B01-A0-completed").armId = 1;
     const mismappedSigned = signedExport(mismappedPayload);
     const mismappedAuthenticated = authenticateExport(
       mismappedSigned.bytes,
@@ -2988,15 +3072,15 @@ test("statistics accepts a full export containing authenticated baseline and AI 
     const overDurationPayload = structuredClone(payload);
     overDurationPayload.exportedAt = "2026-07-29T01:00:00Z";
     overDurationPayload.events.find((event) =>
-      event.eventId === "B01-A0-completed").timestamp = "2026-07-29T00:31:00Z";
+      event.eventId === "V3-B01-A0-completed").timestamp = "2026-07-29T00:31:00Z";
     overDurationPayload.events.find((event) =>
-      event.eventId === "B01-A0-unblinded").timestamp = "2026-07-29T00:31:05Z";
+      event.eventId === "V3-B01-A0-unblinded").timestamp = "2026-07-29T00:31:05Z";
     const baselineUsage = overDurationPayload.events.find((event) =>
-      event.eventId === "B01-A0-usage");
+      event.eventId === "V3-B01-A0-usage");
     baselineUsage.timestamp = "2026-07-29T00:31:06Z";
     baselineUsage.intervalEnd = "2026-07-29T00:31:05Z";
     overDurationPayload.events.find((event) =>
-      event.eventId === "B01-A0-metrics").timestamp = "2026-07-29T00:31:10Z";
+      event.eventId === "V3-B01-A0-metrics").timestamp = "2026-07-29T00:31:10Z";
     const overDurationSigned = signedExport(overDurationPayload);
     const overDurationAuthenticated = authenticateExport(
       overDurationSigned.bytes,
@@ -3086,17 +3170,17 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
       totalTokens: null
     }])),
     staging: {
-      path: "staging/B01-A1.json",
+      path: "staging/V3-B01-A1.json",
       sha256: "d".repeat(64),
       sourceRoot: "corpus-staging/"
     },
     metrics: {
-      path: "metrics/B01-A1.json",
+      path: "metrics/V3-B01-A1.json",
       sha256: "e".repeat(64),
       snapshotSha256: "d".repeat(64),
-      eventId: "B01-A1-metrics",
-      evaluatorSessionId: "B01-A1-evaluator",
-      evaluatorProcessId: "B01-A1-evaluator-process"
+      eventId: "V3-B01-A1-metrics",
+      evaluatorSessionId: "V3-B01-A1-evaluator",
+      evaluatorProcessId: "V3-B01-A1-evaluator-process"
     },
     tools: { surface: [], calls: [] },
     compliance: {
@@ -3132,8 +3216,8 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
 
   const reusedPayload = modelEvidencePayload();
   for (const event of reusedPayload.events.filter((item) =>
-    item.runId === "B02-A4" && item.role === "worker")) {
-    event.sessionId = "B01-A2-worker";
+    item.runId === "V3-B02-A4" && item.role === "worker")) {
+    event.sessionId = "V3-B01-A2-worker";
   }
   const reusedSigned = signedExport(reusedPayload);
   const reusedAuthenticated = authenticateExport(reusedSigned.bytes, reusedSigned.signature, reusedSigned.publicKey);
@@ -3142,35 +3226,38 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
   assert(reused.runs.some((run) => run.reasons.some((reason) => reason.includes("reused"))));
 
   const missingPayload = modelEvidencePayload();
-  missingPayload.events = missingPayload.events.filter((event) => event.runId !== "B12-A4");
+  missingPayload.events = missingPayload.events.filter((event) => event.runId !== "V3-B12-A4");
   const missingSigned = signedExport(missingPayload);
   const missingAuthenticated = authenticateExport(missingSigned.bytes, missingSigned.signature, missingSigned.publicKey);
   const missing = evaluateModelBindings(missingAuthenticated, modelRunRecords(missingAuthenticated));
   assert.equal(missing.allRunsAvailable, false);
-  assert.equal(missing.runs.find((run) => run.runId === "B12-A4").status, "unavailable");
+  assert.equal(missing.runs.find((run) => run.runId === "V3-B12-A4").status, "unavailable");
 
   const stalePayload = modelEvidencePayload();
-  stalePayload.events.find((event) => event.eventId === "B01-A1-parent-created").timestamp = "2026-07-28T00:01:00Z";
+  stalePayload.events.find((event) =>
+    event.eventId === "V3-B01-A1-parent-created").timestamp = "2026-07-28T00:01:00Z";
   const staleSigned = signedExport(stalePayload);
   const staleAuthenticated = authenticateExport(staleSigned.bytes, staleSigned.signature, staleSigned.publicKey);
   const stale = evaluateModelBindings(staleAuthenticated, modelRunRecords(staleAuthenticated));
   assert.equal(stale.allRunsAvailable, false);
-  assert(stale.runs.find((run) => run.runId === "B01-A1").reasons.some((reason) => reason.includes("too old")));
+  assert(stale.runs.find((run) =>
+    run.runId === "V3-B01-A1").reasons.some((reason) => reason.includes("too old")));
 
   const mismatchPayload = modelEvidencePayload();
   mismatchPayload.events.find((event) =>
-    event.runId === "B03-A3" && event.type === "model.bound").modelId = "gpt-5.6-sol";
+    event.runId === "V3-B03-A3" && event.type === "model.bound").modelId = "gpt-5.6-sol";
   const mismatchSigned = signedExport(mismatchPayload);
   const mismatchAuthenticated = authenticateExport(
     mismatchSigned.bytes, mismatchSigned.signature, mismatchSigned.publicKey);
   const mismatch = evaluateModelBindings(mismatchAuthenticated, modelRunRecords(mismatchAuthenticated));
-  assert.equal(mismatch.runs.find((run) => run.runId === "B03-A3").status, "unavailable");
+  assert.equal(mismatch.runs.find((run) => run.runId === "V3-B03-A3").status, "unavailable");
 
   const wrongHashRecords = structuredClone(runRecords);
-  wrongHashRecords.find((record) => record.runId === "B04-A1").modelEvidence.payloadSha256 = "0".repeat(64);
+  wrongHashRecords.find((record) =>
+    record.runId === "V3-B04-A1").modelEvidence.payloadSha256 = "0".repeat(64);
   const wrongHash = evaluateModelBindings(authenticated, wrongHashRecords);
-  assert.equal(wrongHash.runs.find((run) => run.runId === "B04-A1").status, "unavailable");
-  assert(wrongHash.runs.find((run) => run.runId === "B04-A1").reasons
+  assert.equal(wrongHash.runs.find((run) => run.runId === "V3-B04-A1").status, "unavailable");
+  assert(wrongHash.runs.find((run) => run.runId === "V3-B04-A1").reasons
     .some((reason) => reason.includes("exact authenticated raw export")));
 
   const invalidTimestampPayload = modelEvidencePayload();
@@ -3200,7 +3287,7 @@ test("candidate materialization excludes evaluator assets in an external reposit
       blockId: "B01"
     });
     assert.equal(boundary.files.length, readRootJson("design", "candidate-manifest.json").files.length);
-    assert.equal(boundary.protocolId, "semantic-test-corpus-execution-v2");
+    assert.equal(boundary.protocolId, "semantic-test-corpus-execution-v3");
     assert.match(boundary.boundarySha256, /^[a-f0-9]{64}$/);
     assert.match(boundary.terminalCommit, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
     const sourcePin = readRootJson("design", "source-pin.json");
@@ -3273,16 +3360,16 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   for (let block = 1; block <= 12; block += 1) {
     const blockId = `B${String(block).padStart(2, "0")}`;
     observations.push({
-      runId: `${blockId}-A0`,
+      runId: `V3-${blockId}-A0`,
       blockId,
       armId: 0,
       promotionRate: 0.8,
       semanticPathCoverage: 0.8,
       mutantKillRate: 0.8
     });
-    for (const armId of [1, 2, 3, 4]) {
+    for (const armId of [1, 2, 3, 4, 5]) {
       observations.push({
-        runId: `${blockId}-A${armId}`,
+        runId: `V3-${blockId}-A${armId}`,
         blockId,
         armId,
         promotionRate: 0.82,
@@ -3296,9 +3383,9 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   });
   assert.equal(result.analysisEligibility.completeBlocks.length, 12);
   assert.equal(result.analysisEligibility.confirmatoryAvailable, true);
-  assert.equal(result.families.noninferiority.hypotheses, 12);
+  assert.equal(result.families.noninferiority.hypotheses, 15);
   assert.equal(result.families.noninferiority.sidedness, "one-sided");
-  assert.equal(result.families.equality.hypotheses, 12);
+  assert.equal(result.families.equality.hypotheses, 15);
   assert.equal(result.families.equality.sidedness, "two-sided");
   assert.equal(result.families.equality.separateFromNoninferiority, true);
   assert(result.comparisons.every((comparison) => comparison.noninferiority.noninferior));
@@ -3313,16 +3400,16 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
   for (let block = 1; block <= 12; block += 1) {
     const blockId = `B${String(block).padStart(2, "0")}`;
     highVarianceNoninferior.push({
-      runId: `${blockId}-A0`,
+      runId: `V3-${blockId}-A0`,
       blockId,
       armId: 0,
       promotionRate: 0.5,
       semanticPathCoverage: 0.5,
       mutantKillRate: 0.5
     });
-    for (const armId of [1, 2, 3, 4]) {
+    for (const armId of [1, 2, 3, 4, 5]) {
       highVarianceNoninferior.push({
-        runId: `${blockId}-A${armId}`,
+        runId: `V3-${blockId}-A${armId}`,
         blockId,
         armId,
         promotionRate: 0.5 + differences[block - 1],
@@ -3372,7 +3459,10 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
       && comparison.equality.unavailableReason));
 
   const rejectedBindings = analyzeBaselineComparisons(observations, {
-    bindingAvailability: bindingAvailabilityFor(observations, ["B01-A1", "B02-A2", "B03-A3"])
+    bindingAvailability: bindingAvailabilityFor(
+      observations,
+      ["V3-B01-A1", "V3-B02-A2", "V3-B03-A3"]
+    )
   });
   assert.deepEqual(rejectedBindings.analysisEligibility.completeBlocks,
     ["B04", "B05", "B06", "B07", "B08", "B09", "B10", "B11", "B12"]);
@@ -3441,8 +3531,8 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
 });
 
 test("factorial summaries and missingness sensitivity match known synthetic values", () => {
-  const armValues = new Map([[0, 0.5], [1, 0.6], [2, 0.7], [3, 0.4], [4, 0.45]]);
-  const observations = frozenSchedule.runs.filter((run) => run.armId <= 4).map((run) => ({
+  const armValues = new Map([[0, 0.5], [1, 0.6], [2, 0.7], [3, 0.4], [4, 0.45], [5, 0.45]]);
+  const observations = frozenSchedule.runs.map((run) => ({
     runId: run.runId,
     blockId: run.blockId,
     armId: run.armId,
@@ -3489,21 +3579,25 @@ test("factorial summaries and missingness sensitivity match known synthetic valu
   close(comparisonBounds.bestMeanDifference, ((11 * -0.05) + 0.5) / 12);
 
   const unavailableRun = analyzeBaselineComparisons(observations, {
-    bindingAvailability: bindingAvailabilityFor(observations, ["B12-A4"])
+    bindingAvailability: bindingAvailabilityFor(observations, ["V3-B12-A4"])
   });
   assert.equal(unavailableRun.analysisEligibility.completeBlocks.length, 11);
   assert.equal(unavailableRun.analysisEligibility.confirmatoryAvailable, false);
-  assert.deepEqual(unavailableRun.analysisEligibility.unavailableAiRuns, ["B12-A4"]);
+  assert.deepEqual(unavailableRun.analysisEligibility.unavailableAiRuns, ["V3-B12-A4"]);
   assert.match(unavailableRun.analysisEligibility.unavailableReason, /lack frozen model availability/);
   assert.equal(unavailableRun.comparisons, null);
   assert.equal(unavailableRun.factorial, null);
 
   const isolationUnavailableObservations = structuredClone(observations);
-  isolationUnavailableObservations.find((observation) => observation.runId === "B12-A4").isolationVerified = false;
+  isolationUnavailableObservations.find((observation) =>
+    observation.runId === "V3-B12-A4").isolationVerified = false;
   const isolationUnavailable = analyzeBaselineComparisons(isolationUnavailableObservations, {
     bindingAvailability: bindingAvailabilityFor(isolationUnavailableObservations)
   });
-  assert.deepEqual(isolationUnavailable.analysisEligibility.unavailableIsolationRuns, ["B12-A4"]);
+  assert.deepEqual(
+    isolationUnavailable.analysisEligibility.unavailableIsolationRuns,
+    ["V3-B12-A4"]
+  );
   assert.equal(isolationUnavailable.analysisEligibility.confirmatoryAvailable, false);
   assert.equal(isolationUnavailable.comparisons, null);
   assert.equal(isolationUnavailable.factorial, null);

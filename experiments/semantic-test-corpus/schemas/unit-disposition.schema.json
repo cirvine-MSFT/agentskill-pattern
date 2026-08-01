@@ -11,8 +11,8 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
-    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3"]},
+    "runId": {"type": "string", "pattern": "^(?:B|V3-B)\\d{2}-A[0-5]$"},
     "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
     "armId": {"type": "integer", "minimum": 0, "maximum": 5},
     "status": {"type": "string", "enum": ["unavailable", "excluded"]},
@@ -20,7 +20,7 @@
     "evidenceKind": {
       "type": "string",
       "enum": [
-        "preflight-unavailable", "retry-exhausted", "started-uncertain",
+        "preflight-unavailable", "pre-session-failure", "retry-exhausted", "started-uncertain",
         "model-excluded"
       ]
     },

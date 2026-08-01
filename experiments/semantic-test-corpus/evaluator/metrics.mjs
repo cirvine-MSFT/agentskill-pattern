@@ -22,14 +22,16 @@ const metricsSchema = JSON.parse(
 );
 const mappingSpecPath = resolve(root, "fixture", "spec", "mapping-spec.json");
 const mappingSpec = JSON.parse(readFileSync(mappingSpecPath, "utf8"));
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const seeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
+const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const currentSeeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
+const abortedV2Schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "aborted-v2", "schedule.json"), "utf8")
+);
+const abortedV2Seeds = JSON.parse(
+  readFileSync(resolve(root, "design", "aborted-v2", "seeds.json"), "utf8")
+);
 const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.json"), "utf8"));
-const GENERATOR_FILES = [
-  ...GENERAL_GENERATOR_DEPENDENCIES,
-  "design/schedule.json",
-  "design/seeds.json"
-];
+const GENERATOR_FILES = [...GENERAL_GENERATOR_DEPENDENCIES];
 const EVALUATOR_FILES = [
   "baseline/general-generate.mjs",
   "baseline/pairwise.mjs",
@@ -143,6 +145,8 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
   if (snapshot.generator?.blockId !== blockId || snapshot.generator?.armId !== armId) {
     throw new Error("Snapshot generator metadata differs from the metrics run");
   }
+  const schedule = runId.startsWith("V3-") ? currentSchedule : abortedV2Schedule;
+  const seeds = runId.startsWith("V3-") ? currentSeeds : abortedV2Seeds;
   const planned = schedule.runs.find((run) => run.runId === runId);
   const seed = seeds.blocks.find((block) => block.id === blockId)?.seed;
   if (!planned

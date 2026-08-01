@@ -30,10 +30,16 @@ const dispositionSchema = JSON.parse(
 const partialUsageSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "partial-usage.schema.json"), "utf8")
 );
+const runAttemptSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "run-attempt.schema.json"), "utf8")
+);
 const usageExportSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "local-usage-export.schema.json"), "utf8")
 );
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const abortedV2Schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "aborted-v2", "schedule.json"), "utf8")
+);
 const contrastContract = JSON.parse(
   readFileSync(resolve(root, "design", "descriptive-contrasts.json"), "utf8")
 );
@@ -306,14 +312,27 @@ function fullOperationalMetrics(evidence) {
 function recomputePartialMetrics(partialUsage, partialUsagePath) {
   const unavailable = (reason) => operationalMeasurement(null, reason);
   let response = null;
+  let responseSessionId = null;
   const responseSource = partialUsage.sources.response;
   if (responseSource.available) {
-    response = JSON.parse(
-      readFileSync(resolve(dirname(partialUsagePath), responseSource.path), "utf8")
+    const responseText = readFileSync(
+      resolve(dirname(partialUsagePath), responseSource.path),
+      "utf8"
     );
-    if (typeof response.cli_session_id !== "string"
-      || response.cli_session_id.length === 0) {
-      throw new Error("Partial adapter response lacks cli_session_id");
+    if (partialUsage.protocolId === "semantic-test-corpus-execution-v3") {
+      response = responseText.split(/\r?\n/u).filter(Boolean).map(JSON.parse);
+      const results = response.filter((event) => event.type === "result");
+      if (results.length !== 1 || response.at(-1) !== results[0]
+        || typeof results[0].sessionId !== "string") {
+        throw new Error("Partial Copilot JSONL lacks one terminal result sessionId");
+      }
+      responseSessionId = results[0].sessionId;
+    } else {
+      response = JSON.parse(responseText);
+      responseSessionId = response.cli_session_id;
+    }
+    if (typeof responseSessionId !== "string" || responseSessionId.length === 0) {
+      throw new Error("Partial response lacks a CLI session identity");
     }
   }
   let rows = null;
@@ -353,17 +372,30 @@ function recomputePartialMetrics(partialUsage, partialUsagePath) {
   if (eventsSource.available) {
     events = readFileSync(resolve(dirname(partialUsagePath), eventsSource.path), "utf8")
       .split(/\r?\n/u).filter(Boolean).map(JSON.parse);
-    const starts = events.filter((event) => event.type === "session.start");
-    if (starts.length !== 1
-      || typeof starts[0].data?.sessionId !== "string"
-      || (response && starts[0].data.sessionId !== response.cli_session_id)) {
-      throw new Error("Partial raw events are not single-session evidence");
+    if (partialUsage.protocolId === "semantic-test-corpus-execution-v3") {
+      const results = events.filter((event) => event.type === "result");
+      if (results.length !== 1 || events.at(-1) !== results[0]
+        || typeof results[0].sessionId !== "string"
+        || (responseSessionId && results[0].sessionId !== responseSessionId)) {
+        throw new Error("Partial Copilot events are not single-session evidence");
+      }
+    } else {
+      const starts = events.filter((event) => event.type === "session.start");
+      if (starts.length !== 1
+        || typeof starts[0].data?.sessionId !== "string"
+        || (responseSessionId && starts[0].data.sessionId !== responseSessionId)) {
+        throw new Error("Partial raw events are not single-session evidence");
+      }
     }
   }
   if (rows) {
-    const eventSessionId = events?.find((event) =>
-      event.type === "session.start")?.data?.sessionId;
-    const expectedSessionId = response?.cli_session_id ?? eventSessionId;
+    const eventSessionId = partialUsage.protocolId === "semantic-test-corpus-execution-v3"
+      ? events?.find((event) => event.type === "result")?.sessionId
+      : events?.find((event) => event.type === "session.start")?.data?.sessionId;
+    const plannedSessionId = partialUsage.protocolId === "semantic-test-corpus-execution-v3"
+      ? currentSchedule.runs.find((run) => run.runId === partialUsage.runId)?.sessionId
+      : null;
+    const expectedSessionId = plannedSessionId ?? responseSessionId ?? eventSessionId;
     if (expectedSessionId && usageSessionId !== expectedSessionId) {
       throw new Error("Partial usage session differs from adapter/events session");
     }
@@ -425,6 +457,9 @@ function readExecutionRecords(evidence, evidencePath) {
 }
 
 export function buildDescriptiveRuns(input, artifactRoot) {
+  const schedule = input.protocolId === "semantic-test-corpus-execution-v2"
+    ? abortedV2Schedule
+    : currentSchedule;
   const errors = validateJsonSchema(input, artifactSchema, { schemaDir: schemaRoot });
   if (errors.length > 0) {
     throw new Error(`Descriptive artifact manifest is invalid: ${errors[0].path} ${errors[0].message}`);
@@ -617,15 +652,25 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         );
         const attemptBytes = readFileSync(attemptPath);
         const attempt = JSON.parse(attemptBytes);
+        const attemptErrors = validateJsonSchema(attempt, runAttemptSchema, {
+          schemaDir: schemaRoot
+        });
         if (!withinArtifactRoot(attemptPath)
+          || attemptErrors.length > 0
           || sha256(attemptBytes) !== partialUsage.attempt.sha256
           || attempt.attemptId !== partialUsage.attempt.attemptId
-          || attempt.runId !== definition.runId) {
+          || attempt.attemptId !== `${definition.runId}-attempt-1`
+          || attempt.runId !== definition.runId
+          || attempt.attemptNumber !== 1
+          || attempt.cliSessionId !== planned.sessionId
+          || attempt.treatment.blockId !== planned.blockId
+          || attempt.treatment.armId !== planned.armId
+          || attempt.treatment.seed !== planned.seed) {
           throw new Error(`Started/uncertain attempt binding differs: ${definition.runId}`);
         }
       }
       const preservedAttempt = source.preservedFiles.find((file) =>
-        file.path === "attempt-1.json");
+        file.path === partialUsage.attempt.path);
       if (Boolean(preservedAttempt) !== partialUsage.attempt.available
         || (preservedAttempt
           && preservedAttempt.sha256 !== partialUsage.attempt.sha256)) {
@@ -948,7 +993,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
   });
   const internalInput = {
     formatVersion: 1,
-    protocolId: "semantic-test-corpus-execution-v2",
+    protocolId: schedule.protocolId,
     runs
   };
   const internalErrors = validateJsonSchema(internalInput, inputSchema, { schemaDir: schemaRoot });
@@ -970,6 +1015,9 @@ export function summarizeDescriptive(runs) {
     status: "eligible",
     reason: null
   }));
+  const schedule = units[0]?.runId?.startsWith("V3-")
+    ? currentSchedule
+    : abortedV2Schedule;
   if (units.length !== schedule.runs.length) {
     throw new Error("Exactly 72 validated unit records are required; omissions are invalid");
   }
@@ -1069,7 +1117,7 @@ export function summarizeDescriptive(runs) {
   );
   return {
     formatVersion: 1,
-    protocolId: "semantic-test-corpus-execution-v2",
+    protocolId: schedule.protocolId,
     analysis: "descriptive-point-estimates-and-within-block-pairs-only",
     plannedRuns: 72,
     validatedUnits: units.length,

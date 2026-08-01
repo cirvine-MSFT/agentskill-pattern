@@ -3,8 +3,10 @@ import { createHash, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  closeSync,
   existsSync,
   mkdirSync,
+  openSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -21,8 +23,16 @@ import {
   taskSha256ForSeed
 } from "./execution-contract.mjs";
 import { collectLocalEvidence } from "./collect-local-evidence.mjs";
+import { exportLocalUsage } from "./export-local-usage.mjs";
 import { preflightLocalModel } from "./preflight-local-model.mjs";
 import { preflightExecution } from "./preflight-execution.mjs";
+import {
+  MCP_TOOL_NAMES,
+  availableToolsForArm,
+  buildCopilotArgs,
+  parseCopilotJsonl,
+  resultEvent
+} from "./copilot-cli-v3.mjs";
 import { validateStartOrder } from "./validate-start-order.mjs";
 import { runDeterministicBlock } from "./run-deterministic-block.mjs";
 import { snapshotLocalCorpusStaging } from "../evaluator/adapter.mjs";
@@ -33,9 +43,6 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
 const contract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
 const sourcePin = JSON.parse(readFileSync(resolve(root, "design", "source-pin.json"), "utf8"));
-const preSessionFailureSchema = JSON.parse(
-  readFileSync(resolve(root, "schemas", "pre-session-failure.schema.json"), "utf8")
-);
 const partialUsageSchema = JSON.parse(
   readFileSync(resolve(root, "schemas", "partial-usage.schema.json"), "utf8")
 );
@@ -44,6 +51,12 @@ const usageExportSchema = JSON.parse(
 );
 const unitDispositionSchema = JSON.parse(
   readFileSync(resolve(root, "schemas", "unit-disposition.schema.json"), "utf8")
+);
+const preSessionFailureSchema = JSON.parse(
+  readFileSync(resolve(root, "schemas", "pre-session-failure.schema.json"), "utf8")
+);
+const runAttemptSchema = JSON.parse(
+  readFileSync(resolve(root, "schemas", "run-attempt.schema.json"), "utf8")
 );
 
 function argument(args, name) {
@@ -79,6 +92,7 @@ function createSandbox(candidateRoot) {
   const runtimeRoot = resolve(candidateRoot, ".benchmark-runtime");
   const stagingRoot = resolve(runtimeRoot, "corpus-staging");
   const configPath = resolve(runtimeRoot, "corpus-sandbox.json");
+  const mcpConfigPath = resolve(runtimeRoot, "mcp-config.json");
   const contractRoot = resolve(candidateRoot, "corpus-contract");
   mkdirSync(stagingRoot, { recursive: true });
   mkdirSync(runtimeRoot, { recursive: true });
@@ -96,13 +110,31 @@ function createSandbox(candidateRoot) {
     lock: { waitTimeoutMs: 5000, staleAfterMs: 60000 }
   };
   writeOnce(configPath, jsonBytes(config));
+  writeOnce(mcpConfigPath, jsonBytes({
+    mcpServers: {
+      "semantic-corpus": {
+        command: process.execPath,
+        args: [resolve(candidateRoot, "tools", "semantic-corpus-mcp", "server.mjs")],
+        tools: MCP_TOOL_NAMES.map((name) => name.slice("semantic-corpus-".length))
+      }
+    }
+  }));
   for (const file of readdirSync(contractRoot)) {
     chmodSync(resolve(contractRoot, file), 0o444);
   }
   chmodSync(configPath, 0o444);
+  chmodSync(mcpConfigPath, 0o444);
   const excludePath = resolve(candidateRoot, ".git", "info", "exclude");
   writeFileSync(excludePath, "\n.benchmark-runtime/\n", { flag: "a" });
-  return { runtimeRoot, stagingRoot, configPath, contractRoot, token, config };
+  return {
+    runtimeRoot,
+    stagingRoot,
+    configPath,
+    mcpConfigPath,
+    contractRoot,
+    token,
+    config
+  };
 }
 
 function nextStart(indexPath, planned) {
@@ -110,7 +142,7 @@ function nextStart(indexPath, planned) {
     ? JSON.parse(readFileSync(indexPath, "utf8"))
     : {
         formatVersion: 1,
-        protocolId: "semantic-test-corpus-execution-v2",
+        protocolId: contract.protocolId,
         captures: []
       };
   const errors = validateStartOrder(index, { requireComplete: false });
@@ -126,7 +158,14 @@ function storeStart(indexPath, index, capture) {
   const errors = validateStartOrder(next, { requireComplete: next.captures.length === 72 });
   if (errors.length > 0) throw new Error(`Captured start order is invalid: ${errors[0]}`);
   const pending = `${indexPath}.next`;
-  writeFileSync(pending, jsonBytes(next), { flag: "wx" });
+  const nextBytes = jsonBytes(next);
+  if (existsSync(pending)) {
+    if (!readFileSync(pending).equals(nextBytes)) {
+      throw new Error("Pending start-index update differs from the requested frozen capture");
+    }
+  } else {
+    writeFileSync(pending, nextBytes, { flag: "wx" });
+  }
   if (existsSync(indexPath)) chmodSync(indexPath, 0o666);
   renameSync(pending, indexPath);
   let finalization = null;
@@ -222,13 +261,20 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
   const responseSource = partialSource(
     plan,
     "process-stdout.txt",
-    "adapter response was not produced before the attempt became uncertain"
+    "Copilot JSONL result was not produced before the attempt became uncertain"
   );
-  const attemptSource = partialSource(
+  const finalAttemptSource = partialSource(
     plan,
     "attempt-1.json",
-    "attempt record was not produced before the attempt became uncertain"
+    "final attempt record was not produced before the attempt became uncertain"
   );
+  const attemptSource = finalAttemptSource.bytes
+    ? finalAttemptSource
+    : partialSource(
+        plan,
+        "attempt-start.json",
+        "attempt-start record was not produced before the attempt became uncertain"
+      );
   const invalidSources = [];
   const invalidateSource = (kind, source, validationError) => {
     if (source.bytes) {
@@ -248,22 +294,6 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
     };
   };
   let response = null;
-  if (responseSource.bytes) {
-    try {
-      response = JSON.parse(responseSource.bytes);
-      if (typeof response.cli_session_id !== "string"
-        || response.cli_session_id.length === 0) {
-        throw new Error("adapter response lacks cli_session_id");
-      }
-    } catch (error) {
-      invalidateSource(
-        "response",
-        responseSource,
-        `adapter response is invalid: ${error.message}`
-      );
-      response = null;
-    }
-  }
   const unavailableUsage = (field) => partialMeasurement(
     null,
     usageSource.source.reason ?? `usage export does not provide finite ${field}`
@@ -302,16 +332,12 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
   let events = null;
   if (eventsSource.bytes) {
     try {
-      events = eventsSource.bytes.toString("utf8").split(/\r?\n/u)
-        .filter(Boolean).map(JSON.parse);
-      const starts = events.filter((event) => event.type === "session.start");
-      if (starts.length !== 1
-        || typeof starts[0].data?.sessionId !== "string") {
-        throw new Error("raw events require exactly one session.start");
-      }
-      if (response
-        && starts[0].data.sessionId !== response.cli_session_id) {
-        throw new Error("raw events session differs from adapter response");
+      events = parseCopilotJsonl(eventsSource.bytes);
+      try {
+        const result = resultEvent(events, plan.cliSessionId);
+        response = { cli_session_id: result.sessionId };
+      } catch (error) {
+        invalidateSource("response", responseSource, error.message);
       }
     } catch (error) {
       invalidateSource(
@@ -323,15 +349,12 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
     }
   }
   if (usageRows) {
-    const eventSessionId = events?.find((event) =>
-      event.type === "session.start")?.data?.sessionId;
-    const expectedSessionId = response?.cli_session_id ?? eventSessionId;
-    if (expectedSessionId
-      && usageSessionId !== expectedSessionId) {
+    const expectedSessionId = response?.cli_session_id ?? plan.cliSessionId;
+    if (usageSessionId !== expectedSessionId) {
       invalidateSource(
         "usage",
         usageSource,
-        "usage export session differs from adapter/events session"
+        "usage export session differs from the predetermined/result session"
       );
       usageRows = null;
     }
@@ -363,7 +386,14 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
   if (attemptSource.bytes) {
     try {
       const record = JSON.parse(attemptSource.bytes);
-      if (record.runId === plan.runId && typeof record.attemptId === "string") {
+      const errors = validateJsonSchema(record, runAttemptSchema, {
+        schemaDir: resolve(root, "schemas")
+      });
+      if (errors.length === 0
+        && record.runId === plan.runId
+        && record.cliSessionId === plan.cliSessionId
+        && record.attemptNumber === 1
+        && typeof record.attemptId === "string") {
         attempt = {
           available: true,
           attemptId: record.attemptId,
@@ -372,7 +402,9 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
           reason: null
         };
       } else {
-        attempt.reason = "attempt record does not bind this run";
+        attempt.reason = errors.length > 0
+          ? `attempt record is invalid: ${errors[0].path} ${errors[0].message}`
+          : "attempt record does not bind this run/session/attempt";
       }
     } catch (error) {
       attempt.reason = `attempt record is unreadable: ${error.message}`;
@@ -469,6 +501,71 @@ function writeUnitDisposition(plan, status, reason, sourcePath, sourceBytes, {
   return { disposition, dispositionPath };
 }
 
+function persistPreSessionFailure(plan, startIndex, phase, reason) {
+  const attemptedAt = nextRecordedAt(startIndex);
+  const evidence = readdirSync(plan.artifactRoot)
+    .map((name) => resolve(plan.artifactRoot, name))
+    .filter((path) => statSync(path).isFile())
+    .map((path) => {
+      const bytes = readFileSync(path);
+      return {
+        path: basename(path),
+        sha256: sha256(bytes),
+        bytes: bytes.length
+      };
+    })
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const failure = {
+    formatVersion: 1,
+    protocolId: contract.protocolId,
+    failureId: `${plan.runId}-pre-session`,
+    runId: plan.runId,
+    attemptedAt,
+    phase,
+    kickoffStarted: false,
+    sessionCreated: false,
+    reason,
+    evidence,
+    receipt: null,
+    usage: {
+      aiCredits: null,
+      premiumRequests: null,
+      nanoAiu: null,
+      modelTokens: null,
+      completionCount: null,
+      unavailableReason: "No authoritative zero-session/zero-usage receipt is available"
+    }
+  };
+  const errors = validateJsonSchema(failure, preSessionFailureSchema, {
+    schemaDir: resolve(root, "schemas")
+  });
+  if (errors.length > 0) {
+    throw new Error(`Pre-session failure is invalid: ${errors[0].path} ${errors[0].message}`);
+  }
+  const failurePath = resolve(plan.artifactRoot, "pre-session-failure.json");
+  const failureBytes = jsonBytes(failure);
+  writeOnce(failurePath, failureBytes);
+  immutable(failurePath);
+  const disposition = writeUnitDisposition(
+    plan, "unavailable", reason, failurePath, failureBytes, {
+      evidenceKind: "pre-session-failure"
+    }
+  );
+  const stored = storeStart(
+    plan.startIndexPath,
+    startIndex,
+    orderCapture(plan, failurePath, failureBytes, "unavailable", attemptedAt)
+  );
+  return {
+    status: "unavailable",
+    plan,
+    failure,
+    failurePath,
+    ...disposition,
+    startFinalization: stored.finalization
+  };
+}
+
 function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reason) {
   const current = existsSync(plan.startIndexPath)
     ? JSON.parse(readFileSync(plan.startIndexPath, "utf8"))
@@ -540,14 +637,171 @@ function persistUncertain(plan, startIndex, lifecyclePath, lifecycleBytes, reaso
   };
 }
 
+function recoverInterruptedSlot(plan, planned, preflight) {
+  const lifecyclePath = resolve(plan.artifactRoot, "lifecycle-start.json");
+  const preSessionFailurePath = resolve(plan.artifactRoot, "pre-session-failure.json");
+  const lockPath = `${plan.startIndexPath}.slot-${String(plan.globalOrder).padStart(2, "0")}.lock`;
+  const index = existsSync(plan.startIndexPath)
+    ? JSON.parse(readFileSync(plan.startIndexPath, "utf8"))
+    : { formatVersion: 1, protocolId: contract.protocolId, captures: [] };
+  const errors = validateStartOrder(index, { requireComplete: false });
+  if (errors.length > 0) throw new Error(`Existing start index is invalid: ${errors[0]}`);
+  const pendingPath = `${plan.startIndexPath}.next`;
+  if (existsSync(pendingPath)) {
+    const pending = JSON.parse(readFileSync(pendingPath, "utf8"));
+    const pendingErrors = validateStartOrder(pending, { requireComplete: false });
+    if (pendingErrors.length > 0) {
+      throw new Error(`Pending start index is invalid: ${pendingErrors[0]}`);
+    }
+    if (JSON.stringify(pending) === JSON.stringify(index)) {
+      rmSync(pendingPath);
+    } else if (pending.captures.length !== index.captures.length + 1
+      || pending.captures.at(-1)?.runId !== plan.runId) {
+      throw new Error("Pending start index does not represent this interrupted slot");
+    }
+  }
+  const releaseRecoveredLock = () => {
+    if (!existsSync(lockPath)) return;
+    const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+    if (lock.protocolId !== contract.protocolId
+      || lock.runId !== plan.runId
+      || lock.globalOrder !== plan.globalOrder) {
+      throw new Error("Existing reservation does not bind the requested frozen slot");
+    }
+    releaseReservation(lockPath);
+  };
+  if (existsSync(preSessionFailurePath)) {
+    const failureBytes = readFileSync(preSessionFailurePath);
+    const failure = JSON.parse(failureBytes);
+    const failureErrors = validateJsonSchema(failure, preSessionFailureSchema, {
+      schemaDir: resolve(root, "schemas")
+    });
+    if (failureErrors.length > 0
+      || failure.protocolId !== contract.protocolId
+      || failure.runId !== plan.runId
+      || failure.kickoffStarted !== false
+      || failure.sessionCreated !== false) {
+      throw new Error("Existing pre-session failure does not bind the requested frozen slot");
+    }
+    let startFinalization = null;
+    if (index.captures.length === plan.globalOrder - 1) {
+      startFinalization = storeStart(
+        plan.startIndexPath,
+        index,
+        orderCapture(
+          plan,
+          preSessionFailurePath,
+          failureBytes,
+          "unavailable",
+          failure.attemptedAt
+        )
+      ).finalization;
+    } else if (index.captures.length !== plan.globalOrder
+      || index.captures.at(-1)?.runId !== plan.runId) {
+      throw new Error("Interrupted pre-session failure cannot be recovered at the current order");
+    }
+    const dispositionPath = resolve(plan.artifactRoot, "unit-disposition.json");
+    const dispositionResult = existsSync(dispositionPath)
+      ? {
+          disposition: JSON.parse(readFileSync(dispositionPath, "utf8")),
+          dispositionPath
+        }
+      : writeUnitDisposition(
+          plan,
+          "unavailable",
+          failure.reason,
+          preSessionFailurePath,
+          failureBytes,
+          { evidenceKind: "pre-session-failure" }
+        );
+    releaseRecoveredLock();
+    return {
+      status: "unavailable",
+      plan,
+      preflight,
+      failure,
+      failurePath: preSessionFailurePath,
+      ...dispositionResult,
+      startFinalization,
+      recovered: true
+    };
+  }
+  const finalizedMarkers = ["evaluation.json", "run-manifest.json"];
+  if (finalizedMarkers.some((name) => existsSync(resolve(plan.artifactRoot, name)))
+    || (existsSync(resolve(plan.artifactRoot, "unit-disposition.json"))
+      && !existsSync(resolve(plan.artifactRoot, "uncertainty.json")))) {
+    throw new Error("Artifact root contains a finalized slot and cannot be resumed");
+  }
+  if (!existsSync(lifecyclePath)) {
+    if (index.captures.length + 1 !== planned.globalOrder) {
+      throw new Error("Interrupted pre-session slot no longer matches the next global order");
+    }
+    const recovered = persistPreSessionFailure(
+      plan,
+      index,
+      "kickoff-preparation",
+      "Recovered interrupted preparation before the durable start marker; no process was spawned"
+    );
+    releaseRecoveredLock();
+    return { ...recovered, preflight, recovered: true };
+  }
+  const lifecycleBytes = readFileSync(lifecyclePath);
+  const lifecycle = JSON.parse(lifecycleBytes);
+  if (lifecycle.protocolId !== contract.protocolId
+    || lifecycle.runId !== plan.runId
+    || lifecycle.blockId !== plan.blockId
+    || lifecycle.armId !== plan.armId
+    || lifecycle.globalOrder !== plan.globalOrder
+    || lifecycle.disposition !== "started"
+    || lifecycle.taskSha256 !== plan.taskSha256
+    || lifecycle.kickoffSha256 !== plan.kickoffSha256) {
+    throw new Error("Existing durable lifecycle marker does not bind the requested frozen slot");
+  }
+  const attemptStartPath = resolve(plan.artifactRoot, "attempt-start.json");
+  if (existsSync(attemptStartPath)) {
+    const attemptStart = JSON.parse(readFileSync(attemptStartPath, "utf8"));
+    const attemptErrors = validateJsonSchema(attemptStart, runAttemptSchema, {
+      schemaDir: resolve(root, "schemas")
+    });
+    if (attemptErrors.length > 0
+      || attemptStart.runId !== plan.runId
+      || attemptStart.cliSessionId !== plan.cliSessionId
+      || attemptStart.status !== "created") {
+      throw new Error("Existing attempt-start record does not bind the requested frozen slot");
+    }
+  }
+  if (index.captures.length === plan.globalOrder - 1) {
+    storeStart(
+      plan.startIndexPath,
+      index,
+      orderCapture(plan, lifecyclePath, lifecycleBytes, "started", lifecycle.recordedAt)
+    );
+  } else if (index.captures.length !== plan.globalOrder
+    || index.captures.at(-1)?.runId !== plan.runId) {
+    throw new Error("Interrupted durable start cannot be recovered at the current global order");
+  }
+  releaseRecoveredLock();
+  return {
+    ...persistUncertain(
+      plan,
+      index,
+      lifecyclePath,
+      lifecycleBytes,
+      "Recovered an interrupted durable start without respawning the measured process"
+    ),
+    preflight,
+    recovered: true
+  };
+}
+
 export function buildHarnessPlan({
   cli,
-  projectId,
   candidateRoot,
   artifactRoot,
   startIndexPath,
   blockId,
-  armId
+  armId,
+  disabledMcpServers = []
 }) {
   const planned = schedule.runs.find((run) => run.blockId === blockId && run.armId === armId);
   if (!planned) throw new Error("Run is not present in the frozen schedule");
@@ -560,22 +814,17 @@ export function buildHarnessPlan({
     || planned.kickoffSha256 !== generatedKickoffSha256) {
     throw new Error("Generated task/kickoff bytes differ from the frozen planned SHA-256");
   }
-  const kickoffPath = resolve(artifactRoot, "kickoff.txt");
   const args = armId === 0 ? [] : [
-    "create-session",
-    "--project-id", projectId,
-    "--execution-location", "local",
-    "--mode", "autopilot",
-    "--model", arm.model,
-    "--prompt-file", kickoffPath,
-    "--prompt-sha256", planned.kickoffSha256,
-    "--task-file", resolve(candidateRoot, contract.commonContract.taskArtifact),
-    "--run-id", planned.runId,
-    "--global-order", String(planned.globalOrder),
-    "--candidate-commit", "<materialized-terminal-commit>",
-    "--sandbox-config", resolve(candidateRoot, ".benchmark-runtime", "corpus-sandbox.json"),
-    "--events-out", resolve(artifactRoot, "captured.events.jsonl"),
-    "--usage-out", resolve(artifactRoot, "captured.usage.json")
+    ...buildCopilotArgs({
+      prompt: kickoffBytesForRun(armId, planned.seed).toString("utf8"),
+      sessionId: planned.sessionId,
+      model: arm.model,
+      topLevelAgent: arm.topLevelAgent,
+      candidateRoot: resolve(candidateRoot),
+      mcpConfigPath: resolve(candidateRoot, ".benchmark-runtime", "mcp-config.json"),
+      disabledMcpServers: disabledMcpServers.filter((name) => name !== "semantic-corpus"),
+      availableTools: availableToolsForArm(arm)
+    })
   ];
   return {
     protocolId: contract.protocolId,
@@ -587,6 +836,7 @@ export function buildHarnessPlan({
     globalOrder: planned.globalOrder,
     taskSha256: planned.taskSha256,
     kickoffSha256: planned.kickoffSha256,
+    cliSessionId: planned.sessionId,
     sourcePin,
     candidateRoot: resolve(candidateRoot),
     artifactRoot: resolve(artifactRoot),
@@ -596,14 +846,20 @@ export function buildHarnessPlan({
 }
 
 export function runControlledHarness(options) {
-  const plan = buildHarnessPlan(options);
+  const preflight = options.preflight ?? preflightExecution(options.cli, {
+    sessionStore: options.sessionStore,
+    capturedAt: options.capturedAt
+  });
+  const plan = buildHarnessPlan({
+    ...options,
+    disabledMcpServers: preflight.configuredMcpServers
+  });
   const planned = schedule.runs.find((run) => run.runId === plan.runId);
   const arm = contract.arms.find((item) => item.id === plan.armId);
-  const preflight = preflightExecution(options.cli, options.capturedAt);
   const armPreflight = preflight.arms.find((item) => item.armId === plan.armId);
   if (options.dryRun) return { status: "dry-run", plan, preflight };
   if (existsSync(plan.artifactRoot) && readdirSync(plan.artifactRoot).length > 0) {
-    throw new Error("Artifact root must be absent or empty");
+    return recoverInterruptedSlot(plan, planned, preflight);
   }
   mkdirSync(plan.artifactRoot, { recursive: true });
   const startIndex = nextStart(plan.startIndexPath, planned);
@@ -619,103 +875,20 @@ export function runControlledHarness(options) {
   writeOnce(preflightPath, preflightBytes);
   immutable(preflightPath);
   if (armPreflight.status !== "available") {
-    const recordedAt = nextRecordedAt(startIndex);
-    const unavailable = {
-      formatVersion: 1,
-      protocolId: contract.protocolId,
-      runId: plan.runId,
-      blockId: plan.blockId,
-      armId: plan.armId,
-      seed: plan.seed,
-      scheduleOrder: plan.scheduleOrder,
-      globalOrder: plan.globalOrder,
-      disposition: "unavailable",
-      recordedAt,
-      startedAt: null,
-      preflightSha256: sha256(preflightBytes),
-      reasons: armPreflight.reasons
-    };
-    const unavailablePath = resolve(plan.artifactRoot, "order-record.json");
-    const unavailableBytes = jsonBytes(unavailable);
-    writeOnce(unavailablePath, unavailableBytes);
-    immutable(unavailablePath);
-    const disposition = writeUnitDisposition(
+    const unavailable = persistPreSessionFailure(
       plan,
-      "unavailable",
-      armPreflight.reasons.join("; "),
-      unavailablePath,
-      unavailableBytes,
-      { evidenceKind: "preflight-unavailable" }
-    );
-    const stored = storeStart(
-      plan.startIndexPath,
       startIndex,
-      orderCapture(plan, unavailablePath, unavailableBytes, "unavailable", recordedAt)
+      "preflight",
+      armPreflight.reasons.join("; ")
     );
     releaseReservationOnce();
     return {
-      status: "unavailable",
-      plan,
+      ...unavailable,
       preflight,
-      reasons: armPreflight.reasons,
-      orderRecord: unavailable,
-      ...disposition,
-      startFinalization: stored.finalization
+      reasons: armPreflight.reasons
     };
   }
   const preSessionFailures = [];
-  if (options.preSessionFailurePath) {
-    try {
-    const sourcePath = resolve(options.preSessionFailurePath);
-    const sourceBytes = readFileSync(sourcePath);
-    const record = JSON.parse(sourceBytes);
-    const errors = validateJsonSchema(record, preSessionFailureSchema, {
-      schemaDir: resolve(root, "schemas")
-    });
-    const receiptPath = errors.length === 0
-      ? resolve(dirname(sourcePath), record.receipt.path)
-      : null;
-    const receiptBytes = receiptPath && existsSync(receiptPath)
-      ? readFileSync(receiptPath)
-      : null;
-    let receipt = null;
-    try {
-      receipt = receiptBytes ? JSON.parse(receiptBytes) : null;
-    } catch {
-      receipt = null;
-    }
-    if (errors.length > 0
-      || record.runId !== plan.runId
-      || record.kickoffStarted !== false
-      || record.sessionCreated !== false
-      || !receiptBytes
-      || sha256(receiptBytes) !== record.receipt.sha256
-      || receipt?.receiptKind !== record.receipt.receiptKind
-      || receipt?.receiptId !== record.receipt.receiptId
-      || receipt?.kickoffStarted !== false
-      || receipt?.sessionCreated !== false
-      || JSON.stringify(receipt?.usage) !== JSON.stringify(record.usage)) {
-      releaseReservationOnce();
-      throw new Error("Prior pre-session failure is invalid or belongs to another run");
-    }
-    const target = resolve(plan.artifactRoot, `${record.failureId}.json`);
-    const targetReceipt = resolve(plan.artifactRoot, record.receipt.path);
-    writeOnce(target, sourceBytes);
-    writeOnce(targetReceipt, receiptBytes);
-    immutable(target);
-    immutable(targetReceipt);
-    preSessionFailures.push({
-      path: target,
-      bytes: sourceBytes,
-      record,
-      receiptPath: targetReceipt,
-      receiptBytes
-    });
-    } catch (error) {
-      releaseReservationOnce();
-      throw error;
-    }
-  }
   if (plan.armId === 0) {
     let lifecyclePath;
     let lifecycleBytes;
@@ -856,9 +1029,12 @@ export function runControlledHarness(options) {
   let usagePath;
   let lifecyclePath;
   let lifecycleBytes;
+  let preSessionPhase = "candidate-materialization";
   try {
     boundary = materializeCandidate(plan.candidateRoot, { blockId: plan.blockId });
+    preSessionPhase = "sandbox-preparation";
     sandbox = createSandbox(plan.candidateRoot);
+    preSessionPhase = "kickoff-preparation";
     kickoffBytes = kickoffBytesForRun(plan.armId, plan.seed);
     const taskBytes = readFileSync(
       resolve(plan.candidateRoot, contract.commonContract.taskArtifact)
@@ -886,7 +1062,7 @@ export function runControlledHarness(options) {
       disposition: "started",
       recordedAt,
       startedAt: recordedAt,
-      state: "atomic-kickoff-planned",
+      state: "atomic-copilot-prompt-planned",
       taskSha256: plan.taskSha256,
       kickoffSha256: plan.kickoffSha256,
       candidateSnapshotSha256: boundary.boundarySha256,
@@ -897,8 +1073,8 @@ export function runControlledHarness(options) {
     writeOnce(lifecyclePath, lifecycleBytes);
     immutable(lifecyclePath);
   } catch (error) {
-    releaseReservationOnce();
     if (lifecyclePath && lifecycleBytes && existsSync(lifecyclePath)) {
+      releaseReservationOnce();
       return {
         ...persistUncertain(
           plan,
@@ -910,177 +1086,176 @@ export function runControlledHarness(options) {
         preflight
       };
     }
-    throw error;
+    const unavailable = {
+      ...persistPreSessionFailure(
+        plan,
+        startIndex,
+        preSessionPhase,
+        error instanceof Error ? error.message : String(error)
+      ),
+      preflight
+    };
+    releaseReservationOnce();
+    return unavailable;
   }
   const recordedAt = JSON.parse(lifecycleBytes.toString("utf8")).recordedAt;
   const plannedStartCapture = orderCapture(
     plan, lifecyclePath, lifecycleBytes, "started", recordedAt
   );
-  const commandArgs = plan.atomicCommand.args.map((item) =>
-    item === "<materialized-terminal-commit>" ? boundary.terminalCommit : item);
+  const commandArgs = plan.atomicCommand.args;
   const [executable, ...prefix] = commandParts(options.cli);
   const completeAiRun = () => {
-  const execution = spawnSync(executable, [...prefix, ...commandArgs], {
-    cwd: plan.candidateRoot,
-    encoding: "utf8",
-    windowsHide: true,
-    env: {
-      ...process.env,
-      SEMANTIC_CORPUS_SANDBOX_CONFIG: sandbox.configPath,
-      SEMANTIC_CORPUS_SANDBOX_TOKEN: sandbox.token
-    },
-    maxBuffer: 64 * 1024 * 1024,
-    timeout: contract.commonContract.wallClockMinutes * 60_000,
-    killSignal: "SIGTERM"
+  const attemptStartPath = resolve(plan.artifactRoot, "attempt-start.json");
+  const attemptTreatment = {
+    blockId: plan.blockId,
+    armId: plan.armId,
+    seed: plan.seed,
+    sourceCommit: sourcePin.sourceCommit,
+    sourceTree: sourcePin.sourceTree,
+    terminalCommit: boundary.terminalCommit,
+    candidateSnapshotSha256: boundary.boundarySha256,
+    sharedTaskSha256: taskSha256ForSeed(plan.seed),
+    kickoffSha256: kickoffSha256ForRun(plan.armId, plan.seed),
+    wallLimitMs: 1800000,
+    toolCallLimit: 120,
+    modelTokenLimit: 100000
+  };
+  const attemptStart = {
+    formatVersion: 1,
+    protocolId: contract.protocolId,
+    attemptId: `${plan.runId}-attempt-1`,
+    runId: plan.runId,
+    attemptNumber: 1,
+    appProjectSessionId: null,
+    cliSessionId: plan.cliSessionId,
+    requestedParentModel: arm.model,
+    requestedWorkerModel: arm.workerModel ?? null,
+    status: "created",
+    startedAt: recordedAt,
+    endedAt: null,
+    terminalReturn: null,
+    localEvidencePath: null,
+    modelPreflightPath: null,
+    treatment: attemptTreatment,
+    evaluatorSnapshotPath: null,
+    outcomesOpenedAt: null,
+    deviations: []
+  };
+  const attemptStartErrors = validateJsonSchema(attemptStart, runAttemptSchema, {
+    schemaDir: resolve(root, "schemas")
   });
-  const stdoutPath = resolve(plan.artifactRoot, "process-stdout.txt");
-  const stderrPath = resolve(plan.artifactRoot, "process-stderr.txt");
-  writeOnce(stdoutPath, Buffer.from(execution.stdout ?? "", "utf8"));
-  writeOnce(stderrPath, Buffer.from(execution.stderr ?? "", "utf8"));
-  if (execution.error && execution.status === null) throw execution.error;
-  if (execution.status !== 0) {
-    if (existsSync(eventsPath) || existsSync(usagePath)) {
-      throw new Error("Failed create-session emitted run evidence after the durable kickoff marker");
-    }
-    let receipt;
-    try {
-      receipt = JSON.parse(execution.stdout);
-    } catch {
-      throw new Error("Create-session failure lacks an authoritative failure receipt");
-    }
-    if (!preflight.capabilities.preSessionFailureReceipt
-      || !preflight.capabilities.zeroUsageReceipt
-      || receipt.receiptKind !== "authoritative-pre-session-failure"
-      || receipt.kickoffStarted !== false
-      || receipt.sessionCreated !== false
-      || JSON.stringify(receipt.usage) !== JSON.stringify({
-        aiCredits: 0,
-        premiumRequests: null,
-        nanoAiu: 0,
-        modelTokens: 0,
-        completionCount: 0
-      })) {
-      throw new Error("Create-session failure receipt does not prove pre-kickoff zero usage");
-    }
-    const receiptBytes = Buffer.from(execution.stdout, "utf8");
-    const receiptName = `${plan.runId}-pre-session-${preSessionFailures.length + 1}.receipt.json`;
-    const receiptPath = resolve(plan.artifactRoot, receiptName);
-    writeOnce(receiptPath, receiptBytes);
-    const failure = {
-      formatVersion: 1,
-      protocolId: contract.protocolId,
-      failureId: `${plan.runId}-pre-session-${preSessionFailures.length + 1}`,
-      runId: plan.runId,
-      attemptedAt: new Date().toISOString(),
-      phase: "create_session",
-      kickoffStarted: false,
-      sessionCreated: false,
-      reason: execution.stderr.trim() || `create-session exited ${execution.status}`,
-      receipt: {
-        receiptKind: receipt.receiptKind,
-        receiptId: receipt.receiptId,
-        path: receiptName,
-        sha256: sha256(receiptBytes)
-      },
-      usage: receipt.usage
-    };
-    const failurePath = resolve(plan.artifactRoot, `${failure.failureId}.json`);
-    writeOnce(failurePath, jsonBytes(failure));
-    for (const path of [stdoutPath, stderrPath, receiptPath, failurePath]) immutable(path);
-    if (preSessionFailures.length > 0) {
-      const unavailableRecordedAt = nextRecordedAt(startIndex);
-      const unavailable = {
-        formatVersion: 1,
-        protocolId: contract.protocolId,
-        runId: plan.runId,
-        blockId: plan.blockId,
-        armId: plan.armId,
-        disposition: "unavailable",
-        recordedAt: unavailableRecordedAt,
-        startedAt: null,
-        reason: "single positive pre-session retry was exhausted",
-        failures: [...preSessionFailures.map((item) => basename(item.path)), basename(failurePath)]
-      };
-      const unavailablePath = resolve(plan.artifactRoot, "order-record.json");
-      const unavailableBytes = jsonBytes(unavailable);
-      writeOnce(unavailablePath, unavailableBytes);
-      immutable(unavailablePath);
-      const retryDisposition = writeUnitDisposition(
-        plan,
-        "unavailable",
-        unavailable.reason,
-        unavailablePath,
-        unavailableBytes,
-        { evidenceKind: "retry-exhausted" }
-      );
-      const stored = storeStart(
-        plan.startIndexPath,
-        startIndex,
-        orderCapture(
-          plan, unavailablePath, unavailableBytes, "unavailable", unavailableRecordedAt
-        )
-      );
-      releaseReservationOnce();
-      return {
-        status: "unavailable",
-        plan,
-        preflight,
-        failure,
-        orderRecord: unavailable,
-        ...retryDisposition,
-        startFinalization: stored.finalization
-      };
-    }
-    releaseReservationOnce();
-    return {
-      status: "pre-session-failure",
-      plan,
-      preflight,
-      failure,
-      failurePath
-    };
+  if (attemptStartErrors.length > 0) {
+    throw new Error(
+      `Attempt-start record is invalid: ${attemptStartErrors[0].path} ${attemptStartErrors[0].message}`
+    );
   }
-  const response = JSON.parse(execution.stdout);
-  const eventsBytes = readFileSync(eventsPath);
-  const events = eventsBytes.toString("utf8").trim().split(/\r?\n/u).map(JSON.parse);
-  const sessionStart = events.find((event) => event.type === "session.start");
-  if (!sessionStart || response.cli_session_id !== sessionStart.data?.sessionId) {
-    throw new Error("CLI response and captured session.start ID differ");
-  }
+  writeOnce(attemptStartPath, jsonBytes(attemptStart));
+  immutable(attemptStartPath);
   const capturePath = resolve(plan.artifactRoot, "start-capture.json");
   writeOnce(capturePath, jsonBytes(plannedStartCapture));
   const startStored = storeStart(plan.startIndexPath, startIndex, plannedStartCapture);
   releaseReservationOnce();
+  const stdoutPath = resolve(plan.artifactRoot, "process-stdout.txt");
+  const stderrPath = resolve(plan.artifactRoot, "process-stderr.txt");
+  const stdoutFd = openSync(stdoutPath, "wx");
+  const stderrFd = openSync(stderrPath, "wx");
+  let execution;
+  try {
+    execution = spawnSync(executable, [...prefix, ...commandArgs], {
+      cwd: plan.candidateRoot,
+      windowsHide: true,
+      env: {
+        ...process.env,
+        SEMANTIC_CORPUS_SANDBOX_CONFIG: sandbox.configPath,
+        SEMANTIC_CORPUS_SANDBOX_TOKEN: sandbox.token
+      },
+      stdio: ["ignore", stdoutFd, stderrFd],
+      timeout: contract.commonContract.wallClockMinutes * 60_000,
+      killSignal: "SIGTERM"
+    });
+  } finally {
+    closeSync(stdoutFd);
+    closeSync(stderrFd);
+  }
+  const processResultPath = resolve(plan.artifactRoot, "process-result.json");
+  const processResult = {
+    formatVersion: 1,
+    recordedAt: new Date().toISOString(),
+    status: execution.status,
+    signal: execution.signal,
+    error: execution.error
+      ? {
+          name: execution.error.name,
+          message: execution.error.message,
+          code: execution.error.code ?? null
+        }
+      : null
+  };
+  writeOnce(processResultPath, jsonBytes(processResult));
+  immutable(processResultPath);
+  const stdoutBytes = readFileSync(stdoutPath);
+  writeOnce(eventsPath, stdoutBytes);
+  const exportedUsage = (options.usageExporter ?? exportLocalUsage)({
+    database: options.sessionStore,
+    cliSessionId: plan.cliSessionId,
+    exportedAt: new Date().toISOString()
+  });
+  const usageBytes = jsonBytes(exportedUsage);
+  writeOnce(usagePath, usageBytes);
+  if (execution.error && execution.status === null) throw execution.error;
+  const eventsBytes = stdoutBytes;
+  const events = parseCopilotJsonl(eventsBytes);
+  const result = resultEvent(events, plan.cliSessionId);
+  if (execution.status !== 0 || result.exitCode !== 0) {
+    throw new Error(`Copilot prompt failed after the durable start marker (process=${execution.status}, result=${result.exitCode})`);
+  }
+  const topLevelMessages = events.filter((event) =>
+    event.type === "assistant.message" && !event.agentId);
+  const taskStart = events.find((event) =>
+    event.type === "tool.execution_start" && event.data?.toolName === "task");
+  const taskComplete = events.find((event) =>
+    event.type === "tool.execution_complete"
+    && event.data?.toolCallId === taskStart?.data?.toolCallId);
+  const terminalReturn = arm.delegated
+    ? taskComplete?.data?.result?.content ?? null
+    : topLevelMessages.at(-1)?.data?.content ?? null;
+  const startedAt = events.find((event) =>
+    event.type === "user.message" && !event.agentId)?.timestamp ?? recordedAt;
+  const response = {
+    cli_session_id: result.sessionId,
+    started_at: startedAt,
+    ended_at: result.timestamp,
+    terminal_return: terminalReturn,
+    exit_code: result.exitCode
+  };
 
   const boundaryPath = resolve(plan.artifactRoot, "candidate-boundary.json");
   const boundaryBytes = readFileSync(resolve(plan.candidateRoot, ".benchmark-boundary.json"));
   writeOnce(boundaryPath, boundaryBytes);
   const sessionCreation = {
-    formatVersion: 1,
-    operation: "create_session",
+    formatVersion: 2,
+    operation: "copilot_prompt",
     capturedAt: response.started_at,
     request: {
-      project_id: options.projectId,
-      execution_location: "local",
-      coordinate_with_creator: false,
+      session_id: plan.cliSessionId,
+      cwd: plan.candidateRoot,
       candidate_commit: boundary.terminalCommit,
-      kickoff: {
-        mode: "autopilot",
-        model: arm.model,
-        prompt: kickoffBytes.toString("utf8"),
-        agent: null,
-        context_tier: "default",
-        reasoning_effort: "medium"
-      }
+      model: arm.model,
+      agent: arm.topLevelAgent,
+      prompt: kickoffBytes.toString("utf8"),
+      prompt_sha256: plan.kickoffSha256,
+      output_format: "json",
+      available_tools: availableToolsForArm(arm),
+      disabled_mcp_servers: preflight.configuredMcpServers
+        .filter((name) => name !== "semantic-corpus"),
+      mcp_config_path: sandbox.mcpConfigPath,
+      mcp_config_sha256: sha256(readFileSync(sandbox.mcpConfigPath)),
+      command_args: commandArgs
     },
     response: {
-      project_session_id: response.project_session_id,
-      project_id: response.project_id,
-      execution_location: response.execution_location,
-      kickoff_mode: response.kickoff_mode,
-      kickoff_model: response.kickoff_model,
-      kickoff_consumed: response.kickoff_consumed === true,
-      kickoff_prompt_sha256: response.prompt_sha256_echo
+      result_session_id: response.cli_session_id,
+      exit_code: response.exit_code,
+      result_timestamp: response.ended_at
     }
   };
   const sessionCreationPath = resolve(plan.artifactRoot, "session-creation.json");
@@ -1094,7 +1269,7 @@ export function runControlledHarness(options) {
     attemptId: `${plan.runId}-attempt-1`,
     runId: plan.runId,
     attemptNumber: 1,
-    appProjectSessionId: response.project_session_id,
+    appProjectSessionId: null,
     cliSessionId: response.cli_session_id,
     requestedParentModel: arm.model,
     requestedWorkerModel: arm.workerModel ?? null,
@@ -1104,20 +1279,7 @@ export function runControlledHarness(options) {
     terminalReturn: response.terminal_return,
     localEvidencePath: "local-evidence.json",
     modelPreflightPath: "model-preflight.json",
-    treatment: {
-      blockId: plan.blockId,
-      armId: plan.armId,
-      seed: plan.seed,
-      sourceCommit: sourcePin.sourceCommit,
-      sourceTree: sourcePin.sourceTree,
-      terminalCommit: boundary.terminalCommit,
-      candidateSnapshotSha256: boundary.boundarySha256,
-      sharedTaskSha256: taskSha256ForSeed(plan.seed),
-      kickoffSha256: kickoffSha256ForRun(plan.armId, plan.seed),
-      wallLimitMs: 1800000,
-      toolCallLimit: 120,
-      modelTokenLimit: 100000
-    },
+    treatment: attemptTreatment,
     evaluatorSnapshotPath: null,
     outcomesOpenedAt: null,
     deviations: []
@@ -1133,7 +1295,7 @@ export function runControlledHarness(options) {
     globalOrder: plan.globalOrder,
     sourceCommit: sourcePin.sourceCommit,
     sourceTree: sourcePin.sourceTree,
-    appProjectSessionId: response.project_session_id,
+    appProjectSessionId: null,
     cliSessionId: response.cli_session_id,
     terminalCommit: boundary.terminalCommit,
     candidateSnapshotSha256: boundary.boundarySha256,
@@ -1146,7 +1308,6 @@ export function runControlledHarness(options) {
     deviations: []
   };
   const sessionCreationBytes = jsonBytes(sessionCreation);
-  const usageBytes = readFileSync(usagePath);
   let capturedUsage;
   try {
     capturedUsage = JSON.parse(usageBytes);
@@ -1219,7 +1380,8 @@ export function runControlledHarness(options) {
 
   const produced = [
     ...preSessionFailures.flatMap((item) => [item.path, item.receiptPath]),
-    preflightPath, kickoffPath, lifecyclePath, stdoutPath, stderrPath,
+    preflightPath, kickoffPath, lifecyclePath, attemptStartPath,
+    stdoutPath, stderrPath, processResultPath,
     eventsPath, usagePath, capturePath, boundaryPath,
     sessionCreationPath, attemptPath, manifestPath, evidencePath, modelPreflightPath,
     ...(startStored.finalization
@@ -1289,7 +1451,7 @@ export function runControlledHarness(options) {
     immutablePolicy: "write-once then read-only",
     sourcePin,
     atomicCommand: { command: options.cli, args: commandArgs },
-    appProjectSessionId: response.project_session_id,
+    appProjectSessionId: null,
     cliSessionId: response.cli_session_id,
     terminalCommit: boundary.terminalCommit,
     candidateBoundarySha256: boundary.boundarySha256,
@@ -1338,7 +1500,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = process.argv.slice(2);
   const required = Object.fromEntries([
     ["cli", "--cli"],
-    ["projectId", "--project-id"],
+    ["sessionStore", "--session-store"],
     ["candidateRoot", "--candidate-root"],
     ["artifactRoot", "--artifact-root"],
     ["startIndexPath", "--start-index"],
@@ -1346,12 +1508,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     ["arm", "--arm"]
   ].map(([key, flag]) => [key, argument(args, flag)]));
   if (Object.values(required).some((value) => value === undefined)) {
-    throw new Error("Usage: node scripts/run-controlled-harness.mjs --cli <adapter> --project-id <id> --candidate-root <external-empty-directory> --artifact-root <external-empty-directory> --start-index <external-index.json> --block <B01..B12> --arm <0..5> [--pre-session-failure <record.json>] [--dry-run]");
+    throw new Error("Usage: node scripts/run-controlled-harness.mjs --cli <copilot> --session-store <session-store.db> --candidate-root <external-empty-directory> --artifact-root <external-empty-directory> --start-index <external-index.json> --block <B01..B12> --arm <0..5> [--dry-run]");
   }
   const output = runControlledHarness({
     ...required,
     armId: Number(required.arm),
-    preSessionFailurePath: argument(args, "--pre-session-failure"),
     dryRun: args.includes("--dry-run")
   });
   process.stdout.write(`${JSON.stringify(output)}\n`);

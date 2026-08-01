@@ -22,7 +22,8 @@ export function reproduceLocalEvidence() {
   rmSync(candidateRoot, { recursive: true, force: true });
   materializeCandidate(candidateRoot, {
     allowTestDestination: true,
-    blockId: "B01"
+    blockId: "B01",
+    abortedV2: true
   });
   try {
     const eventsBytes = readFileSync(eventsPath);

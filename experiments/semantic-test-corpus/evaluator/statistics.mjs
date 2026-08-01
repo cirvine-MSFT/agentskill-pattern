@@ -22,6 +22,9 @@ const DEFAULT_ENDPOINTS = Object.freeze({
 });
 const evaluatorRoot = dirname(fileURLToPath(import.meta.url));
 const schedule = JSON.parse(readFileSync(resolve(evaluatorRoot, "..", "design", "schedule.json"), "utf8"));
+const abortedV2Schedule = JSON.parse(
+  readFileSync(resolve(evaluatorRoot, "..", "design", "aborted-v2", "schedule.json"), "utf8")
+);
 const schemaRoot = resolve(evaluatorRoot, "..", "schemas");
 const statisticsInputSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "statistics-input.schema.json"), "utf8")
@@ -33,8 +36,8 @@ const metricsArtifactSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "metrics-artifact.schema.json"), "utf8")
 );
 const PLANNED_BLOCKS = [...new Set(schedule.runs.map((run) => run.blockId))].sort();
-const ARM_IDS = [0, 1, 2, 3, 4];
-const AI_ARM_IDS = [1, 2, 3, 4];
+const ARM_IDS = [...new Set(schedule.runs.map((run) => run.armId))].sort((left, right) => left - right);
+const AI_ARM_IDS = ARM_IDS.filter((armId) => armId !== 0);
 
 function mean(values) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -182,7 +185,8 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
     item.runId === runRecord.runId && item.type === "outcomes.unblinded");
   const starts = events.filter((item) =>
     item.runId === runRecord.runId && item.type === "run.started");
-  const planned = schedule.runs.find((item) => item.runId === runRecord.runId);
+  const runSchedule = runRecord.runId.startsWith("V3-") ? schedule : abortedV2Schedule;
+  const planned = runSchedule.runs.find((item) => item.runId === runRecord.runId);
   const boundaries = [...completion, ...unblinding];
   const expectedBoundaryRole = runRecord.armId === 0 ? "baseline" : "parent";
   const expectedBoundarySession = runRecord.armId === 0
@@ -625,14 +629,14 @@ export function analyzeBaselineComparisons(observations, options = {}) {
     bootstrap: { resamples: bootstrapResamples, seed: bootstrapSeed, lowerTail: alpha },
     families: {
       noninferiority: {
-        hypotheses: 12,
+        hypotheses: AI_ARM_IDS.length * endpointEntries.length,
         evaluated: comparisons?.length ?? 0,
         adjustment: "Holm",
         sidedness: "one-sided",
         decisionAvailable: confirmatoryAvailable
       },
       equality: {
-        hypotheses: 12,
+        hypotheses: AI_ARM_IDS.length * endpointEntries.length,
         evaluated: comparisons?.length ?? 0,
         adjustment: "Holm",
         sidedness: "two-sided",
