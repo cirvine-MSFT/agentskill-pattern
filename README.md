@@ -71,16 +71,16 @@ descriptions of both diagrams.
 | Reference | Live components | Status |
 | --- | --- | --- |
 | **ASCII art** | [`ascii-art` Skill](.github/skills/ascii-art/SKILL.md), [custom agent](.github/agents/ascii-art.agent.md), and [implementation notes](docs/reference-implementations/ascii-art.md) | Implemented; the [completed case study](experiments/ascii-art-powershell-cli) tests the pattern's small-task cost/quality hypothesis. |
-| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [inherited-model agent](.github/agents/semantic-test-corpus.agent.md), [fixed-Haiku target agent](.github/agents/semantic-test-corpus-haiku.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [six-arm executable v2 design](experiments/semantic-test-corpus/execution-amendment-v2.md) has a deterministic foundation, but no AI trials or AI benchmark results yet. |
+| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [inherited-model agent](.github/agents/semantic-test-corpus.agent.md), [fixed-Haiku target agent](.github/agents/semantic-test-corpus-haiku.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [completed six-arm protocol-v5 case study](experiments/semantic-test-corpus/report.md) reports 12 complete randomized blocks and descriptive ITT results. |
 
 In the semantic reference, migration and expected-output oracle behavior remain
 deterministic. AI is limited to proposing semantic v1 source scenarios, with staged
 writes isolated behind a [path-constrained MCP server](tools/semantic-corpus-mcp/server.mjs)
 and its [tests](tests/semantic-corpus-mcp/). An enforceable OS sandbox is mandatory:
-use a container, restricted mounts, restricted VM, or dedicated ACL identity. The
-[sole executable v2 protocol](experiments/semantic-test-corpus/execution-amendment-v2.md)
+use a container, restricted mounts, restricted VM, or dedicated ACL identity. The [completed protocol-v5 benchmark](experiments/semantic-test-corpus/report.md)
 compares one deterministic baseline, a 2x2 model-tier-by-delegation design, and
-the GPT-parent-to-fixed-Haiku target arm. `protocol.md` is historical only.
+the GPT-parent-to-fixed-Haiku target arm. Earlier protocols, including
+`protocol.md`, are historical only.
 
 ## Evidence and experiments
 
@@ -98,6 +98,16 @@ Fourteen of 60 schedules are missing, so inference and significance claims are
 withheld. See the [report](experiments/ascii-art-powershell-cli/report.md),
 [raw evidence](experiments/ascii-art-powershell-cli/raw/), and
 [machine-readable results](experiments/ascii-art-powershell-cli/results/).
+
+The semantic test-corpus case study completed all 72 protocol-v5 units in 12
+randomized complete blocks. The target arm used 38.8% fewer credits/nano-AIU and
+58.0% less parent cumulative input than GPT inline, but used 88.0% more total model
+tokens, took 72.0% longer, missed the path and mutant-quality floors, and was
+treatment-adherent in only 1/12 units. The preregistered positive-efficiency signal
+was not met. See the [final report](experiments/semantic-test-corpus/report.md),
+[immutable evidence package](experiments/semantic-test-corpus/results/v5-b01/), and
+[machine-readable summary](experiments/semantic-test-corpus/results/v5-final-summary.json).
+These local, unsigned results are descriptive only.
 
 ## Research and prior art
 
@@ -118,11 +128,11 @@ search methodology.
 ## Status
 
 This repository contains the pattern documentation, benchmark foundation, and live
-GitHub Copilot reference implementations. The ASCII art case study is complete; its
-incomplete, dispatch-affected dataset supports descriptive results only, so inferential
-conclusions were withheld. The semantic test-corpus implementation and deterministic
-benchmark foundation are complete, but no AI arm has run and no AI trial result is
-claimed.
+GitHub Copilot reference implementations. Both case studies are complete and
+descriptive only. The ASCII dataset is incomplete and dispatch-affected. The semantic
+protocol-v5 dataset contains all 72 scheduled units, but its local, unsigned evidence
+and preregistered analysis still do not support significance, causal, compliance, or
+population-generalization claims.
 
 ## License
 

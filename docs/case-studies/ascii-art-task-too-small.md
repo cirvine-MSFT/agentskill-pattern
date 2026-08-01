@@ -258,3 +258,7 @@ joint screen.
   them. It does not itself vary task size, so isolating the task-size hypothesis specifically
   would need a further extension of that template (an added task-size factor), not a re-read
   of the ascii-art report.
+- [Completed semantic test-corpus protocol-v5 report](../../experiments/semantic-test-corpus/report.md) —
+  the separately analyzed 12-block, six-arm case study. Its different
+  credit/context/latency pattern is not pooled with this ASCII task; together the two
+  studies support task scale/structure only as a hypothesis, not a general effect.

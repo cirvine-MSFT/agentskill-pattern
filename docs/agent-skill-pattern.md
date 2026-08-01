@@ -20,7 +20,7 @@ examples below describe the ASCII art reference unless noted otherwise.
 | Reference | Components | Evidence status |
 | --- | --- | --- |
 | **ASCII art** | [Implementation notes](reference-implementations/ascii-art.md), [`ascii-art` Skill](../.github/skills/ascii-art/SKILL.md), [custom agent](../.github/agents/ascii-art.agent.md) | The [completed case study](../experiments/ascii-art-powershell-cli/) tests the small-task cost/quality hypothesis. Its incomplete dataset supports descriptive results only. |
-| **Semantic test corpus** | [Research](research/semantic-corpus-generation.md), [implementation notes](reference-implementations/semantic-test-corpus.md), [`semantic-test-corpus` Skill](../.github/skills/semantic-test-corpus/SKILL.md), [custom agent](../.github/agents/semantic-test-corpus.agent.md) | The [preregistered executable design](../experiments/semantic-test-corpus/README.md) has a checked deterministic foundation. No AI trials have run, so there are no AI benchmark results. |
+| **Semantic test corpus** | [Research](research/semantic-corpus-generation.md), [implementation notes](reference-implementations/semantic-test-corpus.md), [`semantic-test-corpus` Skill](../.github/skills/semantic-test-corpus/SKILL.md), [custom agent](../.github/agents/semantic-test-corpus.agent.md) | The [completed protocol-v5 case study](../experiments/semantic-test-corpus/report.md) has 12 complete randomized blocks and descriptive ITT results. |
 
 The semantic reference keeps the migration and expected-output oracle deterministic;
 AI may only propose semantic v1 source scenarios. Its writes go to isolated staging
@@ -28,7 +28,7 @@ through the [path-constrained MCP server](../tools/semantic-corpus-mcp/server.mj
 [security/protocol tests](../tests/semantic-corpus-mcp/). An enforceable OS sandbox
 (container, restricted mounts, restricted VM, or dedicated ACL identity) is mandatory
 outside the MCP's own defense-in-depth checks. The
-[sole executable v2 protocol](../experiments/semantic-test-corpus/execution-amendment-v2.md#design-and-arms)
+[completed protocol-v5 benchmark](../experiments/semantic-test-corpus/report.md)
 fixes six arms: one deterministic baseline, a complete 2x2
 model-tier-by-delegation design, and the GPT-parent-to-fixed-Haiku target.
 
