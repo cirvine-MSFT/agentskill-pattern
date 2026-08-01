@@ -1,0 +1,28 @@
+{
+  "formatVersion": 1,
+  "protocolId": "release-note-synthesis-v0-foundation",
+  "phase": "excluded-pilot",
+  "runId": "PILOT-A4-01",
+  "derivedAfterPilot": true,
+  "derivation": "deterministic review addendum; original raw events and run-evidence remain unchanged",
+  "rawEventsSha256": "a6f35e25af06fdd74ffda017a5c550532c1c4b32c152b55730f617983e81b77e",
+  "returnBoundary": {
+    "compactReturnValid": false,
+    "parentEnvelope": null,
+    "workerEnvelope": null,
+    "violations": [
+      "parent return is not exactly one compact status envelope",
+      "worker return is not exactly one compact status envelope",
+      "MCP write result envelope is unavailable",
+      "parent received narration or draft content beyond the compact envelope",
+      "worker emitted pseudo tool calls as assistant text"
+    ],
+    "workerCallId": "call_haZEBixg83xkzQV8GtMr9Xse"
+  },
+  "runtimeIsolation": {
+    "established": false,
+    "projectSkillLoadedFromRepositoryWorkspace": true,
+    "evaluatorRootAbsentFromWorkspace": false,
+    "reason": "captured run used the repository workspace containing evaluator/gold and prior outputs"
+  }
+}

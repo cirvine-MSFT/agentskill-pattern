@@ -1,0 +1,120 @@
+{
+  "formatVersion": 1,
+  "runId": "PILOT-A4-01",
+  "dossierId": "pilot-feature-repo-delete",
+  "arm": "A4",
+  "sessionId": "a1e32afc-2ecd-59d1-ac4d-8db6a557935e",
+  "startedAt": "2026-08-01T15:13:02.358Z",
+  "endedAt": "2026-08-01T15:14:04.175Z",
+  "disposition": "measured-failure",
+  "operationalSuccess": false,
+  "treatmentAdherent": false,
+  "strictSuccess": false,
+  "failureReasons": [
+    "MCP calls are not exactly two worker-owned and zero parent-owned",
+    "audit records 0 dossier reads",
+    "audit records 0 draft writes",
+    "MCP audit does not end in run.completed",
+    "draft unavailable: ENOENT: no such file or directory, open 'C:\\release-note-pilot-20260801-foundation\\PILOT-A4-01\\staging\\draft.md'"
+  ],
+  "mechanism": {
+    "parentModel": "gpt-5.6-sol",
+    "workerModel": "claude-haiku-4.5",
+    "skill": {
+      "name": "release-note-synthesis",
+      "invoked": true,
+      "contextInjected": true
+    },
+    "delegation": {
+      "invoked": true,
+      "completed": true,
+      "agentName": "release-note-haiku",
+      "workerCallId": "call_haZEBixg83xkzQV8GtMr9Xse"
+    },
+    "taskEnvelopeSha256": "96420931cacd68955020e1a78fd9a0392bc54c53939b09cd16482a3c06586b9c"
+  },
+  "boundary": {
+    "reads": 0,
+    "writes": 0,
+    "terminalSuccess": false,
+    "configuredToolSchemaCount": 2,
+    "configuredToolSchemaBytes": 140,
+    "observedToolNames": [
+      "skill",
+      "task"
+    ],
+    "mcpCalls": 0,
+    "parentMcpCalls": 0,
+    "workerMcpCalls": 0,
+    "toolCalls": 2,
+    "toolResultBytes": 4819,
+    "rawEventBytes": 169918,
+    "draftBytes": null,
+    "draftSha256": null,
+    "boundariesObservable": true
+  },
+  "usage": {
+    "parent": {
+      "completions": 3,
+      "inputTokens": 28502,
+      "outputTokens": 456,
+      "cachedReadTokens": 18421,
+      "cachedWriteTokens": 10072,
+      "reasoningTokens": 104,
+      "modelTokens": 28958,
+      "nanoAiu": 8588550000,
+      "requestMultiplier": 3,
+      "activeTimeMs": 9388,
+      "models": [
+        "gpt-5.6-sol"
+      ]
+    },
+    "worker": {
+      "completions": 1,
+      "inputTokens": 1204,
+      "outputTokens": 700,
+      "cachedReadTokens": 0,
+      "cachedWriteTokens": 0,
+      "reasoningTokens": 160,
+      "modelTokens": 1904,
+      "nanoAiu": 470400000,
+      "requestMultiplier": 0.33,
+      "activeTimeMs": 8221,
+      "models": [
+        "claude-haiku-4.5"
+      ]
+    },
+    "total": {
+      "completions": 4,
+      "inputTokens": 29706,
+      "outputTokens": 1156,
+      "cachedReadTokens": 18421,
+      "cachedWriteTokens": 10072,
+      "reasoningTokens": 264,
+      "modelTokens": 30862,
+      "nanoAiu": 9058950000,
+      "requestMultiplier": 3.33,
+      "activeTimeMs": 17609,
+      "models": [
+        "claude-haiku-4.5",
+        "gpt-5.6-sol"
+      ]
+    },
+    "credits": null,
+    "creditsAvailabilityReason": "local assistant_usage_events does not expose a credits column"
+  },
+  "timing": {
+    "parentActiveMs": 9388,
+    "workerActiveMs": 8221,
+    "parentWaitMs": 9742,
+    "workerWallMs": 9742,
+    "wallTimeMs": 61817
+  },
+  "terminal": {
+    "processStatus": 0,
+    "processSignal": null,
+    "resultEventCount": 1,
+    "resultSessionId": "a1e32afc-2ecd-59d1-ac4d-8db6a557935e",
+    "resultExitCode": 0
+  }
+}

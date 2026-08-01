@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "protocolId": "release-note-synthesis-v0-foundation",
+  "frozenBeforeExecution": true,
+  "phase": "excluded-pilot",
+  "arm": "A4",
+  "runOrder": [
+    "pilot-feature-repo-delete",
+    "pilot-bugfix-rest-errors",
+    "pilot-mixed-repo-create"
+  ],
+  "required": {
+    "boundariesObservable": true,
+    "operationalSuccessCount": 3,
+    "adherenceSuccessCount": 3,
+    "unsupportedCriticalClaims": 0,
+    "readsPerRun": 1,
+    "writesPerRun": 1,
+    "protocolInfrastructureAmbiguities": 0
+  },
+  "limits": {
+    "mcpCallsPerRun": 2,
+    "successfulDraftWritesPerRun": 1,
+    "totalModelTokensPerRun": 20000,
+    "wallTimeMsPerRun": 300000
+  },
+  "failureDisposition": "NO-GO",
+  "retryPolicy": "none-after-start"
+}

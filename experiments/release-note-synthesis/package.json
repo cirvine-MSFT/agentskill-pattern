@@ -1,0 +1,22 @@
+{
+  "name": "release-note-synthesis-experiment",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "freeze": "node scripts/freeze-fixtures.mjs",
+    "validate": "node scripts/validate-foundation.mjs",
+    "baseline": "node scripts/run-baseline.mjs",
+    "evaluate": "node scripts/evaluate-results.mjs",
+    "pilot": "node scripts/run-excluded-pilot.mjs",
+    "pilot:audit": "node scripts/audit-captured-pilot.mjs",
+    "pilot:check": "node scripts/check-pilot-evidence.mjs",
+    "pilot:package": "node scripts/package-pilot-evidence.mjs",
+    "pilot:package:check": "node scripts/package-pilot-evidence.mjs --check",
+    "test": "node --test tests/*.test.mjs ../../tests/release-note-mcp/*.test.mjs",
+    "reproduce": "npm run validate && npm run baseline && npm run evaluate && npm run pilot:audit && npm run pilot:check && npm run pilot:package:check"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "dossierId": "pilot-bugfix-rest-errors",
+  "expectedCategory": "bug-fix-set",
+  "facts": [
+    {"id":"status-graceful-degrade","claim":"gh status again gracefully degrades when notifications or events are inaccessible","category":"fix","critical":true,"weight":3,"supportPatterns":["gh status.{0,80}graceful","graceful.{0,80}gh status","status.{0,80}(notifications|events).{0,40}(inaccessible|unavailable)"],"claimPatterns":["`?gh status`?.{0,50}(?:gracefully degrades|continues).{0,50}(?:notifications|events).{0,30}(?:inaccessible|unavailable)","When (?:notifications|events).{0,30}(?:inaccessible|unavailable).{0,50}`?gh status`?.{0,30}(?:gracefully|continues)"]},
+    {"id":"attestation-retry","claim":"gh attestation commands again retry fetching attestations after HTTP 500 responses","category":"fix","critical":true,"weight":3,"supportPatterns":["attestation.{0,80}retr","retr.{0,80}attestation","500.{0,50}retr"],"claimPatterns":["`?gh attestation`?.{0,50}retr.{0,50}(?:HTTP )?500","Attestation.{0,40}fetch.{0,30}retr.{0,30}(?:HTTP )?500"]},
+    {"id":"consistent-http-error","claim":"RESTWithNext now exposes the same API HTTP error type as REST","category":"technical-context","critical":false,"weight":1,"supportPatterns":["RESTWithNext.{0,80}(HTTP|error type|consistent)","error type.{0,80}RESTWithNext"],"claimPatterns":["`?RESTWithNext`?.{0,50}(?:same|consistent).{0,40}(?:API )?HTTP error type.{0,30}`?REST`?","`?RESTWithNext`?.{0,30}(?:now )?(?:wraps|exposes).{0,30}(?:API )?HTTP error"]}
+  ],
+  "audienceInappropriatePatterns": ["errors\\.As","go-gh","per-host API routing","removed code"],
+  "unsupportedCriticalPatterns": ["all http errors are retried","retries? every"],
+  "requiredReferences": ["https://github.com/cli/cli/pull/13988"]
+}

@@ -1,0 +1,118 @@
+{
+  "formatVersion": 1,
+  "protocolId": "release-note-synthesis-v0-foundation",
+  "dossiers": [
+    {
+      "dossierId": "dev-release-discussions",
+      "partition": "development",
+      "path": "fixtures/dossiers/development/dev-release-discussions.json",
+      "bytes": 1466,
+      "sha256": "86891869f1bb895341ae9ce70f295dd064dbf0995f90b4084a53a2f9337e082a",
+      "sources": [
+        {
+          "sourceId": "cli-cli-pr-4003",
+          "publicUrl": "https://github.com/cli/cli/pull/4003",
+          "selectedFieldsSha256": "e9ce7f5e845810206dab077395abb901dac2b60492dd052c1d2ee138ff204195"
+        },
+        {
+          "sourceId": "cli-cli-issue-3381",
+          "publicUrl": "https://github.com/cli/cli/issues/3381",
+          "selectedFieldsSha256": "96611aa532df0c292fc3f586176ac4a3afaad8e976553b92426ab5c20815fa00"
+        }
+      ]
+    },
+    {
+      "dossierId": "pilot-bugfix-rest-errors",
+      "partition": "excluded-pilot",
+      "path": "fixtures/dossiers/excluded-pilot/pilot-bugfix-rest-errors.json",
+      "bytes": 1279,
+      "sha256": "7731c24dc9067136c9bf4da708a1ba15dc93abfe13f4b52616f230e9da161af7",
+      "sources": [
+        {
+          "sourceId": "cli-cli-pr-13988",
+          "publicUrl": "https://github.com/cli/cli/pull/13988",
+          "selectedFieldsSha256": "da189f32522569ec506afe2059465b4b07ff5d0e261b3df91f1ab179f35cca05"
+        }
+      ]
+    },
+    {
+      "dossierId": "pilot-feature-repo-delete",
+      "partition": "excluded-pilot",
+      "path": "fixtures/dossiers/excluded-pilot/pilot-feature-repo-delete.json",
+      "bytes": 1309,
+      "sha256": "115d3b951bd56c356e270304dd84aca580bf109c5d5c6c3c687e24e0c2b61bd3",
+      "sources": [
+        {
+          "sourceId": "cli-cli-pr-4451",
+          "publicUrl": "https://github.com/cli/cli/pull/4451",
+          "selectedFieldsSha256": "1e489601afa7232c72105038fd7078642c25859de20e03e8b4fb7c60ca325b30"
+        },
+        {
+          "sourceId": "cli-cli-issue-3625",
+          "publicUrl": "https://github.com/cli/cli/issues/3625",
+          "selectedFieldsSha256": "24cdf82149d4984f0f7e341ab7f1463dc2ebbb3c2c9e8e85c230f7f36703fa59"
+        }
+      ]
+    },
+    {
+      "dossierId": "pilot-mixed-repo-create",
+      "partition": "excluded-pilot",
+      "path": "fixtures/dossiers/excluded-pilot/pilot-mixed-repo-create.json",
+      "bytes": 3474,
+      "sha256": "a6c15237631ff8d1daa9ea028e094773f2059e15c08dc233eedc2b6a245b289d",
+      "sources": [
+        {
+          "sourceId": "cli-cli-pr-4578",
+          "publicUrl": "https://github.com/cli/cli/pull/4578",
+          "selectedFieldsSha256": "a6598c7b38956f10d883701dffb4efba204a228ecccc495152108a116e989a42"
+        },
+        {
+          "sourceId": "cli-cli-issue-2166",
+          "publicUrl": "https://github.com/cli/cli/issues/2166",
+          "selectedFieldsSha256": "8a67761e52616ad41c715cf1d77519c2dde91147b99dc87e5f0ac063ff0c6201"
+        },
+        {
+          "sourceId": "cli-cli-issue-893",
+          "publicUrl": "https://github.com/cli/cli/issues/893",
+          "selectedFieldsSha256": "6ad01ad6d81c14ca58ac1891e4cab414784fdba00fad6314178009f99b473428"
+        },
+        {
+          "sourceId": "cli-cli-issue-2059",
+          "publicUrl": "https://github.com/cli/cli/issues/2059",
+          "selectedFieldsSha256": "22a055bad2648105557144179103c1674e3220126a550089c7c679b4570c79d7"
+        },
+        {
+          "sourceId": "cli-cli-issue-2077",
+          "publicUrl": "https://github.com/cli/cli/issues/2077",
+          "selectedFieldsSha256": "b35e9acb5ab2df7fd51430e38456cf4ef32fe5442708a079439945883a26849b"
+        }
+      ]
+    }
+  ],
+  "evaluatorGold": [
+    {
+      "dossierId": "dev-release-discussions",
+      "path": "evaluator/gold/dev-release-discussions.json",
+      "bytes": 1581,
+      "sha256": "828d6a986d2ebdb14aed66d883d29396dc3131c897f8fd3e43877e8cafe0f5b8"
+    },
+    {
+      "dossierId": "pilot-bugfix-rest-errors",
+      "path": "evaluator/gold/pilot-bugfix-rest-errors.json",
+      "bytes": 1799,
+      "sha256": "989e58c73f23831b7c967b877caf2663bf1c3ae0e4a628c0e72065648a77b858"
+    },
+    {
+      "dossierId": "pilot-feature-repo-delete",
+      "path": "evaluator/gold/pilot-feature-repo-delete.json",
+      "bytes": 1244,
+      "sha256": "fe6abdbbfed92589a799f7c4152c5befa0eeed440a46ff96a1aa18b09d91bfb2"
+    },
+    {
+      "dossierId": "pilot-mixed-repo-create",
+      "path": "evaluator/gold/pilot-mixed-repo-create.json",
+      "bytes": 3452,
+      "sha256": "8cf44f20a3a6c9c64339c6fdb0459871eeab86d410c2c2a42ea7ce9c5091ac0f"
+    }
+  ]
+}

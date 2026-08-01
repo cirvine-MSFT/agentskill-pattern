@@ -1,5 +1,9 @@
 # Reference implementations
 
+- [Release-note synthesis](../../experiments/release-note-synthesis/) — one frozen
+  public-source dossier read, one direct customer-facing draft write, and a compact
+  integrity-only return. The included pilot is excluded from any later confirmation.
+
 | Reference | What it demonstrates | Status |
 | --- | --- | --- |
 | [ASCII art](ascii-art.md) | Minimal Skill-to-agent routing for a small bounded asset task | Implemented; [case study complete](../../experiments/ascii-art-powershell-cli/) with descriptive results only |
