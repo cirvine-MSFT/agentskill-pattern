@@ -73,8 +73,7 @@ function statistic(point) {
     mean: point.mean,
     median: point.median,
     minimum: values.length > 0 ? Math.min(...values) : null,
-    maximum: values.length > 0 ? Math.max(...values) : null,
-    blockValues: point.blockValues
+    maximum: values.length > 0 ? Math.max(...values) : null
   };
 }
 
@@ -311,6 +310,8 @@ function buildSummary() {
         "analysis",
         "descriptive-results.json"
       ))),
+      canonicalRegisteredContrasts:
+        "results/v5-b01/analysis/descriptive-results.json#/registeredContrasts",
       verification
     },
     execution: {
@@ -326,7 +327,6 @@ function buildSummary() {
     },
     arms,
     targetContrasts,
-    registeredContrasts: results.registeredContrasts,
     targetArmDecisionRule: results.targetArmDecisionRule,
     allAttemptOperationalUsage: {
       runs: 60,
