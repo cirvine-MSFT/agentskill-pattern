@@ -1,8 +1,11 @@
 # Reference implementation: `semantic-test-corpus` (GitHub Copilot)
 
-**Status: implemented reference.** AI proposes schema-valid v1 source documents. It
-never computes expected results. Deterministic parent code owns validation, promotion,
-migration execution, the expected-output oracle, traces, and mutant scoring.
+**Status: implemented reference with completed protocol-v5 case study.** AI proposes
+schema-valid v1 source documents. It never computes expected results. Deterministic
+parent code owns validation, promotion, migration execution, the expected-output
+oracle, traces, and mutant scoring. See the
+[final descriptive ITT report](../../experiments/semantic-test-corpus/report.md) and
+[immutable evidence package](../../experiments/semantic-test-corpus/results/v5-b01/).
 
 ## Components
 

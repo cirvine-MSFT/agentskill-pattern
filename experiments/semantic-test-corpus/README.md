@@ -1,14 +1,17 @@
-# Semantic migration corpus benchmark — corrective execution v4
+# Semantic migration corpus benchmark
 
-This directory contains the corrective v4 12-block, six-arm descriptive benchmark.
-V2 and v3 evidence is historical and unchanged. V3-B01 is partially consumed and
-aborted: A4 and A2 started, while A0/A1/A3/A5 were untouched; every V3-B01 identity is
-retired. `execution-amendment-v4.md` and `design/v4/` are normative.
+Protocol v5 completed all 12 randomized blocks and 72 units: 60 AI units and
+12 deterministic units, with zero missing slots, retries, or protocol deviations.
+All started measured failures remain in the descriptive ITT analysis.
 
-**V4 is not executable.** Pilot-only live preflight series R3 passed A1/A2/A3/A5 but
-failed A4's exact Skill ordering and worker-task final byte. No measured v4 unit has
-started, and the harness blocks before slot reservation unless all five live smokes
-pass.
+**Final results:** see the [protocol-v5 report](report.md), [machine-readable final
+summary](results/v5-final-summary.json), [per-arm CSV](results/v5-final-arm-summary.csv),
+and [immutable evidence package](results/v5-b01/). The evidence is local, unsigned,
+and descriptive only; it does not support significance, causal, compliance, or
+population-generalization claims.
+
+V2, v3, and v4 remain immutable historical protocols. V5 is normative for the
+completed execution: `execution-amendment-v5.md` and `design/v5/`.
 
 ## Frozen arms
 

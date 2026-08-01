@@ -20,8 +20,10 @@
     "validate-starts": "node scripts/validate-start-order.mjs",
     "evidence:v5": "node scripts/package-v5-evidence.mjs",
     "evidence:v5:verify": "node scripts/package-v5-evidence.mjs --verify --out results/v5-b01",
+    "report:v5": "node scripts/generate-v5-report.mjs",
+    "report:v5:check": "node scripts/generate-v5-report.mjs --check",
     "randomize": "node scripts/randomize.mjs --out design/v5/schedule.json",
     "reproduce": "node scripts/generate-haiku-agent-profile.mjs && node evaluator/reproduce.mjs && node scripts/reproduce-local-evidence.mjs",
-    "test": "node scripts/generate-haiku-agent-profile.mjs && node baseline/assert-public-only.mjs && node evaluator/tests/run-tests.mjs && node --test evaluator/tests/evidence-package.test.mjs ../../tests/semantic-corpus-mcp/*.test.mjs"
+    "test": "node scripts/generate-haiku-agent-profile.mjs && node baseline/assert-public-only.mjs && node evaluator/tests/run-tests.mjs && node --test evaluator/tests/evidence-package.test.mjs evaluator/tests/report-v5.test.mjs ../../tests/semantic-corpus-mcp/*.test.mjs"
   }
 }
