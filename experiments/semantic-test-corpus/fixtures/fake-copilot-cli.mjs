@@ -2,14 +2,15 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { generateGeneralBaseline } from "../baseline/general-generate.mjs";
 
 const args = process.argv.slice(2);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schedule = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "schedule.json"), "utf8")
 );
 const contract = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "arm-contract.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "arm-contract.json"), "utf8")
 );
 
 function value(name) {
@@ -76,8 +77,16 @@ if (!planned) throw new Error(`Unknown predetermined session UUID ${cliSessionId
 const arm = contract.arms.find((item) => item.id === planned.armId);
 const workerModel = arm.workerModel ?? null;
 const workerCallId = `${planned.runId}-worker`;
-const terminal = "corpus-staging - 0 scenarios - FAILURE: SCHEMA_ERROR";
 const taskPrompt = readFileSync(resolve(candidateRoot, contract.commonContract.taskArtifact), "utf8");
+const partialConfig = process.env.FAKE_COPILOT_PARTIAL_STAGING === "1"
+  ? generateGeneralBaseline({
+      seed: planned.seed,
+      blockId: planned.blockId
+    }).cases[0].input
+  : null;
+const terminal = partialConfig
+  ? "corpus-staging/manifest.json - 1 scenarios - SUCCESS"
+  : "corpus-staging - 0 scenarios - FAILURE: SCHEMA_ERROR";
 const start = Date.parse(
   process.env.FAKE_COPILOT_START_ISO ?? "2026-08-01T01:00:00.000Z"
 ) + planned.globalOrder * 10_000;
@@ -169,14 +178,16 @@ events.push(
   event("tool.execution_start", {
     toolCallId: `${planned.runId}-write`,
     toolName: "semantic-corpus-write_scenario_input",
-    arguments: { scenarioId: "scenario-001", config: {} },
+    arguments: { scenarioId: "scenario-001", config: partialConfig ?? {} },
     model: semanticModel,
     ...(semanticAgentId ? { parentToolCallId: semanticAgentId } : {})
   }, { agentId: semanticAgentId }),
   event("tool.execution_complete", {
     toolCallId: `${planned.runId}-write`,
-    success: false,
-    result: { error: { code: "SCHEMA_ERROR", message: "fixture rejection" } },
+    success: partialConfig !== null,
+    result: partialConfig
+      ? { content: "{\"status\":\"written\"}" }
+      : { error: { code: "SCHEMA_ERROR", message: "fixture rejection" } },
     model: semanticModel,
     ...(semanticAgentId ? { parentToolCallId: semanticAgentId } : {})
   }, { agentId: semanticAgentId })
@@ -264,9 +275,22 @@ if (process.env.FAKE_COPILOT_UNEXPECTED_STAGING === "1") {
     { flag: "wx" }
   );
 }
+if (partialConfig) {
+  const sandbox = JSON.parse(
+    readFileSync(process.env.SEMANTIC_CORPUS_SANDBOX_CONFIG, "utf8")
+  );
+  const scenarios = resolve(sandbox.roots.staging.path, "scenarios");
+  mkdirSync(scenarios, { recursive: true });
+  writeFileSync(
+    resolve(scenarios, "scenario-001.json"),
+    `${JSON.stringify(partialConfig, null, 2)}\n`,
+    { flag: "wx" }
+  );
+}
 
 if (process.env.FAKE_COPILOT_MALFORMED_EVENTS === "1") {
   process.stdout.write("{\"type\":\"user.message\"\n");
 } else {
   for (const item of events) emit(item);
 }
+if (process.env.FAKE_COPILOT_NONZERO_EXIT === "1") process.exit(23);

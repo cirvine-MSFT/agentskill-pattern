@@ -9,7 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
 const schema = JSON.parse(readFileSync(resolve(schemaRoot, "start-index.schema.json"), "utf8"));
 const schedule = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "schedule.json"), "utf8")
 );
 
 export function validateStartOrder(index, { requireComplete = true, baseDir = null } = {}) {
@@ -44,13 +44,19 @@ export function validateStartOrder(index, { requireComplete = true, baseDir = nu
           errors.push(`capture ${capture.runId} source SHA-256 differs`);
         }
         const source = JSON.parse(bytes);
+        const preSessionFailure = source?.kickoffStarted === false
+          && source?.sessionCreated === false
+          && typeof source?.attemptedAt === "string";
+        const sourceDisposition = preSessionFailure ? "unavailable" : source?.disposition;
+        const sourceRecordedAt = preSessionFailure ? source.attemptedAt : source?.recordedAt;
+        const sourceStartedAt = preSessionFailure ? null : source?.startedAt;
         if (!source
           || source.runId !== capture.runId
-          || source.disposition !== capture.disposition
-          || source.recordedAt !== capture.recordedAt
+          || sourceDisposition !== capture.disposition
+          || sourceRecordedAt !== capture.recordedAt
           || (capture.disposition === "started"
             && (capture.startedAt !== capture.recordedAt
-              || source.startedAt !== capture.startedAt))
+              || sourceStartedAt !== capture.startedAt))
           || (capture.disposition === "unavailable"
             && capture.startedAt !== null)) {
           errors.push(`capture ${capture.runId} disposition/timestamp is not derived from its raw source`);

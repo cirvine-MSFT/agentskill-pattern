@@ -11,7 +11,11 @@ import {
 } from "../scripts/verify-isolation-evidence.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { protocolDesignForRunId } from "../scripts/protocol-design.mjs";
-import { canonicalMetricsBytes, deriveMetricsArtifact } from "./metrics.mjs";
+import {
+  canonicalMetricsBytes,
+  deriveFailureMetricsArtifact,
+  deriveMetricsArtifact
+} from "./metrics.mjs";
 
 const FROZEN_ALPHA = 0.05;
 const FROZEN_BOOTSTRAP_RESAMPLES = 10000;
@@ -23,7 +27,7 @@ const DEFAULT_ENDPOINTS = Object.freeze({
 });
 const evaluatorRoot = dirname(fileURLToPath(import.meta.url));
 const schedule = JSON.parse(
-  readFileSync(resolve(evaluatorRoot, "..", "design", "v4", "schedule.json"), "utf8")
+  readFileSync(resolve(evaluatorRoot, "..", "design", "v5", "schedule.json"), "utf8")
 );
 const schemaRoot = resolve(evaluatorRoot, "..", "schemas");
 const statisticsInputSchema = JSON.parse(
@@ -108,8 +112,8 @@ function samePath(left, right) {
 }
 
 export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated }) {
-  if (!runRecord?.metrics || !runRecord?.staging) {
-    throw new Error(`run record ${runRecord?.runId ?? "<missing>"} lacks staging/metrics bindings`);
+  if (!runRecord?.metrics) {
+    throw new Error(`run record ${runRecord?.runId ?? "<missing>"} lacks metrics bindings`);
   }
   if (!samePath(metricsPath, runRecord.metrics.path)) {
     throw new Error(`metrics path differs from run record for ${runRecord.runId}`);
@@ -129,24 +133,44 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
   if (!canonicalMetricsBytes(artifact).equals(metricsBytes)) {
     throw new Error(`metrics artifact is not canonical for ${runRecord.runId}`);
   }
+  const zeroFailure = artifact.outcome?.disposition === "measured-failure"
+    && artifact.outcome.scoringSource === "zero-no-authenticated-snapshot";
   if (artifact.runId !== runRecord.runId
     || artifact.blockId !== runRecord.blockId
     || artifact.armId !== runRecord.armId
     || artifact.snapshotSha256 !== runRecord.metrics.snapshotSha256
-    || artifact.snapshotSha256 !== runRecord.staging.sha256) {
+    || (!zeroFailure && artifact.snapshotSha256 !== runRecord.staging?.sha256)) {
     throw new Error(`metrics artifact identity differs from run record for ${runRecord.runId}`);
   }
-  const snapshotBytes = readFileSync(resolve(runRecord.staging.path));
-  if (sha256(snapshotBytes) !== artifact.snapshotSha256) {
+  const snapshotBytes = zeroFailure ? null : readFileSync(resolve(runRecord.staging.path));
+  if (snapshotBytes && sha256(snapshotBytes) !== artifact.snapshotSha256) {
     throw new Error(`snapshot hash differs from metrics artifact for ${runRecord.runId}`);
   }
-  const expected = deriveMetricsArtifact(snapshotBytes, {
-    runId: runRecord.runId,
-    blockId: runRecord.blockId,
-    armId: runRecord.armId
-  });
+  const expected = artifact.outcome?.disposition === "measured-failure"
+    ? deriveFailureMetricsArtifact({
+        runId: runRecord.runId,
+        blockId: runRecord.blockId,
+        armId: runRecord.armId,
+        failureKinds: artifact.outcome.failureKinds,
+        snapshotBytes,
+        treatmentAdherent: runRecord.outcome?.treatmentAdherent,
+        operationalSuccess: runRecord.outcome?.operationalSuccess
+      })
+    : deriveMetricsArtifact(snapshotBytes, {
+        runId: runRecord.runId,
+        blockId: runRecord.blockId,
+        armId: runRecord.armId
+      });
   if (!canonicalMetricsBytes(expected).equals(metricsBytes)) {
     throw new Error(`metrics artifact does not match deterministic evaluator output for ${runRecord.runId}`);
+  }
+  if (artifact.outcome
+    && (artifact.outcome.disposition !== runRecord.outcome?.finalDisposition
+      || artifact.outcome.treatmentAdherent !== runRecord.outcome?.treatmentAdherent
+      || artifact.outcome.operationalSuccess !== runRecord.outcome?.operationalSuccess
+      || JSON.stringify(artifact.outcome.failureKinds)
+        !== JSON.stringify(runRecord.outcome?.failureKinds))) {
+    throw new Error(`metrics outcomes differ from run record for ${runRecord.runId}`);
   }
   const events = authenticated.payload.events;
   const computed = events.filter((event) =>
@@ -416,6 +440,14 @@ export function analyzeBaselineComparisons(observations, options = {}) {
   const bootstrapSeed = FROZEN_BOOTSTRAP_SEED;
   const { bindingAvailability } = options;
   if (!Array.isArray(observations)) throw new Error("observations must be an array");
+  const activeSchedule = observations.length > 0
+    ? protocolDesignForRunId(observations[0].runId).schedule
+    : schedule;
+  if (observations.some((observation) =>
+    protocolDesignForRunId(observation.runId).schedule.protocolId
+      !== activeSchedule.protocolId)) {
+    throw new Error("observations must belong to one protocol");
+  }
   const bindingRuns = validateBindings(bindingAvailability);
   assertProbability(alpha, "alpha");
   if (!Number.isInteger(bootstrapResamples) || bootstrapResamples < 1000) {
@@ -446,10 +478,12 @@ export function analyzeBaselineComparisons(observations, options = {}) {
       throw new Error(`duplicate observation for ${observation.blockId}/arm ${observation.armId}`);
     }
     submittedByBlockArm.set(key, observation);
-    const planned = schedule.runs.find((run) =>
+    const planned = activeSchedule.runs.find((run) =>
       run.blockId === observation.blockId && run.armId === observation.armId);
     if (observation.runId !== planned.runId) continue;
-    if (observation.armId === 0) {
+    if (observation.armId === 0
+      || (/^V5-/u.test(observation.runId)
+        && observation.disposition === "measured-failure")) {
       eligibleByBlockArm.set(key, observation);
       continue;
     }
@@ -476,21 +510,32 @@ export function analyzeBaselineComparisons(observations, options = {}) {
     if (reasons.length === 0) completeBlocks.push(blockId);
     else incompleteBlocks.push({ blockId, reasons });
   }
-  const unavailableAiRuns = schedule.runs
+  const unavailableAiRuns = activeSchedule.runs
     .filter((run) => AI_ARM_IDS.includes(run.armId))
-    .filter((run) => bindingRuns.get(run.runId)?.status !== "available")
+    .filter((run) => {
+      const observation = submittedByBlockArm.get(`${run.blockId}\0${run.armId}`);
+      return observation?.disposition !== "measured-failure"
+        && bindingRuns.get(run.runId)?.status !== "available";
+    })
     .map((run) => run.runId);
   const unavailableIsolationRuns = observations
-    .filter((observation) => observation.armId !== 0 && observation.isolationVerified !== true)
+    .filter((observation) =>
+      observation.armId !== 0
+      && observation.disposition !== "measured-failure"
+      && observation.isolationVerified !== true)
     .map((observation) => observation.runId)
     .sort();
-  const confirmatoryAvailable = unavailableAiRuns.length === 0
+  const v5DescriptiveOnly = observations.some((observation) => /^V5-/u.test(observation.runId));
+  const confirmatoryAvailable = !v5DescriptiveOnly
+    && unavailableAiRuns.length === 0
     && unavailableIsolationRuns.length === 0
     && incompleteBlocks.length <= 2
     && completeBlocks.length > 0;
   const unavailableReason = confirmatoryAvailable
     ? null
-    : unavailableAiRuns.length > 0
+    : v5DescriptiveOnly
+      ? "protocol v5 preregisters descriptive ITT contrasts only"
+      : unavailableAiRuns.length > 0
       ? `${unavailableAiRuns.length} measured AI run(s) lack frozen model availability`
       : unavailableIsolationRuns.length > 0
         ? `${unavailableIsolationRuns.length} measured AI run(s) lack authenticated compliant isolation/budget evidence`
@@ -518,87 +563,119 @@ export function analyzeBaselineComparisons(observations, options = {}) {
   if (completeBlocks.length > 0
     && unavailableAiRuns.length === 0
     && unavailableIsolationRuns.length === 0) {
-    comparisons = [];
-    for (const armId of AI_ARM_IDS) {
-      for (const [endpoint, margin] of endpointEntries) {
-        if (!Number.isFinite(margin) || margin >= 0) {
-          throw new Error(`${endpoint} noninferiority margin must be finite and negative`);
-        }
-        const differences = pairedDifferences(eligibleByBlockArm, completeBlocks, armId, endpoint);
-        const bootstrap = bootstrapBounds(differences, {
-          alpha,
-          resamples: bootstrapResamples,
-          seed: bootstrapSeed
-        });
-        comparisons.push({
-          armId,
+    if (v5DescriptiveOnly) {
+      comparisons = AI_ARM_IDS.flatMap((armId) =>
+        endpointEntries.map(([endpoint]) => {
+          const differences = pairedDifferences(
+            eligibleByBlockArm,
+            completeBlocks,
+            armId,
+            endpoint
+          );
+          return {
+            armId,
+            endpoint,
+            pairedBlocks: [...completeBlocks],
+            differences,
+            meanDifference: mean(differences)
+          };
+        }));
+      factorial = endpointEntries.map(([endpoint]) => {
+        const values = contrastValues(eligibleByBlockArm, completeBlocks, endpoint);
+        return {
           endpoint,
-          margin,
           pairedBlocks: [...completeBlocks],
-          differences,
-          meanDifference: mean(differences),
-          noninferiority: {
-            alternative: "greater",
-            nullHypothesis: `difference <= ${margin}`,
-            rawPValue: exactSignFlipPValue(
-              differences.map((difference) => difference - margin),
-              "greater"
-            ),
-            lowerConfidenceBound: bootstrap.oneSidedLower
-          },
-          equality: {
-            alternative: "two-sided",
-            nullHypothesis: "difference = 0",
-            rawPValue: exactSignFlipPValue(differences, "two-sided"),
-            confidenceInterval: bootstrap.twoSided
+          contrasts: Object.fromEntries(
+            Object.entries(values).map(([name, blockValues]) => [
+              name,
+              { estimate: mean(blockValues), blockValues }
+            ])
+          )
+        };
+      });
+    } else {
+      comparisons = [];
+      for (const armId of AI_ARM_IDS) {
+        for (const [endpoint, margin] of endpointEntries) {
+          if (!Number.isFinite(margin) || margin >= 0) {
+            throw new Error(`${endpoint} noninferiority margin must be finite and negative`);
           }
-        });
-      }
-    }
-
-    const noninferiorityAdjusted = holmAdjust(
-      comparisons.map((comparison) => ({ rawPValue: comparison.noninferiority.rawPValue }))
-    );
-    const equalityAdjusted = holmAdjust(
-      comparisons.map((comparison) => ({ rawPValue: comparison.equality.rawPValue }))
-    );
-    for (const [index, comparison] of comparisons.entries()) {
-      comparison.noninferiority.holmAdjustedPValue = noninferiorityAdjusted[index];
-      comparison.noninferiority.decisionAvailable = confirmatoryAvailable;
-      comparison.noninferiority.noninferior = confirmatoryAvailable
-        ? comparison.noninferiority.holmAdjustedPValue <= alpha
-        : null;
-      comparison.noninferiority.unavailableReason = confirmatoryAvailable ? null : unavailableReason;
-      comparison.equality.holmAdjustedPValue = equalityAdjusted[index];
-      comparison.equality.decisionAvailable = confirmatoryAvailable;
-      comparison.equality.rejectEquality = confirmatoryAvailable
-        ? comparison.equality.holmAdjustedPValue <= alpha
-        : null;
-      comparison.equality.unavailableReason = confirmatoryAvailable ? null : unavailableReason;
-    }
-
-    factorial = endpointEntries.map(([endpoint]) => {
-      const values = contrastValues(eligibleByBlockArm, completeBlocks, endpoint);
-      return {
-        endpoint,
-        pairedBlocks: [...completeBlocks],
-        confirmatoryAvailable,
-        unavailableReason,
-        multiplicityWarning: "Factorial and conditional-effect bootstrap intervals are unadjusted and descriptive.",
-        contrasts: Object.fromEntries(Object.entries(values).map(([name, blockValues]) => {
-          const interval = bootstrapBounds(blockValues, {
+          const differences = pairedDifferences(eligibleByBlockArm, completeBlocks, armId, endpoint);
+          const bootstrap = bootstrapBounds(differences, {
             alpha,
             resamples: bootstrapResamples,
             seed: bootstrapSeed
-          }).twoSided;
-          return [name, {
-            estimate: mean(blockValues),
-            blockValues,
-            confidenceInterval: interval
-          }];
-        }))
-      };
-    });
+          });
+          comparisons.push({
+            armId,
+            endpoint,
+            margin,
+            pairedBlocks: [...completeBlocks],
+            differences,
+            meanDifference: mean(differences),
+            noninferiority: {
+              alternative: "greater",
+              nullHypothesis: `difference <= ${margin}`,
+              rawPValue: exactSignFlipPValue(
+                differences.map((difference) => difference - margin),
+                "greater"
+              ),
+              lowerConfidenceBound: bootstrap.oneSidedLower
+            },
+            equality: {
+              alternative: "two-sided",
+              nullHypothesis: "difference = 0",
+              rawPValue: exactSignFlipPValue(differences, "two-sided"),
+              confidenceInterval: bootstrap.twoSided
+            }
+          });
+        }
+      }
+
+      const noninferiorityAdjusted = holmAdjust(
+        comparisons.map((comparison) => ({ rawPValue: comparison.noninferiority.rawPValue }))
+      );
+      const equalityAdjusted = holmAdjust(
+        comparisons.map((comparison) => ({ rawPValue: comparison.equality.rawPValue }))
+      );
+      for (const [index, comparison] of comparisons.entries()) {
+        comparison.noninferiority.holmAdjustedPValue = noninferiorityAdjusted[index];
+        comparison.noninferiority.decisionAvailable = confirmatoryAvailable;
+        comparison.noninferiority.noninferior = confirmatoryAvailable
+          ? comparison.noninferiority.holmAdjustedPValue <= alpha
+          : null;
+        comparison.noninferiority.unavailableReason = confirmatoryAvailable ? null : unavailableReason;
+        comparison.equality.holmAdjustedPValue = equalityAdjusted[index];
+        comparison.equality.decisionAvailable = confirmatoryAvailable;
+        comparison.equality.rejectEquality = confirmatoryAvailable
+          ? comparison.equality.holmAdjustedPValue <= alpha
+          : null;
+        comparison.equality.unavailableReason = confirmatoryAvailable ? null : unavailableReason;
+      }
+
+      factorial = endpointEntries.map(([endpoint]) => {
+        const values = contrastValues(eligibleByBlockArm, completeBlocks, endpoint);
+        return {
+          endpoint,
+          pairedBlocks: [...completeBlocks],
+          confirmatoryAvailable,
+          unavailableReason,
+          multiplicityWarning: "Factorial and conditional-effect bootstrap intervals are unadjusted and descriptive.",
+          contrasts: Object.fromEntries(Object.entries(values).map(([name, blockValues]) => {
+            const interval = bootstrapBounds(blockValues, {
+              alpha,
+              resamples: bootstrapResamples,
+              seed: bootstrapSeed
+            }).twoSided;
+            return [name, {
+              estimate: mean(blockValues),
+              blockValues,
+              confidenceInterval: interval
+            }];
+          }))
+        };
+      });
+    }
   }
 
   return {
@@ -626,24 +703,26 @@ export function analyzeBaselineComparisons(observations, options = {}) {
       armSummaries,
       sensitivity: sensitivityAnalysis(eligibleByBlockArm, endpointEntries)
     },
-    bootstrap: { resamples: bootstrapResamples, seed: bootstrapSeed, lowerTail: alpha },
-    families: {
-      noninferiority: {
-        hypotheses: AI_ARM_IDS.length * endpointEntries.length,
-        evaluated: comparisons?.length ?? 0,
-        adjustment: "Holm",
-        sidedness: "one-sided",
-        decisionAvailable: confirmatoryAvailable
-      },
-      equality: {
-        hypotheses: AI_ARM_IDS.length * endpointEntries.length,
-        evaluated: comparisons?.length ?? 0,
-        adjustment: "Holm",
-        sidedness: "two-sided",
-        separateFromNoninferiority: true,
-        decisionAvailable: confirmatoryAvailable
+    ...(!v5DescriptiveOnly ? {
+      bootstrap: { resamples: bootstrapResamples, seed: bootstrapSeed, lowerTail: alpha },
+      families: {
+        noninferiority: {
+          hypotheses: AI_ARM_IDS.length * endpointEntries.length,
+          evaluated: comparisons?.length ?? 0,
+          adjustment: "Holm",
+          sidedness: "one-sided",
+          decisionAvailable: confirmatoryAvailable
+        },
+        equality: {
+          hypotheses: AI_ARM_IDS.length * endpointEntries.length,
+          evaluated: comparisons?.length ?? 0,
+          adjustment: "Holm",
+          sidedness: "two-sided",
+          separateFromNoninferiority: true,
+          decisionAvailable: confirmatoryAvailable
+        }
       }
-    },
+    } : {}),
     factorial,
     comparisons
   };
@@ -718,11 +797,15 @@ export function analyzeAuthenticatedStatisticsInput(input, authenticated) {
       runId: run.runId,
       blockId: run.blockId,
       armId: run.armId,
+      disposition: artifact.outcome?.disposition ?? "success",
       promotionRate: artifact.metrics.promotion.promotionRate,
       semanticPathCoverage: artifact.metrics.coverage.paths.rate,
       mutantKillRate: artifact.metrics.mutation.killRate
     };
     if (run.armId === 0) return { ...observation, isolationVerified: true };
+    if (observation.disposition === "measured-failure") {
+      return { ...observation, isolationVerified: false };
+    }
     const context = run.evidenceContext;
     if (!context?.contractRoot
       || !context?.stagingRoot

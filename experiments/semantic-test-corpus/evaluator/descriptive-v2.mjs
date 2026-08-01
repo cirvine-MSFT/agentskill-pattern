@@ -5,7 +5,11 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { protocolDesignForId, protocolDesignForRunId } from "../scripts/protocol-design.mjs";
-import { canonicalMetricsBytes, deriveMetricsArtifact } from "./metrics.mjs";
+import {
+  canonicalMetricsBytes,
+  deriveFailureMetricsArtifact,
+  deriveMetricsArtifact
+} from "./metrics.mjs";
 import { canonicalStagingBytes, verifyLocalSnapshotWrites } from "./adapter.mjs";
 import { preflightLocalModel } from "../scripts/preflight-local-model.mjs";
 import { validateExecutionRecords } from "../scripts/validate-execution-records.mjs";
@@ -34,6 +38,9 @@ const partialUsageSchema = JSON.parse(
 const runAttemptSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "run-attempt.schema.json"), "utf8")
 );
+const preSessionFailureSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "pre-session-failure.schema.json"), "utf8")
+);
 const usageExportSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "local-usage-export.schema.json"), "utf8")
 );
@@ -43,6 +50,17 @@ const contrastContract = JSON.parse(
 const endpointNames = Object.keys(
   inputSchema.properties.runs.items.properties.endpoints.properties
 );
+const availabilityFieldNames = [
+  "premiumRequests",
+  "toolSchemas",
+  "exposedTools",
+  "compaction",
+  "reasoningTokens",
+  "latencyDetails",
+  "requestMultiplier",
+  "parentWait",
+  "sourceReadOnly"
+];
 
 function argument(args, name) {
   const index = args.indexOf(name);
@@ -538,13 +556,20 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       throw new Error(`Unavailable/excluded unit lacks exact evidence binding: ${definition.runId}`);
     }
     const source = JSON.parse(sourceBytes);
-    const expectedKinds = definition.status === "excluded"
-      ? ["model-excluded"]
-      : ["preflight-unavailable", "retry-exhausted", "started-uncertain"];
+    const expectedKinds = definition.status === "measured-failure"
+      ? ["model-failure", "started-failure"]
+      : definition.status === "excluded"
+        ? ["model-excluded"]
+        : [
+            "preflight-unavailable",
+            "pre-session-failure",
+            "retry-exhausted",
+            "started-uncertain"
+          ];
     if (!expectedKinds.includes(disposition.evidenceKind)) {
       throw new Error(`Unit disposition evidence kind is invalid: ${definition.runId}`);
     }
-    if (disposition.evidenceKind === "started-uncertain"
+    if (["started-uncertain", "started-failure"].includes(disposition.evidenceKind)
       ? (!disposition.partialUsagePath || !disposition.partialUsageSha256)
       : (disposition.partialUsagePath !== null
         || disposition.partialUsageSha256 !== null)) {
@@ -559,11 +584,25 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         throw new Error(`Unavailable order evidence is invalid: ${definition.runId}`);
       }
     }
-    if (disposition.evidenceKind === "started-uncertain") {
+    if (disposition.evidenceKind === "pre-session-failure") {
+      const preSessionErrors = validateJsonSchema(source, preSessionFailureSchema, {
+        schemaDir: schemaRoot
+      });
+      if (preSessionErrors.length > 0
+        || source.runId !== definition.runId
+        || source.protocolId !== schedule.protocolId
+        || source.kickoffStarted !== false
+        || source.sessionCreated !== false
+        || orderCapture.disposition !== "unavailable"
+        || source.attemptedAt !== orderCapture.recordedAt) {
+        throw new Error(`Pre-session failure evidence is invalid: ${definition.runId}`);
+      }
+    }
+    if (["started-uncertain", "started-failure"].includes(disposition.evidenceKind)) {
       if (source.runId !== definition.runId
         || source.blockId !== definition.blockId
         || source.armId !== definition.armId
-        || source.status !== "started-uncertain"
+        || !["started-uncertain", "measured-failure"].includes(source.status)
         || source.lifecycleSha256 !== sha256(orderSourceBytes)
         || !Array.isArray(source.preservedFiles)) {
         throw new Error(`Started/uncertain evidence is invalid: ${definition.runId}`);
@@ -580,7 +619,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       }
     }
     let operationalMetrics = null;
-    if (disposition.evidenceKind === "started-uncertain") {
+    if (["started-uncertain", "started-failure"].includes(disposition.evidenceKind)) {
       const partialUsagePath = resolve(
         dirname(dispositionPath),
         disposition.partialUsagePath
@@ -681,7 +720,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       }
       operationalMetrics = recomputedMetrics;
     }
-    if (disposition.evidenceKind === "model-excluded") {
+    if (["model-excluded", "model-failure"].includes(disposition.evidenceKind)) {
       const evidencePath = resolve(artifactRoot, definition.localEvidencePath);
       const evidenceBytes = readFileSync(evidencePath);
       const evidence = JSON.parse(evidenceBytes);
@@ -700,20 +739,9 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         || preflightPath !== resolve(dirname(dispositionPath), disposition.sourcePath)
         || !preflightBytes.equals(sourceBytes)
         || JSON.stringify(preflight) !== JSON.stringify(recomputed)
-        || preflight.status === "pass") {
-        throw new Error(`Excluded unit local evidence is invalid: ${definition.runId}`);
-      }
-      const records = readExecutionRecords(evidence, evidencePath);
-      for (const attempt of records.attempts) {
-        for (const [label, value, set] of [
-          ["app project", attempt.appProjectSessionId, appSessions],
-          ["CLI", attempt.cliSessionId, cliSessions]
-        ]) {
-          if (set.has(value)) {
-            throw new Error(`${label} session is reused across AI attempts: ${value}`);
-          }
-          set.add(value);
-        }
+        || (disposition.evidenceKind === "model-excluded"
+          && preflight.status === "pass")) {
+        throw new Error(`Unit local evidence is invalid: ${definition.runId}`);
       }
       operationalMetrics = fullOperationalMetrics(evidence);
     }
@@ -723,13 +751,15 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       armId: definition.armId,
       status: definition.status,
       reason: disposition.reason,
+      evidenceKind: disposition.evidenceKind,
       operationalMetrics
     };
   });
   if (seenUnits.size !== schedule.runs.length) {
     throw new Error("Exactly 72 unique frozen unit records are required");
   }
-  const runs = input.runs.filter((definition) => definition.status === "eligible")
+  const runs = input.runs.filter((definition) =>
+    ["eligible", "measured-failure"].includes(definition.status))
     .map((definition) => {
     const planned = schedule.runs.find((run) => run.runId === definition.runId);
     const orderCapture = startIndex.captures.find((capture) =>
@@ -740,9 +770,11 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       || planned.armId !== definition.armId) {
       throw new Error(`Artifact identity differs from the frozen schedule: ${definition.runId}`);
     }
-    const snapshotPath = resolve(artifactRoot, definition.snapshotPath);
+    const snapshotPath = definition.snapshotPath
+      ? resolve(artifactRoot, definition.snapshotPath)
+      : null;
     const metricsPath = resolve(artifactRoot, definition.metricsPath);
-    const snapshotBytes = readFileSync(snapshotPath);
+    const snapshotBytes = snapshotPath ? readFileSync(snapshotPath) : null;
     const metricsBytes = readFileSync(metricsPath);
     const evaluation = JSON.parse(
       readFileSync(resolve(artifactRoot, definition.evaluationPath), "utf8")
@@ -754,13 +786,32 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       || evaluation.runId !== definition.runId
       || evaluation.blockId !== definition.blockId
       || evaluation.armId !== definition.armId
-      || resolve(artifactRoot, evaluation.snapshotPath) !== snapshotPath
+      || (evaluation.snapshotPath
+        ? resolve(artifactRoot, evaluation.snapshotPath) !== snapshotPath
+        : snapshotPath !== null)
       || resolve(artifactRoot, evaluation.metricsPath) !== metricsPath
-      || evaluation.snapshotSha256 !== sha256(snapshotBytes)
+      || evaluation.snapshotSha256 !== (snapshotBytes ? sha256(snapshotBytes) : null)
       || evaluation.metricsSha256 !== sha256(metricsBytes)) {
       throw new Error(`Evaluation record is not bound to exact run artifacts: ${definition.runId}`);
     }
-    const metrics = deriveMetricsArtifact(snapshotBytes, definition);
+    const parsedMetrics = JSON.parse(metricsBytes);
+    if (/^V5-/u.test(definition.runId)
+      && (evaluation.disposition !== parsedMetrics.outcome?.disposition
+        || evaluation.treatmentAdherent !== parsedMetrics.outcome?.treatmentAdherent
+        || evaluation.operationalSuccess !== parsedMetrics.outcome?.operationalSuccess
+        || JSON.stringify(evaluation.failureKinds)
+          !== JSON.stringify(parsedMetrics.outcome?.failureKinds))) {
+      throw new Error(`Evaluation outcomes differ from metrics artifact: ${definition.runId}`);
+    }
+    const metrics = definition.status === "measured-failure"
+      ? deriveFailureMetricsArtifact({
+          ...definition,
+          failureKinds: parsedMetrics.outcome?.failureKinds,
+          snapshotBytes,
+          treatmentAdherent: evaluation.treatmentAdherent,
+          operationalSuccess: evaluation.operationalSuccess
+        })
+      : deriveMetricsArtifact(snapshotBytes, definition);
     if (!canonicalMetricsBytes(metrics).equals(metricsBytes)) {
       throw new Error(`Metrics artifact is not exact deterministic output: ${definition.runId}`);
     }
@@ -768,6 +819,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       ...emptyEndpoints(),
       ...qualityEndpoints(metrics)
     };
+    unitRecord.outcome = metrics.outcome ?? null;
 
     if (definition.armId === 0) {
       const executionBytes = readFileSync(resolve(artifactRoot, definition.executionPath));
@@ -892,6 +944,32 @@ export function buildDescriptiveRuns(input, artifactRoot) {
           operationalMeasurement(0, null)
         ])
       );
+    } else if (definition.status === "measured-failure"
+      && unitRecord.evidenceKind === "started-failure") {
+      Object.assign(endpoints, {
+        operationalTotalAiCredits: unitRecord.operationalMetrics.aiCredits.available
+          ? unitRecord.operationalMetrics.aiCredits.value
+          : null,
+        operationalTotalNanoAiu: unitRecord.operationalMetrics.nanoAiu.available
+          ? unitRecord.operationalMetrics.nanoAiu.value
+          : null,
+        operationalTotalModelTokens: unitRecord.operationalMetrics.modelTokens.available
+          ? unitRecord.operationalMetrics.modelTokens.value
+          : null,
+        operationalTotalCompletionCount: unitRecord.operationalMetrics.completionCount.available
+          ? unitRecord.operationalMetrics.completionCount.value
+          : null,
+        toolCallCount: unitRecord.operationalMetrics.toolCallCount.available
+          ? unitRecord.operationalMetrics.toolCallCount.value
+          : null,
+        toolResultCount: unitRecord.operationalMetrics.toolResultCount.available
+          ? unitRecord.operationalMetrics.toolResultCount.value
+          : null,
+        sessionEvidenceAvailable: unitRecord.operationalMetrics.completionCount.available ? 1 : 0,
+        modelEvidenceAvailable: 0,
+        mechanismEvidenceAvailable: 0,
+        deviationCount: 1
+      });
     } else {
       const evidencePath = resolve(artifactRoot, definition.localEvidencePath);
       const evidenceBytes = readFileSync(evidencePath);
@@ -906,20 +984,21 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         || evidence.armId !== definition.armId) {
         throw new Error(`Local evidence is not bound to the artifact run: ${definition.runId}`);
       }
-      if (evidence.availability.session.status !== "available"
-        || evidence.availability.model.status !== "available"
-        || evidence.availability.mechanism.status !== "available"
-        || evidence.budgets.status !== "within-budget") {
+      if (definition.status === "eligible"
+        && (evidence.availability.session.status !== "available"
+          || evidence.availability.model.status !== "available"
+          || evidence.availability.mechanism.status !== "available"
+          || evidence.budgets.status !== "within-budget")) {
         throw new Error(`Unavailable AI run must not be included in analysis: ${definition.runId}`);
       }
-      verifyLocalSnapshotWrites(snapshotBytes, evidence);
+      if (snapshotBytes) verifyLocalSnapshotWrites(snapshotBytes, evidence);
       const preflightPath = resolve(artifactRoot, definition.modelPreflightPath);
       const preflightBytes = readFileSync(preflightPath);
       const preflight = JSON.parse(preflightBytes);
       const recomputedPreflight = preflightLocalModel(evidence, evidenceBytes);
       if (JSON.stringify(preflight) !== JSON.stringify(recomputedPreflight)
-        || preflight.status !== "pass") {
-        throw new Error(`Final model preflight is not an exact pass: ${definition.runId}`);
+        || (definition.status === "eligible" && preflight.status !== "pass")) {
+        throw new Error(`Final model preflight differs from the final disposition: ${definition.runId}`);
       }
       if (evaluation.localEvidenceSha256 !== sha256(evidenceBytes)
         || evaluation.modelPreflightSha256 !== sha256(preflightBytes)) {
@@ -928,8 +1007,10 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       const records = readExecutionRecords(evidence, evidencePath);
       if (evaluation.attemptId !== records.attempts.at(-1)?.attemptId
         || evaluation.executionSha256 !== null
-        || records.attempts.at(-1)?.status === "excluded") {
-        throw new Error(`Evaluation record is not bound to the final eligible attempt: ${definition.runId}`);
+        || records.attempts.at(-1)?.status !== (preflight.status === "pass"
+          ? "completed"
+          : "measured-failure")) {
+        throw new Error(`Evaluation record is not bound to the final attempt: ${definition.runId}`);
       }
       if (resolve(dirname(evidencePath), records.manifest.preflights.at(-1)) !== preflightPath) {
         throw new Error(`Analysis preflight path differs from final execution record: ${definition.runId}`);
@@ -952,6 +1033,7 @@ export function buildDescriptiveRuns(input, artifactRoot) {
           ["app project", attempt.appProjectSessionId, appSessions],
           ["CLI", attempt.cliSessionId, cliSessions]
         ]) {
+          if (value === null) continue;
           if (set.has(value)) throw new Error(`${label} session is reused across AI attempts: ${value}`);
           set.add(value);
         }
@@ -984,7 +1066,8 @@ export function buildDescriptiveRuns(input, artifactRoot) {
       runId: definition.runId,
       blockId: definition.blockId,
       armId: definition.armId,
-      endpoints
+      endpoints,
+      outcome: metrics.outcome ?? null
     };
   });
   const internalInput = {
@@ -1020,7 +1103,7 @@ export function summarizeDescriptive(runs) {
     if (unit.runId !== planned.runId
       || unit.blockId !== planned.blockId
       || unit.armId !== planned.armId
-      || !["eligible", "unavailable", "excluded"].includes(unit.status)) {
+      || !["eligible", "measured-failure", "unavailable", "excluded"].includes(unit.status)) {
       throw new Error(`Unit record ${index + 1} differs from the frozen schedule`);
     }
   }
@@ -1109,6 +1192,44 @@ export function summarizeDescriptive(runs) {
       }];
     })
   );
+  const completeBlocks = Array.from({ length: 12 }, (_, index) =>
+    `B${String(index + 1).padStart(2, "0")}`)
+    .filter((blockId) => {
+      const block = units.filter((unit) => unit.blockId === blockId);
+      return block.length === 6 && block.every((unit) =>
+        ["eligible", "measured-failure"].includes(unit.status));
+    });
+  const outcomeRuns = runs
+    .filter((run) => run.outcome)
+    .map((run) => ({
+      runId: run.runId,
+      blockId: run.blockId,
+      armId: run.armId,
+      ...run.outcome
+    }));
+  const outcomeByArm = Array.from({ length: 6 }, (_, armId) => {
+    const armRuns = outcomeRuns.filter((run) => run.armId === armId);
+    return {
+      armId,
+      started: armRuns.length,
+      successfulDisposition: armRuns.filter((run) =>
+        run.disposition === "success").length,
+      measuredFailures: armRuns.filter((run) =>
+        run.disposition === "measured-failure").length,
+      treatmentAdherent: armRuns.filter((run) => run.treatmentAdherent).length,
+      operationallySuccessful: armRuns.filter((run) => run.operationalSuccess).length,
+      partialScenarioCount: armRuns.reduce((sum, run) =>
+        sum + run.partialScenarioCount, 0),
+      scoringSources: Object.fromEntries(
+        [...new Set(armRuns.map((run) => run.scoringSource))]
+          .sort()
+          .map((source) => [
+            source,
+            armRuns.filter((run) => run.scoringSource === source).length
+          ])
+      )
+    };
+  });
   return {
     formatVersion: 1,
     protocolId: schedule.protocolId,
@@ -1116,9 +1237,17 @@ export function summarizeDescriptive(runs) {
     plannedRuns: 72,
     validatedUnits: units.length,
     observedRuns: runs.length,
+    completeBlocks,
     unavailableRuns: units
-      .filter((unit) => unit.status !== "eligible")
+      .filter((unit) => ["unavailable", "excluded"].includes(unit.status))
       .map(({ operationalMetrics: _operationalMetrics, ...unit }) => unit),
+    measuredFailures: units
+      .filter((unit) => unit.status === "measured-failure")
+      .map(({ operationalMetrics: _operationalMetrics, ...unit }) => unit),
+    outcomes: {
+      runs: outcomeRuns,
+      byArm: outcomeByArm
+    },
     allAttemptOperationalUsage: {
       runs: operationalRuns,
       totals: operationalTotals
@@ -1137,8 +1266,20 @@ export function analyzeDescriptiveArtifacts(input, artifactRoot) {
   const runs = buildDescriptiveRuns(input, artifactRoot);
   const summary = summarizeDescriptive(runs);
   summary.fieldAvailabilityByRun = input.runs
-    .filter((definition) => definition.status === "eligible" && definition.armId !== 0)
+    .filter((definition) =>
+      ["eligible", "measured-failure"].includes(definition.status)
+      && definition.armId !== 0)
     .map((definition) => {
+      if (!definition.localEvidencePath) {
+        const reason = "Complete local evidence was not produced before the started failure";
+        return {
+          runId: definition.runId,
+          fields: Object.fromEntries(availabilityFieldNames.map((name) => [
+            name,
+            { status: "unavailable", reasons: [reason] }
+          ]))
+        };
+      }
       const evidence = JSON.parse(
         readFileSync(resolve(artifactRoot, definition.localEvidencePath), "utf8")
       );

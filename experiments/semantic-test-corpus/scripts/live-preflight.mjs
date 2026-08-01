@@ -22,7 +22,7 @@ import {
   parseCopilotJsonl,
   predeterminedSessionId,
   resultEvent
-} from "./copilot-cli-v4.mjs";
+} from "./copilot-cli-v5.mjs";
 import { exportLocalUsage } from "./export-local-usage.mjs";
 import { materializeCandidate } from "./materialize-candidate.mjs";
 import { probeGeneratedMcp, EXPECTED_TOOLS } from "./mcp-live-probe.mjs";
@@ -36,12 +36,12 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const contract = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "arm-contract.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "arm-contract.json"), "utf8")
 );
 const conditions = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "condition-instructions.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "condition-instructions.json"), "utf8")
 );
-export const PILOT_NAMESPACE = "semantic-test-corpus-v4-pilot-only";
+export const PILOT_NAMESPACE = contract.commonContract.livePreflight.namespace;
 
 const EXPECTED_TERMINAL = "corpus-staging/manifest.json - 1 scenarios - SUCCESS";
 
@@ -252,12 +252,13 @@ export function runLivePreflight({
   for (const armId of [1, 2, 3, 4, 5]) {
     const arm = contract.arms.find((item) => item.id === armId);
     const condition = conditions.conditions.find((item) => item.armId === armId);
-    const pilotId = `P4-SMOKE-${pilotSeries}-A${armId}`;
+    const pilotId = `P5-SMOKE-${pilotSeries}-A${armId}`;
     const sessionId = predeterminedSessionId(PILOT_NAMESPACE, pilotId);
     const candidateRoot = resolve(base, pilotId, "candidate");
     const artifactRoot = resolve(base, pilotId, "artifacts");
     mkdirSync(artifactRoot, { recursive: true });
     const reasons = [];
+    const treatmentObservations = [];
     let handshake = "fail";
     let eventsBytes = null;
     let usageBytes = null;
@@ -310,7 +311,7 @@ export function runLivePreflight({
       const events = parseCopilotJsonl(eventsBytes);
       const result = resultEvent(events, sessionId);
       if (execution.error || execution.status !== 0 || result.exitCode !== 0) {
-        reasons.push(`Copilot exited process=${execution.status} result=${result.exitCode}: ${
+        treatmentObservations.push(`Copilot exited process=${execution.status} result=${result.exitCode}: ${
           execution.error?.message ?? execution.stderr?.trim() ?? "unknown failure"
         }`);
       }
@@ -328,16 +329,18 @@ export function runLivePreflight({
             expectedAgent: arm.agentName
           })
         : auditInline({ events, usageRows: usageExport.rows, kickoff, arm });
-      reasons.push(...audit.reasons);
+      treatmentObservations.push(...audit.reasons);
       workerCallId = audit.workerCallId;
-      reasons.push(...auditMcp(events, { delegated: arm.delegated, workerCallId }));
+      treatmentObservations.push(...auditMcp(events, { delegated: arm.delegated, workerCallId }));
       terminal = terminalReturn(events, arm.delegated);
-      if (terminal !== EXPECTED_TERMINAL) reasons.push("terminal return differs from pilot contract");
+      if (terminal !== EXPECTED_TERMINAL) {
+        treatmentObservations.push("terminal return differs from pilot contract");
+      }
       const stagingRoot = sandbox.stagingRoot;
       const scenarioPath = resolve(stagingRoot, "scenarios", "pilot-scenario-001.json");
       const manifestPath = resolve(stagingRoot, "manifest.json");
       if (!existsSync(scenarioPath) || !existsSync(manifestPath)) {
-        reasons.push("pilot staging lacks the scenario or manifest");
+        treatmentObservations.push("pilot staging lacks the scenario or manifest");
       } else {
         stagingBytes = Buffer.concat([readFileSync(scenarioPath), readFileSync(manifestPath)]);
       }
@@ -354,8 +357,9 @@ export function runLivePreflight({
       reasoningEffort: arm.reasoningEffort,
       mechanism: condition.execution,
       agentName: arm.agentName ?? null,
-      status: reasons.length === 0 ? "pass" : "fail",
+      status: reasons.length === 0 ? "eligible" : "infrastructure-failure",
       reasons,
+      treatmentObservations,
       mcpHandshake: handshake,
       terminalReturn: terminal,
       eventsSha256: eventsBytes ? sha256(eventsBytes) : null,
@@ -405,7 +409,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const target = resolve(out);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, jsonBytes(output), { flag: "wx" });
-  process.stdout.write(`${output.arms.filter((arm) => arm.status === "pass").length}/5 live arm smokes passed\n`);
+  process.stdout.write(`${output.arms.filter((arm) => arm.status === "eligible").length}/5 live arm surfaces eligible\n`);
   if (validateLivePreflight(output).length > 0) process.exitCode = 2;
 }
 

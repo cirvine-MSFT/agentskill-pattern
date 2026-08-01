@@ -23,7 +23,7 @@ const metricsSchema = JSON.parse(
 );
 const mappingSpecPath = resolve(root, "fixture", "spec", "mapping-spec.json");
 const mappingSpec = JSON.parse(readFileSync(mappingSpecPath, "utf8"));
-const currentSourcePin = protocolDesign("v4").sourcePin;
+const currentSourcePin = protocolDesign("v5").sourcePin;
 const GENERATOR_FILES = [...GENERAL_GENERATOR_DEPENDENCIES];
 const EVALUATOR_FILES = [
   "baseline/general-generate.mjs",
@@ -163,6 +163,18 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
     blockId,
     armId,
     snapshotSha256,
+    ...(/^V5-/u.test(runId)
+      ? { outcome: {
+          disposition: "success",
+          started: true,
+          treatmentAdherent: true,
+          operationalSuccess: true,
+          semanticQualityScored: true,
+          scoringSource: "authenticated-snapshot",
+          failureKinds: [],
+          partialScenarioCount: report.corpus.submittedCases
+        } }
+      : {}),
     provenance: metricsProvenance(sourcePin),
     metrics: {
       promotion: {
@@ -201,6 +213,107 @@ export function deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId }) 
   const errors = validateJsonSchema(artifact, metricsSchema, { schemaDir: schemaRoot });
   if (errors.length > 0) {
     throw new Error(`Derived metrics artifact is invalid: ${errors[0].path} ${errors[0].message}`);
+  }
+  return artifact;
+}
+
+function zeroCoverage(total, missing) {
+  return { exercised: 0, total, rate: 0, missing };
+}
+
+export function deriveFailureMetricsArtifact({
+  runId,
+  blockId,
+  armId,
+  failureKinds,
+  snapshotBytes = null,
+  treatmentAdherent = false,
+  operationalSuccess = false
+}) {
+  if (!/^V5-B\d{2}-A[0-5]$/u.test(runId)) {
+    throw new Error("Failure metrics are defined only for started v5 units");
+  }
+  if (!Array.isArray(failureKinds) || failureKinds.length === 0) {
+    throw new Error("Started failure metrics require one or more explicit failure kinds");
+  }
+  if (snapshotBytes) {
+    const artifact = deriveMetricsArtifact(snapshotBytes, { runId, blockId, armId });
+    artifact.outcome = {
+      disposition: "measured-failure",
+      started: true,
+      treatmentAdherent,
+      operationalSuccess,
+      semanticQualityScored: true,
+      scoringSource: "authenticated-partial-snapshot",
+      failureKinds: [...new Set(failureKinds)].sort(),
+      partialScenarioCount: artifact.metrics.promotion.submittedCases
+    };
+    return artifact;
+  }
+  const ruleIds = mappingSpec.rules.map((rule) => rule.id).sort();
+  const pathIds = [...new Set([
+    ...mappingSpec.rules.flatMap((rule) => rule.paths),
+    ...mappingSpec.invariants.flatMap((invariant) => invariant.paths)
+  ])].sort();
+  const invariantIds = mappingSpec.invariants.map((invariant) => invariant.id).sort();
+  const artifact = {
+    formatVersion: 1,
+    runId,
+    blockId,
+    armId,
+    snapshotSha256: null,
+    outcome: {
+      disposition: "measured-failure",
+      started: true,
+      treatmentAdherent,
+      operationalSuccess,
+      semanticQualityScored: true,
+      scoringSource: "zero-no-authenticated-snapshot",
+      failureKinds: [...new Set(failureKinds)].sort(),
+      partialScenarioCount: 0
+    },
+    provenance: metricsProvenance(protocolDesignForRunId(runId).sourcePin),
+    metrics: {
+      promotion: {
+        targetCases: 60,
+        submittedCases: 0,
+        promotedCases: 0,
+        invalidCases: 0,
+        missingSlots: 60,
+        promotionRate: 0
+      },
+      coverage: {
+        rules: zeroCoverage(ruleIds.length, ruleIds),
+        paths: zeroCoverage(pathIds.length, pathIds),
+        invariants: zeroCoverage(invariantIds.length, invariantIds),
+        diagnostics: {
+          categories: [],
+          totalDefinedCategories: mappingSpec.diagnosticCategories.length,
+          rate: 0,
+          counts: {}
+        }
+      },
+      mutation: {
+        catalogVersion: "2026-07-29.1",
+        catalogValidation: { frozenCount: 33, validated: 33 },
+        catalogSize: 33,
+        triggered: 0,
+        untriggered: 33,
+        killed: 0,
+        survived: 33,
+        killRate: 0
+      },
+      diversity: {
+        exactDuplicateCases: 0,
+        semanticDuplicateCases: 0,
+        semanticUniqueSignatures: 0,
+        meanPairwiseJaccardDistance: null
+      }
+    }
+  };
+  const errors = validateJsonSchema(artifact, metricsSchema, { schemaDir: schemaRoot });
+  if (errors.length > 0) {
+    throw new Error(`Failure metrics artifact is invalid: ${errors[0].path} ${errors[0].message}`);
   }
   return artifact;
 }

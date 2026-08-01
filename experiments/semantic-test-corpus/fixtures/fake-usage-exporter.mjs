@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schedule = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "schedule.json"), "utf8")
 );
 const contract = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "arm-contract.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "arm-contract.json"), "utf8")
 );
 
 function row(id, sessionId, agentId, model, createdAt) {

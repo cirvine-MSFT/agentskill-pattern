@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const conditions = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "condition-instructions.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "condition-instructions.json"), "utf8")
 );
 const repositoryRoot = resolve(root, "..", "..");
 const sourcePin = JSON.parse(
-  readFileSync(resolve(root, "design", "v4", "source-pin.json"), "utf8")
+  readFileSync(resolve(root, "design", "v5", "source-pin.json"), "utf8")
 );
 const taskBlob = sourcePin.sourceBlobs[
   "experiments/semantic-test-corpus/design/shared-task-prompt.txt"

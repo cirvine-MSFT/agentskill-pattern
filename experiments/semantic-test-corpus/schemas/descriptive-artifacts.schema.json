@@ -9,7 +9,7 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4", "semantic-test-corpus-execution-v5"]},
     "startIndexPath": {"type": "string", "minLength": 1},
     "startIndexSha256Path": {"type": "string", "minLength": 1},
     "runs": {
@@ -26,15 +26,31 @@
         "additionalProperties": false,
         "allOf": [
           {
-            "if": {"properties": {"status": {"const": "eligible"}}},
+            "if": {"properties": {"status": {"enum": ["eligible", "measured-failure"]}}},
             "then": {
               "allOf": [
                 {
                   "properties": {
-                    "snapshotPath": {"type": "string", "minLength": 1},
                     "metricsPath": {"type": "string", "minLength": 1},
-                    "evaluationPath": {"type": "string", "minLength": 1},
-                    "dispositionPath": {"type": "null"}
+                    "evaluationPath": {"type": "string", "minLength": 1}
+                  }
+                },
+                {
+                  "if": {"properties": {"status": {"const": "eligible"}}},
+                  "then": {
+                    "properties": {
+                      "snapshotPath": {"type": "string", "minLength": 1},
+                      "dispositionPath": {"type": "null"}
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "snapshotPath": {"type": ["string", "null"]},
+                      "dispositionPath": {"type": "string", "minLength": 1},
+                      "localEvidencePath": {"type": ["string", "null"]},
+                      "modelPreflightPath": {"type": ["string", "null"]},
+                      "candidateRoot": {"type": ["string", "null"]}
+                    }
                   }
                 },
                 {
@@ -52,9 +68,9 @@
                   "else": {
                     "properties": {
                       "executionPath": {"type": "null"},
-                      "localEvidencePath": {"type": "string", "minLength": 1},
-                      "modelPreflightPath": {"type": "string", "minLength": 1},
-                      "candidateRoot": {"type": "string", "minLength": 1},
+                      "localEvidencePath": {"type": ["string", "null"], "minLength": 1},
+                      "modelPreflightPath": {"type": ["string", "null"], "minLength": 1},
+                      "candidateRoot": {"type": ["string", "null"], "minLength": 1},
                       "startEvidencePath": {"type": "null"},
                       "endEvidencePath": {"type": "null"}
                     }
@@ -97,10 +113,10 @@
           }
         ],
         "properties": {
-          "runId": {"type": "string", "pattern": "^(?:B|V[34]-B)\\d{2}-A[0-5]$"},
+          "runId": {"type": "string", "pattern": "^(?:B|V[345]-B)\\d{2}-A[0-5]$"},
           "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
           "armId": {"type": "integer", "minimum": 0, "maximum": 5},
-          "status": {"type": "string", "enum": ["eligible", "unavailable", "excluded"]},
+          "status": {"type": "string", "enum": ["eligible", "measured-failure", "unavailable", "excluded"]},
           "snapshotPath": {"type": ["string", "null"]},
           "metricsPath": {"type": ["string", "null"]},
           "executionPath": {"type": ["string", "null"]},

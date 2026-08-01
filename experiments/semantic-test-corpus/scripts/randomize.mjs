@@ -6,7 +6,7 @@ import {
   kickoffSha256ForRun,
   taskSha256ForSeed
 } from "./execution-contract.mjs";
-import { predeterminedSessionId, PROTOCOL_ID } from "./copilot-cli-v4.mjs";
+import { predeterminedSessionId, PROTOCOL_ID } from "./copilot-cli-v5.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -30,16 +30,16 @@ function shuffle(values, seed) {
 
 export function createSchedule() {
   const design = JSON.parse(
-    readFileSync(resolve(root, "design", "v4", "seeds.json"), "utf8")
+    readFileSync(resolve(root, "design", "v5", "seeds.json"), "utf8")
   );
   return {
     protocolId: PROTOCOL_ID,
-    scheduleVersion: 5,
+    scheduleVersion: 6,
     runNamespace: design.runNamespace,
     randomizationSeed: design.randomizationSeed,
     runs: design.blocks.flatMap((block, blockIndex) =>
       shuffle([0, 1, 2, 3, 4, 5], block.seed).map((armId, order) => ({
-        runId: `V4-${block.id}-A${armId}`,
+        runId: `V5-${block.id}-A${armId}`,
         blockId: block.id,
         armId,
         order: order + 1,
@@ -47,7 +47,7 @@ export function createSchedule() {
         seed: block.seed,
         sessionId: armId === 0
           ? null
-          : predeterminedSessionId(design.runNamespace, `V4-${block.id}-A${armId}`),
+          : predeterminedSessionId(design.runNamespace, `V5-${block.id}-A${armId}`),
         taskSha256: taskSha256ForSeed(block.seed),
         kickoffSha256: armId === 0 ? null : kickoffSha256ForRun(armId, block.seed)
       })))
