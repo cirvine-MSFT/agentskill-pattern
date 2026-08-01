@@ -1,0 +1,605 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v5",
+  "runId": "V5-B11-A0",
+  "blockId": "B11",
+  "armId": 0,
+  "globalOrder": 64,
+  "scheduledSessionId": null,
+  "disposition": {
+    "status": "eligible",
+    "reason": null,
+    "evidenceKind": "evaluation-record",
+    "evaluationSha256": "3fbc45a2c25384166b2d11348feaa600dd8531df58949d948e18615ed2b39ecc",
+    "retryCount": 0
+  },
+  "lifecycleStart": {
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "runId": "V5-B11-A0",
+    "blockId": "B11",
+    "armId": 0,
+    "seed": 2588206090,
+    "scheduleOrder": 4,
+    "globalOrder": 64,
+    "disposition": "started",
+    "recordedAt": "2026-08-01T11:46:14.679Z",
+    "startedAt": "2026-08-01T11:46:14.679Z",
+    "taskSha256": "60dfc0dbb677cd6483210944b0e0bb69e66b72847196db63d99427e7c8387de8",
+    "kickoffSha256": null
+  },
+  "startCapture": {
+    "runId": "V5-B11-A0",
+    "blockId": "B11",
+    "armId": 0,
+    "sequence": 64,
+    "disposition": "started",
+    "recordedAt": "2026-08-01T11:46:14.679Z",
+    "startedAt": "2026-08-01T11:46:14.679Z",
+    "sourcePath": "V5-B11-A0/lifecycle-start.json",
+    "sourceSha256": "bb79476f9e57ba60578d42760579fb99fee2aa82670da28b89d04de96f0337c6"
+  },
+  "evaluation": {
+    "source": {
+      "path": "artifacts/V5-B11-A0/evaluation.json",
+      "bytes": 994,
+      "sha256": "3fbc45a2c25384166b2d11348feaa600dd8531df58949d948e18615ed2b39ecc"
+    },
+    "sourceBytesCommitted": false,
+    "record": {
+      "formatVersion": 1,
+      "protocolId": "semantic-test-corpus-execution-v5",
+      "runId": "V5-B11-A0",
+      "blockId": "B11",
+      "armId": 0,
+      "attemptId": null,
+      "snapshotPath": "artifacts/V5-B11-A0/staging.json",
+      "snapshotSha256": "7e196929e9d06f6edd618bab7cae9b0a35feda8e19e9a4d84bf788982195872e",
+      "metricsPath": "artifacts/V5-B11-A0/metrics.json",
+      "metricsSha256": "69fc227dc55dd39e1fab118853482430c0afbf3334e98f2b5f76326635865ce2",
+      "executionSha256": "cd969b56df5581b2f15c8a95dba5da508751053839ef000a0bac63a85898bb55",
+      "localEvidenceSha256": null,
+      "modelPreflightSha256": null,
+      "createdAt": "2026-08-01T11:46:16.114Z",
+      "disposition": "success",
+      "treatmentAdherent": true,
+      "operationalSuccess": true,
+      "failureKinds": [],
+      "retryCount": 0
+    }
+  },
+  "metrics": {
+    "formatVersion": 1,
+    "runId": "V5-B11-A0",
+    "blockId": "B11",
+    "armId": 0,
+    "snapshotSha256": "7e196929e9d06f6edd618bab7cae9b0a35feda8e19e9a4d84bf788982195872e",
+    "outcome": {
+      "disposition": "success",
+      "started": true,
+      "treatmentAdherent": true,
+      "operationalSuccess": true,
+      "semanticQualityScored": true,
+      "scoringSource": "authenticated-snapshot",
+      "failureKinds": [],
+      "partialScenarioCount": 60
+    },
+    "provenance": {
+      "generator": {
+        "commitSha": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+        "treeSha": "509273e54ca0590fe4dd0f48d5945c606b035916",
+        "objectFormat": "sha1",
+        "files": [
+          {
+            "path": "baseline/general-generate.mjs",
+            "blobSha": "7bd206295cd5f4f646a46ccedfc4366a515393b0"
+          },
+          {
+            "path": "baseline/pairwise.mjs",
+            "blobSha": "e97da051e61e9d032fcf39878627d8a83220e085"
+          },
+          {
+            "path": "design/corpus-request.json",
+            "blobSha": "5f196dbb59c106afe6e6902560bd886ca1683451"
+          },
+          {
+            "path": "fixture/spec/mapping-spec.json",
+            "blobSha": "d84c06bf006ed0037ed2245ea748caac3c70d145"
+          },
+          {
+            "path": "schemas/v1-config.schema.json",
+            "blobSha": "6a109acfa4d610ed5eec6b0041b8524230f7c979"
+          }
+        ]
+      },
+      "evaluator": {
+        "sha256": "4749f8db83df3623aa717d6cf9725513e48dd0b446d3a0d0c1f206f016c7528b",
+        "files": [
+          {
+            "path": "baseline/general-generate.mjs",
+            "sha256": "9e35341742984ccaef6e4323fc34da6401230cdb693301648c267383b1bef434"
+          },
+          {
+            "path": "baseline/pairwise.mjs",
+            "sha256": "f1ea4e930a85b0f70ab516a396a8550c4e74e820b340ca42d50aba4934655157"
+          },
+          {
+            "path": "evaluator/adapter.mjs",
+            "sha256": "61fb29ff8e1d411a993035ff3c269a4832e29351f3ee30ac6035a2c0b2687270"
+          },
+          {
+            "path": "evaluator/metrics.mjs",
+            "sha256": "e3daf893bc3bf6ef08799c7d00a1c195e58d79fae7a3e5a283aef1e570e87bf3"
+          },
+          {
+            "path": "evaluator/promote.mjs",
+            "sha256": "80d81b07ddd0e474ccd781ed129fa212e6a92f0de92dec410a2b1609f8e00dd3"
+          },
+          {
+            "path": "evaluator/report.mjs",
+            "sha256": "530d4652330726d18ed90498a448aa0ffdb29f1de0298308d3bf996500b43e01"
+          },
+          {
+            "path": "schemas/coverage-metric.schema.json",
+            "sha256": "a6662d3af99284d3d0ad3146f71d4a0d77ec9c5b57ec338228f2fa0781543444"
+          },
+          {
+            "path": "schemas/hash-file-set.schema.json",
+            "sha256": "a13aabe177968a82bf5838b37fba612267677e40616e0a70fd1f2706d9f8d9d0"
+          },
+          {
+            "path": "schemas/metrics-artifact.schema.json",
+            "sha256": "eb2288d073e23b94f07887bb1dc4946fa4efde8babd75a92e7df6a61343d7deb"
+          },
+          {
+            "path": "schemas/scenario.schema.json",
+            "sha256": "1246c78e72ef7fba5278bd665cab738eb77a9061fcb1f68118f6946aedecaa58"
+          },
+          {
+            "path": "schemas/staging.schema.json",
+            "sha256": "251f652dc3ed8a622faae86994f9a826380eb5f3a0f049b163c29d43237ce12c"
+          },
+          {
+            "path": "schemas/v1-config.schema.json",
+            "sha256": "9c9eed772f23dc9bb86f69970e54506f5f1b5ca18036270b17013eb703959cec"
+          },
+          {
+            "path": "validators/json-schema.mjs",
+            "sha256": "5d75451a74aaae882b517aef06cb7672c71bd00f8e2272990cdabc1284720148"
+          },
+          {
+            "path": "validators/staging.mjs",
+            "sha256": "913eeaf20832baa503732d0c7486da4d1612019b5e53a68432bf44f0845c9432"
+          }
+        ]
+      },
+      "spec": {
+        "path": "fixture/spec/mapping-spec.json",
+        "sha256": "d75f087df2b1256a0d6f92a0958424e575e3c009a70a90c35377254f51a99578"
+      },
+      "oracle": {
+        "sha256": "88d6825b82ee2cbacf3fc6f7fc104f78e60ce76fc51be27688cc71b8fa0aeabb",
+        "files": [
+          {
+            "path": "evaluator/oracle/index.mjs",
+            "sha256": "5d82eee46bbcceaf819d1aaa661c0a5ba5675f89cd1002ec44a4ab4a44726598"
+          }
+        ]
+      },
+      "mutants": {
+        "sha256": "4dbe2a7d2042482584a966872dd6b831bb87bbaca08a409be13f849762c719dd",
+        "files": [
+          {
+            "path": "evaluator/mutants/definitions.mjs",
+            "sha256": "df67dbc5d8e9558c77ad654a0a47ea3f517fa34c9933958ac6da9ccafffeee91"
+          },
+          {
+            "path": "evaluator/mutants/run.mjs",
+            "sha256": "faee0ac3bd845695ba939dec36c5e8f8d2e998e5475cdfffb901f48b9e79424d"
+          },
+          {
+            "path": "evaluator/mutants/validate.mjs",
+            "sha256": "b03e6f20af466e230149d21ee6d344ad2c932690ec8e72ac735569b9830edec1"
+          },
+          {
+            "path": "evaluator/mutants/oracle-tuned-reference.json",
+            "sha256": "f65123bd8c7c475888a48dc70bc8bcd63967d1c91d38a2258352e94a1a83279d"
+          },
+          {
+            "path": "evaluator/artifacts/baseline-corpus.json",
+            "sha256": "5fca83f2aeff736dff2773f78f2e070734cb6e01cbbb74780159988620e44b7a"
+          },
+          {
+            "path": "evaluator/tests/golden-cases.json",
+            "sha256": "8778cd5f65398eff3a5cd058eb41915c0ba30faedbb5bd5997a28afa1321a4cb"
+          }
+        ]
+      }
+    },
+    "metrics": {
+      "promotion": {
+        "targetCases": 60,
+        "submittedCases": 60,
+        "promotedCases": 60,
+        "invalidCases": 0,
+        "missingSlots": 0,
+        "promotionRate": 1
+      },
+      "coverage": {
+        "rules": {
+          "exercised": 12,
+          "total": 12,
+          "rate": 1,
+          "missing": []
+        },
+        "paths": {
+          "exercised": 60,
+          "total": 67,
+          "rate": 0.8955223880597015,
+          "missing": [
+            "P-FEATURES-NORMALIZED",
+            "P-I-DB-PORT-CONFLICT-FAIL",
+            "P-I-FEATURE-COLLISION-FAIL",
+            "P-I-PROD-CORS-FAIL",
+            "P-I-PROD-DB-TLS-PASS",
+            "P-I-REDIS-ENDPOINT-PASS",
+            "P-REGION-LEGACY"
+          ]
+        },
+        "invariants": {
+          "exercised": 15,
+          "total": 15,
+          "rate": 1,
+          "missing": []
+        },
+        "diagnostics": {
+          "categories": [
+            "cross-field",
+            "domain",
+            "ignored-input",
+            "normalization"
+          ],
+          "totalDefinedCategories": 5,
+          "rate": 0.8,
+          "counts": {
+            "cross-field": 22,
+            "domain": 38,
+            "ignored-input": 19,
+            "normalization": 3
+          }
+        }
+      },
+      "mutation": {
+        "catalogVersion": "2026-07-29.1",
+        "catalogValidation": {
+          "frozenCount": 33,
+          "validated": 33
+        },
+        "catalogSize": 33,
+        "triggered": 22,
+        "untriggered": 11,
+        "killed": 22,
+        "survived": 11,
+        "killRate": 0.6666666666666666
+      },
+      "diversity": {
+        "exactDuplicateCases": 0,
+        "semanticDuplicateCases": 26,
+        "semanticUniqueSignatures": 34,
+        "meanPairwiseJaccardDistance": 0.368720058075266
+      }
+    }
+  },
+  "analysis": {
+    "descriptiveRun": {
+      "runId": "V5-B11-A0",
+      "blockId": "B11",
+      "armId": 0,
+      "endpoints": {
+        "promotionRate": 1,
+        "structuralValidityRate": 1,
+        "tracedRuleCount": 12,
+        "ruleCoverage": 1,
+        "tracedPathCount": 60,
+        "pathCoverage": 0.8955223880597015,
+        "tracedInvariantCount": 15,
+        "invariantCoverage": 1,
+        "tracedDiagnosticCount": 4,
+        "diagnosticCoverage": 0.8,
+        "killedMutants": 22,
+        "mutantKillRate": 0.6666666666666666,
+        "exactDuplicateCases": 0,
+        "semanticDuplicateCases": 26,
+        "semanticUniqueSignatures": 34,
+        "meanPairwiseJaccardDistance": 0.368720058075266,
+        "parentAiCredits": 0,
+        "workerAiCredits": 0,
+        "totalAiCredits": 0,
+        "parentPremiumRequests": 0,
+        "workerPremiumRequests": 0,
+        "totalPremiumRequests": 0,
+        "parentNanoAiu": 0,
+        "workerNanoAiu": 0,
+        "totalNanoAiu": 0,
+        "parentInputTokens": 0,
+        "workerInputTokens": 0,
+        "totalInputTokens": 0,
+        "parentOutputTokens": 0,
+        "workerOutputTokens": 0,
+        "totalOutputTokens": 0,
+        "parentCacheReadTokens": 0,
+        "workerCacheReadTokens": 0,
+        "totalCacheReadTokens": 0,
+        "parentCacheWriteTokens": 0,
+        "workerCacheWriteTokens": 0,
+        "totalCacheWriteTokens": 0,
+        "parentCachedTokens": 0,
+        "workerCachedTokens": 0,
+        "totalCachedTokens": 0,
+        "parentModelTokens": 0,
+        "workerModelTokens": 0,
+        "totalModelTokens": 0,
+        "parentCompletionCount": 0,
+        "workerCompletionCount": 0,
+        "totalCompletionCount": 0,
+        "parentReasoningTokens": 0,
+        "workerReasoningTokens": 0,
+        "totalReasoningTokens": 0,
+        "parentRequestMultiplier": 0,
+        "workerRequestMultiplier": 0,
+        "totalRequestMultiplier": 0,
+        "parentDurationMs": 0,
+        "workerDurationMs": 0,
+        "totalDurationMs": 0,
+        "parentMeanTimeToFirstTokenMs": 0,
+        "workerMeanTimeToFirstTokenMs": 0,
+        "totalMeanTimeToFirstTokenMs": 0,
+        "parentMeanInterTokenLatencyMs": 0,
+        "workerMeanInterTokenLatencyMs": 0,
+        "totalMeanInterTokenLatencyMs": 0,
+        "operationalTotalAiCredits": 0,
+        "operationalTotalNanoAiu": 0,
+        "operationalTotalModelTokens": 0,
+        "operationalTotalCompletionCount": 0,
+        "parentCumulativeInputTokens": 0,
+        "parentPeakInputTokens": 0,
+        "toolSchemaCount": 0,
+        "toolCallCount": 0,
+        "toolResultCount": 0,
+        "toolResultBytes": 0,
+        "compactReturnBytes": 0,
+        "compactionCount": 0,
+        "wallMs": 810,
+        "parentActiveMs": 0,
+        "workerActiveMs": 0,
+        "parentWaitMs": 0,
+        "sessionEvidenceAvailable": 0,
+        "modelEvidenceAvailable": 0,
+        "mechanismEvidenceAvailable": 0,
+        "deviationCount": 0
+      },
+      "outcome": {
+        "disposition": "success",
+        "started": true,
+        "treatmentAdherent": true,
+        "operationalSuccess": true,
+        "semanticQualityScored": true,
+        "scoringSource": "authenticated-snapshot",
+        "failureKinds": [],
+        "partialScenarioCount": 60
+      }
+    },
+    "unitRecord": {
+      "runId": "V5-B11-A0",
+      "blockId": "B11",
+      "armId": 0,
+      "status": "eligible",
+      "reason": null,
+      "operationalMetrics": {
+        "aiCredits": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "nanoAiu": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "inputTokens": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "outputTokens": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "modelTokens": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "completionCount": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "durationMs": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "toolCallCount": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        },
+        "toolResultCount": {
+          "available": true,
+          "value": 0,
+          "reason": null
+        }
+      },
+      "outcome": {
+        "disposition": "success",
+        "started": true,
+        "treatmentAdherent": true,
+        "operationalSuccess": true,
+        "semanticQualityScored": true,
+        "scoringSource": "authenticated-snapshot",
+        "failureKinds": [],
+        "partialScenarioCount": 60
+      }
+    }
+  },
+  "stagingEvidence": {
+    "recordKind": "safe-partial-hash-record",
+    "source": {
+      "path": "artifacts/V5-B11-A0/staging.json",
+      "bytes": 49059,
+      "sha256": "7e196929e9d06f6edd618bab7cae9b0a35feda8e19e9a4d84bf788982195872e"
+    },
+    "committedSnapshot": false,
+    "localAuthentication": "evaluation-record-sha256",
+    "scoringSource": "authenticated-snapshot",
+    "submittedCases": 60,
+    "promotedCases": 60,
+    "invalidCases": 0,
+    "missingSlots": 0
+  },
+  "provenance": {
+    "source": {
+      "path": "artifacts/V5-B11-A0/capture-provenance.json",
+      "bytes": 4020,
+      "sha256": "941671e80263c02446409352e999a00af25792ecebf1d172940844892d8bd13d"
+    },
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "evidence": "unsigned-descriptive-only",
+    "immutablePolicy": "write-once then read-only",
+    "sourcePin": {
+      "protocolId": "semantic-test-corpus-execution-v5",
+      "repository": "cirvine-MSFT/agentskill-pattern",
+      "sourceCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+      "sourceTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+      "sourceBlobs": {
+        "experiments/semantic-test-corpus/candidate-template/package.json": "375823f8278557b384b3363894ba5a7b90ec201c",
+        "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json": "d84c06bf006ed0037ed2245ea748caac3c70d145",
+        "experiments/semantic-test-corpus/design/corpus-request.json": "5f196dbb59c106afe6e6902560bd886ca1683451",
+        "experiments/semantic-test-corpus/schemas/v1-config.schema.json": "6a109acfa4d610ed5eec6b0041b8524230f7c979",
+        "experiments/semantic-test-corpus/schemas/scenario.schema.json": "fe43959704eebd4aa2c092f6c723c57cf5387389",
+        "experiments/semantic-test-corpus/schemas/staging.schema.json": "b38752f9e2526d79043e6b51114409a37e4ee637",
+        "experiments/semantic-test-corpus/design/shared-task-prompt.txt": "6feb972657488cf1d5dec073f2afe8ed9af08c06",
+        ".github/agents/semantic-test-corpus.agent.md": "9a3068268d5223a94af800ce7b3aa6cafa252a5c",
+        ".github/agents/semantic-test-corpus-haiku.agent.md": "6ed9d31fe036c39abdb87e961ae6f71c4a705adb",
+        ".github/skills/semantic-test-corpus/SKILL.md": "a335be260ecd57c62492f72ea05622979982ce5f",
+        "tools/semantic-corpus-mcp/server.mjs": "ac9baf5ee9fb0666185069bd653daec2ea1eb296",
+        "tools/semantic-corpus-mcp/protocol.mjs": "c3798060c843c8fafcf0f33c99f2bcbad5448c83",
+        "tools/semantic-corpus-mcp/lib.mjs": "fa94ac314c125340d3dd00181d88e2b03b79d778"
+      },
+      "generatorCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+      "generatorTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+      "generatorBlobs": {
+        "experiments/semantic-test-corpus/baseline/general-generate.mjs": "7bd206295cd5f4f646a46ccedfc4366a515393b0",
+        "experiments/semantic-test-corpus/baseline/pairwise.mjs": "e97da051e61e9d032fcf39878627d8a83220e085",
+        "experiments/semantic-test-corpus/design/corpus-request.json": "5f196dbb59c106afe6e6902560bd886ca1683451",
+        "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json": "d84c06bf006ed0037ed2245ea748caac3c70d145",
+        "experiments/semantic-test-corpus/schemas/v1-config.schema.json": "6a109acfa4d610ed5eec6b0041b8524230f7c979"
+      },
+      "policy": "Candidate and deterministic baseline sources are read only from corrected main merge commit b5e69bd2a470e5520ba0684f7e1a9fa2f305141b and its exact tree/blob IDs. Symbolic refs and working-tree bytes are forbidden."
+    }
+  },
+  "sourceFiles": [
+    {
+      "path": "artifacts/V5-B11-A0/capture-provenance.json",
+      "kind": "file",
+      "bytes": 4020,
+      "sha256": "941671e80263c02446409352e999a00af25792ecebf1d172940844892d8bd13d"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/evaluation.json",
+      "kind": "file",
+      "bytes": 994,
+      "sha256": "3fbc45a2c25384166b2d11348feaa600dd8531df58949d948e18615ed2b39ecc"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/execution-preflight.json",
+      "kind": "file",
+      "bytes": 1787,
+      "sha256": "1e17be68314ca65542d61980da05672dc2cccfa6b5c21fb7dabf694e40209298"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/execution.json",
+      "kind": "file",
+      "bytes": 588,
+      "sha256": "cd969b56df5581b2f15c8a95dba5da508751053839ef000a0bac63a85898bb55"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/lifecycle-end.json",
+      "kind": "file",
+      "bytes": 177,
+      "sha256": "4bf3453828a9438c0b6e56addfcdd86b43eb447be8005c04942b48373dfa8cbb"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/lifecycle-start.json",
+      "kind": "file",
+      "bytes": 425,
+      "sha256": "bb79476f9e57ba60578d42760579fb99fee2aa82670da28b89d04de96f0337c6"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/metrics.json",
+      "kind": "file",
+      "bytes": 6916,
+      "sha256": "69fc227dc55dd39e1fab118853482430c0afbf3334e98f2b5f76326635865ce2"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/staging.json",
+      "kind": "file",
+      "bytes": 49059,
+      "sha256": "7e196929e9d06f6edd618bab7cae9b0a35feda8e19e9a4d84bf788982195872e"
+    },
+    {
+      "path": "artifacts/V5-B11-A0/start-capture.json",
+      "kind": "file",
+      "bytes": 330,
+      "sha256": "575d68a4d2d5490d0c9913f606a3926b9145d49271be4a27282d955581f8d307"
+    }
+  ],
+  "omittedPayloads": [
+    "artifacts/V5-B11-A0/staging.json"
+  ],
+  "deviations": {
+    "closure": [],
+    "attempt": [],
+    "retryCount": 0
+  },
+  "deterministic": {
+    "execution": {
+      "formatVersion": 1,
+      "protocolId": "semantic-test-corpus-execution-v5",
+      "runId": "V5-B11-A0",
+      "blockId": "B11",
+      "armId": 0,
+      "seed": 2588206090,
+      "scheduleOrder": 4,
+      "globalOrder": 64,
+      "startedAt": "2026-08-01T11:46:14.679Z",
+      "endedAt": "2026-08-01T11:46:15.489Z",
+      "cases": 60,
+      "wallMs": 810,
+      "stagingSha256": "7e196929e9d06f6edd618bab7cae9b0a35feda8e19e9a4d84bf788982195872e",
+      "startEvidenceSha256": "bb79476f9e57ba60578d42760579fb99fee2aa82670da28b89d04de96f0337c6",
+      "endEvidenceSha256": "4bf3453828a9438c0b6e56addfcdd86b43eb447be8005c04942b48373dfa8cbb"
+    },
+    "lifecycleEnd": {
+      "formatVersion": 1,
+      "protocolId": "semantic-test-corpus-execution-v5",
+      "runId": "V5-B11-A0",
+      "blockId": "B11",
+      "armId": 0,
+      "endedAt": "2026-08-01T11:46:15.489Z"
+    }
+  }
+}

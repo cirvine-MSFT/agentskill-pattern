@@ -1,0 +1,1816 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v5",
+  "runId": "V5-B11-A2",
+  "blockId": "B11",
+  "armId": 2,
+  "globalOrder": 62,
+  "scheduledSessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+  "disposition": {
+    "status": "eligible",
+    "reason": null,
+    "evidenceKind": "evaluation-record",
+    "evaluationSha256": "b328f602f79c66b0f48f330fd2108090f502614c6ccfabe4477c5225c11463c4",
+    "retryCount": 0
+  },
+  "lifecycleStart": {
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "runId": "V5-B11-A2",
+    "blockId": "B11",
+    "armId": 2,
+    "seed": 2588206090,
+    "scheduleOrder": 2,
+    "globalOrder": 62,
+    "disposition": "started",
+    "recordedAt": "2026-08-01T11:42:39.711Z",
+    "startedAt": "2026-08-01T11:42:39.711Z",
+    "state": "atomic-copilot-prompt-planned",
+    "taskSha256": "60dfc0dbb677cd6483210944b0e0bb69e66b72847196db63d99427e7c8387de8",
+    "kickoffSha256": "e1af8a73cf9a36a40a034e2c5f96066ba1b3cf7ab692da27f8a6e9ffad849007",
+    "candidateSnapshotSha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8",
+    "terminalCommit": "7717cd5220e3e26a0b7f490544c5b357dbc8484d"
+  },
+  "startCapture": {
+    "runId": "V5-B11-A2",
+    "blockId": "B11",
+    "armId": 2,
+    "sequence": 62,
+    "disposition": "started",
+    "recordedAt": "2026-08-01T11:42:39.711Z",
+    "startedAt": "2026-08-01T11:42:39.711Z",
+    "sourcePath": "V5-B11-A2/lifecycle-start.json",
+    "sourceSha256": "5c732968a95bedba458e68eb0c37435e980b25b3ab379badaa442c4b9fa47598"
+  },
+  "evaluation": {
+    "source": {
+      "path": "artifacts/V5-B11-A2/evaluation.json",
+      "bytes": 1073,
+      "sha256": "b328f602f79c66b0f48f330fd2108090f502614c6ccfabe4477c5225c11463c4"
+    },
+    "sourceBytesCommitted": false,
+    "record": {
+      "formatVersion": 1,
+      "protocolId": "semantic-test-corpus-execution-v5",
+      "runId": "V5-B11-A2",
+      "blockId": "B11",
+      "armId": 2,
+      "attemptId": "V5-B11-A2-attempt-1",
+      "snapshotPath": "artifacts/V5-B11-A2/staging.json",
+      "snapshotSha256": "99f14e2646a4829d2bcfc07b461f76999ac6696f4b385103bd52a17f47287d31",
+      "metricsPath": "artifacts/V5-B11-A2/metrics.json",
+      "metricsSha256": "a983f7fc633585177c99485153e3fe80bdf8c79db6a9f1c60495da36a9b7df7c",
+      "executionSha256": null,
+      "localEvidenceSha256": "d32fd06b985349d0659fcc5500d720f550bf41a39cec834991c26c7e56ec4856",
+      "modelPreflightSha256": "1ba3f0f677a2411cf2f4be581287d46b9d3484c50766b94258cfe112c5a131b4",
+      "createdAt": "2026-08-01T11:44:18.376Z",
+      "disposition": "success",
+      "treatmentAdherent": true,
+      "operationalSuccess": true,
+      "failureKinds": [],
+      "retryCount": 0
+    }
+  },
+  "metrics": {
+    "formatVersion": 1,
+    "runId": "V5-B11-A2",
+    "blockId": "B11",
+    "armId": 2,
+    "snapshotSha256": "99f14e2646a4829d2bcfc07b461f76999ac6696f4b385103bd52a17f47287d31",
+    "outcome": {
+      "disposition": "success",
+      "started": true,
+      "treatmentAdherent": true,
+      "operationalSuccess": true,
+      "semanticQualityScored": true,
+      "scoringSource": "authenticated-snapshot",
+      "failureKinds": [],
+      "partialScenarioCount": 60
+    },
+    "provenance": {
+      "generator": {
+        "commitSha": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+        "treeSha": "509273e54ca0590fe4dd0f48d5945c606b035916",
+        "objectFormat": "sha1",
+        "files": [
+          {
+            "path": "baseline/general-generate.mjs",
+            "blobSha": "7bd206295cd5f4f646a46ccedfc4366a515393b0"
+          },
+          {
+            "path": "baseline/pairwise.mjs",
+            "blobSha": "e97da051e61e9d032fcf39878627d8a83220e085"
+          },
+          {
+            "path": "design/corpus-request.json",
+            "blobSha": "5f196dbb59c106afe6e6902560bd886ca1683451"
+          },
+          {
+            "path": "fixture/spec/mapping-spec.json",
+            "blobSha": "d84c06bf006ed0037ed2245ea748caac3c70d145"
+          },
+          {
+            "path": "schemas/v1-config.schema.json",
+            "blobSha": "6a109acfa4d610ed5eec6b0041b8524230f7c979"
+          }
+        ]
+      },
+      "evaluator": {
+        "sha256": "4749f8db83df3623aa717d6cf9725513e48dd0b446d3a0d0c1f206f016c7528b",
+        "files": [
+          {
+            "path": "baseline/general-generate.mjs",
+            "sha256": "9e35341742984ccaef6e4323fc34da6401230cdb693301648c267383b1bef434"
+          },
+          {
+            "path": "baseline/pairwise.mjs",
+            "sha256": "f1ea4e930a85b0f70ab516a396a8550c4e74e820b340ca42d50aba4934655157"
+          },
+          {
+            "path": "evaluator/adapter.mjs",
+            "sha256": "61fb29ff8e1d411a993035ff3c269a4832e29351f3ee30ac6035a2c0b2687270"
+          },
+          {
+            "path": "evaluator/metrics.mjs",
+            "sha256": "e3daf893bc3bf6ef08799c7d00a1c195e58d79fae7a3e5a283aef1e570e87bf3"
+          },
+          {
+            "path": "evaluator/promote.mjs",
+            "sha256": "80d81b07ddd0e474ccd781ed129fa212e6a92f0de92dec410a2b1609f8e00dd3"
+          },
+          {
+            "path": "evaluator/report.mjs",
+            "sha256": "530d4652330726d18ed90498a448aa0ffdb29f1de0298308d3bf996500b43e01"
+          },
+          {
+            "path": "schemas/coverage-metric.schema.json",
+            "sha256": "a6662d3af99284d3d0ad3146f71d4a0d77ec9c5b57ec338228f2fa0781543444"
+          },
+          {
+            "path": "schemas/hash-file-set.schema.json",
+            "sha256": "a13aabe177968a82bf5838b37fba612267677e40616e0a70fd1f2706d9f8d9d0"
+          },
+          {
+            "path": "schemas/metrics-artifact.schema.json",
+            "sha256": "eb2288d073e23b94f07887bb1dc4946fa4efde8babd75a92e7df6a61343d7deb"
+          },
+          {
+            "path": "schemas/scenario.schema.json",
+            "sha256": "1246c78e72ef7fba5278bd665cab738eb77a9061fcb1f68118f6946aedecaa58"
+          },
+          {
+            "path": "schemas/staging.schema.json",
+            "sha256": "251f652dc3ed8a622faae86994f9a826380eb5f3a0f049b163c29d43237ce12c"
+          },
+          {
+            "path": "schemas/v1-config.schema.json",
+            "sha256": "9c9eed772f23dc9bb86f69970e54506f5f1b5ca18036270b17013eb703959cec"
+          },
+          {
+            "path": "validators/json-schema.mjs",
+            "sha256": "5d75451a74aaae882b517aef06cb7672c71bd00f8e2272990cdabc1284720148"
+          },
+          {
+            "path": "validators/staging.mjs",
+            "sha256": "913eeaf20832baa503732d0c7486da4d1612019b5e53a68432bf44f0845c9432"
+          }
+        ]
+      },
+      "spec": {
+        "path": "fixture/spec/mapping-spec.json",
+        "sha256": "d75f087df2b1256a0d6f92a0958424e575e3c009a70a90c35377254f51a99578"
+      },
+      "oracle": {
+        "sha256": "88d6825b82ee2cbacf3fc6f7fc104f78e60ce76fc51be27688cc71b8fa0aeabb",
+        "files": [
+          {
+            "path": "evaluator/oracle/index.mjs",
+            "sha256": "5d82eee46bbcceaf819d1aaa661c0a5ba5675f89cd1002ec44a4ab4a44726598"
+          }
+        ]
+      },
+      "mutants": {
+        "sha256": "4dbe2a7d2042482584a966872dd6b831bb87bbaca08a409be13f849762c719dd",
+        "files": [
+          {
+            "path": "evaluator/mutants/definitions.mjs",
+            "sha256": "df67dbc5d8e9558c77ad654a0a47ea3f517fa34c9933958ac6da9ccafffeee91"
+          },
+          {
+            "path": "evaluator/mutants/run.mjs",
+            "sha256": "faee0ac3bd845695ba939dec36c5e8f8d2e998e5475cdfffb901f48b9e79424d"
+          },
+          {
+            "path": "evaluator/mutants/validate.mjs",
+            "sha256": "b03e6f20af466e230149d21ee6d344ad2c932690ec8e72ac735569b9830edec1"
+          },
+          {
+            "path": "evaluator/mutants/oracle-tuned-reference.json",
+            "sha256": "f65123bd8c7c475888a48dc70bc8bcd63967d1c91d38a2258352e94a1a83279d"
+          },
+          {
+            "path": "evaluator/artifacts/baseline-corpus.json",
+            "sha256": "5fca83f2aeff736dff2773f78f2e070734cb6e01cbbb74780159988620e44b7a"
+          },
+          {
+            "path": "evaluator/tests/golden-cases.json",
+            "sha256": "8778cd5f65398eff3a5cd058eb41915c0ba30faedbb5bd5997a28afa1321a4cb"
+          }
+        ]
+      }
+    },
+    "metrics": {
+      "promotion": {
+        "targetCases": 60,
+        "submittedCases": 60,
+        "promotedCases": 60,
+        "invalidCases": 0,
+        "missingSlots": 0,
+        "promotionRate": 1
+      },
+      "coverage": {
+        "rules": {
+          "exercised": 12,
+          "total": 12,
+          "rate": 1,
+          "missing": []
+        },
+        "paths": {
+          "exercised": 66,
+          "total": 67,
+          "rate": 0.9850746268656716,
+          "missing": [
+            "P-I-VERSION-FAIL"
+          ]
+        },
+        "invariants": {
+          "exercised": 15,
+          "total": 15,
+          "rate": 1,
+          "missing": []
+        },
+        "diagnostics": {
+          "categories": [
+            "cross-field",
+            "deprecation",
+            "domain",
+            "ignored-input",
+            "normalization"
+          ],
+          "totalDefinedCategories": 5,
+          "rate": 1,
+          "counts": {
+            "cross-field": 17,
+            "deprecation": 12,
+            "domain": 10,
+            "ignored-input": 6,
+            "normalization": 14
+          }
+        }
+      },
+      "mutation": {
+        "catalogVersion": "2026-07-29.1",
+        "catalogValidation": {
+          "frozenCount": 33,
+          "validated": 33
+        },
+        "catalogSize": 33,
+        "triggered": 32,
+        "untriggered": 1,
+        "killed": 32,
+        "survived": 1,
+        "killRate": 0.9696969696969697
+      },
+      "diversity": {
+        "exactDuplicateCases": 0,
+        "semanticDuplicateCases": 7,
+        "semanticUniqueSignatures": 53,
+        "meanPairwiseJaccardDistance": 0.4703169693890316
+      }
+    }
+  },
+  "analysis": {
+    "descriptiveRun": {
+      "runId": "V5-B11-A2",
+      "blockId": "B11",
+      "armId": 2,
+      "endpoints": {
+        "promotionRate": 1,
+        "structuralValidityRate": 1,
+        "tracedRuleCount": 12,
+        "ruleCoverage": 1,
+        "tracedPathCount": 66,
+        "pathCoverage": 0.9850746268656716,
+        "tracedInvariantCount": 15,
+        "invariantCoverage": 1,
+        "tracedDiagnosticCount": 5,
+        "diagnosticCoverage": 1,
+        "killedMutants": 32,
+        "mutantKillRate": 0.9696969696969697,
+        "exactDuplicateCases": 0,
+        "semanticDuplicateCases": 7,
+        "semanticUniqueSignatures": 53,
+        "meanPairwiseJaccardDistance": 0.4703169693890316,
+        "parentAiCredits": 9.19315,
+        "workerAiCredits": 39.662775,
+        "totalAiCredits": 48.855925,
+        "parentPremiumRequests": null,
+        "workerPremiumRequests": null,
+        "totalPremiumRequests": null,
+        "parentNanoAiu": 9193150000,
+        "workerNanoAiu": 39662775000,
+        "totalNanoAiu": 48855925000,
+        "parentInputTokens": 32279,
+        "workerInputTokens": 54247,
+        "totalInputTokens": 86526,
+        "parentOutputTokens": 378,
+        "workerOutputTokens": 8399,
+        "totalOutputTokens": 8777,
+        "parentCacheReadTokens": 21068,
+        "workerCacheReadTokens": 33803,
+        "totalCacheReadTokens": 54871,
+        "parentCacheWriteTokens": 11202,
+        "workerCacheWriteTokens": 20429,
+        "totalCacheWriteTokens": 31631,
+        "parentCachedTokens": 32270,
+        "workerCachedTokens": 54232,
+        "totalCachedTokens": 86502,
+        "parentModelTokens": 32657,
+        "workerModelTokens": 62646,
+        "totalModelTokens": 95303,
+        "parentCompletionCount": 3,
+        "workerCompletionCount": 5,
+        "totalCompletionCount": 8,
+        "parentReasoningTokens": 60,
+        "workerReasoningTokens": 690,
+        "totalReasoningTokens": 750,
+        "parentRequestMultiplier": 3,
+        "workerRequestMultiplier": 5,
+        "totalRequestMultiplier": 8,
+        "parentDurationMs": 9317,
+        "workerDurationMs": 76207,
+        "totalDurationMs": 85524,
+        "parentMeanTimeToFirstTokenMs": 2980.295,
+        "workerMeanTimeToFirstTokenMs": 13904.984900000001,
+        "totalMeanTimeToFirstTokenMs": 9808.2261875,
+        "parentMeanInterTokenLatencyMs": null,
+        "workerMeanInterTokenLatencyMs": null,
+        "totalMeanInterTokenLatencyMs": null,
+        "operationalTotalAiCredits": 48.855925,
+        "operationalTotalNanoAiu": 48855925000,
+        "operationalTotalModelTokens": 95303,
+        "operationalTotalCompletionCount": 8,
+        "parentCumulativeInputTokens": 32279,
+        "parentPeakInputTokens": 11205,
+        "toolSchemaCount": null,
+        "toolCallCount": 66,
+        "toolResultCount": 66,
+        "toolResultBytes": 141667,
+        "compactReturnBytes": 53,
+        "compactionCount": null,
+        "wallMs": 91672,
+        "parentActiveMs": 9317,
+        "workerActiveMs": 76207,
+        "parentWaitMs": 82134,
+        "sessionEvidenceAvailable": 1,
+        "modelEvidenceAvailable": 1,
+        "mechanismEvidenceAvailable": 1,
+        "deviationCount": 0
+      },
+      "outcome": {
+        "disposition": "success",
+        "started": true,
+        "treatmentAdherent": true,
+        "operationalSuccess": true,
+        "semanticQualityScored": true,
+        "scoringSource": "authenticated-snapshot",
+        "failureKinds": [],
+        "partialScenarioCount": 60
+      }
+    },
+    "unitRecord": {
+      "runId": "V5-B11-A2",
+      "blockId": "B11",
+      "armId": 2,
+      "status": "eligible",
+      "reason": null,
+      "operationalMetrics": {
+        "aiCredits": {
+          "available": true,
+          "value": 48.855925,
+          "reason": null
+        },
+        "nanoAiu": {
+          "available": true,
+          "value": 48855925000,
+          "reason": null
+        },
+        "inputTokens": {
+          "available": true,
+          "value": 86526,
+          "reason": null
+        },
+        "outputTokens": {
+          "available": true,
+          "value": 8777,
+          "reason": null
+        },
+        "modelTokens": {
+          "available": true,
+          "value": 95303,
+          "reason": null
+        },
+        "completionCount": {
+          "available": true,
+          "value": 8,
+          "reason": null
+        },
+        "durationMs": {
+          "available": true,
+          "value": 85524,
+          "reason": null
+        },
+        "toolCallCount": {
+          "available": true,
+          "value": 66,
+          "reason": null
+        },
+        "toolResultCount": {
+          "available": true,
+          "value": 66,
+          "reason": null
+        }
+      },
+      "outcome": {
+        "disposition": "success",
+        "started": true,
+        "treatmentAdherent": true,
+        "operationalSuccess": true,
+        "semanticQualityScored": true,
+        "scoringSource": "authenticated-snapshot",
+        "failureKinds": [],
+        "partialScenarioCount": 60
+      }
+    }
+  },
+  "stagingEvidence": {
+    "recordKind": "safe-partial-hash-record",
+    "source": {
+      "path": "artifacts/V5-B11-A2/staging.json",
+      "bytes": 58908,
+      "sha256": "99f14e2646a4829d2bcfc07b461f76999ac6696f4b385103bd52a17f47287d31"
+    },
+    "committedSnapshot": false,
+    "localAuthentication": "evaluation-record-sha256",
+    "scoringSource": "authenticated-snapshot",
+    "submittedCases": 60,
+    "promotedCases": 60,
+    "invalidCases": 0,
+    "missingSlots": 0
+  },
+  "provenance": {
+    "source": {
+      "path": "artifacts/V5-B11-A2/capture-provenance.json",
+      "bytes": 8703,
+      "sha256": "edf8c9277cd84b60191b6d5ad1588aa49cfe95afd724d52228233c111d069fd5"
+    },
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "evidence": "unsigned-descriptive-only",
+    "immutablePolicy": "write-once then read-only",
+    "sourcePin": {
+      "protocolId": "semantic-test-corpus-execution-v5",
+      "repository": "cirvine-MSFT/agentskill-pattern",
+      "sourceCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+      "sourceTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+      "sourceBlobs": {
+        "experiments/semantic-test-corpus/candidate-template/package.json": "375823f8278557b384b3363894ba5a7b90ec201c",
+        "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json": "d84c06bf006ed0037ed2245ea748caac3c70d145",
+        "experiments/semantic-test-corpus/design/corpus-request.json": "5f196dbb59c106afe6e6902560bd886ca1683451",
+        "experiments/semantic-test-corpus/schemas/v1-config.schema.json": "6a109acfa4d610ed5eec6b0041b8524230f7c979",
+        "experiments/semantic-test-corpus/schemas/scenario.schema.json": "fe43959704eebd4aa2c092f6c723c57cf5387389",
+        "experiments/semantic-test-corpus/schemas/staging.schema.json": "b38752f9e2526d79043e6b51114409a37e4ee637",
+        "experiments/semantic-test-corpus/design/shared-task-prompt.txt": "6feb972657488cf1d5dec073f2afe8ed9af08c06",
+        ".github/agents/semantic-test-corpus.agent.md": "9a3068268d5223a94af800ce7b3aa6cafa252a5c",
+        ".github/agents/semantic-test-corpus-haiku.agent.md": "6ed9d31fe036c39abdb87e961ae6f71c4a705adb",
+        ".github/skills/semantic-test-corpus/SKILL.md": "a335be260ecd57c62492f72ea05622979982ce5f",
+        "tools/semantic-corpus-mcp/server.mjs": "ac9baf5ee9fb0666185069bd653daec2ea1eb296",
+        "tools/semantic-corpus-mcp/protocol.mjs": "c3798060c843c8fafcf0f33c99f2bcbad5448c83",
+        "tools/semantic-corpus-mcp/lib.mjs": "fa94ac314c125340d3dd00181d88e2b03b79d778"
+      },
+      "generatorCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+      "generatorTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+      "generatorBlobs": {
+        "experiments/semantic-test-corpus/baseline/general-generate.mjs": "7bd206295cd5f4f646a46ccedfc4366a515393b0",
+        "experiments/semantic-test-corpus/baseline/pairwise.mjs": "e97da051e61e9d032fcf39878627d8a83220e085",
+        "experiments/semantic-test-corpus/design/corpus-request.json": "5f196dbb59c106afe6e6902560bd886ca1683451",
+        "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json": "d84c06bf006ed0037ed2245ea748caac3c70d145",
+        "experiments/semantic-test-corpus/schemas/v1-config.schema.json": "6a109acfa4d610ed5eec6b0041b8524230f7c979"
+      },
+      "policy": "Candidate and deterministic baseline sources are read only from corrected main merge commit b5e69bd2a470e5520ba0684f7e1a9fa2f305141b and its exact tree/blob IDs. Symbolic refs and working-tree bytes are forbidden."
+    },
+    "appProjectSessionId": null,
+    "cliSessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+    "terminalCommit": "7717cd5220e3e26a0b7f490544c5b357dbc8484d",
+    "candidateBoundarySha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8"
+  },
+  "sourceFiles": [
+    {
+      "path": "artifacts/V5-B11-A2/attempt-1.json",
+      "kind": "file",
+      "bytes": 1334,
+      "sha256": "6da4acaeb70c77dff354e42740ebfb7ee784a754551eec3dcf0af195848bbf5d"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/attempt-start.json",
+      "kind": "file",
+      "bytes": 1224,
+      "sha256": "ce53286503bb0fbf4246802e85dd52f4b4f697aa30871c4ec1740db167e60c85"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/candidate-boundary.json",
+      "kind": "file",
+      "bytes": 4548,
+      "sha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/capture-provenance.json",
+      "kind": "file",
+      "bytes": 8703,
+      "sha256": "edf8c9277cd84b60191b6d5ad1588aa49cfe95afd724d52228233c111d069fd5"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/captured.events.jsonl",
+      "kind": "file",
+      "bytes": 734157,
+      "sha256": "10a049710f1cdb93c079346dd5e7465b8295aa88106f2b9d82fb5aa9a3191f02"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/captured.usage.json",
+      "kind": "file",
+      "bytes": 10521,
+      "sha256": "70f3f93f06e954e8cbdd3aa31fa47cc49ed834cdcec023d5e5bd07bcba1f40e4"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/evaluation.json",
+      "kind": "file",
+      "bytes": 1073,
+      "sha256": "b328f602f79c66b0f48f330fd2108090f502614c6ccfabe4477c5225c11463c4"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/execution-preflight.json",
+      "kind": "file",
+      "bytes": 1787,
+      "sha256": "8ecee90aa96d919f994fbc6f987386895c8325329d1b6f141384623eea49e756"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/kickoff.txt",
+      "kind": "file",
+      "bytes": 1560,
+      "sha256": "e1af8a73cf9a36a40a034e2c5f96066ba1b3cf7ab692da27f8a6e9ffad849007"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/lifecycle-start.json",
+      "kind": "file",
+      "bytes": 692,
+      "sha256": "5c732968a95bedba458e68eb0c37435e980b25b3ab379badaa442c4b9fa47598"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/local-evidence.json",
+      "kind": "file",
+      "bytes": 26685,
+      "sha256": "d32fd06b985349d0659fcc5500d720f550bf41a39cec834991c26c7e56ec4856"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/metrics.json",
+      "kind": "file",
+      "bytes": 6750,
+      "sha256": "a983f7fc633585177c99485153e3fe80bdf8c79db6a9f1c60495da36a9b7df7c"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/model-preflight.json",
+      "kind": "file",
+      "bytes": 702,
+      "sha256": "1ba3f0f677a2411cf2f4be581287d46b9d3484c50766b94258cfe112c5a131b4"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/process-result.json",
+      "kind": "file",
+      "bytes": 119,
+      "sha256": "487e1a16fa3438cb4daded188a05175f8a235eecafcd7ef38b16888e6b5e160f"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/process-stderr.txt",
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/process-stdout.txt",
+      "kind": "file",
+      "bytes": 734157,
+      "sha256": "10a049710f1cdb93c079346dd5e7465b8295aa88106f2b9d82fb5aa9a3191f02"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/run-manifest.json",
+      "kind": "file",
+      "bytes": 817,
+      "sha256": "d89e59b6097387dddeae97057b3f0b50f7cf5c73ce1add5c31a583d514d91692"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/session-creation.json",
+      "kind": "file",
+      "bytes": 5651,
+      "sha256": "621d0ee6079ae1f648bd9c89467a9a481cfcac2d81e9fdba5263383ebc72a9f0"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/staging.json",
+      "kind": "file",
+      "bytes": 58908,
+      "sha256": "99f14e2646a4829d2bcfc07b461f76999ac6696f4b385103bd52a17f47287d31"
+    },
+    {
+      "path": "artifacts/V5-B11-A2/start-capture.json",
+      "kind": "file",
+      "bytes": 330,
+      "sha256": "c03d976d137bc26ba68c2c865df9e70b568e1a69032d06168030074a5824ddb1"
+    }
+  ],
+  "omittedPayloads": [
+    "artifacts/V5-B11-A2/captured.events.jsonl",
+    "artifacts/V5-B11-A2/kickoff.txt",
+    "artifacts/V5-B11-A2/process-stderr.txt",
+    "artifacts/V5-B11-A2/process-stdout.txt",
+    "artifacts/V5-B11-A2/session-creation.json",
+    "artifacts/V5-B11-A2/staging.json"
+  ],
+  "deviations": {
+    "closure": [],
+    "attempt": [],
+    "retryCount": 0
+  },
+  "attemptStart": {
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "attemptId": "V5-B11-A2-attempt-1",
+    "runId": "V5-B11-A2",
+    "attemptNumber": 1,
+    "appProjectSessionId": null,
+    "cliSessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+    "requestedParentModel": "gpt-5.6-sol",
+    "requestedWorkerModel": "gpt-5.6-sol",
+    "status": "created",
+    "startedAt": "2026-08-01T11:42:39.711Z",
+    "endedAt": null,
+    "terminalReturn": null,
+    "localEvidencePath": null,
+    "modelPreflightPath": null,
+    "treatment": {
+      "blockId": "B11",
+      "armId": 2,
+      "seed": 2588206090,
+      "sourceCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+      "sourceTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+      "terminalCommit": "7717cd5220e3e26a0b7f490544c5b357dbc8484d",
+      "candidateSnapshotSha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8",
+      "sharedTaskSha256": "60dfc0dbb677cd6483210944b0e0bb69e66b72847196db63d99427e7c8387de8",
+      "kickoffSha256": "e1af8a73cf9a36a40a034e2c5f96066ba1b3cf7ab692da27f8a6e9ffad849007",
+      "wallLimitMs": 1800000,
+      "toolCallLimit": 120,
+      "modelTokenLimit": 100000
+    },
+    "evaluatorSnapshotPath": null,
+    "outcomesOpenedAt": null,
+    "deviations": []
+  },
+  "attempt": {
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "attemptId": "V5-B11-A2-attempt-1",
+    "runId": "V5-B11-A2",
+    "attemptNumber": 1,
+    "appProjectSessionId": null,
+    "cliSessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+    "requestedParentModel": "gpt-5.6-sol",
+    "requestedWorkerModel": "gpt-5.6-sol",
+    "status": "completed",
+    "startedAt": "2026-08-01T11:42:46.513Z",
+    "endedAt": "2026-08-01T11:44:18.376Z",
+    "terminalReturn": "corpus-staging/manifest.json - 60 scenarios - SUCCESS",
+    "localEvidencePath": "local-evidence.json",
+    "modelPreflightPath": "model-preflight.json",
+    "treatment": {
+      "blockId": "B11",
+      "armId": 2,
+      "seed": 2588206090,
+      "sourceCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+      "sourceTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+      "terminalCommit": "7717cd5220e3e26a0b7f490544c5b357dbc8484d",
+      "candidateSnapshotSha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8",
+      "sharedTaskSha256": "60dfc0dbb677cd6483210944b0e0bb69e66b72847196db63d99427e7c8387de8",
+      "kickoffSha256": "e1af8a73cf9a36a40a034e2c5f96066ba1b3cf7ab692da27f8a6e9ffad849007",
+      "wallLimitMs": 1800000,
+      "toolCallLimit": 120,
+      "modelTokenLimit": 100000
+    },
+    "evaluatorSnapshotPath": null,
+    "outcomesOpenedAt": null,
+    "deviations": []
+  },
+  "runManifest": {
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "runId": "V5-B11-A2",
+    "blockId": "B11",
+    "armId": 2,
+    "seed": 2588206090,
+    "scheduleOrder": 2,
+    "globalOrder": 62,
+    "sourceCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+    "sourceTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+    "appProjectSessionId": null,
+    "cliSessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+    "terminalCommit": "7717cd5220e3e26a0b7f490544c5b357dbc8484d",
+    "candidateSnapshotSha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8",
+    "candidateBoundaryPath": "candidate-boundary.json",
+    "attemptNumber": 1,
+    "outcomesOpenedAt": null,
+    "attempts": [
+      "attempt-1.json"
+    ],
+    "preflights": [
+      "model-preflight.json"
+    ],
+    "preSessionFailures": [],
+    "deviations": []
+  },
+  "modelPreflight": {
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "runId": "V5-B11-A2",
+    "attemptNumber": 1,
+    "evidenceSha256": "d32fd06b985349d0659fcc5500d720f550bf41a39cec834991c26c7e56ec4856",
+    "status": "pass",
+    "retryEligible": false,
+    "beforeOutcomesOpened": true,
+    "expected": {
+      "parent": [
+        "gpt-5.6-sol"
+      ],
+      "worker": [
+        "gpt-5.6-sol"
+      ]
+    },
+    "observed": {
+      "parent": [
+        "gpt-5.6-sol"
+      ],
+      "worker": [
+        "gpt-5.6-sol"
+      ]
+    },
+    "checks": {
+      "session": true,
+      "model": true,
+      "mechanism": true,
+      "tools": true,
+      "roles": true,
+      "budgets": true,
+      "candidate": true,
+      "source": true
+    },
+    "reasons": []
+  },
+  "sessionIdentity": {
+    "source": {
+      "path": "artifacts/V5-B11-A2/session-creation.json",
+      "bytes": 5651,
+      "sha256": "621d0ee6079ae1f648bd9c89467a9a481cfcac2d81e9fdba5263383ebc72a9f0"
+    },
+    "operation": "copilot_prompt",
+    "capturedAt": "2026-08-01T11:42:46.513Z",
+    "request": {
+      "sessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+      "model": "gpt-5.6-sol",
+      "agent": null,
+      "outputFormat": "json",
+      "candidateCommit": "7717cd5220e3e26a0b7f490544c5b357dbc8484d",
+      "availableTools": [
+        "skill",
+        "task",
+        "semantic-corpus-list_contract_files",
+        "semantic-corpus-read_contract_file",
+        "semantic-corpus-write_scenario_input",
+        "semantic-corpus-write_scenario_manifest"
+      ],
+      "disabledMcpServers": [
+        "azure",
+        "playwright"
+      ]
+    },
+    "response": {
+      "resultSessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+      "exitCode": 0
+    }
+  },
+  "candidateIdentity": {
+    "source": {
+      "path": "artifacts/V5-B11-A2/candidate-boundary.json",
+      "bytes": 4548,
+      "sha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8"
+    },
+    "formatVersion": 3,
+    "manifestVersion": 6,
+    "sourceCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+    "sourceTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+    "blockId": "B11",
+    "seed": 2588206090,
+    "taskSha256": "60dfc0dbb677cd6483210944b0e0bb69e66b72847196db63d99427e7c8387de8",
+    "networkPolicy": "deny",
+    "filesystemPolicy": "semantic-corpus-launcher-required",
+    "files": [
+      {
+        "path": "package.json",
+        "sha256": "63fc1adda5171634f544ae60eee8f654d2fc7857355f4a2e68cf0f487bf4f6d9",
+        "sourcePath": "experiments/semantic-test-corpus/candidate-template/package.json",
+        "sourceBlob": "375823f8278557b384b3363894ba5a7b90ec201c",
+        "transform": null
+      },
+      {
+        "path": "corpus-contract/mapping-spec.json",
+        "sha256": "d75f087df2b1256a0d6f92a0958424e575e3c009a70a90c35377254f51a99578",
+        "sourcePath": "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json",
+        "sourceBlob": "d84c06bf006ed0037ed2245ea748caac3c70d145",
+        "transform": null
+      },
+      {
+        "path": "corpus-contract/request.json",
+        "sha256": "122c026ad00bb9b3800efecb53f75d8bd1a4344ab8ab9e79319a5ddf7be375c9",
+        "sourcePath": "experiments/semantic-test-corpus/design/corpus-request.json",
+        "sourceBlob": "5f196dbb59c106afe6e6902560bd886ca1683451",
+        "transform": null
+      },
+      {
+        "path": "schemas/v1-config.schema.json",
+        "sha256": "9c9eed772f23dc9bb86f69970e54506f5f1b5ca18036270b17013eb703959cec",
+        "sourcePath": "experiments/semantic-test-corpus/schemas/v1-config.schema.json",
+        "sourceBlob": "6a109acfa4d610ed5eec6b0041b8524230f7c979",
+        "transform": null
+      },
+      {
+        "path": "schemas/scenario.schema.json",
+        "sha256": "1246c78e72ef7fba5278bd665cab738eb77a9061fcb1f68118f6946aedecaa58",
+        "sourcePath": "experiments/semantic-test-corpus/schemas/scenario.schema.json",
+        "sourceBlob": "fe43959704eebd4aa2c092f6c723c57cf5387389",
+        "transform": null
+      },
+      {
+        "path": "schemas/staging.schema.json",
+        "sha256": "251f652dc3ed8a622faae86994f9a826380eb5f3a0f049b163c29d43237ce12c",
+        "sourcePath": "experiments/semantic-test-corpus/schemas/staging.schema.json",
+        "sourceBlob": "b38752f9e2526d79043e6b51114409a37e4ee637",
+        "transform": null
+      },
+      {
+        "path": "task/shared-task-prompt.txt",
+        "sha256": "60dfc0dbb677cd6483210944b0e0bb69e66b72847196db63d99427e7c8387de8",
+        "sourcePath": "experiments/semantic-test-corpus/design/shared-task-prompt.txt",
+        "sourceBlob": "6feb972657488cf1d5dec073f2afe8ed9af08c06",
+        "transform": "append-block-seed"
+      },
+      {
+        "path": ".github/agents/semantic-test-corpus.agent.md",
+        "sha256": "ab556e226e3dda4cbd939fdf7de69cf328b06a5516deaf1c905ef497ccadd2f1",
+        "sourcePath": ".github/agents/semantic-test-corpus.agent.md",
+        "sourceBlob": "9a3068268d5223a94af800ce7b3aa6cafa252a5c",
+        "transform": null
+      },
+      {
+        "path": ".github/agents/semantic-test-corpus-haiku.agent.md",
+        "sha256": "fe825b8fee79217caeb389d62583eb41e1f25f72cd1cf74b02b355b549a9a9a7",
+        "sourcePath": ".github/agents/semantic-test-corpus-haiku.agent.md",
+        "sourceBlob": "6ed9d31fe036c39abdb87e961ae6f71c4a705adb",
+        "transform": null
+      },
+      {
+        "path": ".github/skills/semantic-test-corpus/SKILL.md",
+        "sha256": "75ede05e43c6cfdd1236bf0ea9656696e2d5244fa345030477d58f4655cf34f4",
+        "sourcePath": ".github/skills/semantic-test-corpus/SKILL.md",
+        "sourceBlob": "a335be260ecd57c62492f72ea05622979982ce5f",
+        "transform": null
+      },
+      {
+        "path": "tools/semantic-corpus-mcp/server.mjs",
+        "sha256": "7f7bf0865a970d9af1f28a82cc56cb861f9257e0db0e744287c13dc375910aab",
+        "sourcePath": "tools/semantic-corpus-mcp/server.mjs",
+        "sourceBlob": "ac9baf5ee9fb0666185069bd653daec2ea1eb296",
+        "transform": null
+      },
+      {
+        "path": "tools/semantic-corpus-mcp/protocol.mjs",
+        "sha256": "707f3df5f8133ea647abd3e833420b775703df771e8265a969da0e52da979abe",
+        "sourcePath": "tools/semantic-corpus-mcp/protocol.mjs",
+        "sourceBlob": "c3798060c843c8fafcf0f33c99f2bcbad5448c83",
+        "transform": null
+      },
+      {
+        "path": "tools/semantic-corpus-mcp/lib.mjs",
+        "sha256": "4d3a85c9ff89bd24c97fc12cc1c6d05dfedca28df64586f58ca7537e7345cc80",
+        "sourcePath": "tools/semantic-corpus-mcp/lib.mjs",
+        "sourceBlob": "fa94ac314c125340d3dd00181d88e2b03b79d778",
+        "transform": null
+      }
+    ]
+  },
+  "localEvidence": {
+    "formatVersion": 1,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "evidenceTier": "descriptive-local-v1",
+    "runId": "V5-B11-A2",
+    "blockId": "B11",
+    "armId": 2,
+    "identity": {
+      "appProjectSessionId": null,
+      "cliSessionId": "efc05766-bb7d-5a38-91e5-db02230e3b28",
+      "sourceCommit": "b5e69bd2a470e5520ba0684f7e1a9fa2f305141b",
+      "sourceTree": "509273e54ca0590fe4dd0f48d5945c606b035916",
+      "sourceBlobs": [
+        {
+          "path": ".github/agents/semantic-test-corpus-haiku.agent.md",
+          "blob": "6ed9d31fe036c39abdb87e961ae6f71c4a705adb"
+        },
+        {
+          "path": ".github/agents/semantic-test-corpus.agent.md",
+          "blob": "9a3068268d5223a94af800ce7b3aa6cafa252a5c"
+        },
+        {
+          "path": ".github/skills/semantic-test-corpus/SKILL.md",
+          "blob": "a335be260ecd57c62492f72ea05622979982ce5f"
+        },
+        {
+          "path": "experiments/semantic-test-corpus/candidate-template/package.json",
+          "blob": "375823f8278557b384b3363894ba5a7b90ec201c"
+        },
+        {
+          "path": "experiments/semantic-test-corpus/design/corpus-request.json",
+          "blob": "5f196dbb59c106afe6e6902560bd886ca1683451"
+        },
+        {
+          "path": "experiments/semantic-test-corpus/design/shared-task-prompt.txt",
+          "blob": "6feb972657488cf1d5dec073f2afe8ed9af08c06"
+        },
+        {
+          "path": "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json",
+          "blob": "d84c06bf006ed0037ed2245ea748caac3c70d145"
+        },
+        {
+          "path": "experiments/semantic-test-corpus/schemas/scenario.schema.json",
+          "blob": "fe43959704eebd4aa2c092f6c723c57cf5387389"
+        },
+        {
+          "path": "experiments/semantic-test-corpus/schemas/staging.schema.json",
+          "blob": "b38752f9e2526d79043e6b51114409a37e4ee637"
+        },
+        {
+          "path": "experiments/semantic-test-corpus/schemas/v1-config.schema.json",
+          "blob": "6a109acfa4d610ed5eec6b0041b8524230f7c979"
+        },
+        {
+          "path": "tools/semantic-corpus-mcp/lib.mjs",
+          "blob": "fa94ac314c125340d3dd00181d88e2b03b79d778"
+        },
+        {
+          "path": "tools/semantic-corpus-mcp/protocol.mjs",
+          "blob": "c3798060c843c8fafcf0f33c99f2bcbad5448c83"
+        },
+        {
+          "path": "tools/semantic-corpus-mcp/server.mjs",
+          "blob": "ac9baf5ee9fb0666185069bd653daec2ea1eb296"
+        }
+      ],
+      "terminalCommit": "7717cd5220e3e26a0b7f490544c5b357dbc8484d",
+      "candidateSnapshotSha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8"
+    },
+    "source": {
+      "events": {
+        "path": "captured.events.jsonl",
+        "sha256": "10a049710f1cdb93c079346dd5e7465b8295aa88106f2b9d82fb5aa9a3191f02",
+        "bytes": 734157
+      },
+      "usage": {
+        "path": "captured.usage.json",
+        "sha256": "70f3f93f06e954e8cbdd3aa31fa47cc49ed834cdcec023d5e5bd07bcba1f40e4",
+        "bytes": 10521
+      },
+      "sessionCreation": {
+        "path": "session-creation.json",
+        "sha256": "621d0ee6079ae1f648bd9c89467a9a481cfcac2d81e9fdba5263383ebc72a9f0",
+        "bytes": 5651
+      },
+      "candidateBoundary": {
+        "path": "candidate-boundary.json",
+        "sha256": "510c4902533bfc24996165f5b3324c81df7710f42db12d0f2a6d3f27ca3e97a8",
+        "bytes": 4548
+      },
+      "runManifest": {
+        "path": "run-manifest.json",
+        "sha256": "d89e59b6097387dddeae97057b3f0b50f7cf5c73ce1add5c31a583d514d91692",
+        "bytes": 817
+      },
+      "runAttempt": {
+        "path": "attempt-1.json",
+        "sha256": "6da4acaeb70c77dff354e42740ebfb7ee784a754551eec3dcf0af195848bbf5d",
+        "bytes": 1334
+      },
+      "preSessionFailures": [],
+      "preSessionFailureReceipts": []
+    },
+    "trust": {
+      "status": "local-hash-bound",
+      "signed": false,
+      "complianceProof": false,
+      "limitations": [
+        "No detached platform signature or external trust anchor",
+        "No signed sandbox, filesystem, network, run, adapter, or metrics envelope",
+        "Local hashes establish byte identity only",
+        "Direct Copilot prompt mode exposes no app project-session identity; appProjectSessionId is null"
+      ]
+    },
+    "availability": {
+      "session": {
+        "status": "available",
+        "reasons": []
+      },
+      "model": {
+        "status": "available",
+        "reasons": []
+      },
+      "mechanism": {
+        "status": "available",
+        "reasons": []
+      },
+      "fields": {
+        "premiumRequests": {
+          "status": "unavailable",
+          "reasons": [
+            "assistant_usage_events has no premium-request field"
+          ]
+        },
+        "toolSchemas": {
+          "status": "unavailable",
+          "reasons": [
+            "local events do not expose the complete tool schema payload"
+          ]
+        },
+        "exposedTools": {
+          "status": "available",
+          "reasons": []
+        },
+        "compaction": {
+          "status": "unavailable",
+          "reasons": [
+            "local events do not expose an authoritative compaction counter"
+          ]
+        },
+        "reasoningTokens": {
+          "status": "available",
+          "reasons": []
+        },
+        "latencyDetails": {
+          "status": "unavailable",
+          "reasons": [
+            "one or more usage rows omit latency fields"
+          ]
+        },
+        "requestMultiplier": {
+          "status": "available",
+          "reasons": []
+        },
+        "parentWait": {
+          "status": "available",
+          "reasons": []
+        },
+        "sourceReadOnly": {
+          "status": "unavailable",
+          "reasons": [
+            "portable read-only state is not represented in the source formats"
+          ]
+        }
+      }
+    },
+    "models": {
+      "requested": {
+        "parent": [
+          "gpt-5.6-sol"
+        ],
+        "worker": [
+          "gpt-5.6-sol"
+        ]
+      },
+      "observed": {
+        "parent": [
+          "gpt-5.6-sol"
+        ],
+        "worker": [
+          "gpt-5.6-sol"
+        ]
+      }
+    },
+    "attempt": {
+      "attemptId": "V5-B11-A2-attempt-1",
+      "number": 1,
+      "preSessionFailureCount": 0,
+      "outcomesOpened": false
+    },
+    "usage": {
+      "parent": {
+        "available": false,
+        "aiCredits": 9.19315,
+        "premiumRequests": null,
+        "nanoAiu": 9193150000,
+        "inputTokens": 32279,
+        "outputTokens": 378,
+        "cacheReadTokens": 21068,
+        "cacheWriteTokens": 11202,
+        "reasoningTokens": 60,
+        "requestMultiplier": 3,
+        "durationMs": 9317,
+        "meanTimeToFirstTokenMs": 2980.295,
+        "meanInterTokenLatencyMs": null,
+        "cachedTokens": 32270,
+        "modelTokens": 32657,
+        "completionCount": 3
+      },
+      "worker": {
+        "available": false,
+        "aiCredits": 39.662775,
+        "premiumRequests": null,
+        "nanoAiu": 39662775000,
+        "inputTokens": 54247,
+        "outputTokens": 8399,
+        "cacheReadTokens": 33803,
+        "cacheWriteTokens": 20429,
+        "reasoningTokens": 690,
+        "requestMultiplier": 5,
+        "durationMs": 76207,
+        "meanTimeToFirstTokenMs": 13904.984900000001,
+        "meanInterTokenLatencyMs": null,
+        "cachedTokens": 54232,
+        "modelTokens": 62646,
+        "completionCount": 5
+      },
+      "total": {
+        "available": false,
+        "aiCredits": 48.855925,
+        "premiumRequests": null,
+        "nanoAiu": 48855925000,
+        "inputTokens": 86526,
+        "outputTokens": 8777,
+        "cacheReadTokens": 54871,
+        "cacheWriteTokens": 31631,
+        "cachedTokens": 86502,
+        "reasoningTokens": 750,
+        "modelTokens": 95303,
+        "requestMultiplier": 8,
+        "durationMs": 85524,
+        "meanTimeToFirstTokenMs": 9808.2261875,
+        "meanInterTokenLatencyMs": null,
+        "completionCount": 8
+      }
+    },
+    "operationalUsage": {
+      "parent": {
+        "available": false,
+        "aiCredits": 9.19315,
+        "premiumRequests": null,
+        "nanoAiu": 9193150000,
+        "inputTokens": 32279,
+        "outputTokens": 378,
+        "cacheReadTokens": 21068,
+        "cacheWriteTokens": 11202,
+        "reasoningTokens": 60,
+        "requestMultiplier": 3,
+        "durationMs": 9317,
+        "meanTimeToFirstTokenMs": 2980.295,
+        "meanInterTokenLatencyMs": null,
+        "cachedTokens": 32270,
+        "modelTokens": 32657,
+        "completionCount": 3
+      },
+      "worker": {
+        "available": false,
+        "aiCredits": 39.662775,
+        "premiumRequests": null,
+        "nanoAiu": 39662775000,
+        "inputTokens": 54247,
+        "outputTokens": 8399,
+        "cacheReadTokens": 33803,
+        "cacheWriteTokens": 20429,
+        "reasoningTokens": 690,
+        "requestMultiplier": 5,
+        "durationMs": 76207,
+        "meanTimeToFirstTokenMs": 13904.984900000001,
+        "meanInterTokenLatencyMs": null,
+        "cachedTokens": 54232,
+        "modelTokens": 62646,
+        "completionCount": 5
+      },
+      "total": {
+        "available": false,
+        "aiCredits": 48.855925,
+        "premiumRequests": null,
+        "nanoAiu": 48855925000,
+        "inputTokens": 86526,
+        "outputTokens": 8777,
+        "cacheReadTokens": 54871,
+        "cacheWriteTokens": 31631,
+        "cachedTokens": 86502,
+        "reasoningTokens": 750,
+        "modelTokens": 95303,
+        "requestMultiplier": 8,
+        "durationMs": 85524,
+        "meanTimeToFirstTokenMs": 9808.2261875,
+        "meanInterTokenLatencyMs": null,
+        "completionCount": 8
+      }
+    },
+    "parentContext": {
+      "cumulativeInputTokens": 32279,
+      "peakInputTokens": 11205
+    },
+    "tools": {
+      "schemas": {
+        "available": false,
+        "count": null,
+        "names": null
+      },
+      "exposed": {
+        "available": true,
+        "names": [
+          "skill",
+          "task",
+          "semantic-corpus-list_contract_files",
+          "semantic-corpus-read_contract_file",
+          "semantic-corpus-write_scenario_input",
+          "semantic-corpus-write_scenario_manifest"
+        ]
+      },
+      "calls": [
+        {
+          "role": "parent",
+          "name": "skill",
+          "count": 1
+        },
+        {
+          "role": "parent",
+          "name": "task",
+          "count": 1
+        },
+        {
+          "role": "worker",
+          "name": "semantic-corpus/list_contract_files",
+          "count": 1
+        },
+        {
+          "role": "worker",
+          "name": "semantic-corpus/read_contract_file",
+          "count": 2
+        },
+        {
+          "role": "worker",
+          "name": "semantic-corpus/write_scenario_input",
+          "count": 60
+        },
+        {
+          "role": "worker",
+          "name": "semantic-corpus/write_scenario_manifest",
+          "count": 1
+        }
+      ],
+      "callCount": 66,
+      "resultCount": 66,
+      "resultBytes": 141667
+    },
+    "successfulWrites": [
+      {
+        "callId": "call_a161tOIp9LHICkcwRDSlA9a0",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "7645f64502448992a3444e910771fba2c8222bf040e3b225717f9799ebac2b95",
+        "scenarioId": "scenario-002"
+      },
+      {
+        "callId": "call_QJEoMMiEoPPLnZlEZEuMWtr6",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "fa2e217b838a7a9cbb0c83db62883bed787f113ee90cfd32ab1bd5b0013fcf44",
+        "scenarioId": "scenario-003"
+      },
+      {
+        "callId": "call_lZpmWokdMGEg6OkZN6geuvRG",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "a3adb51e0304868ebda1ac4ae6c76ec768978049f6a6188894dc023d0abb712b",
+        "scenarioId": "scenario-019"
+      },
+      {
+        "callId": "call_5XsH19hXXZLAWJxsFepocbkM",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "426f8995f9d7419e657665ab64e4ed2ec7b8e97085fdfc4a7a3f991d345c6b0f",
+        "scenarioId": "scenario-004"
+      },
+      {
+        "callId": "call_Hupq1OsQkOKQCtCm4ggO9vrs",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "a6cdd7e701c12e18c5a100830a2ff6ace8fa6c85cd0df8b2d070eb138ece75dc",
+        "scenarioId": "scenario-005"
+      },
+      {
+        "callId": "call_qUAlvrVy9JPOapnsKwi0GENr",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "1aab4d1743b80401aa65b9651b1ca2f3b75a21d76295ad9a0d06dda3db2f338c",
+        "scenarioId": "scenario-011"
+      },
+      {
+        "callId": "call_Bphhkfcl4jO5l3JDJxLooCGn",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "94914538554eba580c712848350a905f2a9fcefd89d48fe5681a3ef7a0ac1b6b",
+        "scenarioId": "scenario-012"
+      },
+      {
+        "callId": "call_PplDgKxrw0kPLDsnWe0P9U4K",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "67549b6ce253be27c17faf831287c1717d9551d63027708d495c1b460cf0a74e",
+        "scenarioId": "scenario-001"
+      },
+      {
+        "callId": "call_EDONGTGAuWG5GN4xy4hqR1r5",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "0f0e5ecd5a44d45b9871ff665cb03813d21221c61e9969e939ffb89e751efe08",
+        "scenarioId": "scenario-007"
+      },
+      {
+        "callId": "call_bXQFYj8t5teCCb6IHay365aj",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "fdac438fe00e9afbd46ca5ce21d935e48b13c57fab2a5fc2a9cb3f4cd6c7f113",
+        "scenarioId": "scenario-013"
+      },
+      {
+        "callId": "call_zPWv8UsNYNbEhSokKcYMt6bu",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "e4241b828df227131f32f1fdf06a1d9dcd98e29c979a67d5719424c34e870a42",
+        "scenarioId": "scenario-006"
+      },
+      {
+        "callId": "call_aVtF2qVL7ce7lDqQx71X08nl",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "9a85843e0e0e1f0cc497c86cb4f8ee0ac327d78c534f95843ff35088b7f8aa30",
+        "scenarioId": "scenario-017"
+      },
+      {
+        "callId": "call_asJSN0yXaRfWmLs35dJWaAJD",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "238d45d801e3aabb03b23a7cce43dd10d64a0068d848e62410cea82ee171d2e2",
+        "scenarioId": "scenario-018"
+      },
+      {
+        "callId": "call_Nz3IhQAs90zel7pm9IR1RhJg",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "fb535914cfb58a438b82a5a0cd070b88c52203e0dae4a7dce3a81da07d7caef4",
+        "scenarioId": "scenario-016"
+      },
+      {
+        "callId": "call_Sj3sqdWwUpw9MWCsNwnoOvxQ",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "61b3624f0dea58579e68ea9850f5f3da10ca5a81fcd13cd2b0836adbb897c9f0",
+        "scenarioId": "scenario-015"
+      },
+      {
+        "callId": "call_Rl0XP9pxJeG1nWSdZzPvNYBM",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "2635e896fff515ab12380ba156db0640a4556a374cfb3a73689851b717611f82",
+        "scenarioId": "scenario-008"
+      },
+      {
+        "callId": "call_Zs3H87G9NqeuPrxXfQcmJWM5",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "94094ed7416e770ed10b4ef3afc608e6332a70ace4fd1f649696a72f20779ae6",
+        "scenarioId": "scenario-014"
+      },
+      {
+        "callId": "call_0MUe7fyDeFjhefoQH4OnAiWm",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "256969a28eb6549b3d893aa2cc8c5e7da351ba25d2b28e6abc9db82194615096",
+        "scenarioId": "scenario-009"
+      },
+      {
+        "callId": "call_lMfsfBl9DzNZPyxKihGovgkz",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "3129a6d46b5ca74cf86972b434e2a44df2e4ab8ed3b74fec663d0141989e8671",
+        "scenarioId": "scenario-010"
+      },
+      {
+        "callId": "call_6iTPVFB9gR0WHuGaLaNGEssk",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "b10462f712bb2c127d10e677119736587db886b5d9dd4d08e6814a6abc9b2dd5",
+        "scenarioId": "scenario-024"
+      },
+      {
+        "callId": "call_xL32sTzfzS7TS1mEqz37eaOl",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "01128647193240ffb4b2046ed4c608ae8a3492030be9c61978237d33f199bf66",
+        "scenarioId": "scenario-020"
+      },
+      {
+        "callId": "call_mgZjpBWP3uykEH5Q4HKGdliF",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "442eb5f43ce418f49eb0d59c15cf6b905ff5fb81b2191744615b199ef8c1e35c",
+        "scenarioId": "scenario-023"
+      },
+      {
+        "callId": "call_zW9usiJOfLD40rc15i8eptDv",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "2c01c2e476a7754cb07ace22a0bebc04a474a84639ce96c40b2dd6ead1a318ea",
+        "scenarioId": "scenario-022"
+      },
+      {
+        "callId": "call_IAXhNTPdhkzct7WtZpefdlZ8",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "93c8ba6172adbc6f81436b9430ff6d6f6f362c0585295969bcfbe08a175d9f79",
+        "scenarioId": "scenario-021"
+      },
+      {
+        "callId": "call_EnxNY03a4KNZcX70NAc5twe0",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "ea59d30d1a45b82fe726c320cfe88ab66189bf410037261e63bf57232716d128",
+        "scenarioId": "scenario-025"
+      },
+      {
+        "callId": "call_brbKDwJzUbUUUSA8nTMCFc1p",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "699abb7242c5f09dfccd9f21760f407ca1408f4e2cc7288a5de5b73ad1121ffb",
+        "scenarioId": "scenario-032"
+      },
+      {
+        "callId": "call_dcFLCkfLfKnc2FdX88JhU0cC",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "6b0719e393b10c76b45cce6288264690c538971022f69a715f8dc8c3c726b62d",
+        "scenarioId": "scenario-060"
+      },
+      {
+        "callId": "call_0R6UxzWO6nJKmHaoWcsy2tea",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "7de8dc274291f1bd59907a26ff542c0afc71e042b1a577f0575eff761143c388",
+        "scenarioId": "scenario-027"
+      },
+      {
+        "callId": "call_QIT1evnLYrcBeujNOfpdOJax",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "be84d5b6c162c5e74f943fb9294af137dbdc28629a0f6e1858666ad3b3656c23",
+        "scenarioId": "scenario-030"
+      },
+      {
+        "callId": "call_qRHacdgk7AWqgQQAlrZDCRrt",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "e95855af3f41dc3ca405cf10649fc31fdfa88d8ef05da19badc50bd7d7015e98",
+        "scenarioId": "scenario-026"
+      },
+      {
+        "callId": "call_LxmCAZakpSaQpTwlJ5d5CveN",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "44b93b54c8dd5aeb9922e478c87e636e644d77bef2fd8816d25e4e4287301d9d",
+        "scenarioId": "scenario-028"
+      },
+      {
+        "callId": "call_I7uKpcfMTgJtagrIWbdM59xP",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "ac82e5dcbda1b11809d75a3362bb9d72fd233866b0d453c54a3c96ccb6a2e5fe",
+        "scenarioId": "scenario-034"
+      },
+      {
+        "callId": "call_8FC8jwqMvWghu6iL2YbqWXuH",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "a42249a568ce945e80e22cbecd779018e7d8c602d545913efa549063d4a53a6a",
+        "scenarioId": "scenario-057"
+      },
+      {
+        "callId": "call_wFCo41DXMvAdLVTOVOOjAfwI",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "a52d64954f2e20843b03ced5eeb435281256a2d5a13ef7877ac2c5c4764ae5ac",
+        "scenarioId": "scenario-042"
+      },
+      {
+        "callId": "call_z3McyqjhiNlAWIM0Ac78JoxV",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "b32c7e421991035a09cb456965af449e41cc18baba2a4e9651eb6e6c8689e4c9",
+        "scenarioId": "scenario-037"
+      },
+      {
+        "callId": "call_fm45uq7dVDoX1MBXP3WIVrdj",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "283beadca6d6fa166b7a437f0135b6ad71debb402a664bb62727b6aee52db70d",
+        "scenarioId": "scenario-048"
+      },
+      {
+        "callId": "call_ructczmW9L7eouwJloh3TuCz",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "1d65027674bc37d2e5db4f07172affd311cb1c84be2957ded154d4c2c62b5142",
+        "scenarioId": "scenario-035"
+      },
+      {
+        "callId": "call_diV45EfEeeCetnCGYnZtS8Vj",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "54d21d7861f0b9b5878a10261e20de28074a65606002e161d0be96f3391d370f",
+        "scenarioId": "scenario-036"
+      },
+      {
+        "callId": "call_mwG5oXpC9MqL8SZq3GMKtQbP",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "52802d6c472e674c41a3ba7097b3728bc9fc3e425cad332c0099f2720bf7744c",
+        "scenarioId": "scenario-051"
+      },
+      {
+        "callId": "call_p7JcLa2vy5d11cLlcbQ4C3iY",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "8a2c1dfdd7049c84b282c07b449541154efabf68b39c5f3f242bec25cc5fa317",
+        "scenarioId": "scenario-054"
+      },
+      {
+        "callId": "call_sTr4GX0AFlWYF50LLFN25hsv",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "647165448c7dc0ece29fcc6be3bef44f9dd48bf03f326fa099db0af00d96b7a6",
+        "scenarioId": "scenario-031"
+      },
+      {
+        "callId": "call_ihdQb3iVBk53PBnFXR18Ooun",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "04c0a8f846aee34adcb67680e78740c24bd16e84387c7741a83df15a27e3daf2",
+        "scenarioId": "scenario-058"
+      },
+      {
+        "callId": "call_kpYO3iIGNjjUiLUW98v9UmC9",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "8a05bad4823de6ca1fe10725072c56a44b97ba2d0090001645f54ecce31224e3",
+        "scenarioId": "scenario-047"
+      },
+      {
+        "callId": "call_gzaucJq2izp4x0BWMRzVdx77",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "9567081671fddbbd6027fa3b9df58fdc813a2ed8e218612e647d72d26273c5ae",
+        "scenarioId": "scenario-044"
+      },
+      {
+        "callId": "call_8QTpk4g23N2RPUGAIgFlUciS",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "b4593f7fdbb9a4583e1cb6cdc44514c7ec9f9669de75fe5b07a94c466a580754",
+        "scenarioId": "scenario-056"
+      },
+      {
+        "callId": "call_mho5Kox7hv3ThUMBMaGb5Uz5",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "0300b534b5adc4d3521c3ae4c73a7fb6d0fe0ddc4c635d226f79b273b0511985",
+        "scenarioId": "scenario-033"
+      },
+      {
+        "callId": "call_T3zeXzoN1GAxp1c3EPEmzjVo",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "d234e4dba1627991af528015b8af8dfb769b3b56b716670148c8ce6badd6f6b1",
+        "scenarioId": "scenario-052"
+      },
+      {
+        "callId": "call_HB7kvR1ShOltUcOGxpylKywj",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "8b53fa72efb2b7c2130ee39ebb3fc0d49a1b7523f77ae1082d9bc30edd58279e",
+        "scenarioId": "scenario-039"
+      },
+      {
+        "callId": "call_lhxNp7G66HWh5EXuGkE7JmFm",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "d7577847e80da36fe975c3e0c5dd38b4e0b99cfab8f9140126e3f3de61c8afe4",
+        "scenarioId": "scenario-059"
+      },
+      {
+        "callId": "call_MJEOfl411bj5YenrZN3XLx5W",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "0867e76089b719319be0e4d7899dadf028259588779194fa5da5f3e9dfe82d57",
+        "scenarioId": "scenario-045"
+      },
+      {
+        "callId": "call_HOVcrp8tUgQsPq0myxs7MnK8",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "8f8a8a2eec3003505a832ea8aa318ca1c97657ae9b1bde09d44b62f3b4795078",
+        "scenarioId": "scenario-041"
+      },
+      {
+        "callId": "call_RRHmy38XSeJkNIa0nzpCE6Ph",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "13c132c21df9bdcbcaf6e51d13fc2e45cde3c473a4ce85081486817a5976dacc",
+        "scenarioId": "scenario-040"
+      },
+      {
+        "callId": "call_qlLw1UG1fauOISdO8cuLnjU6",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "23fb781b41f49dd0695ee0dec81af3edded6939cd5797fc30a4fe789321d31cf",
+        "scenarioId": "scenario-029"
+      },
+      {
+        "callId": "call_Gfo6r9X9Favv8MpV5NXkQKhG",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "64ecccbe0ca7ef2c3eed40b3e83e2be89fea7d21c1d6b71f210848ac847cec48",
+        "scenarioId": "scenario-050"
+      },
+      {
+        "callId": "call_hOV0f5fvRfRzp4tlfySCdvhF",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "6865bc65d48cfa7bf5f468a3ff4e7067c577af1601e2037025a0790f4b839e3d",
+        "scenarioId": "scenario-053"
+      },
+      {
+        "callId": "call_pmuqihM0b5XEMeOd3kH8n0Yc",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "e2c2f7c32e64a760dcff1b256865bb2bcd806bad0e4d9bd7178b1bf90b12bc85",
+        "scenarioId": "scenario-038"
+      },
+      {
+        "callId": "call_HuEX4sbXAy4oyh0Jak4H9x4L",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "2a37c6ba59f6c37083ab9ce98beb672749ae6889552aa46fd05f79e4b5e9ce93",
+        "scenarioId": "scenario-043"
+      },
+      {
+        "callId": "call_dRfljTzbJKZg7JuhqRMjW3nU",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "91c48e3952355cc8e31feba2cfafc68ca87342f4420f39003096e85def4b574a",
+        "scenarioId": "scenario-049"
+      },
+      {
+        "callId": "call_gmSUs70dgHNYwPfI37kTkpW1",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "ee8dfc2965d88a1a671386ff4bd37b7217d441e595bd8df1981aa2e2b4be9ab9",
+        "scenarioId": "scenario-055"
+      },
+      {
+        "callId": "call_qkeQTk2X2xIdTkJS7OvxOYch",
+        "toolName": "semantic-corpus/write_scenario_input",
+        "argumentsSha256": "3813efdf4259a74b293b61102f1dfa59d8f32916d6e75b1709816880a58f481b",
+        "scenarioId": "scenario-046"
+      },
+      {
+        "callId": "call_axUwxxWaDR4RLptehjxflOOw",
+        "toolName": "semantic-corpus/write_scenario_manifest",
+        "argumentsSha256": "2a4ebd9dc3b4e7a6ee91c70ac61791a4fe2e11d0718531e9af4ce278ddd90e49"
+      }
+    ],
+    "toolErrors": [],
+    "delegation": {
+      "invoked": true,
+      "completed": true,
+      "agentName": "semantic-test-corpus",
+      "skillCallId": "call_kuFNNGI0Y5SGQ3F2oxRmzbPq",
+      "skillArgumentsSha256": "4068aa1879b89425c63aa3a7f81fce801dd123150669107f5e07bfc6ac9b7e0c",
+      "skillResultSha256": "7c67407e2a6994f984d0496321e6dae10d42b6922d4c43feeee87c2735cc3827",
+      "skillContextSha256": "73b7c376e22fd54b4de82a4c381dff2653a3241769d8ea5b034cfb346fd098b7",
+      "taskPromptSha256": "60dfc0dbb677cd6483210944b0e0bb69e66b72847196db63d99427e7c8387de8",
+      "compactReturn": "corpus-staging/manifest.json - 60 scenarios - SUCCESS",
+      "compactReturnBytes": 53
+    },
+    "timing": {
+      "startedAt": "2026-08-01T11:42:46.591Z",
+      "endedAt": "2026-08-01T11:44:18.263Z",
+      "wallMs": 91672,
+      "parentActiveMs": 9317,
+      "workerActiveMs": 76207,
+      "parentWaitMs": 82134,
+      "globalOrder": 62
+    },
+    "budgets": {
+      "limits": {
+        "wallMs": 1800000,
+        "toolCalls": 120,
+        "modelTokens": 100000
+      },
+      "observed": {
+        "wallMs": 91672,
+        "toolCalls": 66,
+        "modelTokens": 95303
+      },
+      "status": "within-budget",
+      "reasons": []
+    },
+    "events": {
+      "count": 1181,
+      "completionCount": 8,
+      "compactionCount": null
+    },
+    "deviations": []
+  },
+  "usage": {
+    "parent": {
+      "available": false,
+      "aiCredits": 9.19315,
+      "premiumRequests": null,
+      "nanoAiu": 9193150000,
+      "inputTokens": 32279,
+      "outputTokens": 378,
+      "cacheReadTokens": 21068,
+      "cacheWriteTokens": 11202,
+      "reasoningTokens": 60,
+      "requestMultiplier": 3,
+      "durationMs": 9317,
+      "meanTimeToFirstTokenMs": 2980.295,
+      "meanInterTokenLatencyMs": null,
+      "cachedTokens": 32270,
+      "modelTokens": 32657,
+      "completionCount": 3
+    },
+    "worker": {
+      "available": false,
+      "aiCredits": 39.662775,
+      "premiumRequests": null,
+      "nanoAiu": 39662775000,
+      "inputTokens": 54247,
+      "outputTokens": 8399,
+      "cacheReadTokens": 33803,
+      "cacheWriteTokens": 20429,
+      "reasoningTokens": 690,
+      "requestMultiplier": 5,
+      "durationMs": 76207,
+      "meanTimeToFirstTokenMs": 13904.984900000001,
+      "meanInterTokenLatencyMs": null,
+      "cachedTokens": 54232,
+      "modelTokens": 62646,
+      "completionCount": 5
+    },
+    "total": {
+      "available": false,
+      "aiCredits": 48.855925,
+      "premiumRequests": null,
+      "nanoAiu": 48855925000,
+      "inputTokens": 86526,
+      "outputTokens": 8777,
+      "cacheReadTokens": 54871,
+      "cacheWriteTokens": 31631,
+      "cachedTokens": 86502,
+      "reasoningTokens": 750,
+      "modelTokens": 95303,
+      "requestMultiplier": 8,
+      "durationMs": 85524,
+      "meanTimeToFirstTokenMs": 9808.2261875,
+      "meanInterTokenLatencyMs": null,
+      "completionCount": 8
+    }
+  },
+  "operationalUsage": {
+    "parent": {
+      "available": false,
+      "aiCredits": 9.19315,
+      "premiumRequests": null,
+      "nanoAiu": 9193150000,
+      "inputTokens": 32279,
+      "outputTokens": 378,
+      "cacheReadTokens": 21068,
+      "cacheWriteTokens": 11202,
+      "reasoningTokens": 60,
+      "requestMultiplier": 3,
+      "durationMs": 9317,
+      "meanTimeToFirstTokenMs": 2980.295,
+      "meanInterTokenLatencyMs": null,
+      "cachedTokens": 32270,
+      "modelTokens": 32657,
+      "completionCount": 3
+    },
+    "worker": {
+      "available": false,
+      "aiCredits": 39.662775,
+      "premiumRequests": null,
+      "nanoAiu": 39662775000,
+      "inputTokens": 54247,
+      "outputTokens": 8399,
+      "cacheReadTokens": 33803,
+      "cacheWriteTokens": 20429,
+      "reasoningTokens": 690,
+      "requestMultiplier": 5,
+      "durationMs": 76207,
+      "meanTimeToFirstTokenMs": 13904.984900000001,
+      "meanInterTokenLatencyMs": null,
+      "cachedTokens": 54232,
+      "modelTokens": 62646,
+      "completionCount": 5
+    },
+    "total": {
+      "available": false,
+      "aiCredits": 48.855925,
+      "premiumRequests": null,
+      "nanoAiu": 48855925000,
+      "inputTokens": 86526,
+      "outputTokens": 8777,
+      "cacheReadTokens": 54871,
+      "cacheWriteTokens": 31631,
+      "cachedTokens": 86502,
+      "reasoningTokens": 750,
+      "modelTokens": 95303,
+      "requestMultiplier": 8,
+      "durationMs": 85524,
+      "meanTimeToFirstTokenMs": 9808.2261875,
+      "meanInterTokenLatencyMs": null,
+      "completionCount": 8
+    }
+  }
+}
