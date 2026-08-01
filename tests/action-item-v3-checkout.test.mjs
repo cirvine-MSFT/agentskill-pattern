@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -20,8 +20,8 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function assertFrozenFile(checkoutRoot, record) {
-  const bytes = readFileSync(resolve(checkoutRoot, experimentPath, record.path));
+function assertFrozenFile(root, record) {
+  const bytes = readFileSync(resolve(root, record.path));
   assert.equal(bytes.length, record.bytes, `${record.path} byte length changed`);
   assert.equal(sha256(bytes), record.sha256, `${record.path} hash changed`);
 }
@@ -41,12 +41,18 @@ test("core.autocrlf=true checkout preserves frozen v3 bytes", async () => {
     const checkoutExperimentRoot = resolve(checkoutRoot, experimentPath);
     const manifest = JSON.parse(readFileSync(resolve(checkoutExperimentRoot, "design", "fixture-manifest.json"), "utf8"));
     const foundationLock = JSON.parse(readFileSync(resolve(checkoutExperimentRoot, "design", "foundation-lock.json"), "utf8"));
+    const evidenceRoot = resolve(checkoutExperimentRoot, "results", "excluded-pilot-v3");
+    const evidenceManifestPath = resolve(evidenceRoot, "manifest.json");
+    const resultPaths = existsSync(evidenceManifestPath)
+      ? git(["ls-files", `${experimentPath}/results/excluded-pilot-v3/**`], checkoutRoot).split(/\r?\n/u)
+      : [];
     const lfPaths = [
       ...git(["ls-files", `${experimentPath}/design/*.json`], checkoutRoot).split(/\r?\n/u),
       ...manifest.fixtures.flatMap((fixture) => [
         `${experimentPath}/${fixture.transcriptPath}`,
         `${experimentPath}/${fixture.goldPath}`,
       ]),
+      ...resultPaths,
     ].filter(Boolean);
     assert.ok(lfPaths.length > 0, "v3 checkout contains no LF-pinned files");
     for (const path of lfPaths) {
@@ -54,9 +60,13 @@ test("core.autocrlf=true checkout preserves frozen v3 bytes", async () => {
       assert.equal(readFileSync(resolve(checkoutRoot, path)).includes(Buffer.from("\r\n")), false, `${path} contains CRLF`);
     }
 
-    assertFrozenFile(checkoutRoot, manifest.sourceGenerator);
+    assertFrozenFile(checkoutExperimentRoot, manifest.sourceGenerator);
     for (const record of [...foundationLock.designFiles, ...foundationLock.lifecycleAndCandidateFiles]) {
-      assertFrozenFile(checkoutRoot, record);
+      assertFrozenFile(checkoutExperimentRoot, record);
+    }
+    if (existsSync(evidenceManifestPath)) {
+      const evidenceManifest = JSON.parse(readFileSync(evidenceManifestPath, "utf8"));
+      for (const record of evidenceManifest.files) assertFrozenFile(evidenceRoot, record);
     }
 
     const sourceModule = await import(pathToFileURL(resolve(checkoutExperimentRoot, manifest.sourceGenerator.path)).href);

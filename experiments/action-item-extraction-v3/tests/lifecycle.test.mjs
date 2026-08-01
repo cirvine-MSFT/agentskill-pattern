@@ -1,20 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { checkEvidence } from "../scripts/check-evidence.mjs";
 import { reportText } from "../scripts/generate-report.mjs";
 import { assertNoRun } from "../scripts/assert-no-run.mjs";
 import { summarizeEvidence, summarizeUsage } from "../scripts/evidence.mjs";
-import { experimentRoot } from "../scripts/lib.mjs";
+import { evidenceRoot, experimentRoot, readJson } from "../scripts/lib.mjs";
 import { parseCliVersion } from "../scripts/run-excluded-pilot.mjs";
 
-test("no-run attestation is backed by absent runtime and evidence roots", () => {
-  assert.deepEqual(assertNoRun(), {
-    evidenceRootExists: false,
-    runtimeRootExists: false,
-    v3AiUnitsStarted: 0,
-  });
-  assert.match(reportText(), /design frozen; no v3 AI unit started/iu);
+test("lifecycle evidence matches the current phase", () => {
+  if (existsSync(evidenceRoot)) {
+    assert.deepEqual(checkEvidence(), { mode: "post-run", disposition: "NO-GO", starts: 3 });
+    assert.match(reportText(readJson(resolve(evidenceRoot, "summary.json"))), /Disposition: NO-GO/iu);
+  } else {
+    assert.deepEqual(assertNoRun(), {
+      evidenceRootExists: false,
+      runtimeRootExists: false,
+      v3AiUnitsStarted: 0,
+    });
+    assert.match(reportText(), /design frozen; no v3 AI unit started/iu);
+  }
 });
 
 test("usage must settle before gate evaluation", () => {

@@ -1,0 +1,386 @@
+{
+  "formatVersion": 3,
+  "protocolId": "action-item-extraction-v3",
+  "runId": "PILOT-ACTION-V3-A4-C845",
+  "sessionId": "15ef4185-b4ec-5aec-b52a-65da4c413526",
+  "intentToTreat": true,
+  "startedAt": "2026-08-01T18:09:28.160Z",
+  "endedAt": "2026-08-01T18:10:35.204Z",
+  "disposition": "measured-failure",
+  "operationalSuccess": false,
+  "treatmentAdherent": false,
+  "failureReasons": [
+    "prospective warning rule failed",
+    "ambiguity policy failed",
+    "total token ceiling failed"
+  ],
+  "mechanism": {
+    "prospectiveRuleVersion": 3,
+    "exactSingleParentWarning": true,
+    "workerUnknownToolWarnings": [],
+    "exactCalls": true,
+    "exactMechanism": false,
+    "sentinelReplaced": true,
+    "schemaValid": true,
+    "expectedActorsAndModels": true,
+    "accepted": false,
+    "fatal": true,
+    "warnings": [
+      {
+        "source": "event",
+        "message": "Unknown tool name in the tool allowlist: \"edit\"",
+        "agentId": null
+      }
+    ],
+    "tools": {
+      "workerAgentId": "call_foHIymto9ZPSFvfAGX8zc213",
+      "workerName": "action-ledger-v3-haiku",
+      "workerModel": "claude-haiku-4.5",
+      "projectSkillLoads": 1,
+      "parentTaskStarts": 1,
+      "parentTaskCompleted": true,
+      "subagentStarts": 1,
+      "subagentCompletes": 1,
+      "workerViews": 1,
+      "workerEdits": 1,
+      "successfulWorkerViews": 1,
+      "successfulWorkerEdits": 1,
+      "parentFileCalls": 0,
+      "otherWorkerTools": [],
+      "ordered": true,
+      "wholeTranscriptView": true,
+      "exactSentinelEdit": false,
+      "exactLifecycle": true,
+      "exactCalls": true,
+      "exactPathsAndArguments": false,
+      "linkedWorker": true,
+      "linkedWorkerTools": true,
+      "exactEventModels": true,
+      "exactMechanism": false
+    },
+    "toolsBlocks": {
+      "informativeOnly": true,
+      "parentCaptured": true,
+      "workerCaptured": false,
+      "distinctParentAndWorkerBlocks": false,
+      "blocks": [
+        {
+          "source": "event",
+          "workerAttributed": false,
+          "text": "{\"type\":\"session.info\",\"data\":{\"infoType\":\"configuration\",\"message\":\"Disabled tools: apply_patch, fetch_copilot_cli_documentation, glob, list_agents, list_powershell, powershell, read_agent, read_powershell, rg, session_store_sql, skill, sql, stop_powershell, web_fetch, write_agent\"},\"ephemeral\":true,\"id\":\"a402d56d-c6af-472c-8680-7add7758b6c5\",\"timestamp\":\"2026-08-01T18:09:33.210Z\",\"parentId\":\"5dbf139c-6fdd-489a-a29d-cb26852f29d8\"}"
+        }
+      ]
+    }
+  },
+  "schema": {
+    "valid": true,
+    "errors": []
+  },
+  "returnBoundary": {
+    "expectedStatus": "PILOT-ACTION-V3-A4-C845 | X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-C845\\output\\ledger.json | 13 | f993c45170833d7f59fb262d99e615b632903c0b17882b09c59db3997d1998c1",
+    "workerStatus": "PILOT-ACTION-V3-A4-C845 | X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-C845\\output\\ledger.json | 13 | f993c45170833d7f59fb262d99e615b632903c0b17882b09c59db3997d1998c1",
+    "parentStatus": "PILOT-ACTION-V3-A4-C845 | X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-C845\\output\\ledger.json | 13 | f993c45170833d7f59fb262d99e615b632903c0b17882b09c59db3997d1998c1",
+    "compact": true
+  },
+  "isolation": {
+    "valid": true,
+    "candidateFiles": [
+      ".github/agents/action-ledger-v3-haiku.agent.md",
+      ".github/skills/action-ledger-v3/SKILL.md",
+      "input/transcript.txt",
+      "output/ledger.json"
+    ]
+  },
+  "usage": {
+    "settlementRequired": true,
+    "settled": true,
+    "completions": 5,
+    "inputTokens": 35582,
+    "outputTokens": 5233,
+    "reasoningTokens": 264,
+    "totalModelTokens": 40815,
+    "activeTimeMs": 50269,
+    "models": [
+      "claude-haiku-4.5",
+      "gpt-5.6-sol"
+    ]
+  },
+  "timing": {
+    "wallTimeMs": 67044
+  },
+  "quality": {
+    "formatVersion": 3,
+    "protocolId": "action-item-extraction-v3",
+    "runId": "PILOT-ACTION-V3-A4-C845",
+    "transcriptId": "v3-pilot-lumen-device-recovery",
+    "tuple": {
+      "definition": "Canonical owner, action, final due date, status, condition, and criticality must all match.",
+      "candidateCount": 13,
+      "goldCount": 13,
+      "pairedCount": 13,
+      "matchedCount": 10,
+      "precision": 0.7692307692307693,
+      "recall": 0.7692307692307693,
+      "f1": 0.7692307692307693
+    },
+    "fieldAccuracy": {
+      "owner": 1,
+      "action": 1,
+      "dueDate": 1,
+      "status": 1,
+      "condition": 0.7692307692307693,
+      "criticality": 0.9230769230769231
+    },
+    "changeHandling": {
+      "rescission": {
+        "eligible": 1,
+        "correct": 1,
+        "rate": 1
+      },
+      "reassignment": {
+        "eligible": 1,
+        "correct": 1,
+        "rate": 1
+      },
+      "dateChange": {
+        "eligible": 1,
+        "correct": 1,
+        "rate": 1
+      }
+    },
+    "unsupportedCommitments": 0,
+    "unsupportedCriticalActions": 1,
+    "schema": {
+      "valid": true,
+      "errors": []
+    },
+    "duplicates": 0,
+    "sourceGrounding": {
+      "definition": "Exact gold source line/range identifiers and complete prefixed transcript quote are required.",
+      "candidateItems": 13,
+      "matchedItems": 13,
+      "groundedItems": 1,
+      "expectedAmbiguities": 1,
+      "groundedAmbiguities": 0,
+      "rate": 0.07142857142857142
+    },
+    "ambiguity": {
+      "expected": 1,
+      "candidate": 3,
+      "matched": 0,
+      "noteSimilarityMinimum": 0.55,
+      "completeAndExactlyGrounded": false
+    },
+    "matches": [
+      {
+        "candidateIndex": 0,
+        "goldIndex": 0,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 1,
+        "goldIndex": 1,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 2,
+        "goldIndex": 2,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "date-change",
+          "retained-owner"
+        ]
+      },
+      {
+        "candidateIndex": 3,
+        "goldIndex": 3,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": false,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "conditional"
+        ]
+      },
+      {
+        "candidateIndex": 4,
+        "goldIndex": 4,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "reassignment"
+        ]
+      },
+      {
+        "candidateIndex": 5,
+        "goldIndex": 5,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": false,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "blocked"
+        ]
+      },
+      {
+        "candidateIndex": 6,
+        "goldIndex": 6,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": true,
+        "resolutionTags": [
+          "explicit-no-date"
+        ]
+      },
+      {
+        "candidateIndex": 7,
+        "goldIndex": 7,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 8,
+        "goldIndex": 8,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "team-owner"
+        ]
+      },
+      {
+        "candidateIndex": 9,
+        "goldIndex": 9,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 10,
+        "goldIndex": 10,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 11,
+        "goldIndex": 11,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 12,
+        "goldIndex": 12,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": false,
+        "criticality": false,
+        "goldCritical": false,
+        "grounded": false,
+        "resolutionTags": [
+          "conditional"
+        ]
+      }
+    ]
+  }
+}

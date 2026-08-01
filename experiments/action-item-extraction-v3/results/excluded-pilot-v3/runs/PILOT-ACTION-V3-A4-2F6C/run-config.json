@@ -1,0 +1,94 @@
+{
+  "formatVersion": 3,
+  "protocolId": "action-item-extraction-v3",
+  "run": {
+    "order": 1,
+    "phase": "excluded-pilot",
+    "arm": "A4",
+    "runId": "PILOT-ACTION-V3-A4-2F6C",
+    "transcriptId": "v3-pilot-ember-identity-rollout",
+    "category": "identity-rollout"
+  },
+  "sessionId": "4d955534-9f54-516a-b019-e8789c0acbf5",
+  "taskEnvelope": {
+    "formatVersion": 3,
+    "protocolId": "action-item-extraction-v3",
+    "phase": "excluded-pilot",
+    "arm": "A4",
+    "order": 1,
+    "runId": "PILOT-ACTION-V3-A4-2F6C",
+    "transcriptId": "v3-pilot-ember-identity-rollout",
+    "transcriptPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-2F6C\\input\\transcript.txt",
+    "ledgerPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-2F6C\\output\\ledger.json",
+    "ledgerSentinel": "{\"sentinel\":\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\"}\n",
+    "statusHash": "e7a073e1afc5a5988ec40bac92f7996ff6a71157bf11e029007a89d62d205cb5",
+    "instruction": "Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.",
+    "schema": {
+      "schemaVersion": "action-ledger.v3",
+      "runId": "exact supplied run ID",
+      "transcriptId": "exact supplied transcript ID",
+      "items": [
+        {
+          "itemId": "AI-001 sequentially",
+          "owner": "canonical person or team",
+          "action": "normalized final action",
+          "dueDate": "YYYY-MM-DD or null",
+          "status": "open|conditional|blocked",
+          "condition": "string or null",
+          "sourceCitations": [
+            {
+              "startLineId": "[NNN] exact transcript prefix",
+              "endLineId": "[NNN] exact transcript prefix",
+              "quote": "complete verbatim prefixed transcript line or contiguous range"
+            }
+          ],
+          "criticality": "critical|normal"
+        }
+      ],
+      "ambiguities": [
+        {
+          "sourceCitations": "non-empty array using the same exact citation schema",
+          "note": "grounded omission or qualification reason"
+        }
+      ]
+    },
+    "policy": [
+      "Include only final explicit commitments with attributable owners.",
+      "Apply the last explicit owner, due date, status, and condition.",
+      "Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.",
+      "Record materially ambiguous apparent commitments only in ambiguities.",
+      "Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.",
+      "A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.",
+      "Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking."
+    ]
+  },
+  "exactCliArgs": [
+    "-p",
+    "{\"arm\":\"A4\",\"formatVersion\":3,\"instruction\":\"Follow the loaded action-ledger-v3 project Skill exactly once. Delegate exactly once to action-ledger-v3-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured whole-transcript view and exactly one structured edit replacing the supplied sentinel with the complete ledger. Do not retry. Return only the compact worker line.\",\"ledgerPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-2F6C\\\\output\\\\ledger.json\",\"ledgerSentinel\":\"{\\\"sentinel\\\":\\\"ACTION_ITEM_EXTRACTION_V3_REPLACE_ME\\\"}\\n\",\"order\":1,\"phase\":\"excluded-pilot\",\"policy\":[\"Include only final explicit commitments with attributable owners.\",\"Apply the last explicit owner, due date, status, and condition.\",\"Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.\",\"Record materially ambiguous apparent commitments only in ambiguities.\",\"Every item must cite all supporting gold lines using exact bracketed line identifiers and complete verbatim prefixed lines.\",\"A malformed, missing, altered, incomplete, or non-supporting citation fails source grounding.\",\"Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking.\"],\"protocolId\":\"action-item-extraction-v3\",\"runId\":\"PILOT-ACTION-V3-A4-2F6C\",\"schema\":{\"ambiguities\":[{\"note\":\"grounded omission or qualification reason\",\"sourceCitations\":\"non-empty array using the same exact citation schema\"}],\"items\":[{\"action\":\"normalized final action\",\"condition\":\"string or null\",\"criticality\":\"critical|normal\",\"dueDate\":\"YYYY-MM-DD or null\",\"itemId\":\"AI-001 sequentially\",\"owner\":\"canonical person or team\",\"sourceCitations\":[{\"endLineId\":\"[NNN] exact transcript prefix\",\"quote\":\"complete verbatim prefixed transcript line or contiguous range\",\"startLineId\":\"[NNN] exact transcript prefix\"}],\"status\":\"open|conditional|blocked\"}],\"runId\":\"exact supplied run ID\",\"schemaVersion\":\"action-ledger.v3\",\"transcriptId\":\"exact supplied transcript ID\"},\"statusHash\":\"e7a073e1afc5a5988ec40bac92f7996ff6a71157bf11e029007a89d62d205cb5\",\"transcriptId\":\"v3-pilot-ember-identity-rollout\",\"transcriptPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v3-runtime\\\\candidates\\\\PILOT-ACTION-V3-A4-2F6C\\\\input\\\\transcript.txt\"}",
+    "--session-id",
+    "4d955534-9f54-516a-b019-e8789c0acbf5",
+    "--model",
+    "gpt-5.6-sol",
+    "--output-format",
+    "json",
+    "--log-level",
+    "debug",
+    "-C",
+    "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v3-runtime\\candidates\\PILOT-ACTION-V3-A4-2F6C",
+    "--allow-all-tools",
+    "--available-tools=task,view,edit",
+    "--disable-builtin-mcps",
+    "--disallow-temp-dir",
+    "--no-custom-instructions",
+    "--no-ask-user",
+    "--no-remote-export",
+    "--no-auto-update",
+    "--experimental",
+    "--context",
+    "default",
+    "--effort",
+    "medium",
+    "--secret-env-vars=COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+  ],
+  "candidateFileSetSha256": "9520b8eebdc72b0b4d2d43f4446f6c54e7b6a2e0d86ae58638f03e15dc349384"
+}

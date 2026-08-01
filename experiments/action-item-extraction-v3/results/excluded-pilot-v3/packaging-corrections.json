@@ -1,0 +1,30 @@
+{
+  "formatVersion": 3,
+  "protocolId": "action-item-extraction-v3",
+  "corrections": [
+    {
+      "correctionId": "privacy-normalization-1",
+      "scope": "packaging-only",
+      "appliedAfterLifecycle": true,
+      "measuredOutcomesChanged": false,
+      "normalizedField": "session.skills_loaded.data.skills[source=builtin].path",
+      "replacement": "<BUILTIN_SKILL_PATH>",
+      "reason": "Remove the operator-specific user profile path from the public evidence package.",
+      "files": [
+        {
+          "path": "runs/PILOT-ACTION-V3-A4-2F6C/copilot-events.jsonl",
+          "originalSha256": "a17a463f5a9290d36bf312febab3de80a77c76f461e27e9213b336991c2e4fa8"
+        },
+        {
+          "path": "runs/PILOT-ACTION-V3-A4-71D9/copilot-events.jsonl",
+          "originalSha256": "cdc5925f3e8896b6673dce2c0d3c4bc1fba1c051b4ec26fa1e899d3e200a4605"
+        },
+        {
+          "path": "runs/PILOT-ACTION-V3-A4-C845/copilot-events.jsonl",
+          "originalSha256": "75a951914bc1526f43ab6860a07bfa15f581a2a52fde2fd59dd66329a8bfb1be"
+        }
+      ],
+      "verification": "Post-normalization evidence reconstruction must exactly match every derived run-evidence artifact and the frozen aggregate disposition."
+    }
+  ]
+}

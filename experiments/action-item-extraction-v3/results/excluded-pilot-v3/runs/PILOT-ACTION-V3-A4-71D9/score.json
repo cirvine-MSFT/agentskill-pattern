@@ -1,0 +1,194 @@
+{
+  "formatVersion": 3,
+  "protocolId": "action-item-extraction-v3",
+  "runId": "PILOT-ACTION-V3-A4-71D9",
+  "transcriptId": "v3-pilot-harbor-billing-migration",
+  "tuple": {
+    "definition": "Canonical owner, action, final due date, status, condition, and criticality must all match.",
+    "candidateCount": 13,
+    "goldCount": 13,
+    "pairedCount": 8,
+    "matchedCount": 3,
+    "precision": 0.23076923076923078,
+    "recall": 0.23076923076923078,
+    "f1": 0.23076923076923078
+  },
+  "fieldAccuracy": {
+    "owner": 1,
+    "action": 0.625,
+    "dueDate": 1,
+    "status": 1,
+    "condition": 0.75,
+    "criticality": 1
+  },
+  "changeHandling": {
+    "rescission": {
+      "eligible": 1,
+      "correct": 1,
+      "rate": 1
+    },
+    "reassignment": {
+      "eligible": 1,
+      "correct": 1,
+      "rate": 1
+    },
+    "dateChange": {
+      "eligible": 1,
+      "correct": 0,
+      "rate": 0
+    }
+  },
+  "unsupportedCommitments": 5,
+  "unsupportedCriticalActions": 1,
+  "schema": {
+    "valid": true,
+    "errors": []
+  },
+  "duplicates": 0,
+  "sourceGrounding": {
+    "definition": "Exact gold source line/range identifiers and complete prefixed transcript quote are required.",
+    "candidateItems": 13,
+    "matchedItems": 8,
+    "groundedItems": 1,
+    "expectedAmbiguities": 1,
+    "groundedAmbiguities": 0,
+    "rate": 0.07142857142857142
+  },
+  "ambiguity": {
+    "expected": 1,
+    "candidate": 2,
+    "matched": 0,
+    "noteSimilarityMinimum": 0.55,
+    "completeAndExactlyGrounded": false
+  },
+  "matches": [
+    {
+      "candidateIndex": 3,
+      "goldIndex": 3,
+      "similarity": 1,
+      "owner": true,
+      "action": true,
+      "dueDate": true,
+      "status": true,
+      "condition": false,
+      "criticality": true,
+      "goldCritical": false,
+      "grounded": false,
+      "resolutionTags": [
+        "conditional"
+      ]
+    },
+    {
+      "candidateIndex": 4,
+      "goldIndex": 4,
+      "similarity": 1,
+      "owner": true,
+      "action": true,
+      "dueDate": true,
+      "status": true,
+      "condition": true,
+      "criticality": true,
+      "goldCritical": false,
+      "grounded": false,
+      "resolutionTags": [
+        "reassignment"
+      ]
+    },
+    {
+      "candidateIndex": 5,
+      "goldIndex": 5,
+      "similarity": 1,
+      "owner": true,
+      "action": true,
+      "dueDate": true,
+      "status": true,
+      "condition": false,
+      "criticality": true,
+      "goldCritical": false,
+      "grounded": true,
+      "resolutionTags": [
+        "blocked"
+      ]
+    },
+    {
+      "candidateIndex": 7,
+      "goldIndex": 7,
+      "similarity": 1,
+      "owner": true,
+      "action": true,
+      "dueDate": true,
+      "status": true,
+      "condition": true,
+      "criticality": true,
+      "goldCritical": true,
+      "grounded": false,
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "candidateIndex": 8,
+      "goldIndex": 8,
+      "similarity": 1,
+      "owner": true,
+      "action": true,
+      "dueDate": true,
+      "status": true,
+      "condition": true,
+      "criticality": true,
+      "goldCritical": false,
+      "grounded": false,
+      "resolutionTags": [
+        "team-owner"
+      ]
+    },
+    {
+      "candidateIndex": 6,
+      "goldIndex": 6,
+      "similarity": 0.6363636363636364,
+      "owner": true,
+      "action": false,
+      "dueDate": true,
+      "status": true,
+      "condition": true,
+      "criticality": true,
+      "goldCritical": false,
+      "grounded": false,
+      "resolutionTags": [
+        "explicit-no-date"
+      ]
+    },
+    {
+      "candidateIndex": 10,
+      "goldIndex": 10,
+      "similarity": 0.5882352941176471,
+      "owner": true,
+      "action": false,
+      "dueDate": true,
+      "status": true,
+      "condition": true,
+      "criticality": true,
+      "goldCritical": true,
+      "grounded": false,
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "candidateIndex": 9,
+      "goldIndex": 9,
+      "similarity": 0.5714285714285715,
+      "owner": true,
+      "action": false,
+      "dueDate": true,
+      "status": true,
+      "condition": true,
+      "criticality": true,
+      "goldCritical": false,
+      "grounded": false,
+      "resolutionTags": [
+        "direct"
+      ]
+    }
+  ]
+}
