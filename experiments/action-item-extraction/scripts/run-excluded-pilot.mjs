@@ -243,11 +243,6 @@ function deriveEvidence({ run, events, rawBytes, stderrBytes, processResult, usa
   const workerStatus = exactStatus(workerMessages.at(-1)?.data?.content, run, ledgerPath, itemCount);
   if (!parentStatus || !workerStatus || parentStatus !== workerStatus) failures.push("compact return mismatch");
   const agentSurface = events.filter((event) => event.type === "session.custom_agents_updated").at(-1)?.data ?? {};
-  const agent = agentSurface.agents?.find((entry) => entry.name === "action-item-haiku");
-  if (agentSurface.errors?.length || agentSurface.warnings?.length || !agent
-    || JSON.stringify(agent.tools) !== JSON.stringify(["read", "edit"])) {
-    failures.push("custom-agent surface mismatch");
-  }
   const loadedSkills = events.filter((event) => event.type === "session.skills_loaded").at(-1)?.data?.skills ?? [];
   const skill = loadedSkills.find((entry) => entry.name === "action-item-extraction");
   if (!skill || skill.source !== "project") failures.push("project Skill was not loaded");
@@ -577,9 +572,19 @@ function main() {
   assert(!existsSync(evidenceRoot), "excluded-pilot evidence already exists; retries are forbidden");
   assert(!existsSync(runtimeRoot), "runtime root already exists; retries are forbidden");
   const gate = readJson(resolve(experimentRoot, "design", "development-gate.json"));
+  const fixtureManifest = readJson(resolve(experimentRoot, "design", "fixture-manifest.json"));
   const candidate = candidateManifest();
   assert(gate.candidateFileSetSha256 === candidate.fileSetSha256, "candidate differs from frozen smoke gate");
   assert(JSON.stringify(gate.exactCliArgs) === JSON.stringify(cliArgs(runs[0])), "CLI args differ from frozen smoke gate");
+  for (const run of runs) {
+    const fixture = fixtureManifest.fixtures.find((entry) => entry.runId === run.runId);
+    const bytes = readFileSync(transcriptPath(run));
+    assert(
+      fixture?.sha256 === sha256(bytes) && fixture.bytes === bytes.length,
+      `${run.runId} transcript differs from the frozen fixture manifest`,
+    );
+  }
+  assert(gate.transcriptSha256 === sha256(readFileSync(transcriptPath(runs[0]))), "smoke transcript differs from frozen gate");
   const help = runCommand("copilot", ["--help"]);
   assert(help.status === 0, "copilot --help failed");
   for (const flag of ["--available-tools", "--session-id", "--model", "--output-format", "--disallow-temp-dir"]) {

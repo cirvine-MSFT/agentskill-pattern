@@ -1,0 +1,83 @@
+{
+  "formatVersion": 1,
+  "protocolId": "action-item-extraction-v1",
+  "completedBeforeAnyLifecycleMarker": true,
+  "copilotVersion": "GitHub Copilot CLI 1.0.77.\nRun 'copilot update' to check for updates.",
+  "exactToolFilter": [
+    "skill",
+    "task",
+    "read",
+    "edit"
+  ],
+  "candidateManifest": {
+    "files": [
+      {
+        "path": ".github/agents/action-item-haiku.agent.md",
+        "bytes": 2019,
+        "sha256": "65f3520bdfdafadc93908efcf10bd1cb752626646f6e79b410cb4476d5b08382"
+      },
+      {
+        "path": ".github/skills/action-item-extraction/SKILL.md",
+        "bytes": 731,
+        "sha256": "98beded5868ba954a492216be3f79d9c4342db5b4301d7e28172aca1d84e695a"
+      }
+    ],
+    "fileSetSha256": "0212de29dc9250d953676774e7933fd8f3b743752ae79ed19b2e0f1c0fdec4ee"
+  },
+  "candidateRootLocation": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-runtime-v1",
+  "candidateRootOutsideExperimentTree": true,
+  "loadedSurfacePlan": {
+    "projectSkills": [
+      "action-item-extraction"
+    ],
+    "projectAgents": [
+      {
+        "name": "action-item-haiku",
+        "model": "claude-haiku-4.5",
+        "tools": [
+          "read",
+          "edit"
+        ]
+      }
+    ],
+    "builtInMcpDisabled": true,
+    "customMcpServers": []
+  },
+  "controls": {
+    "autoUpdate": false,
+    "memory": false,
+    "customAgents": {
+      "defaultLocalOnly": true
+    },
+    "sandbox": {
+      "enabled": true,
+      "addCurrentWorkingDirectory": true,
+      "allowBypass": false,
+      "gitAuth": false,
+      "ghAuth": false,
+      "sandboxMcpServers": true,
+      "sandboxLspServers": true,
+      "userPolicy": {
+        "filesystem": {
+          "readwritePaths": [],
+          "readonlyPaths": [],
+          "deniedPaths": [
+            "X:\\code\\copilot-worktrees\\agentskill-pattern\\cirvine-msft-crispy-succotash",
+            "X:\\code\\copilot-worktrees\\agentskill-pattern\\cirvine-msft-crispy-succotash\\experiments\\action-item-extraction\\results\\excluded-pilot",
+            "X:\\code\\copilot-worktrees\\agentskill-pattern\\cirvine-msft-crispy-succotash\\experiments\\action-item-extraction\\evaluator"
+          ],
+          "clearPolicyOnExit": true
+        },
+        "network": {
+          "allowOutbound": false,
+          "allowLocalNetwork": false
+        }
+      }
+    }
+  },
+  "limitations": [
+    "Current CLI options are used without invented container isolation.",
+    "Built-in read/edit controls on Windows are best-effort CLI restrictions.",
+    "Token ceilings are evaluated after each model call/session rather than enforced as a hard token interrupt."
+  ]
+}

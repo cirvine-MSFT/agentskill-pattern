@@ -1,0 +1,235 @@
+{
+  "formatVersion": 1,
+  "protocolId": "action-item-extraction-v1",
+  "phase": "development-smoke",
+  "permanentlyExcludedFromConfirmation": true,
+  "runId": "DEV-ACTION-V1-A4-01",
+  "transcriptId": "dev-platform-readiness",
+  "sessionId": "603ed3a2-76ae-53e4-bc21-c0ac395edade",
+  "startedAt": "2026-08-01T16:16:56.251Z",
+  "endedAt": "2026-08-01T16:17:29.241Z",
+  "disposition": "measured-failure",
+  "operationalSuccess": false,
+  "treatmentAdherent": false,
+  "failureReasons": [
+    "unknown-tool warnings were emitted",
+    "worker transcript read is not exactly one successful structured call",
+    "worker ledger edit is not exactly one successful structured call",
+    "ledger schema invalid",
+    "compact return mismatch",
+    "custom-agent surface mismatch",
+    "ledger read failed: ENOENT: no such file or directory, open 'X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-runtime-v1\\candidates\\DEV-ACTION-V1-A4-01\\output\\ledger.json'"
+  ],
+  "mechanism": {
+    "parentModel": "gpt-5.6-sol",
+    "workerAgent": "action-item-haiku",
+    "workerModel": "claude-haiku-4.5",
+    "workerCallId": "call_yKAb3OiLABK0Zwe0bv6uIvPO",
+    "skillStarts": 1,
+    "taskStarts": 1,
+    "customAgentStarts": 1,
+    "customAgentCompletes": 1
+  },
+  "boundary": {
+    "workerTranscriptReads": 0,
+    "workerLedgerEdits": 1,
+    "parentReads": 0,
+    "parentEdits": 0,
+    "unexpectedFileAccesses": [],
+    "observedToolNames": [
+      "edit",
+      "skill",
+      "task"
+    ],
+    "unknownToolWarnings": [
+      "Unknown tool name in the tool allowlist: \"read\"",
+      "Unknown tool name in the tool allowlist: \"edit\"",
+      "Unknown tool name in the tool allowlist: \"read\""
+    ],
+    "candidateRoot": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-runtime-v1\\candidates\\DEV-ACTION-V1-A4-01",
+    "transcriptSha256": "faa15ea947b51a3b989d022ad85cc5e0bec59ad2884b130216bed53e6dd26c5f",
+    "ledgerSha256": null,
+    "ledgerBytes": null,
+    "rawEventBytes": 266679
+  },
+  "loadedSurfaces": {
+    "skills": [
+      {
+        "name": "action-item-extraction",
+        "description": "Routes one bounded meeting transcript to the fixed-Haiku action-ledger specialist for one grounded direct ledger write.",
+        "source": "project",
+        "userInvocable": true,
+        "enabled": true,
+        "path": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-runtime-v1\\candidates\\DEV-ACTION-V1-A4-01\\.github\\skills\\action-item-extraction\\SKILL.md"
+      },
+      {
+        "name": "customize-cloud-agent",
+        "description": "Skill for customizing the Copilot cloud agent (formerly known as Copilot coding agent) environment, including copilot-setup-steps.yml configuration, preinstalling tools and dependencies, runners, and settings. Use when the user mentions copilot-setup-steps, copilot setup steps, or wants to configure the cloud agent environment.",
+        "source": "builtin",
+        "userInvocable": false,
+        "enabled": true,
+        "path": "C:\\Users\\cirvine\\AppData\\Local\\copilot\\pkg\\win32-x64\\1.0.77\\builtin\\customize-cloud-agent\\SKILL.md"
+      }
+    ],
+    "customAgents": {},
+    "mcpServers": []
+  },
+  "isolation": {
+    "forbiddenRootAccesses": 0,
+    "toolRestrictionAndContextMinimizationOnly": true,
+    "complianceClaimed": false,
+    "limitation": "Built-in read/edit path controls on Windows are best-effort CLI controls, not an independently enforced security boundary."
+  },
+  "returnBoundary": {
+    "parentStatus": null,
+    "workerStatus": null,
+    "expectedItemCount": 0
+  },
+  "schema": {
+    "valid": false,
+    "errors": [
+      "ledger-not-object"
+    ]
+  },
+  "usage": {
+    "parent": {
+      "completions": 3,
+      "inputTokens": 24332,
+      "outputTokens": 716,
+      "reasoningTokens": 54,
+      "modelTokens": 25048,
+      "nanoAiu": 8333200000,
+      "activeTimeMs": 8169,
+      "models": [
+        "gpt-5.6-sol"
+      ]
+    },
+    "worker": {
+      "completions": 2,
+      "inputTokens": 6764,
+      "outputTokens": 705,
+      "reasoningTokens": 435,
+      "modelTokens": 7469,
+      "nanoAiu": 1028900000,
+      "activeTimeMs": 8597,
+      "models": [
+        "claude-haiku-4.5"
+      ]
+    },
+    "unexpectedActors": {
+      "completions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "reasoningTokens": 0,
+      "modelTokens": 0,
+      "nanoAiu": 0,
+      "activeTimeMs": 0,
+      "models": []
+    },
+    "total": {
+      "completions": 5,
+      "inputTokens": 31096,
+      "outputTokens": 1421,
+      "reasoningTokens": 489,
+      "modelTokens": 32517,
+      "nanoAiu": 9362100000,
+      "activeTimeMs": 16766,
+      "models": [
+        "claude-haiku-4.5",
+        "gpt-5.6-sol"
+      ]
+    }
+  },
+  "timing": {
+    "wallTimeMs": 32990
+  },
+  "terminal": {
+    "processStatus": 0,
+    "processSignal": null,
+    "resultEventCount": 1,
+    "resultSessionId": "603ed3a2-76ae-53e4-bc21-c0ac395edade",
+    "resultExitCode": 0
+  },
+  "quality": {
+    "formatVersion": 1,
+    "protocolId": "action-item-extraction-v1",
+    "runId": "DEV-ACTION-V1-A4-01",
+    "transcriptId": "dev-platform-readiness",
+    "tuple": {
+      "candidateCount": 0,
+      "goldCount": 8,
+      "matchedCount": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "fieldAccuracy": {
+      "owner": null,
+      "action": null,
+      "dueDate": null,
+      "status": null,
+      "condition": null,
+      "criticality": null
+    },
+    "resolution": {
+      "eligible": 3,
+      "correct": 0,
+      "rate": 0
+    },
+    "unsupportedCommitments": 0,
+    "unsupportedCriticalActions": 0,
+    "unsupportedCandidateIndexes": [],
+    "schema": {
+      "valid": false,
+      "errors": [
+        "ledger-not-object"
+      ]
+    },
+    "duplicates": 0,
+    "sourceGrounding": {
+      "matchedItems": 0,
+      "groundedItems": 0,
+      "rate": 0
+    },
+    "matches": [],
+    "blindedReview": {
+      "usefulness": null,
+      "clarity": null,
+      "availabilityReason": "planned for confirmation; not collected in excluded feasibility work"
+    }
+  },
+  "launch": {
+    "executable": "copilot",
+    "args": [
+      "-p",
+      "{\"arm\":\"A4\",\"formatVersion\":1,\"instruction\":\"Invoke the action-item-extraction Skill exactly once and delegate exactly once to action-item-haiku. The parent must not read the transcript or read/write the ledger. The worker must read the transcript exactly once and edit the ledger exactly once. Use the exact action-ledger.v1 schema and extraction policy below. Do not retry. Return only the worker's compact status.\",\"ledgerPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-runtime-v1\\\\candidates\\\\DEV-ACTION-V1-A4-01\\\\output\\\\ledger.json\",\"phase\":\"development-smoke\",\"policy\":[\"Include only a final explicit commitment with an attributable owner.\",\"Apply the last explicit owner, due date, status, and condition.\",\"Omit suggestions, brainstorming, decisions without assigned action, negated work, and fully rescinded items.\",\"Record materially ambiguous apparent commitments in ambiguities; invent no owner, date, condition, or action.\",\"Use null only when an explicit commitment genuinely lacks a due date or condition.\",\"Source quotes must be verbatim and declared line ranges must cover them.\",\"Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking.\"],\"protocolId\":\"action-item-extraction-v1\",\"runId\":\"DEV-ACTION-V1-A4-01\",\"schema\":{\"ambiguities\":[{\"note\":\"omission or qualification reason\",\"sourceLine\":\"positive integer\"}],\"items\":[{\"action\":\"normalized action\",\"condition\":\"string or null\",\"criticality\":\"critical|normal\",\"dueDate\":\"YYYY-MM-DD or null\",\"itemId\":\"AI-001 sequentially\",\"owner\":\"canonical person or team\",\"sourceSpans\":[{\"endLine\":\"positive integer\",\"quote\":\"verbatim text\",\"startLine\":\"positive integer\"}],\"status\":\"open|conditional|blocked\"}],\"runId\":\"exact supplied run ID\",\"schemaVersion\":\"action-ledger.v1\",\"transcriptId\":\"exact supplied transcript ID\"},\"transcriptId\":\"dev-platform-readiness\",\"transcriptPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-runtime-v1\\\\candidates\\\\DEV-ACTION-V1-A4-01\\\\input\\\\transcript.txt\"}",
+      "--session-id",
+      "603ed3a2-76ae-53e4-bc21-c0ac395edade",
+      "--model",
+      "gpt-5.6-sol",
+      "--output-format",
+      "json",
+      "-C",
+      "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-runtime-v1\\candidates\\DEV-ACTION-V1-A4-01",
+      "--allow-all-tools",
+      "--available-tools=skill,task,read,edit",
+      "--disable-builtin-mcps",
+      "--disallow-temp-dir",
+      "--no-custom-instructions",
+      "--no-ask-user",
+      "--no-remote-export",
+      "--no-auto-update",
+      "--experimental",
+      "--context",
+      "default",
+      "--effort",
+      "medium",
+      "--secret-env-vars=COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+    ],
+    "environment": {
+      "HOME": "<isolated-profile>",
+      "USERPROFILE": "<isolated-profile>",
+      "COPILOT_HOME": "<isolated-profile>/.copilot"
+    }
+  }
+}

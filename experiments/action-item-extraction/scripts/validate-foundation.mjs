@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assert,
@@ -13,6 +13,7 @@ import {
   protocolId,
   readJson,
   runs,
+  runtimeRoot,
   sha256,
   transcriptPath,
 } from "./lib.mjs";
@@ -74,7 +75,21 @@ export function validateFoundation() {
   const manifest = candidateManifest();
   assert(gate.candidateFileSetSha256 === manifest.fileSetSha256, "frozen candidate hash differs");
   assert(gate.transcriptSha256 === sha256(readFileSync(transcriptPath(runs[0]))), "smoke transcript hash differs");
-  assert(JSON.stringify(gate.exactCliArgs) === JSON.stringify(cliArgs(runs[0])), "frozen CLI args differ");
+  const frozenRuntimeRoot = resolve(dirname(gate.taskEnvelope.transcriptPath), "..", "..", "..");
+  const normalizeRuntimePath = (value, root) => {
+    if (typeof value === "string") return value.replaceAll(root, "<runtime-root>").replaceAll("\\", "/");
+    if (Array.isArray(value)) return value.map((entry) => normalizeRuntimePath(entry, root));
+    if (value && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value)
+        .map(([key, entry]) => [key, normalizeRuntimePath(entry, root)]));
+    }
+    return value;
+  };
+  assert(
+    JSON.stringify(normalizeRuntimePath(gate.exactCliArgs, frozenRuntimeRoot))
+      === JSON.stringify(normalizeRuntimePath(cliArgs(runs[0]), runtimeRoot)),
+    "frozen CLI args differ",
+  );
   assert(JSON.stringify(gate.availableTools) === JSON.stringify(availableTools), "tool filter mismatch");
   assert(gate.frozenBeforeStart === true && gate.permanentlyExcludedFromConfirmation === true, "smoke gate is not frozen/excluded");
   return { fixtures: runs.length, candidateFiles: manifest.files.length };

@@ -74,3 +74,15 @@ test("unsupported critical tuple is counted", () => {
   assert.equal(score.tuple.f1, 0);
   assert.equal(score.unsupportedCriticalActions, 1);
 });
+
+test("malformed ambiguity entries fail schema validation", () => {
+  const malformed = ledger([]);
+  malformed.ambiguities = [null, { sourceLine: 0, note: "" }];
+  const score = evaluateLedger({ run, transcript, gold, ledger: malformed });
+  assert.equal(score.schema.valid, false);
+  assert.deepEqual(score.schema.errors, [
+    "ambiguity-1-object",
+    "ambiguity-2-source-line",
+    "ambiguity-2-note",
+  ]);
+});

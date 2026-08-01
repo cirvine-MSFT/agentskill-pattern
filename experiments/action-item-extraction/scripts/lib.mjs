@@ -252,6 +252,19 @@ export function ledgerSchemaErrors(ledger, run) {
       if (typeof span.quote !== "string" || !span.quote.trim()) errors.push(`${prefix}-quote`);
     }
   }
+  for (const [index, ambiguity] of (ledger.ambiguities ?? []).entries()) {
+    const prefix = `ambiguity-${index + 1}`;
+    if (!ambiguity || typeof ambiguity !== "object" || Array.isArray(ambiguity)) {
+      errors.push(`${prefix}-object`);
+      continue;
+    }
+    if (!Number.isInteger(ambiguity.sourceLine) || ambiguity.sourceLine < 1) {
+      errors.push(`${prefix}-source-line`);
+    }
+    if (typeof ambiguity.note !== "string" || !ambiguity.note.trim()) {
+      errors.push(`${prefix}-note`);
+    }
+  }
   return [...new Set(errors)];
 }
 

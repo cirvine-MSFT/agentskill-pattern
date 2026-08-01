@@ -11,10 +11,17 @@ preregistration pull request. It never authorizes main execution.
 
 ## Status
 
+**NO-GO.** The single frozen development smoke was consumed and failed because
+Copilot CLI 1.0.77 emitted unknown-tool warnings for both `read` and `edit`; no
+transcript read or ledger artifact was produced. This is a fixable identifier
+and runtime-surface mismatch, not semantic evidence about the pattern. The
+abandonment rule fired, no pilot unit started, and no confirmation or main
+execution is authorized. See
+[`report.md`](report.md) and the immutable
+[`summary.json`](results/excluded-pilot/summary.json).
+
 Run `npm run reproduce` to validate the frozen foundation, regenerate the
 deterministic floor, rescore preserved artifacts, and check immutable evidence.
-See `results/excluded-pilot/summary.json` after execution for the GO/NO-GO
-disposition.
 
 ## Boundaries
 
