@@ -149,3 +149,6 @@ credits, nano-AIU, input/output/model tokens, completions, duration, and tool
 call/result counts contribute to all-attempt operational totals. Missing usage or event
 fields remain explicit unavailable measurements with reasons. Partial attempts never
 enter selected quality outcomes.
+Malformed or cross-session usage/events are not parsed into metrics: their normal
+source path/hash fields are null, while typed `invalidSources` entries preserve kind,
+path, SHA-256, byte length, and validation error.

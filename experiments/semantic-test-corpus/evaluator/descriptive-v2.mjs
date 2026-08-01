@@ -305,7 +305,19 @@ function fullOperationalMetrics(evidence) {
 
 function recomputePartialMetrics(partialUsage, partialUsagePath) {
   const unavailable = (reason) => operationalMeasurement(null, reason);
+  let response = null;
+  const responseSource = partialUsage.sources.response;
+  if (responseSource.available) {
+    response = JSON.parse(
+      readFileSync(resolve(dirname(partialUsagePath), responseSource.path), "utf8")
+    );
+    if (typeof response.cli_session_id !== "string"
+      || response.cli_session_id.length === 0) {
+      throw new Error("Partial adapter response lacks cli_session_id");
+    }
+  }
   let rows = null;
+  let usageSessionId = null;
   const usageSource = partialUsage.sources.usage;
   if (usageSource.available) {
     const usageBytes = readFileSync(resolve(dirname(partialUsagePath), usageSource.path));
@@ -319,6 +331,7 @@ function recomputePartialMetrics(partialUsage, partialUsagePath) {
       throw new Error("Partial usage export is not valid single-session evidence");
     }
     rows = usage.rows;
+    usageSessionId = usage.source.cliSessionId;
   }
   const sum = (field) => {
     if (!rows || rows.some((row) =>
@@ -340,6 +353,20 @@ function recomputePartialMetrics(partialUsage, partialUsagePath) {
   if (eventsSource.available) {
     events = readFileSync(resolve(dirname(partialUsagePath), eventsSource.path), "utf8")
       .split(/\r?\n/u).filter(Boolean).map(JSON.parse);
+    const starts = events.filter((event) => event.type === "session.start");
+    if (starts.length !== 1
+      || typeof starts[0].data?.sessionId !== "string"
+      || (response && starts[0].data.sessionId !== response.cli_session_id)) {
+      throw new Error("Partial raw events are not single-session evidence");
+    }
+  }
+  if (rows) {
+    const eventSessionId = events?.find((event) =>
+      event.type === "session.start")?.data?.sessionId;
+    const expectedSessionId = response?.cli_session_id ?? eventSessionId;
+    if (expectedSessionId && usageSessionId !== expectedSessionId) {
+      throw new Error("Partial usage session differs from adapter/events session");
+    }
   }
   return {
     aiCredits: nanoAiu.available
@@ -555,6 +582,32 @@ export function buildDescriptiveRuns(input, artifactRoot) {
         if (!withinArtifactRoot(path)
           || sha256(readFileSync(path)) !== sourceDefinition.sha256) {
           throw new Error(`Started/uncertain usage source differs: ${definition.runId}`);
+        }
+      }
+      const invalidKinds = new Set();
+      for (const invalidSource of partialUsage.invalidSources) {
+        if (invalidKinds.has(invalidSource.kind)) {
+          throw new Error(`Started/uncertain invalid source is duplicated: ${definition.runId}`);
+        }
+        invalidKinds.add(invalidSource.kind);
+        const sourceDefinition = partialUsage.sources[invalidSource.kind];
+        const path = resolve(dirname(partialUsagePath), invalidSource.path);
+        const bytes = readFileSync(path);
+        if (sourceDefinition.available
+          || sourceDefinition.path !== null
+          || sourceDefinition.sha256 !== null
+          || sourceDefinition.reason !== invalidSource.validationError
+          || !withinArtifactRoot(path)
+          || bytes.length !== invalidSource.byteLength
+          || sha256(bytes) !== invalidSource.sha256) {
+          throw new Error(`Started/uncertain invalid source differs: ${definition.runId}`);
+        }
+      }
+      for (const [kind, sourceDefinition] of Object.entries(partialUsage.sources)) {
+        if (!sourceDefinition.available
+          && !sourceDefinition.reason.includes("was not produced")
+          && !invalidKinds.has(kind)) {
+          throw new Error(`Started/uncertain invalid source is unbound: ${definition.runId}`);
         }
       }
       if (partialUsage.attempt.available) {

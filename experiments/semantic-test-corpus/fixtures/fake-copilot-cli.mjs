@@ -284,11 +284,31 @@ const usage = {
   ]
 };
 usage.rows[0].parent_tool_call_id = null;
+if (process.env.FAKE_COPILOT_USAGE_SESSION_MISMATCH === "1") {
+  usage.source.cliSessionId = `${cliSessionId}-other`;
+  for (const item of usage.rows) item.session_id = `${cliSessionId}-other`;
+}
+if (process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH === "1") {
+  events.find((event) => event.type === "session.start").data.sessionId =
+    `${cliSessionId}-other`;
+}
 mkdirSync(dirname(eventsPath), { recursive: true });
 mkdirSync(dirname(usagePath), { recursive: true });
-writeFileSync(eventsPath, `${events.map((event) => JSON.stringify(event)).join("\n")}\n`, { flag: "wx" });
+writeFileSync(
+  eventsPath,
+  process.env.FAKE_COPILOT_MALFORMED_EVENTS === "1"
+    ? "{\"type\":\"session.start\"\n"
+    : `${events.map((event) => JSON.stringify(event)).join("\n")}\n`,
+  { flag: "wx" }
+);
 if (process.env.FAKE_COPILOT_MISSING_USAGE !== "1") {
-  writeFileSync(usagePath, `${JSON.stringify(usage, null, 2)}\n`, { flag: "wx" });
+  writeFileSync(
+    usagePath,
+    process.env.FAKE_COPILOT_MALFORMED_USAGE === "1"
+      ? "{\"formatVersion\":1,\n"
+      : `${JSON.stringify(usage, null, 2)}\n`,
+    { flag: "wx" }
+  );
 }
 if (process.env.FAKE_COPILOT_UNEXPECTED_STAGING === "1") {
   const sandbox = JSON.parse(
@@ -308,9 +328,7 @@ process.stdout.write(`${JSON.stringify({
   execution_location: "local",
   kickoff_mode: "autopilot",
   kickoff_model: parentModel,
-  cli_session_id: process.env.FAKE_COPILOT_RESPONSE_SESSION_MISMATCH === "1"
-    ? `${cliSessionId}-mismatch`
-    : cliSessionId,
+  cli_session_id: cliSessionId,
   started_at: timestamp(0),
   ended_at: timestamp(2200),
   terminal_return: terminal,

@@ -47,6 +47,8 @@ The harness derives a typed partial-usage artifact from any raw usage/events alr
 exported, binds it to the disposition and attempt when present, and records unavailable
 fields explicitly. The analyzer includes available finite values only in all-attempt
 operational totals, never selected quality outcomes.
+Malformed or cross-session usage/events are preserved as typed invalid-source
+path/hash/length/error records with null normal source bindings and no parsed metrics.
 Only authoritative positive evidence of no kickoff, no session, and zero usage permits
 one retry. The raw authoritative receipt is preserved, hashed, and revalidated before
 retry. Selected-attempt and all-attempt operational costs remain separate.

@@ -219,16 +219,57 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
     "captured.events.jsonl",
     "raw events were not produced before the attempt became uncertain"
   );
+  const responseSource = partialSource(
+    plan,
+    "process-stdout.txt",
+    "adapter response was not produced before the attempt became uncertain"
+  );
   const attemptSource = partialSource(
     plan,
     "attempt-1.json",
     "attempt record was not produced before the attempt became uncertain"
   );
+  const invalidSources = [];
+  const invalidateSource = (kind, source, validationError) => {
+    if (source.bytes) {
+      invalidSources.push({
+        kind,
+        path: source.source.path,
+        sha256: source.source.sha256,
+        byteLength: source.bytes.length,
+        validationError
+      });
+    }
+    source.source = {
+      available: false,
+      path: null,
+      sha256: null,
+      reason: validationError
+    };
+  };
+  let response = null;
+  if (responseSource.bytes) {
+    try {
+      response = JSON.parse(responseSource.bytes);
+      if (typeof response.cli_session_id !== "string"
+        || response.cli_session_id.length === 0) {
+        throw new Error("adapter response lacks cli_session_id");
+      }
+    } catch (error) {
+      invalidateSource(
+        "response",
+        responseSource,
+        `adapter response is invalid: ${error.message}`
+      );
+      response = null;
+    }
+  }
   const unavailableUsage = (field) => partialMeasurement(
     null,
     usageSource.source.reason ?? `usage export does not provide finite ${field}`
   );
   let usageRows = null;
+  let usageSessionId = null;
   if (usageSource.bytes) {
     try {
       const usage = JSON.parse(usageSource.bytes);
@@ -240,15 +281,59 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
         && usage.rows.every((row) =>
           row.session_id === usage.source.cliSessionId)) {
         usageRows = usage.rows;
+        usageSessionId = usage.source.cliSessionId;
       } else {
-        usageSource.source.available = false;
-        usageSource.source.reason = errors.length > 0
+        invalidateSource(
+          "usage",
+          usageSource,
+          errors.length > 0
           ? `usage export is invalid: ${errors[0].path} ${errors[0].message}`
-          : "usage export rows are not bound to one CLI session";
+          : "usage export rows are not bound to one CLI session"
+        );
       }
     } catch (error) {
-      usageSource.source.available = false;
-      usageSource.source.reason = `usage export is unreadable: ${error.message}`;
+      invalidateSource(
+        "usage",
+        usageSource,
+        `usage export is unreadable: ${error.message}`
+      );
+    }
+  }
+  let events = null;
+  if (eventsSource.bytes) {
+    try {
+      events = eventsSource.bytes.toString("utf8").split(/\r?\n/u)
+        .filter(Boolean).map(JSON.parse);
+      const starts = events.filter((event) => event.type === "session.start");
+      if (starts.length !== 1
+        || typeof starts[0].data?.sessionId !== "string") {
+        throw new Error("raw events require exactly one session.start");
+      }
+      if (response
+        && starts[0].data.sessionId !== response.cli_session_id) {
+        throw new Error("raw events session differs from adapter response");
+      }
+    } catch (error) {
+      invalidateSource(
+        "events",
+        eventsSource,
+        `raw events are invalid: ${error.message}`
+      );
+      events = null;
+    }
+  }
+  if (usageRows) {
+    const eventSessionId = events?.find((event) =>
+      event.type === "session.start")?.data?.sessionId;
+    const expectedSessionId = response?.cli_session_id ?? eventSessionId;
+    if (expectedSessionId
+      && usageSessionId !== expectedSessionId) {
+      invalidateSource(
+        "usage",
+        usageSource,
+        "usage export session differs from adapter/events session"
+      );
+      usageRows = null;
     }
   }
   const sum = (field) => {
@@ -268,16 +353,6 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
   const modelTokens = inputTokens.available && outputTokens.available
     ? partialMeasurement(inputTokens.value + outputTokens.value, null)
     : unavailableUsage("model tokens");
-  let events = null;
-  if (eventsSource.bytes) {
-    try {
-      events = eventsSource.bytes.toString("utf8").split(/\r?\n/u)
-        .filter(Boolean).map(JSON.parse);
-    } catch (error) {
-      eventsSource.source.available = false;
-      eventsSource.source.reason = `raw events are unreadable: ${error.message}`;
-    }
-  }
   let attempt = {
     available: false,
     attemptId: null,
@@ -319,8 +394,10 @@ function derivePartialUsage(plan, lifecyclePath, lifecycleBytes) {
     attempt,
     sources: {
       events: eventsSource.source,
-      usage: usageSource.source
+      usage: usageSource.source,
+      response: responseSource.source
     },
+    invalidSources,
     metrics: {
       aiCredits: nanoAiu.available
         ? partialMeasurement(nanoAiu.value / 1e9, null)
@@ -1070,6 +1147,21 @@ export function runControlledHarness(options) {
   };
   const sessionCreationBytes = jsonBytes(sessionCreation);
   const usageBytes = readFileSync(usagePath);
+  let capturedUsage;
+  try {
+    capturedUsage = JSON.parse(usageBytes);
+  } catch (error) {
+    throw new Error(`Captured usage is unreadable: ${error.message}`);
+  }
+  const capturedUsageErrors = validateJsonSchema(capturedUsage, usageExportSchema, {
+    schemaDir: resolve(root, "schemas")
+  });
+  if (capturedUsageErrors.length > 0
+    || capturedUsage.source.cliSessionId !== response.cli_session_id
+    || capturedUsage.rows.some((row) =>
+      row.session_id !== response.cli_session_id)) {
+    throw new Error("Captured usage is invalid or differs from the created CLI session");
+  }
   const manifestBytes = jsonBytes(manifest);
   let attemptBytes = jsonBytes(attempt);
   let evidence = collectLocalEvidence({

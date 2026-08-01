@@ -795,10 +795,51 @@ test("fake CLI preflight and harness capture a complete immutable run", () => {
     assert.equal(partial.partialUsage.metrics.toolResultCount.value, 4);
     assert.equal(partial.partialUsage.attempt.available, true);
     assert.equal(partial.partialUsage.attempt.attemptId, "B01-A4-attempt-1");
+
+    for (const [environmentName, invalidKind, costsAvailable] of [
+      ["FAKE_COPILOT_MALFORMED_USAGE", "usage", false],
+      ["FAKE_COPILOT_USAGE_SESSION_MISMATCH", "usage", false],
+      ["FAKE_COPILOT_MALFORMED_EVENTS", "events", true],
+      ["FAKE_COPILOT_EVENTS_SESSION_MISMATCH", "events", true]
+    ]) {
+      process.env[environmentName] = "1";
+      const invalidRoot = resolve(temporary, environmentName.toLowerCase());
+      const invalid = runControlledHarness({
+        cli: fakeCli,
+        projectId: "fixture-project",
+        candidateRoot: resolve(invalidRoot, "candidate"),
+        artifactRoot: resolve(invalidRoot, "artifacts"),
+        startIndexPath: resolve(invalidRoot, "start-index.json"),
+        blockId: "B01",
+        armId: 4,
+        capturedAt: "2026-07-31T20:00:00.000Z"
+      });
+      delete process.env[environmentName];
+      assert.equal(invalid.status, "started-uncertain", environmentName);
+      assert(existsSync(invalid.dispositionPath), environmentName);
+      const invalidSource = invalid.partialUsage.invalidSources.find((source) =>
+        source.kind === invalidKind);
+      assert(invalidSource, environmentName);
+      assert.match(invalidSource.sha256, /^[a-f0-9]{64}$/);
+      assert(invalidSource.byteLength > 0);
+      assert(invalidSource.validationError.length > 0);
+      assert.equal(invalid.partialUsage.sources[invalidKind].available, false);
+      assert.equal(invalid.partialUsage.sources[invalidKind].path, null);
+      assert.equal(invalid.partialUsage.sources[invalidKind].sha256, null);
+      assert.equal(
+        invalid.partialUsage.metrics.aiCredits.available,
+        costsAvailable,
+        environmentName
+      );
+    }
   } finally {
     delete process.env.FAKE_COPILOT_CREATE_FAILURE;
     delete process.env.FAKE_COPILOT_MISSING_USAGE;
     delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    delete process.env.FAKE_COPILOT_MALFORMED_USAGE;
+    delete process.env.FAKE_COPILOT_USAGE_SESSION_MISMATCH;
+    delete process.env.FAKE_COPILOT_MALFORMED_EVENTS;
+    delete process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH;
     rmSync(temporary, { recursive: true, force: true });
   }
 });
@@ -927,9 +968,35 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
       capturedAt: "2026-07-31T20:00:00.000Z"
     });
     delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    process.env.FAKE_COPILOT_MALFORMED_USAGE = "1";
+    const malformedUsageUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "malformed-usage-candidate"),
+      artifactRoot: resolve(temporary, "malformed-usage-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 3,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MALFORMED_USAGE;
+    process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH = "1";
+    const mismatchedEventsUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "mismatched-events-candidate"),
+      artifactRoot: resolve(temporary, "mismatched-events-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 5,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH;
     delete process.env.FAKE_COPILOT_START_ISO;
     assert.equal(partialUncertain.status, "started-uncertain");
     assert.equal(noUsageUncertain.status, "started-uncertain");
+    assert.equal(malformedUsageUncertain.status, "started-uncertain");
+    assert.equal(mismatchedEventsUncertain.status, "started-uncertain");
     const partialCaptures = JSON.parse(
       readFileSync(partialIndexPath, "utf8")
     ).captures;
@@ -965,6 +1032,38 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
         startEvidencePath: null,
         endEvidencePath: null,
         dispositionPath: noUsageUncertain.dispositionPath
+      }],
+      ["B01-A3", {
+        runId: "B01-A3",
+        blockId: "B01",
+        armId: 3,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: malformedUsageUncertain.dispositionPath
+      }],
+      ["B01-A5", {
+        runId: "B01-A5",
+        blockId: "B01",
+        armId: 5,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: mismatchedEventsUncertain.dispositionPath
       }]
     ]);
     const orderBaseMs = Date.parse(partialCaptures.at(-1).recordedAt) - 1;
@@ -1207,18 +1306,18 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 1);
     const operationalSummary = summarizeDescriptive(runs)
       .allAttemptOperationalUsage;
-    assert.equal(operationalSummary.totals.aiCredits.value, 8);
-    assert.equal(operationalSummary.totals.nanoAiu.value, 8_000_000_000);
-    assert.equal(operationalSummary.totals.inputTokens.value, 2000);
-    assert.equal(operationalSummary.totals.outputTokens.value, 180);
-    assert.equal(operationalSummary.totals.modelTokens.value, 2180);
-    assert.equal(operationalSummary.totals.completionCount.value, 4);
-    assert.equal(operationalSummary.totals.durationMs.value, 6200);
-    assert.equal(operationalSummary.totals.toolCallCount.value, 12);
-    assert.equal(operationalSummary.totals.toolResultCount.value, 12);
+    assert.equal(operationalSummary.totals.aiCredits.value, 10);
+    assert.equal(operationalSummary.totals.nanoAiu.value, 10_000_000_000);
+    assert.equal(operationalSummary.totals.inputTokens.value, 2300);
+    assert.equal(operationalSummary.totals.outputTokens.value, 210);
+    assert.equal(operationalSummary.totals.modelTokens.value, 2510);
+    assert.equal(operationalSummary.totals.completionCount.value, 6);
+    assert.equal(operationalSummary.totals.durationMs.value, 7200);
+    assert.equal(operationalSummary.totals.toolCallCount.value, 16);
+    assert.equal(operationalSummary.totals.toolResultCount.value, 16);
     assert.deepEqual(
       operationalSummary.totals.aiCredits.unavailableRunIds,
-      ["B01-A1"]
+      ["B01-A1", "B01-A3"]
     );
     const partialRun = operationalSummary.runs.find((run) =>
       run.runId === "B01-A4");
@@ -1227,10 +1326,14 @@ test("v2 analyzer derives measurements only from exact evaluator artifacts", () 
     assert.equal(partialRun.metrics.aiCredits.available, true);
     assert.equal(noUsageRun.metrics.aiCredits.available, false);
     assert.match(noUsageRun.metrics.aiCredits.reason, /usage export was not produced/);
+    assert.deepEqual(
+      operationalSummary.totals.toolCallCount.unavailableRunIds,
+      ["B01-A5"]
+    );
 
     const unavailableDefinition = definitions.runs.find((run) =>
       run.status === "unavailable"
-      && !["B01-A4", "B01-A1"].includes(run.runId));
+      && !["B01-A4", "B01-A1", "B01-A3", "B01-A5"].includes(run.runId));
     const dispositionBytes = readFileSync(unavailableDefinition.dispositionPath);
     const forgedDisposition = JSON.parse(dispositionBytes);
     forgedDisposition.orderSourceSha256 = "0".repeat(64);

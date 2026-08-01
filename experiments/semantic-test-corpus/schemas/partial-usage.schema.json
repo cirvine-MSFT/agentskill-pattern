@@ -4,7 +4,7 @@
   "type": "object",
   "required": [
     "formatVersion", "protocolId", "runId", "blockId", "armId", "status",
-    "lifecycle", "attempt", "sources", "metrics"
+    "lifecycle", "attempt", "sources", "invalidSources", "metrics"
   ],
   "additionalProperties": false,
   "properties": {
@@ -50,11 +50,30 @@
     },
     "sources": {
       "type": "object",
-      "required": ["events", "usage"],
+      "required": ["events", "usage", "response"],
       "additionalProperties": false,
       "properties": {
         "events": {"$ref": "partial-usage-source.schema.json"},
-        "usage": {"$ref": "partial-usage-source.schema.json"}
+        "usage": {"$ref": "partial-usage-source.schema.json"},
+        "response": {"$ref": "partial-usage-source.schema.json"}
+      }
+    },
+    "invalidSources": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "kind", "path", "sha256", "byteLength", "validationError"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {"type": "string", "enum": ["usage", "events", "response"]},
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "byteLength": {"type": "integer", "minimum": 0},
+          "validationError": {"type": "string", "minLength": 1}
+        }
       }
     },
     "metrics": {

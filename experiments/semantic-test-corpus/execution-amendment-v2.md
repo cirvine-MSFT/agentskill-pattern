@@ -178,5 +178,8 @@ lifecycle marker, available raw usage/events, and the attempt record when it exi
 Every finite available credit, nano-AIU, token, completion, duration, and tool count
 contributes to all-attempt operational totals; unavailable fields stay null with a
 reason. These records are never selected quality outcomes.
+Malformed or session-mismatched usage/events remain preserved only as typed invalid
+sources (kind, path, hash, byte length, validation error) and contribute no parsed
+metrics.
 
 No AI trial or outcome artifact belongs in this amendment commit.
