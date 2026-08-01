@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="550" viewBox="0 0 980 550" role="img" aria-labelledby="title description">
+  <title id="title">All-arm reliability, quality, credits, tokens, and wall comparison</title>
+  <desc id="description">A0 deterministic: strict 12/12, path 87.6%, mutant 65.4%, credits 0.00, tokens 0.0 thousand, wall 0.8 seconds. A1 GPT inline: strict 10/12, path 97.1%, mutant 95.5%, credits 43.32, tokens 85.5 thousand, wall 83.5 seconds. A2 GPT to GPT: strict 11/12, path 97.4%, mutant 95.5%, credits 49.76, tokens 98.1 thousand, wall 93.2 seconds. A3 Haiku inline: strict 0/12, path 73.9%, mutant 48.2%, credits 17.39, tokens 152.0 thousand, wall 137.2 seconds. A4 Haiku to Haiku: strict 0/12, path 74.6%, mutant 49.7%, credits 19.40, tokens 159.3 thousand, wall 150.9 seconds. A5 GPT to Haiku: strict 0/12, path 75.9%, mutant 51.5%, credits 26.51, tokens 160.7 thousand, wall 143.7 seconds.</desc>
+  <style>
+    text { font-family: "Segoe UI", Aptos, Calibri, sans-serif; fill: #242424; }
+    .title { font-size: 26px; font-weight: 700; }
+    .subtitle { font-size: 14px; fill: #5c5c5c; }
+    .label { font-size: 14px; font-weight: 600; }
+    .value { font-size: 14px; font-weight: 700; }
+    .small { font-size: 12px; fill: #5c5c5c; }
+    .good { fill: #16a34a; }
+    .bad { fill: #dc2626; }
+    .neutral { fill: #5c5c5c; }
+    .track { fill: #f5f5f5; stroke: #919191; }
+    .accent { fill: #b11f4b; }
+    .line { stroke: #dedede; }
+  </style>
+  <rect width="980" height="550" fill="#f7f4ef"/>
+  <text x="28" y="42" class="title">All six protocol-v5 arms</text>
+  <text x="28" y="68" class="subtitle">Mean endpoint values across 12 complete randomized blocks; A5 is highlighted.</text>
+  <text x="430" y="108" text-anchor="end" class="label">Strict</text>
+  <text x="530" y="108" text-anchor="end" class="label">Path</text>
+  <text x="630" y="108" text-anchor="end" class="label">Mutant</text>
+  <text x="730" y="108" text-anchor="end" class="label">Credits</text>
+  <text x="830" y="108" text-anchor="end" class="label">Tokens</text>
+  <text x="930" y="108" text-anchor="end" class="label">Wall</text>
+  <rect x="24" y="125" width="922" height="44" rx="6" fill="#ffffff" stroke="#dedede"/>
+  <text x="42" y="155" class="label">A0 deterministic</text>
+  <text x="430" y="155" text-anchor="end" class="value">12/12</text>
+  <text x="530" y="155" text-anchor="end" class="value">87.6%</text>
+  <text x="630" y="155" text-anchor="end" class="value">65.4%</text>
+  <text x="730" y="155" text-anchor="end" class="value">0.00</text>
+  <text x="830" y="155" text-anchor="end" class="value">0.0k</text>
+  <text x="930" y="155" text-anchor="end" class="value">0.8s</text>
+  <rect x="24" y="183" width="922" height="44" rx="6" fill="#ffffff" stroke="#dedede"/>
+  <text x="42" y="213" class="label">A1 GPT inline</text>
+  <text x="430" y="213" text-anchor="end" class="value">10/12</text>
+  <text x="530" y="213" text-anchor="end" class="value">97.1%</text>
+  <text x="630" y="213" text-anchor="end" class="value">95.5%</text>
+  <text x="730" y="213" text-anchor="end" class="value">43.32</text>
+  <text x="830" y="213" text-anchor="end" class="value">85.5k</text>
+  <text x="930" y="213" text-anchor="end" class="value">83.5s</text>
+  <rect x="24" y="241" width="922" height="44" rx="6" fill="#ffffff" stroke="#dedede"/>
+  <text x="42" y="271" class="label">A2 GPT to GPT</text>
+  <text x="430" y="271" text-anchor="end" class="value">11/12</text>
+  <text x="530" y="271" text-anchor="end" class="value">97.4%</text>
+  <text x="630" y="271" text-anchor="end" class="value">95.5%</text>
+  <text x="730" y="271" text-anchor="end" class="value">49.76</text>
+  <text x="830" y="271" text-anchor="end" class="value">98.1k</text>
+  <text x="930" y="271" text-anchor="end" class="value">93.2s</text>
+  <rect x="24" y="299" width="922" height="44" rx="6" fill="#ffffff" stroke="#dedede"/>
+  <text x="42" y="329" class="label">A3 Haiku inline</text>
+  <text x="430" y="329" text-anchor="end" class="value">0/12</text>
+  <text x="530" y="329" text-anchor="end" class="value">73.9%</text>
+  <text x="630" y="329" text-anchor="end" class="value">48.2%</text>
+  <text x="730" y="329" text-anchor="end" class="value">17.39</text>
+  <text x="830" y="329" text-anchor="end" class="value">152.0k</text>
+  <text x="930" y="329" text-anchor="end" class="value">137.2s</text>
+  <rect x="24" y="357" width="922" height="44" rx="6" fill="#ffffff" stroke="#dedede"/>
+  <text x="42" y="387" class="label">A4 Haiku to Haiku</text>
+  <text x="430" y="387" text-anchor="end" class="value">0/12</text>
+  <text x="530" y="387" text-anchor="end" class="value">74.6%</text>
+  <text x="630" y="387" text-anchor="end" class="value">49.7%</text>
+  <text x="730" y="387" text-anchor="end" class="value">19.40</text>
+  <text x="830" y="387" text-anchor="end" class="value">159.3k</text>
+  <text x="930" y="387" text-anchor="end" class="value">150.9s</text>
+  <rect x="24" y="415" width="922" height="44" rx="6" fill="#f7e8ed" stroke="#dedede"/>
+  <text x="42" y="445" class="label">A5 GPT to Haiku</text>
+  <text x="430" y="445" text-anchor="end" class="value">0/12</text>
+  <text x="530" y="445" text-anchor="end" class="value">75.9%</text>
+  <text x="630" y="445" text-anchor="end" class="value">51.5%</text>
+  <text x="730" y="445" text-anchor="end" class="value">26.51</text>
+  <text x="830" y="445" text-anchor="end" class="value">160.7k</text>
+  <text x="930" y="445" text-anchor="end" class="value">143.7s</text>
+  <text x="28" y="525" class="small">Source: v5-final-summary.json. Local, unsigned, descriptive-only.</text>
+</svg>
