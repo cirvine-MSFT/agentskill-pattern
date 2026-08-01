@@ -1,0 +1,48 @@
+{
+  "formatVersion": 1,
+  "protocolId": "action-item-extraction-v1",
+  "runId": "DEV-ACTION-V1-A4-01",
+  "transcriptId": "dev-platform-readiness",
+  "tuple": {
+    "candidateCount": 0,
+    "goldCount": 8,
+    "matchedCount": 0,
+    "precision": 0,
+    "recall": 0,
+    "f1": 0
+  },
+  "fieldAccuracy": {
+    "owner": null,
+    "action": null,
+    "dueDate": null,
+    "status": null,
+    "condition": null,
+    "criticality": null
+  },
+  "resolution": {
+    "eligible": 3,
+    "correct": 0,
+    "rate": 0
+  },
+  "unsupportedCommitments": 0,
+  "unsupportedCriticalActions": 0,
+  "unsupportedCandidateIndexes": [],
+  "schema": {
+    "valid": false,
+    "errors": [
+      "ledger-not-object"
+    ]
+  },
+  "duplicates": 0,
+  "sourceGrounding": {
+    "matchedItems": 0,
+    "groundedItems": 0,
+    "rate": 0
+  },
+  "matches": [],
+  "blindedReview": {
+    "usefulness": null,
+    "clarity": null,
+    "availabilityReason": "planned for confirmation; not collected in excluded feasibility work"
+  }
+}
