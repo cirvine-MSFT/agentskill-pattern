@@ -11,8 +11,8 @@
   "additionalProperties": false,
   "properties": {
     "formatVersion": {"const": 1},
-    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3"]},
-    "runId": {"type": "string", "pattern": "^(?:B|V3-B)\\d{2}-A[0-5]$"},
+    "protocolId": {"enum": ["semantic-test-corpus-execution-v2", "semantic-test-corpus-execution-v3", "semantic-test-corpus-execution-v4"]},
+    "runId": {"type": "string", "pattern": "^(?:B|V[34]-B)\\d{2}-A[0-5]$"},
     "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
     "armId": {"type": "integer", "minimum": 0, "maximum": 5},
     "status": {"type": "string", "enum": ["unavailable", "excluded"]},

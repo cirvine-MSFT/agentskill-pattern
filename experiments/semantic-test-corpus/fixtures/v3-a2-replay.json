@@ -1,0 +1,40 @@
+{
+  "description": "Minimal sanitized V3-B01-A2 event and usage shapes retained only for parser replay; no opaque model content or corpus output is included.",
+  "expected": {
+    "kickoff": "Load the semantic-test-corpus Skill and delegate the exact worker task.",
+    "parentModel": "gpt-5.6-sol",
+    "workerModel": "gpt-5.6-sol",
+    "agent": "semantic-test-corpus",
+    "seed": 2504740569,
+    "capturedTaskBytes": 1051,
+    "frozenV3TaskBytes": 1050,
+    "capturedTaskSha256": "1cb6fc5c7f62601b745c2f8f19c4cf961277044e0614b4dc8b34551e914fc8c8",
+    "frozenV3TaskSha256": "2640c358a7c72890d0fd00ffc5a72a4e5e687d0a462632ed29070988f253f0b8",
+    "byteDisposition": "The parent appended exactly one terminal LF before worker execution. This treatment nonconformance is independent of the MCP outage. V4 freezes that LF in the worker artifact and still requires byte equality; this fixture does not retroactively make V3-B01-A2 outcome-eligible.",
+    "mcpStartupError": "SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\"",
+    "cliSurfaceError": "connection closed: initialize response",
+    "environmentPropagation": "correct"
+  },
+  "mcpLaunches": [
+    {"attempt":"V3-B01-A4","environmentPropagated":true,"startupError":"SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\""},
+    {"attempt":"V3-B01-A2-parent","environmentPropagated":true,"startupError":"SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\""},
+    {"attempt":"V3-B01-A2-worker","environmentPropagated":true,"startupError":"SCHEMA_ERROR: sandbox config roots.contract is missing required field \"access\""}
+  ],
+  "events": [
+    {"type":"user.message","data":{"content":"Load the semantic-test-corpus Skill and delegate the exact worker task."},"timestamp":"2026-07-31T20:00:00.000Z"},
+    {"type":"model.call_start","data":{"model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.100Z"},
+    {"type":"tool.execution_start","data":{"toolCallId":"a2-skill","toolName":"skill","arguments":{"skill":"semantic-test-corpus"},"model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.200Z"},
+    {"type":"tool.execution_complete","data":{"toolCallId":"a2-skill","success":true,"result":{"content":"Skill semantic-test-corpus loaded"},"model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.300Z"},
+    {"type":"user.message","data":{"source":"skill-semantic-test-corpus","content":"Sanitized registered Skill context."},"timestamp":"2026-07-31T20:00:00.400Z"},
+    {"type":"tool.execution_start","data":{"toolCallId":"a2-worker","toolName":"task","arguments":{"agent_type":"semantic-test-corpus","mode":"sync","prompt":"Generate the immutable request's 60 high-value v1 configuration migration scenarios.\n\nUse `semantic-corpus/list_contract_files`, then\n`semantic-corpus/read_contract_file` for `request.json` and every listed contract file.\nFor each request-defined ID, call `semantic-corpus/write_scenario_input` exactly once\nwith only `scenarioId` and a closed-schema `config`. Do not retry rejected or failed\ncalls. If all 60 writes succeed, call `semantic-corpus/write_scenario_manifest` exactly once with the request-defined ID/category pairs.\n\nDo not read staging, execute the migration, derive expected v2 output, add diagnostics,\ninspect acceptance-only paths, validate, package, copy, or return corpus content.\nOptimize semantic decisions, boundaries, cross-field interactions, and nonredundant path\ncoverage within the fixed budget. Return exactly\n`corpus-staging/manifest.json - <count> scenarios - SUCCESS` after manifest success, or\n`corpus-staging - <written-count> scenarios - FAILURE: <reason>` after the first failure.\n\nBenchmark block seed: 2504740569\n"},"model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.500Z"},
+    {"type":"subagent.started","agentId":"a2-worker","data":{"toolCallId":"a2-worker","agentName":"semantic-test-corpus","model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.600Z"},
+    {"type":"model.call_start","agentId":"a2-worker","data":{"model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.700Z"},
+    {"type":"tool.execution_start","agentId":"a2-worker","data":{"toolCallId":"a2-list","toolName":"semantic-corpus-list_contract_files","arguments":{},"mcpServerName":"semantic-corpus","mcpToolName":"list_contract_files","parentToolCallId":"a2-worker","model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.800Z"},
+    {"type":"tool.execution_complete","agentId":"a2-worker","data":{"toolCallId":"a2-list","success":false,"result":{"content":"connection closed: initialize response"},"parentToolCallId":"a2-worker","model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:00.900Z"},
+    {"type":"subagent.completed","agentId":"a2-worker","data":{"toolCallId":"a2-worker","agentName":"semantic-test-corpus","model":"gpt-5.6-sol"},"timestamp":"2026-07-31T20:00:01.000Z"}
+  ],
+  "usageRows": [
+    {"id":"a2-parent-usage","agent_id":null,"parent_tool_call_id":null,"initiator":"user","model":"gpt-5.6-sol"},
+    {"id":"a2-worker-usage","agent_id":"a2-worker","parent_tool_call_id":"a2-worker","initiator":"sub-agent","model":"gpt-5.6-sol"}
+  ]
+}

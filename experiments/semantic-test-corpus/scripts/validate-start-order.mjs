@@ -8,7 +8,9 @@ import { validateJsonSchema } from "../validators/json-schema.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
 const schema = JSON.parse(readFileSync(resolve(schemaRoot, "start-index.schema.json"), "utf8"));
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
+const schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+);
 
 export function validateStartOrder(index, { requireComplete = true, baseDir = null } = {}) {
   const errors = validateJsonSchema(index, schema, { schemaDir: schemaRoot })

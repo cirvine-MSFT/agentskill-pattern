@@ -7,13 +7,17 @@ import { fileURLToPath } from "node:url";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
 import {
   kickoffBytesForRun,
+  legacyTaskBytesForSeed,
+  legacyTaskSha256ForSeed,
   taskBytesForSeed,
   taskSha256ForSeed
 } from "./execution-contract.mjs";
 import {
   availableToolsForArm,
   buildCopilotArgs
-} from "./copilot-cli-v3.mjs";
+} from "./copilot-cli-v4.mjs";
+import { buildCopilotArgs as buildCopilotArgsV3 } from "./copilot-cli-v3.mjs";
+import { protocolDesignForId } from "./protocol-design.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schemaRoot = resolve(root, "schemas");
@@ -27,30 +31,7 @@ const preSessionFailureSchema = JSON.parse(
 const sessionCreationSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "session-creation.schema.json"), "utf8")
 );
-const currentContract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
-const currentSchedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const currentCandidateManifest = JSON.parse(
-  readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8")
-);
-const currentSourcePin = JSON.parse(
-  readFileSync(resolve(root, currentCandidateManifest.sourcePin), "utf8")
-);
-const abortedV2Root = resolve(root, "design", "aborted-v2");
-const abortedV2Contract = JSON.parse(
-  readFileSync(resolve(abortedV2Root, "arm-contract.json"), "utf8")
-);
-const abortedV2Schedule = JSON.parse(
-  readFileSync(resolve(abortedV2Root, "schedule.json"), "utf8")
-);
-const abortedV2CandidateManifest = JSON.parse(
-  readFileSync(resolve(abortedV2Root, "candidate-manifest.json"), "utf8")
-);
-const abortedV2SourcePin = JSON.parse(
-  readFileSync(resolve(abortedV2Root, "source-pin.json"), "utf8")
-);
-const abortedV2Conditions = JSON.parse(
-  readFileSync(resolve(abortedV2Root, "condition-instructions.json"), "utf8")
-);
+const currentContract = protocolDesignForId("semantic-test-corpus-execution-v4").contract;
 const repositoryRoot = resolve(root, "..", "..");
 const MCP_TOOLS = new Set(currentContract.commonContract.toolSurface);
 
@@ -63,18 +44,18 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function expectedKickoffBytes(armId, seed, abortedV2) {
-  if (!abortedV2) return kickoffBytesForRun(armId, seed);
-  const condition = abortedV2Conditions.conditions.find((item) => item.armId === armId);
-  if (!condition?.kickoff) throw new Error(`No aborted v2 kickoff for arm ${armId}`);
+function expectedKickoffBytes(armId, seed, protocolVersion, conditions) {
+  if (protocolVersion === "v4") return kickoffBytesForRun(armId, seed);
+  const condition = conditions.conditions.find((item) => item.armId === armId);
+  if (!condition?.kickoff) throw new Error(`No ${protocolVersion} kickoff for arm ${armId}`);
   return Buffer.concat([
     Buffer.from(`${condition.kickoff}\n\n`, "utf8"),
-    taskBytesForSeed(seed)
+    legacyTaskBytesForSeed(seed)
   ]);
 }
 
-function expectedKickoffSha256(armId, seed, abortedV2) {
-  return sha256(expectedKickoffBytes(armId, seed, abortedV2));
+function expectedKickoffSha256(armId, seed, protocolVersion, conditions) {
+  return sha256(expectedKickoffBytes(armId, seed, protocolVersion, conditions));
 }
 
 function git(candidateRoot, args) {
@@ -248,6 +229,121 @@ function contractToolName(event) {
     : name;
 }
 
+function eventOrder(events, ...items) {
+  const indices = items.map((item) => events.indexOf(item));
+  return indices.every((index) => index >= 0)
+    && indices.every((index, position) => position === 0 || indices[position - 1] < index);
+}
+
+export function auditDelegatedEventSequence({
+  events,
+  usageRows,
+  expectedKickoff,
+  expectedTaskBytes,
+  expectedParentModel,
+  expectedWorkerModel,
+  expectedAgent
+}) {
+  const reasons = [];
+  const skillContexts = events.filter((event) =>
+    event.type === "user.message"
+    && !event.agentId
+    && event.data?.source === "skill-semantic-test-corpus");
+  const externalMessages = events.filter((event) =>
+    event.type === "user.message"
+    && !event.agentId
+    && event.data?.source !== "skill-semantic-test-corpus");
+  if (externalMessages.length !== 1
+    || externalMessages[0]?.data?.content !== expectedKickoff) {
+    reasons.push("external user steering differs from the sole atomic kickoff");
+  }
+  const toolStarts = events.filter((event) => event.type === "tool.execution_start");
+  const toolCompletes = events.filter((event) => event.type === "tool.execution_complete");
+  const skillStarts = toolStarts.filter((event) =>
+    event.data?.toolName === "skill"
+    && event.data?.arguments?.skill === "semantic-test-corpus");
+  const skillComplete = toolCompletes.filter((event) =>
+    event.data?.toolCallId === skillStarts[0]?.data?.toolCallId);
+  const taskStarts = toolStarts.filter((event) => event.data?.toolName === "task");
+  if (skillStarts.length !== 1 || skillComplete.length !== 1
+    || skillComplete[0]?.data?.success !== true) {
+    reasons.push("Skill tool start/complete lifecycle is missing or ambiguous");
+  }
+  if (skillContexts.length !== 1
+    || typeof skillContexts[0]?.data?.content !== "string"
+    || skillContexts[0].data.content.length === 0
+    || !eventOrder(events, skillStarts[0], skillComplete[0], skillContexts[0], taskStarts[0])
+    || Date.parse(skillContexts[0]?.timestamp) < Date.parse(skillComplete[0]?.timestamp)
+    || Date.parse(skillContexts[0]?.timestamp) > Date.parse(taskStarts[0]?.timestamp)
+    || skillComplete[0]?.data?.result === undefined) {
+    reasons.push("Skill context injection provenance is invalid");
+  }
+  const taskPrompt = taskStarts[0]?.data?.arguments?.prompt;
+  if (taskStarts.length !== 1
+    || taskStarts[0]?.data?.arguments?.agent_type !== expectedAgent
+    || typeof taskPrompt !== "string"
+    || !Buffer.from(taskPrompt, "utf8").equals(expectedTaskBytes)) {
+    reasons.push("Task invocation differs from the exact per-block worker prompt bytes");
+  }
+  const workerCallId = taskStarts[0]?.data?.toolCallId;
+  const parentModels = [...new Set(events
+    .filter((event) => !event.agentId
+      && ["model.call_start", "assistant.message"].includes(event.type))
+    .map((event) => event.data?.model)
+    .filter((model) => typeof model === "string"))];
+  const workerModels = [...new Set(events
+    .filter((event) => event.agentId === workerCallId
+      && ["model.call_start", "assistant.message", "subagent.started", "subagent.completed"]
+        .includes(event.type))
+    .map((event) => event.data?.model)
+    .filter((model) => typeof model === "string"))];
+  if (parentModels.length !== 1 || parentModels[0] !== expectedParentModel) {
+    reasons.push("parent event model attribution is missing or incorrect");
+  }
+  if (workerModels.length !== 1 || workerModels[0] !== expectedWorkerModel) {
+    reasons.push("worker event model attribution is missing or incorrect");
+  }
+  const parentUsage = usageRows.filter((row) =>
+    row.agent_id === null && row.parent_tool_call_id === null);
+  const workerUsage = usageRows.filter((row) =>
+    row.agent_id === workerCallId
+    && row.parent_tool_call_id === workerCallId
+    && row.initiator === "sub-agent");
+  if (parentUsage.length === 0 || parentUsage.some((row) => row.model !== expectedParentModel)) {
+    reasons.push("parent usage attribution is missing or incorrect");
+  }
+  if (workerUsage.length === 0 || workerUsage.some((row) => row.model !== expectedWorkerModel)) {
+    reasons.push("worker usage attribution is missing or incorrect");
+  }
+  const semanticCalls = toolStarts.filter((event) => MCP_TOOLS.has(contractToolName(event)));
+  if (semanticCalls.length === 0) reasons.push("no semantic-corpus MCP calls were observed");
+  if (semanticCalls.some((event) =>
+    event.agentId !== workerCallId
+    || event.data?.parentToolCallId !== workerCallId)) {
+    reasons.push("semantic-corpus MCP calls are not worker-attributed");
+  }
+  return {
+    status: reasons.length === 0 ? "pass" : "fail",
+    reasons,
+    workerCallId: workerCallId ?? null,
+    binding: {
+      skillCallId: skillStarts[0]?.data?.toolCallId ?? null,
+      skillArgumentsSha256: skillStarts[0]
+        ? sha256(Buffer.from(canonicalJson(skillStarts[0].data.arguments), "utf8"))
+        : null,
+      skillResultSha256: skillComplete[0]
+        ? sha256(Buffer.from(canonicalJson(skillComplete[0].data?.result ?? null), "utf8"))
+        : null,
+      skillContextSha256: skillContexts[0]
+        ? sha256(Buffer.from(skillContexts[0].data.content, "utf8"))
+        : null,
+      taskPromptSha256: typeof taskPrompt === "string"
+        ? sha256(Buffer.from(taskPrompt, "utf8"))
+        : null
+    }
+  };
+}
+
 function timing(events, parentRows, workerRows, delegated) {
   const starts = events.filter((event) =>
     event.type === "assistant.turn_start" && !event.agentId);
@@ -293,13 +389,20 @@ export function collectLocalEvidence({
 }) {
   const usageExport = JSON.parse(usageBytes);
   const sessionCreation = JSON.parse(sessionCreationBytes);
-  const abortedV2 = runManifest.protocolId === "semantic-test-corpus-execution-v2";
-  const contract = abortedV2 ? abortedV2Contract : currentContract;
-  const schedule = abortedV2 ? abortedV2Schedule : currentSchedule;
-  const candidateManifest = abortedV2
-    ? abortedV2CandidateManifest
-    : currentCandidateManifest;
-  const sourcePin = abortedV2 ? abortedV2SourcePin : currentSourcePin;
+  const design = protocolDesignForId(runManifest.protocolId);
+  const abortedV2 = design.version === "v2";
+  const legacyTask = design.version !== "v4";
+  const expectedTaskBytesForSeed = legacyTask ? legacyTaskBytesForSeed : taskBytesForSeed;
+  const expectedTaskSha256ForSeed = legacyTask
+    ? legacyTaskSha256ForSeed
+    : taskSha256ForSeed;
+  const {
+    contract,
+    schedule,
+    candidateManifest,
+    sourcePin,
+    conditions
+  } = design;
   const usageErrors = validateJsonSchema(usageExport, usageSchema, { schemaDir: schemaRoot });
   if (usageErrors.length > 0) {
     throw new Error(`Usage export is invalid: ${usageErrors[0].path} ${usageErrors[0].message}`);
@@ -331,11 +434,12 @@ export function collectLocalEvidence({
     || planned.seed !== runManifest.seed
     || planned.order !== runManifest.scheduleOrder
     || planned.globalOrder !== runManifest.globalOrder
-    || planned.taskSha256 !== taskSha256ForSeed(runManifest.seed)
+    || planned.taskSha256 !== expectedTaskSha256ForSeed(runManifest.seed)
     || planned.kickoffSha256 !== expectedKickoffSha256(
       runManifest.armId,
       runManifest.seed,
-      abortedV2
+      design.version,
+      conditions
     )) {
     throw new Error("Run manifest differs from the frozen schedule");
   }
@@ -348,7 +452,7 @@ export function collectLocalEvidence({
     || runManifest.sourceTree !== sourcePin.sourceTree
     || boundary.blockId !== runManifest.blockId
     || boundary.seed !== runManifest.seed
-    || boundary.taskSha256 !== taskSha256ForSeed(runManifest.seed)
+    || boundary.taskSha256 !== expectedTaskSha256ForSeed(runManifest.seed)
     || !Array.isArray(boundary.files)
     || boundary.files.length === 0) {
     throw new Error("Candidate boundary is not the frozen v2 materialization format");
@@ -356,7 +460,7 @@ export function collectLocalEvidence({
   const expectedCandidateFiles = candidateManifest.files.map((entry) => {
     const source = committedSource(entry.source, sourcePin);
     const bytes = entry.transform === "append-block-seed"
-      ? taskBytesForSeed(runManifest.seed)
+      ? expectedTaskBytesForSeed(runManifest.seed)
       : source.bytes;
     return {
       path: entry.destination.replaceAll("\\", "/"),
@@ -418,7 +522,7 @@ export function collectLocalEvidence({
   }
   const taskFile = boundary.files.find((file) => file.path === contract.commonContract.taskArtifact);
   if (!taskFile
-    || taskFile.sha256 !== taskSha256ForSeed(runManifest.seed)
+    || taskFile.sha256 !== expectedTaskSha256ForSeed(runManifest.seed)
     || runAttempt.treatment.blockId !== runManifest.blockId
     || runAttempt.treatment.armId !== runManifest.armId
     || runAttempt.treatment.seed !== runManifest.seed
@@ -428,7 +532,12 @@ export function collectLocalEvidence({
     || runAttempt.treatment.candidateSnapshotSha256 !== runManifest.candidateSnapshotSha256
     || runAttempt.treatment.sharedTaskSha256 !== taskFile.sha256
     || runAttempt.treatment.kickoffSha256
-      !== expectedKickoffSha256(runManifest.armId, runManifest.seed, abortedV2)
+      !== expectedKickoffSha256(
+        runManifest.armId,
+        runManifest.seed,
+        design.version,
+        conditions
+      )
     || runAttempt.treatment.wallLimitMs !== contract.commonContract.wallClockMinutes * 60_000
     || runAttempt.treatment.toolCallLimit !== contract.commonContract.maximumToolCalls
     || runAttempt.treatment.modelTokenLimit !== contract.commonContract.maximumTotalModelTokens) {
@@ -501,10 +610,11 @@ export function collectLocalEvidence({
     }
   } else {
     const expectedAvailableTools = availableToolsForArm(arm);
-    const expectedArgs = buildCopilotArgs({
+    const expectedArgs = (design.version === "v4" ? buildCopilotArgs : buildCopilotArgsV3)({
       prompt: capturedPrompt,
       sessionId: cliSessionId,
       model: arm.model,
+      ...(design.version === "v4" ? { reasoningEffort: arm.reasoningEffort } : {}),
       topLevelAgent: arm.topLevelAgent,
       candidateRoot: resolve(candidateRoot),
       mcpConfigPath: sessionCreation.request.mcp_config_path,
@@ -542,7 +652,7 @@ export function collectLocalEvidence({
   }
   if (sha256(capturedKickoffBytes) !== runAttempt.treatment.kickoffSha256
     || !capturedKickoffBytes.equals(
-      expectedKickoffBytes(runManifest.armId, runManifest.seed, abortedV2)
+      expectedKickoffBytes(runManifest.armId, runManifest.seed, design.version, conditions)
     )) {
     sessionReasons.push("captured kickoff bytes differ from the frozen attempt");
   }
@@ -554,8 +664,14 @@ export function collectLocalEvidence({
     event.type === "assistant.turn_start" && !event.agentId);
   const topLevelTurnEnds = events.filter((event) =>
     event.type === "assistant.turn_end" && !event.agentId);
+  const skillContextMessages = events.filter((event) =>
+    event.type === "user.message"
+    && !event.agentId
+    && event.data?.source === "skill-semantic-test-corpus");
   const topLevelUserMessages = events.filter((event) =>
-    event.type === "user.message" && !event.agentId);
+    event.type === "user.message"
+    && !event.agentId
+    && event.data?.source !== "skill-semantic-test-corpus");
   if (topLevelTurnStarts.length === 0
     || topLevelTurnStarts.length !== topLevelTurnEnds.length) {
     sessionReasons.push("attempt must contain one or more complete top-level assistant turns");
@@ -576,8 +692,9 @@ export function collectLocalEvidence({
   const semanticCalls = toolStarts.filter((event) => MCP_TOOLS.has(contractToolName(event)));
   const subagentStarts = events.filter((event) => event.type === "subagent.started");
   const subagentCompletes = events.filter((event) => event.type === "subagent.completed");
-  const skillInvocations = events.filter((event) => event.type === "skill.invoked");
   const skillCalls = toolStarts.filter((event) => event.data?.toolName === "skill");
+  const skillCompletes = toolCompletes.filter((event) =>
+    event.data?.toolCallId === skillCalls[0]?.data?.toolCallId);
   const taskCalls = toolStarts.filter((event) => event.data?.toolName === "task");
   const expectedAgent = arm.agentName;
   const workerCallId = arm.delegated && taskCalls.length === 1
@@ -653,6 +770,18 @@ export function collectLocalEvidence({
     return { role, name, count };
   }).sort((left, right) => `${left.role}/${left.name}`.localeCompare(`${right.role}/${right.name}`));
   const mechanismReasons = [];
+  const delegatedAudit = arm.delegated && !abortedV2
+    ? auditDelegatedEventSequence({
+      events,
+      usageRows: usageExport.rows,
+      expectedKickoff: capturedPrompt,
+      expectedTaskBytes: expectedTaskBytesForSeed(runManifest.seed),
+      expectedParentModel: arm.model,
+      expectedWorkerModel: arm.workerModel,
+      expectedAgent
+    })
+    : null;
+  if (delegatedAudit) mechanismReasons.push(...delegatedAudit.reasons);
   if (!abortedV2) {
     const startIds = toolStarts.map((event) => event.data?.toolCallId);
     const completeIds = toolCompletes.map((event) => event.data?.toolCallId);
@@ -709,16 +838,34 @@ export function collectLocalEvidence({
     if (observedOverride !== undefined) {
       mechanismReasons.push("inherited delegated arm unexpectedly overrides the worker model");
     }
+    const expectedWorkerPromptBytes = expectedTaskBytesForSeed(runManifest.seed);
     const observedWorkerPrompt = taskCalls[0]?.data?.arguments?.prompt;
     if (typeof observedWorkerPrompt !== "string"
-      || sha256(Buffer.from(observedWorkerPrompt, "utf8")) !== taskFile.sha256) {
-      mechanismReasons.push("delegated task prompt differs from the byte-exact shared task");
+      || !Buffer.from(observedWorkerPrompt, "utf8").equals(expectedWorkerPromptBytes)) {
+      mechanismReasons.push("delegated task prompt differs from the exact per-block task artifact bytes");
     }
     if (skillCalls.length !== 1
       || skillCalls[0]?.data?.arguments?.skill !== "semantic-test-corpus"
-      || skillInvocations.length !== 1
-      || skillInvocations[0]?.data?.name !== "semantic-test-corpus") {
-      mechanismReasons.push("delegated arm requires one semantic-test-corpus Skill invocation");
+      || skillCompletes.length !== 1
+      || skillCompletes[0]?.data?.success !== true) {
+      mechanismReasons.push("delegated arm requires one complete semantic-test-corpus Skill tool lifecycle");
+    }
+    if (!abortedV2 && (skillContextMessages.length !== 1
+      || typeof skillContextMessages[0]?.data?.content !== "string"
+      || skillContextMessages[0].data.content.length === 0
+      || !eventOrder(
+        events,
+        skillCalls[0],
+        skillCompletes[0],
+        skillContextMessages[0],
+        taskCalls[0]
+      )
+      || Date.parse(skillContextMessages[0]?.timestamp)
+        < Date.parse(skillCompletes[0]?.timestamp)
+      || Date.parse(skillContextMessages[0]?.timestamp)
+        > Date.parse(taskCalls[0]?.timestamp)
+      || skillCompletes[0]?.data?.result === undefined)) {
+      mechanismReasons.push("Skill context injection lacks exact source provenance or lifecycle ordering");
     }
   } else {
     if (subagentStarts.length > 0 || subagentCompletes.length > 0) {
@@ -727,7 +874,7 @@ export function collectLocalEvidence({
     if (semanticCalls.some((event) => eventRole(event) !== "parent")) {
       mechanismReasons.push("inline MCP call is not parent-attributed");
     }
-    if (skillCalls.length > 0 || skillInvocations.length > 0 || taskCalls.length > 0) {
+    if (skillCalls.length > 0 || skillContextMessages.length > 0 || taskCalls.length > 0) {
       mechanismReasons.push("inline arm invoked a Skill or delegated task");
     }
   }
@@ -1007,6 +1154,13 @@ export function collectLocalEvidence({
       invoked: subagentStarts.length > 0,
       completed: subagentCompletes.length > 0,
       agentName: subagentStarts[0]?.data?.agentName ?? null,
+      ...(abortedV2 ? {} : {
+        skillCallId: delegatedAudit?.binding.skillCallId ?? null,
+        skillArgumentsSha256: delegatedAudit?.binding.skillArgumentsSha256 ?? null,
+        skillResultSha256: delegatedAudit?.binding.skillResultSha256 ?? null,
+        skillContextSha256: delegatedAudit?.binding.skillContextSha256 ?? null,
+        taskPromptSha256: delegatedAudit?.binding.taskPromptSha256 ?? null
+      }),
       compactReturn,
       compactReturnBytes: compactReturn === null
         ? null

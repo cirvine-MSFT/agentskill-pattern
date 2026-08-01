@@ -12,27 +12,18 @@ import {
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { taskBytesForSeed, taskSha256ForSeed } from "./execution-contract.mjs";
+import {
+  legacyTaskBytesForSeed,
+  legacyTaskSha256ForSeed,
+  taskBytesForSeed,
+  taskSha256ForSeed
+} from "./execution-contract.mjs";
+import { protocolDesign } from "./protocol-design.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = resolve(root, "..", "..");
 const evaluatorRoot = resolve(root, "evaluator");
 const testWorkRoot = resolve(root, ".regression-work");
-const currentManifest = JSON.parse(
-  readFileSync(resolve(root, "design", "candidate-manifest.json"), "utf8")
-);
-const currentSourcePin = JSON.parse(
-  readFileSync(resolve(root, currentManifest.sourcePin), "utf8")
-);
-const currentSeeds = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
-const abortedV2Root = resolve(root, "design", "aborted-v2");
-const abortedV2Manifest = JSON.parse(
-  readFileSync(resolve(abortedV2Root, "candidate-manifest.json"), "utf8")
-);
-const abortedV2SourcePin = JSON.parse(
-  readFileSync(resolve(abortedV2Root, "source-pin.json"), "utf8")
-);
-const abortedV2Seeds = JSON.parse(readFileSync(resolve(abortedV2Root, "seeds.json"), "utf8"));
 const canonicalRepositoryRoot = realpathSync.native(repositoryRoot);
 const canonicalEvaluatorRoot = realpathSync.native(evaluatorRoot);
 
@@ -114,11 +105,12 @@ function canonicalProspectivePath(path) {
 export function materializeCandidate(destination, {
   allowTestDestination = false,
   blockId,
-  abortedV2 = false
+  abortedV2 = false,
+  protocolVersion = "v4"
 } = {}) {
-  const manifest = abortedV2 ? abortedV2Manifest : currentManifest;
-  const sourcePin = abortedV2 ? abortedV2SourcePin : currentSourcePin;
-  const seeds = abortedV2 ? abortedV2Seeds : currentSeeds;
+  const version = abortedV2 ? "v2" : protocolVersion;
+  const { candidateManifest: manifest, sourcePin, seeds } = protocolDesign(version);
+  const legacyTask = version !== "v4";
   const block = seeds.blocks.find((item) => item.id === blockId);
   if (!block) throw new Error("A frozen block ID from design/seeds.json is required");
   const observedTree = runGit(repositoryRoot, [
@@ -168,7 +160,7 @@ export function materializeCandidate(destination, {
     const repositoryPath = relative(repositoryRoot, canonicalSource).replaceAll("\\", "/");
     const pinned = pinnedBlob(repositoryPath, sourcePin);
     const bytes = entry.transform === "append-block-seed"
-      ? taskBytesForSeed(block.seed)
+      ? (legacyTask ? legacyTaskBytesForSeed(block.seed) : taskBytesForSeed(block.seed))
       : pinned.bytes;
     if (entry.transform && entry.transform !== "append-block-seed") {
       throw new Error(`Unsupported candidate transform: ${entry.transform}`);
@@ -191,7 +183,9 @@ export function materializeCandidate(destination, {
     sourceTree: sourcePin.sourceTree,
     blockId: block.id,
     seed: block.seed,
-    taskSha256: taskSha256ForSeed(block.seed),
+    taskSha256: legacyTask
+      ? legacyTaskSha256ForSeed(block.seed)
+      : taskSha256ForSeed(block.seed),
     candidateRoot: ".",
     networkPolicy: "deny",
     filesystemPolicy: "semantic-corpus-launcher-required",

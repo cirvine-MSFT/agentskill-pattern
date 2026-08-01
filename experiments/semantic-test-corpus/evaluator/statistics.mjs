@@ -10,6 +10,7 @@ import {
   evaluateIsolationEvidence
 } from "../scripts/verify-isolation-evidence.mjs";
 import { validateJsonSchema } from "../validators/json-schema.mjs";
+import { protocolDesignForRunId } from "../scripts/protocol-design.mjs";
 import { canonicalMetricsBytes, deriveMetricsArtifact } from "./metrics.mjs";
 
 const FROZEN_ALPHA = 0.05;
@@ -21,9 +22,8 @@ const DEFAULT_ENDPOINTS = Object.freeze({
   mutantKillRate: -0.05
 });
 const evaluatorRoot = dirname(fileURLToPath(import.meta.url));
-const schedule = JSON.parse(readFileSync(resolve(evaluatorRoot, "..", "design", "schedule.json"), "utf8"));
-const abortedV2Schedule = JSON.parse(
-  readFileSync(resolve(evaluatorRoot, "..", "design", "aborted-v2", "schedule.json"), "utf8")
+const schedule = JSON.parse(
+  readFileSync(resolve(evaluatorRoot, "..", "design", "v4", "schedule.json"), "utf8")
 );
 const schemaRoot = resolve(evaluatorRoot, "..", "schemas");
 const statisticsInputSchema = JSON.parse(
@@ -185,7 +185,7 @@ export function verifyMetricsArtifact({ metricsPath, runRecord, authenticated })
     item.runId === runRecord.runId && item.type === "outcomes.unblinded");
   const starts = events.filter((item) =>
     item.runId === runRecord.runId && item.type === "run.started");
-  const runSchedule = runRecord.runId.startsWith("V3-") ? schedule : abortedV2Schedule;
+  const runSchedule = protocolDesignForRunId(runRecord.runId).schedule;
   const planned = runSchedule.runs.find((item) => item.runId === runRecord.runId);
   const boundaries = [...completion, ...unblinding];
   const expectedBoundaryRole = runRecord.armId === 0 ? "baseline" : "parent";

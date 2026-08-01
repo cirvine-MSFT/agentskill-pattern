@@ -3,8 +3,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const contract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
+const schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+);
+const contract = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "arm-contract.json"), "utf8")
+);
 
 function row(id, sessionId, agentId, model, createdAt) {
   return {

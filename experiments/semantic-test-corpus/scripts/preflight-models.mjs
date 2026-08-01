@@ -3,10 +3,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readAuthenticatedExport } from "./authenticated-export.mjs";
+import { protocolDesignForRunId } from "./protocol-design.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const contract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
 const evidenceContract = JSON.parse(readFileSync(resolve(root, "design", "platform-evidence-contract.json"), "utf8"));
 
 function argument(args, name) {
@@ -38,6 +37,12 @@ export function evaluateModelBindings(authenticated, runRecords) {
   const capturedAt = Date.parse(payload.capturedAt);
   const records = Array.isArray(runRecords) ? runRecords : runRecords?.runs;
   if (!Array.isArray(records)) throw new Error("run records are required for per-run model binding");
+  if (records.length === 0) throw new Error("at least one run record is required");
+  const { contract, schedule } = protocolDesignForRunId(records[0].runId);
+  if (records.some((record) =>
+    protocolDesignForRunId(record.runId).contract.protocolId !== contract.protocolId)) {
+    throw new Error("run records cannot mix protocol versions");
+  }
   const recordIds = new Set();
   const duplicateRecordIds = new Set();
   for (const record of records) {

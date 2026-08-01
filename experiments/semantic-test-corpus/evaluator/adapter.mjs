@@ -17,19 +17,10 @@ import { readAuthenticatedExport } from "../scripts/authenticated-export.mjs";
 import { preflightLocalModel } from "../scripts/preflight-local-model.mjs";
 import { validateLocalEvidence } from "../scripts/validate-local-evidence.mjs";
 import { computeRequestHash } from "../../../tools/semantic-corpus-mcp/lib.mjs";
+import { protocolDesignForRunId } from "../scripts/protocol-design.mjs";
 
 const benchmarkRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const frozenRequest = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "corpus-request.json"), "utf8"));
-const currentSchedule = JSON.parse(
-  readFileSync(resolve(benchmarkRoot, "design", "schedule.json"), "utf8")
-);
-const currentSeeds = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "seeds.json"), "utf8"));
-const abortedV2Schedule = JSON.parse(
-  readFileSync(resolve(benchmarkRoot, "design", "aborted-v2", "schedule.json"), "utf8")
-);
-const abortedV2Seeds = JSON.parse(
-  readFileSync(resolve(benchmarkRoot, "design", "aborted-v2", "seeds.json"), "utf8")
-);
 const schemaRoot = resolve(benchmarkRoot, "schemas");
 const localEvidenceSchema = JSON.parse(
   readFileSync(resolve(schemaRoot, "local-evidence.schema.json"), "utf8")
@@ -345,8 +336,7 @@ export function snapshotCorpusStaging({
   if (completions.length !== 1) {
     throw new Error("Evaluator adapter requires exactly one model run completion");
   }
-  const schedule = runId.startsWith("V3-") ? currentSchedule : abortedV2Schedule;
-  const seeds = runId.startsWith("V3-") ? currentSeeds : abortedV2Seeds;
+  const { schedule, seeds } = protocolDesignForRunId(runId);
   const planned = schedule.runs.find((item) => item.runId === runId);
   const expectedSeed = seeds.blocks.find((item) => item.id === blockId)?.seed;
   if (!planned
@@ -445,9 +435,7 @@ export function snapshotLocalCorpusStaging({
     || modelPreflight.evidenceSha256 !== sha256(localEvidenceBytes)) {
     throw new Error("Local evaluator snapshot requires exact passing pre-outcome model evidence");
   }
-  const schedule = localEvidence.protocolId === "semantic-test-corpus-execution-v2"
-    ? abortedV2Schedule
-    : currentSchedule;
+  const schedule = protocolDesignForRunId(localEvidence.runId).schedule;
   const planned = schedule.runs.find((item) => item.runId === localEvidence.runId);
   if (!planned
     || planned.blockId !== localEvidence.blockId

@@ -5,8 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const schedule = JSON.parse(readFileSync(resolve(root, "design", "schedule.json"), "utf8"));
-const contract = JSON.parse(readFileSync(resolve(root, "design", "arm-contract.json"), "utf8"));
+const schedule = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "schedule.json"), "utf8")
+);
+const contract = JSON.parse(
+  readFileSync(resolve(root, "design", "v4", "arm-contract.json"), "utf8")
+);
 
 function value(name) {
   const index = args.indexOf(name);
@@ -112,12 +116,15 @@ if (arm.delegated) {
       arguments: { skill: "semantic-test-corpus" },
       model: parentModel
     }),
-    event("skill.invoked", { name: "semantic-test-corpus" }),
     event("tool.execution_complete", {
       toolCallId: `${planned.runId}-skill`,
       success: true,
       result: { content: "loaded" },
       model: parentModel
+    }),
+    event("user.message", {
+      source: "skill-semantic-test-corpus",
+      content: "Bounded semantic-test-corpus Skill context"
     }),
     event("tool.execution_start", {
       toolCallId: workerCallId,
