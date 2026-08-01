@@ -1,0 +1,92 @@
+{
+  "formatVersion": 1,
+  "sourceSha256": "48eba1e9aea499851b330145c653faac6ce4c11c31f758cb25a070dc373a6587",
+  "sourceBytesCommitted": false,
+  "preflight": {
+    "formatVersion": 2,
+    "protocolId": "semantic-test-corpus-execution-v5",
+    "capturedAt": "2026-08-01T09:09:23.013Z",
+    "cli": {
+      "command": "copilot",
+      "version": "GitHub Copilot CLI 1.0.77.\nRun 'copilot update' to check for updates.",
+      "versionExitCode": 0,
+      "helpExitCode": 0,
+      "mcpListExitCode": 0
+    },
+    "surface": {
+      "requiredFlagsPresent": true,
+      "missingFlags": [],
+      "fabricatedCreateSessionPresent": false
+    },
+    "configuredMcpServers": [
+      "azure",
+      "playwright"
+    ],
+    "usageStore": {
+      "path": "session-store.db",
+      "status": "available",
+      "columns": [
+        "id",
+        "session_id",
+        "turn_index",
+        "agent_id",
+        "parent_tool_call_id",
+        "model",
+        "input_tokens",
+        "output_tokens",
+        "cache_read_tokens",
+        "cache_write_tokens",
+        "reasoning_tokens",
+        "total_nano_aiu",
+        "request_multiplier",
+        "duration_ms",
+        "time_to_first_token_ms",
+        "inter_token_latency_ms",
+        "initiator",
+        "api_endpoint",
+        "reasoning_effort",
+        "finish_reason",
+        "content_filter_triggered",
+        "token_details_json",
+        "created_at"
+      ],
+      "reason": null
+    },
+    "profiles": {
+      "normalPinned": true,
+      "fixedHaikuPinned": true
+    },
+    "arms": [
+      {
+        "armId": 0,
+        "status": "available",
+        "reasons": []
+      },
+      {
+        "armId": 1,
+        "status": "available",
+        "reasons": []
+      },
+      {
+        "armId": 2,
+        "status": "available",
+        "reasons": []
+      },
+      {
+        "armId": 3,
+        "status": "available",
+        "reasons": []
+      },
+      {
+        "armId": 4,
+        "status": "available",
+        "reasons": []
+      },
+      {
+        "armId": 5,
+        "status": "available",
+        "reasons": []
+      }
+    ]
+  }
+}

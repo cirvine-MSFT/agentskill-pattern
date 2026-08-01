@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v5",
+  "descriptive": {
+    "status": "available",
+    "method": "descriptive-point-estimates-and-within-block-pairs-only"
+  },
+  "inference": {
+    "status": "unavailable",
+    "reason": "Protocol v5 permits descriptive ITT analysis only; evidence is local and unsigned."
+  },
+  "limitations": [
+    "No significance, causal, compliance, or population-generalization claims are supported.",
+    "Full candidate worktrees, staging documents, prompts, and raw JSONL events remain external.",
+    "Unavailable telemetry fields remain explicit null values with per-run availability reasons."
+  ]
+}
