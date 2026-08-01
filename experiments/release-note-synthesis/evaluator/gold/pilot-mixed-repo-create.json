@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "dossierId": "pilot-mixed-repo-create",
+  "expectedCategory": "mixed-breaking",
+  "facts": [
+    {"id":"explicit-args","claim":"interactive mode applies only with no arguments; otherwise arguments must be explicit","category":"breaking","critical":true,"weight":3,"supportPatterns":["interactive.{0,50}no arguments","arguments.{0,30}explicit"],"claimPatterns":["Interactive mode.{0,40}(?:only|when).{0,30}no arguments","With arguments.{0,40}(?:all )?arguments.{0,20}explicit"]},
+    {"id":"no-default-clone","claim":"new repositories are no longer cloned by default; use --clone","category":"breaking","critical":true,"weight":3,"supportPatterns":["no longer.{0,30}clone","not.{0,30}cloned by default","--clone"],"claimPatterns":["(?:New )?repositories?.{0,30}(?:no longer|not).{0,20}cloned by default","Use `?--clone`? to clone.{0,30}(?:new )?repositor"]},
+    {"id":"source-required","claim":"use --source to create from an existing local repository","category":"breaking","critical":true,"weight":3,"supportPatterns":["--source.{0,80}(local|existing)","existing local.{0,80}--source"],"claimPatterns":["Use `?--source`?.{0,40}(?:existing|local).{0,30}repositor","Creating from an existing local repository.{0,30}`?--source`?"]},
+    {"id":"cwd-behavior","claim":"behavior no longer changes merely because the current directory is a Git repository","category":"breaking","critical":false,"weight":2,"supportPatterns":["current directory.{0,80}(no longer|doesn't|does not)","no longer.{0,80}current directory"],"claimPatterns":["Behavior.{0,30}(?:no longer|does not|doesn't) change.{0,40}current directory.{0,30}Git repository","The current directory.{0,30}Git repository.{0,40}(?:no longer|does not|doesn't).{0,20}change"]},
+    {"id":"new-flags","claim":"--source, --remote, and --push are new flags","category":"feature","critical":false,"weight":1,"supportPatterns":["--source.{0,80}--remote.{0,80}--push","new flags.{0,100}--source"],"claimPatterns":["(?:New flags.{0,20})?`?--source`?,? `?--remote`?,? and `?--push`?.{0,20}(?:are )?(?:new|available|added)","(?:Adds|Introduces).{0,20}`?--source`?.{0,30}`?--remote`?.{0,30}`?--push`?"]},
+    {"id":"deprecated-flags","claim":"--enable-wiki, --enable-issues, and --confirm are deprecated","category":"breaking","critical":true,"weight":3,"supportPatterns":["deprecated.{0,100}--confirm","--enable-wiki.{0,120}--confirm"],"claimPatterns":["`?--enable-wiki`?,? `?--enable-issues`?,? and `?--confirm`?.{0,20}(?:are )?deprecated","Deprecated flags.{0,30}`?--enable-wiki`?.{0,40}`?--enable-issues`?.{0,40}`?--confirm`?"]},
+    {"id":"remote-origin-fix","claim":"the rewrite addresses failures when origin already exists","category":"fix","critical":false,"weight":1,"supportPatterns":["origin already exists","existing remote"],"claimPatterns":["The rewrite.{0,30}(?:fixes|addresses).{0,40}(?:origin already exists|existing remote)","(?:Fixes|Addresses).{0,30}(?:fatal: )?remote origin already exists"]}
+  ],
+  "audienceInappropriatePatterns": ["test coverage","merge commit","implementation package"],
+  "unsupportedCriticalPatterns": ["backward compatible without exception","still clones by default","--confirm is required"],
+  "requiredReferences": ["https://github.com/cli/cli/pull/4578","https://github.com/cli/cli/issues/2166","https://github.com/cli/cli/issues/893","https://github.com/cli/cli/issues/2059","https://github.com/cli/cli/issues/2077"]
+}

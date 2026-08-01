@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "dossierId": "pilot-bugfix-rest-errors",
+  "partition": "excluded-pilot",
+  "category": "bug-fix-set",
+  "product": "GitHub CLI",
+  "audience": "GitHub CLI users",
+  "target": {"format":"markdown","kind":"customer-facing-release-note","maxWords":180,"referencesRequired":true},
+  "sources": [
+    {
+      "sourceId": "cli-cli-pr-13988",
+      "type": "pull-request",
+      "repository": "cli/cli",
+      "number": 13988,
+      "title": "Fix RESTWithNext error type, repairing gh status and attestation retries",
+      "body": "RESTWithNext did not wrap go-gh errors into the API HTTP error type as REST does. This broke two user-visible behaviors: gh status should gracefully degrade when notifications or events are inaccessible, and gh attestation commands should retry attestation fetching for HTTP 500 responses. The change makes programmatic errors.As checks for api.HTTPError work consistently. It is also groundwork for per-host API routing, but that implementation detail is not the customer-facing focus.",
+      "author": "williammartin",
+      "publicUrl": "https://github.com/cli/cli/pull/13988",
+      "mergedAt": "2026-08-01T07:52:47Z",
+      "mergeCommitSha": "e83adbc0642994fae7c39a9a012eb34b8c81f4f1"
+    }
+  ]
+}

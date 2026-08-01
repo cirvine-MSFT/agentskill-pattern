@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "dossierId": "pilot-feature-repo-delete",
+  "expectedCategory": "feature",
+  "facts": [
+    {"id":"repo-delete-command","claim":"GitHub CLI adds the gh repo delete command","category":"feature","critical":true,"weight":3,"supportPatterns":["gh repo delete","delete.{0,25}repositor"],"claimPatterns":["(?:GitHub CLI|`?gh`?).{0,30}(?:adds|introduces|supports|includes).{0,20}`?gh repo delete`?.{0,20}command","(?:Use|Run) `?gh repo delete`? to delete (?:a )?repositor"]},
+    {"id":"strong-confirmation-request","claim":"the originating request called for stronger confirmation than yes/no","category":"safety","critical":false,"weight":1,"supportPatterns":["type.{0,30}repositor","strong.{0,20}confirm","rather than.{0,20}yes.?no"],"claimPatterns":["The (?:request|proposal).{0,30}(?:strong|type).{0,40}confirm.{0,40}(?:yes.?no|repository name)","(?:Type|Typing).{0,30}repository name.{0,30}confirm"]}
+  ],
+  "audienceInappropriatePatterns": ["merge commit","internal package","implementation detail"],
+  "unsupportedCriticalPatterns": ["delete.{0,20}without confirmation","automatically deletes"],
+  "requiredReferences": ["https://github.com/cli/cli/pull/4451","https://github.com/cli/cli/issues/3625"]
+}

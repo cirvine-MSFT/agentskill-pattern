@@ -1,0 +1,35 @@
+{
+  "formatVersion": 1,
+  "dossierId": "dev-release-discussions",
+  "partition": "development",
+  "category": "feature",
+  "product": "GitHub CLI",
+  "audience": "GitHub CLI users",
+  "target": {"format":"markdown","kind":"customer-facing-release-note","maxWords":160,"referencesRequired":true},
+  "sources": [
+    {
+      "sourceId": "cli-cli-pr-4003",
+      "type": "pull-request",
+      "repository": "cli/cli",
+      "number": 4003,
+      "title": "add --discussion-category flag to release cmd",
+      "body": "Flag for signaling that a discussion should be created with the given category for the release. Discussions are not supported for draft releases. If a discussion category is given for a draft, an error will be shown. Closes #3381.",
+      "author": "despreston",
+      "publicUrl": "https://github.com/cli/cli/pull/4003",
+      "mergedAt": "2021-08-10T13:54:04Z",
+      "mergeCommitSha": "4fa984a33304f006aab08cfee218fc187acc6ba9"
+    },
+    {
+      "sourceId": "cli-cli-issue-3381",
+      "type": "issue",
+      "repository": "cli/cli",
+      "number": 3381,
+      "title": "Creating discussions for a release using the CLI",
+      "body": "Request to create a linked discussion from gh release create, with an example using a discussion category.",
+      "author": "panva",
+      "publicUrl": "https://github.com/cli/cli/issues/3381",
+      "state": "closed",
+      "closedAt": "2021-08-10T13:54:04Z"
+    }
+  ]
+}
