@@ -4,7 +4,9 @@ Protocol v5 completed all 12 randomized blocks and 72 units: 60 AI units and
 12 deterministic units, with zero missing slots, retries, or protocol deviations.
 All started measured failures remain in the descriptive ITT analysis.
 
-**Final results:** see the [protocol-v5 report](report.md), [machine-readable final
+**Final results:** see the [protocol-v5 report](report.md), [self-contained results
+dashboard](results/v5-results-dashboard.html), [GitHub-renderable static
+charts](results/v5-charts/), [machine-readable final
 summary](results/v5-final-summary.json), [per-arm CSV](results/v5-final-arm-summary.csv),
 and [immutable evidence package](results/v5-b01/). The evidence is local, unsigned,
 and descriptive only; it does not support significance, causal, compliance, or

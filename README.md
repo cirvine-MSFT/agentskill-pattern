@@ -105,6 +105,8 @@ randomized complete blocks. The target arm used 38.8% fewer credits/nano-AIU and
 tokens, took 72.0% longer, missed the path and mutant-quality floors, and was
 treatment-adherent in only 1/12 units. The preregistered positive-efficiency signal
 was not met. See the [final report](experiments/semantic-test-corpus/report.md),
+[self-contained results dashboard](experiments/semantic-test-corpus/results/v5-results-dashboard.html),
+[GitHub-renderable static charts](experiments/semantic-test-corpus/results/v5-charts/),
 [immutable evidence package](experiments/semantic-test-corpus/results/v5-b01/), and
 [machine-readable summary](experiments/semantic-test-corpus/results/v5-final-summary.json).
 These local, unsigned results are descriptive only.

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="470" viewBox="0 0 980 470" role="img" aria-labelledby="title description">
+  <title id="title">A5 reliability funnel and main failure anatomy</title>
+  <desc id="description">A5 started 12/12, was operational in 10/12, treatment-adherent in 1/12, and strictly successful in 0/12. Failure categories were budget 11/12, terminal 10/12, mechanism 9/12, partial-staging 1/12. Categories can overlap.</desc>
+  <style>
+    text { font-family: "Segoe UI", Aptos, Calibri, sans-serif; fill: #242424; }
+    .title { font-size: 26px; font-weight: 700; }
+    .subtitle { font-size: 14px; fill: #5c5c5c; }
+    .label { font-size: 14px; font-weight: 600; }
+    .value { font-size: 14px; font-weight: 700; }
+    .small { font-size: 12px; fill: #5c5c5c; }
+    .good { fill: #16a34a; }
+    .bad { fill: #dc2626; }
+    .neutral { fill: #5c5c5c; }
+    .track { fill: #f5f5f5; stroke: #919191; }
+    .accent { fill: #b11f4b; }
+    .line { stroke: #dedede; }
+  </style>
+  <rect width="980" height="470" fill="#f7f4ef"/>
+  <text x="28" y="42" class="title">A5 reliability collapsed after operational execution</text>
+  <text x="28" y="68" class="subtitle">Funnel counts and overlapping failure categories across 12 runs.</text>
+  <text x="28" y="96" class="label">Reliability funnel</text>
+  <text x="640" y="96" class="label">Failure anatomy</text>
+  <text x="28" y="138" class="label">Started</text>
+  <rect x="190" y="116" width="340" height="30" rx="6" class="track"/>
+  <rect x="190" y="116" width="340" height="30" rx="6" class="accent"/>
+  <text x="548" y="138" class="value">12/12</text>
+  <text x="28" y="204" class="label">Operational</text>
+  <rect x="190" y="182" width="340" height="30" rx="6" class="track"/>
+  <rect x="190" y="182" width="283.3333333333333" height="30" rx="6" class="accent"/>
+  <text x="548" y="204" class="value">10/12</text>
+  <text x="28" y="270" class="label">Treatment-adherent</text>
+  <rect x="190" y="248" width="340" height="30" rx="6" class="track"/>
+  <rect x="190" y="248" width="28.333333333333332" height="30" rx="6" class="accent"/>
+  <text x="548" y="270" class="value">1/12</text>
+  <text x="28" y="336" class="label">Strict success</text>
+  <rect x="190" y="314" width="340" height="30" rx="6" class="track"/>
+  <rect x="190" y="314" width="0" height="30" rx="6" class="accent"/>
+  <text x="548" y="336" class="value">0/12</text>
+  <text x="640" y="148" class="label">budget</text>
+  <rect x="760" y="128" width="150" height="26" rx="6" class="track"/>
+  <rect x="760" y="128" width="137.5" height="26" rx="6" class="bad"/>
+  <text x="926" y="148" class="value">11/12</text>
+  <text x="640" y="212" class="label">terminal</text>
+  <rect x="760" y="192" width="150" height="26" rx="6" class="track"/>
+  <rect x="760" y="192" width="125" height="26" rx="6" class="bad"/>
+  <text x="926" y="212" class="value">10/12</text>
+  <text x="640" y="276" class="label">mechanism</text>
+  <rect x="760" y="256" width="150" height="26" rx="6" class="track"/>
+  <rect x="760" y="256" width="112.5" height="26" rx="6" class="bad"/>
+  <text x="926" y="276" class="value">9/12</text>
+  <text x="640" y="340" class="label">partial-staging</text>
+  <rect x="760" y="320" width="150" height="26" rx="6" class="track"/>
+  <rect x="760" y="320" width="12.5" height="26" rx="6" class="bad"/>
+  <text x="926" y="340" class="value">1/12</text>
+  <text x="28" y="446" class="small">Source: v5-final-summary.json. Partial authenticated snapshots remain in ITT.</text>
+</svg>

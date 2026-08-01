@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="540" viewBox="0 0 980 540" role="img" aria-labelledby="title description">
+  <title id="title">A5 versus A1 efficiency and context tradeoffs</title>
+  <desc id="description">A5 changed credits by -38.8%, parent input by -58.0%, total model tokens by +88.0%, wall time by +72.0%, path coverage by -21.3 pp, and mutant kill by -43.9 pp versus A1.</desc>
+  <style>
+    text { font-family: "Segoe UI", Aptos, Calibri, sans-serif; fill: #242424; }
+    .title { font-size: 26px; font-weight: 700; }
+    .subtitle { font-size: 14px; fill: #5c5c5c; }
+    .label { font-size: 14px; font-weight: 600; }
+    .value { font-size: 14px; font-weight: 700; }
+    .small { font-size: 12px; fill: #5c5c5c; }
+    .good { fill: #16a34a; }
+    .bad { fill: #dc2626; }
+    .neutral { fill: #5c5c5c; }
+    .track { fill: #f5f5f5; stroke: #919191; }
+    .accent { fill: #b11f4b; }
+    .line { stroke: #dedede; }
+  </style>
+  <rect width="980" height="540" fill="#f7f4ef"/>
+  <text x="28" y="42" class="title">A5 vs A1: cheaper parent, larger system</text>
+  <text x="28" y="68" class="subtitle">Left is lower; right is higher. Quality rows use percentage points.</text>
+  <line x1="540" y1="94" x2="540" y2="492" stroke="#919191" stroke-width="2"/>
+  <text x="530" y="92" text-anchor="end" class="small">lower</text>
+  <text x="550" y="92" class="small">higher</text>
+  <text x="28" y="135" class="label">AI credits</text>
+  <rect x="140" y="115" width="800" height="28" rx="6" class="track"/>
+  <rect x="384.7292510451207" y="115" width="155.27074895487928" height="28" rx="4" class="good"/>
+  <text x="374.7292510451207" y="135" text-anchor="end" class="value">-38.8%</text>
+  <text x="28" y="197" class="label">Parent cumulative input</text>
+  <rect x="140" y="177" width="800" height="28" rx="6" class="track"/>
+  <rect x="308.06697919579017" y="177" width="231.9330208042098" height="28" rx="4" class="good"/>
+  <text x="298.06697919579017" y="197" text-anchor="end" class="value">-58.0%</text>
+  <text x="28" y="259" class="label">Total model tokens</text>
+  <rect x="140" y="239" width="800" height="28" rx="6" class="track"/>
+  <rect x="540" y="239" width="351.9840608401786" height="28" rx="4" class="bad"/>
+  <text x="901.9840608401786" y="259" text-anchor="start" class="value">+88.0%</text>
+  <text x="28" y="321" class="label">Wall time</text>
+  <rect x="140" y="301" width="800" height="28" rx="6" class="track"/>
+  <rect x="540" y="301" width="287.8757890872526" height="28" rx="4" class="bad"/>
+  <text x="837.8757890872525" y="321" text-anchor="start" class="value">+72.0%</text>
+  <text x="28" y="383" class="label">Path coverage</text>
+  <rect x="140" y="363" width="800" height="28" rx="6" class="track"/>
+  <rect x="454.92537313432837" y="363" width="85.07462686567163" height="28" rx="4" class="bad"/>
+  <text x="444.92537313432837" y="383" text-anchor="end" class="value">-21.3pp</text>
+  <text x="28" y="445" class="label">Mutant kill</text>
+  <rect x="140" y="425" width="800" height="28" rx="6" class="track"/>
+  <rect x="364.24242424242425" y="425" width="175.75757575757575" height="28" rx="4" class="bad"/>
+  <text x="354.24242424242425" y="445" text-anchor="end" class="value">-43.9pp</text>
+  <text x="28" y="520" class="small">Source: v5-final-summary.json. Local, unsigned, descriptive-only.</text>
+</svg>

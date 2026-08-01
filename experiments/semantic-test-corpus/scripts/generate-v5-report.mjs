@@ -492,6 +492,13 @@ Machine-readable sources:
 - [per-arm endpoint CSV](results/v5-final-arm-summary.csv)
 - [canonical descriptive results](results/v5-b01/analysis/descriptive-results.json)
 
+Result visualizations:
+
+- [self-contained protocol-v5 dashboard](results/v5-results-dashboard.html)
+- [A5 versus A1 efficiency/context tradeoffs](results/v5-charts/a5-vs-a1-tradeoffs.svg)
+- [all-arm reliability, quality, credits, tokens, and wall comparison](results/v5-charts/all-arm-comparison.svg)
+- [A5 reliability funnel and failure anatomy](results/v5-charts/a5-reliability-funnel.svg)
+
 ## Design, integrity, and ITT accounting
 
 The benchmark contains 12 randomized complete blocks and 72 units: 60 AI units and
@@ -739,6 +746,8 @@ From \`experiments/semantic-test-corpus\`:
 \`\`\`powershell
 npm run report:v5
 npm run report:v5:check
+npm run visualize:v5
+npm run visualize:v5:check
 npm test
 npm run evidence:v5:verify
 \`\`\`
@@ -746,7 +755,9 @@ npm run evidence:v5:verify
 \`report:v5\` verifies the immutable package, re-derives every table from committed
 canonical artifacts, asserts the closure/package hashes and complete-execution
 totals, and writes the Markdown/JSON/CSV outputs. \`report:v5:check\` regenerates in
-memory and requires byte-for-byte equality.
+memory and requires byte-for-byte equality. \`visualize:v5\` derives the dashboard and
+SVG charts only from \`results/v5-final-summary.json\`; \`visualize:v5:check\` requires
+all four generated files to remain byte-for-byte current.
 `;
   return Buffer.from(report, "utf8");
 }
