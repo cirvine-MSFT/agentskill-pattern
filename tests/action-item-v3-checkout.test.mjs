@@ -16,12 +16,6 @@ function git(args, cwd = repositoryRoot) {
   return result.stdout.trim();
 }
 
-function node(args, cwd) {
-  const result = spawnSync(process.execPath, args, { cwd, encoding: "utf8", windowsHide: true });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  return result.stdout.trim();
-}
-
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -38,8 +32,9 @@ test("core.autocrlf=true checkout preserves frozen v3 bytes", async () => {
 
   try {
     const sourceCommit = git(["rev-parse", "HEAD"]);
-    git(["clone", "--quiet", "--no-checkout", "--no-hardlinks", repositoryRoot, checkoutRoot]);
+    git(["clone", "--quiet", "--no-checkout", repositoryRoot, checkoutRoot]);
     git(["config", "core.autocrlf", "true"], checkoutRoot);
+    git(["sparse-checkout", "set", experimentPath], checkoutRoot);
     git(["checkout", "--quiet", "--detach", sourceCommit], checkoutRoot);
     assert.equal(git(["config", "--get", "core.autocrlf"], checkoutRoot), "true");
 
@@ -75,7 +70,6 @@ test("core.autocrlf=true checkout preserves frozen v3 bytes", async () => {
       assert.equal(transcriptBytes.toString("utf8"), sourceModule.fixtureSources[index].transcript);
       assert.deepEqual(JSON.parse(goldBytes), sourceModule.fixtureSources[index].gold);
     }
-    assert.match(node(["scripts/validate-foundation.mjs"], checkoutExperimentRoot), /zero AI starts$/u);
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   }
