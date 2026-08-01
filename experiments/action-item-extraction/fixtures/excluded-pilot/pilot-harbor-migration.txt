@@ -1,0 +1,51 @@
+[001] Meeting: Harbor data migration readiness. Date: 2026-11-03. Participants: Grace Kim, Hugo Mensah, Inez Park, Jonah Reed, Kira Patel, Malik Thompson, and facilitator Elena Rossi.
+[002] Elena: We are preparing the November twenty-four migration. Please be precise about owners, dates, and conditions.
+[003] Grace: The rehearsal copied 1.8 terabytes. The funny graph annotation can stay; no one needs to fix it.
+[004] Hugo: We decided to retain the old export bucket for thirty days. Storage policy already implements that decision.
+[005] Inez: Maybe we should write a retrospective template before migration.
+[006] Jonah: Not now. That is a suggestion, not a commitment.
+[007] Kira: I will publish the customer migration schedule by 2026-11-06, after Account Management approves the cohort order.
+[008] Malik: I will validate checksums for the top twenty customer exports by 2026-11-09.
+[009] Grace: I will prepare the cutover command sheet by 2026-11-10.
+[010] Grace: The command sheet must include stop conditions and rollback commands.
+[011] Elena: Grace's action is the complete cutover command sheet with those sections.
+[012] Hugo: I will test restore throughput by 2026-11-08.
+[013] Hugo: Change the due date to 2026-11-11; the larger snapshot will not exist until the tenth.
+[014] Inez: I will notify the support leads about the migration window by 2026-11-07.
+[015] Inez: I need to correct that. Jonah will own the support-lead notification instead, due 2026-11-08.
+[016] Jonah: Accepted. I will notify support leads about the migration window by 2026-11-08.
+[017] Malik: The checksum script prints harmless warnings. We could clean that up later.
+[018] Grace: No warning-cleanup action for this migration.
+[019] Kira: Legal requested a record of deletion exceptions.
+[020] Kira: I will file the legal deletion-exception register by 2026-11-12. Legal says the register blocks migration approval.
+[021] Jonah: I can provide account contacts, but that does not transfer ownership.
+[022] Elena: Correct. Kira owns the critical legal register.
+[023] Hugo: I had volunteered to resize the test database. I rescind that because Capacity already completed it.
+[024] Malik: If the top-twenty checksum validation finds a mismatch, I will open a customer-impact incident within thirty minutes of detection.
+[025] Elena: Conditional, no calendar due date, and explicitly customer-impacting.
+[026] Grace: I will lead the cutover rehearsal on 2026-11-16.
+[027] Grace: Actually, Malik will lead the cutover rehearsal on 2026-11-17; I am withdrawing my rehearsal commitment.
+[028] Malik: Confirmed. I will lead the cutover rehearsal on 2026-11-17.
+[029] Inez: We should have snacks during the overnight migration.
+[030] Jonah: Facilities can handle snacks. No engineering action.
+[031] Hugo: I will document measured restore throughput by 2026-11-12 after my throughput test finishes.
+[032] Kira: If Account Management rejects a cohort, somebody may need to revise the schedule.
+[033] Kira: To make that explicit, if Account Management rejects the cohort order, I will revise the customer migration schedule within one business day of rejection.
+[034] Elena: Separate conditional commitment, no fixed due date.
+[035] Jonah: I will prepare the support escalation tree by Friday.
+[036] Elena: Friday is ambiguous. State the date or we cannot normalize it.
+[037] Jonah: I will prepare the support escalation tree by 2026-11-13.
+[038] Inez: I can review the tree if time permits.
+[039] Inez: That is not a commitment; Jonah owns completion.
+[040] Grace: Security asked about database credentials in command examples.
+[041] Grace: I will remove live credential examples from the cutover command sheet by 2026-11-10. This is part of my existing command-sheet deliverable, not a duplicate action.
+[042] Malik: The rehearsal room is too cold, but that is not relevant to extraction.
+[043] Hugo: We decided to use the larger snapshot for the final benchmark. The test I already own covers that decision.
+[044] Kira: I will not create a second legal register for sandbox tenants; Legal excluded them.
+[045] Jonah: I will confirm the support bridge phone number by 2026-11-18.
+[046] Jonah: Cancel that commitment. The bridge service now publishes the number automatically.
+[047] Inez: I will send the internal migration reminder by 2026-11-20, conditional on the final go decision.
+[048] Elena: That is a valid conditional commitment.
+[049] Grace: The cutover command sheet remains due on the tenth, despite the rehearsal moving.
+[050] Elena: Final list: Kira conditional schedule, critical register, and conditional revision; Malik checksum validation, conditional incident, and rehearsal; Grace command sheet; Hugo throughput test and documentation; Jonah support notice and escalation tree; Inez conditional internal reminder.
+[051] All: Confirmed. The canceled bridge-number task and all suggestions are omitted.

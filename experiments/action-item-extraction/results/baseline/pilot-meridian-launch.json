@@ -1,0 +1,248 @@
+{
+  "schemaVersion": "action-ledger.v1",
+  "runId": "BASELINE-pilot-meridian-launch",
+  "transcriptId": "pilot-meridian-launch",
+  "items": [
+    {
+      "itemId": "AI-001",
+      "owner": "Devon Price",
+      "action": "rotate the production signing certificate",
+      "dueDate": "2026-10-09",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 6,
+          "endLine": 6,
+          "quote": "I will rotate the production signing certificate by 2026-10-09. Security has labeled this release-blocking."
+        }
+      ],
+      "criticality": "critical"
+    },
+    {
+      "itemId": "AI-002",
+      "owner": "Theo Grant",
+      "action": "verify the app-store privacy labels against the shipped SDK list",
+      "dueDate": "2026-10-08",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 8,
+          "endLine": 8,
+          "quote": "I will verify the app-store privacy labels against the shipped SDK list by 2026-10-08."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-003",
+      "owner": "Aisha Khan",
+      "action": "prepare the launch-health dashboard",
+      "dueDate": "2026-10-12",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 11,
+          "endLine": 11,
+          "quote": "I will prepare the launch-health dashboard by 2026-10-12."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-004",
+      "owner": "Clara Wu",
+      "action": "draft the release-day customer post",
+      "dueDate": "2026-10-13",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 14,
+          "endLine": 14,
+          "quote": "I will draft the release-day customer post by 2026-10-13."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-005",
+      "owner": "Rosa Silva",
+      "action": "draft the release-day customer post",
+      "dueDate": "2026-10-14",
+      "status": "conditional",
+      "condition": "Accepted. I will draft the release-day customer post by 2026-10-14, conditional on Legal approving the feature names.",
+      "sourceSpans": [
+        {
+          "startLine": 16,
+          "endLine": 16,
+          "quote": "Accepted. I will draft the release-day customer post by 2026-10-14, conditional on Legal approving the feature names."
+        }
+      ],
+      "criticality": "critical"
+    },
+    {
+      "itemId": "AI-006",
+      "owner": "Ben Ortiz",
+      "action": "send Rosa the final feature names tomorrow",
+      "dueDate": null,
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 17,
+          "endLine": 17,
+          "quote": "I will send Rosa the final feature names tomorrow."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-007",
+      "owner": "Ben Ortiz",
+      "action": "send Rosa the final feature-name list",
+      "dueDate": "2026-10-07",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 19,
+          "endLine": 19,
+          "quote": "I will send Rosa the final feature-name list by 2026-10-07."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-008",
+      "owner": "Ben Ortiz",
+      "action": "verify legacy-email deep links on the release candidate",
+      "dueDate": "2026-10-11",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 22,
+          "endLine": 22,
+          "quote": "I will verify legacy-email deep links on the release candidate by 2026-10-11."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-009",
+      "owner": "Rosa Silva",
+      "action": "assemble the support macro set",
+      "dueDate": "2026-10-15",
+      "status": "conditional",
+      "condition": "I will assemble the support macro set by 2026-10-15 if Support approves the final troubleshooting taxonomy by 2026-10-12.",
+      "sourceSpans": [
+        {
+          "startLine": 27,
+          "endLine": 27,
+          "quote": "I will assemble the support macro set by 2026-10-15 if Support approves the final troubleshooting taxonomy by 2026-10-12."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-010",
+      "owner": "Theo Grant",
+      "action": "open the compliance review ticket for the retention wording",
+      "dueDate": "2026-10-08",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 31,
+          "endLine": 31,
+          "quote": "I will open the compliance review ticket for the retention wording by 2026-10-08. Compliance marked it launch-blocking."
+        }
+      ],
+      "criticality": "critical"
+    },
+    {
+      "itemId": "AI-011",
+      "owner": "Ben Ortiz",
+      "action": "produce the release-candidate smoke-test matrix",
+      "dueDate": "2026-10-10",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 36,
+          "endLine": 36,
+          "quote": "I will produce the release-candidate smoke-test matrix by 2026-10-10."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-012",
+      "owner": "Rosa Silva",
+      "action": "update the post within four hours of notification",
+      "dueDate": null,
+      "status": "conditional",
+      "condition": "If Legal changes an approved feature name, I will update the post within four hours of notification.",
+      "sourceSpans": [
+        {
+          "startLine": 40,
+          "endLine": 40,
+          "quote": "If Legal changes an approved feature name, I will update the post within four hours of notification."
+        }
+      ],
+      "criticality": "critical"
+    },
+    {
+      "itemId": "AI-013",
+      "owner": "Aisha Khan",
+      "action": "run a dashboard rehearsal",
+      "dueDate": "2026-10-16",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 44,
+          "endLine": 44,
+          "quote": "I will run a dashboard rehearsal by 2026-10-16."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-014",
+      "owner": "Aisha Khan",
+      "action": "run the launch-health dashboard rehearsal",
+      "dueDate": "2026-10-16",
+      "status": "conditional",
+      "condition": "More precisely, I will run the launch-health dashboard rehearsal by 2026-10-16 after the smoke-test matrix is available.",
+      "sourceSpans": [
+        {
+          "startLine": 45,
+          "endLine": 45,
+          "quote": "More precisely, I will run the launch-health dashboard rehearsal by 2026-10-16 after the smoke-test matrix is available."
+        }
+      ],
+      "criticality": "normal"
+    },
+    {
+      "itemId": "AI-015",
+      "owner": "Theo Grant",
+      "action": "archive the privacy-label evidence",
+      "dueDate": "2026-10-16",
+      "status": "conditional",
+      "condition": "I will archive the privacy-label evidence by 2026-10-16 after verification completes.",
+      "sourceSpans": [
+        {
+          "startLine": 48,
+          "endLine": 48,
+          "quote": "I will archive the privacy-label evidence by 2026-10-16 after verification completes."
+        }
+      ],
+      "criticality": "normal"
+    }
+  ],
+  "ambiguities": []
+}

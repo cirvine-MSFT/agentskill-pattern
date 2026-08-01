@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "transcriptId": "pilot-lumen-audit",
+  "policy": {
+    "include": "final explicit commitments with attributable owners",
+    "omit": "suggestions, decisions without actions, negations, fully rescinded work, and unaccepted assignments",
+    "ambiguity": "record material ambiguity without inventing fields",
+    "finalState": "last explicit owner, due date, status, and condition wins"
+  },
+  "expectedItems": [
+    {"owner":"Hana Sato","action":"reconcile the privileged-account sample","dueDate":"2027-01-15","status":"open","condition":null,"sourceSpans":[{"startLine":5,"endLine":5,"quote":"I will reconcile the privileged-account sample by 2027-01-15."}],"criticality":"normal","resolutionTags":["direct"]},
+    {"owner":"Isaac Bell","action":"collect manager attestations","dueDate":"2027-01-18","status":"open","condition":null,"sourceSpans":[{"startLine":6,"endLine":8,"quote":"My collection commitment is unconditional"}],"criticality":"normal","resolutionTags":["clarification"]},
+    {"owner":"Keon Davis","action":"draft the exception summary with severity, business-owner, and control-identifier fields","dueDate":"2027-01-21","status":"open","condition":null,"sourceSpans":[{"startLine":9,"endLine":10,"quote":"Make that 2027-01-21"},{"startLine":22,"endLine":23,"quote":"severity and business-owner fields"},{"startLine":32,"endLine":32,"quote":"map each exception to a control identifier"}],"criticality":"normal","resolutionTags":["date-change","merged-clarification"]},
+    {"owner":"Farah Ali","action":"submit the audit evidence package","dueDate":"2027-01-25","status":"open","condition":null,"sourceSpans":[{"startLine":11,"endLine":13,"quote":"I will submit the audit evidence package by 2027-01-25."}],"criticality":"critical","resolutionTags":["retained-owner"]},
+    {"owner":"Hana Sato","action":"disable the three stale service accounts","dueDate":"2027-01-16","status":"conditional","condition":"Security change approval","sourceSpans":[{"startLine":14,"endLine":16,"quote":"record the stale-account disablement as conditional on Security change approval"}],"criticality":"critical","resolutionTags":["conditional"]},
+    {"owner":"Jules Martin","action":"update the access-review procedure","dueDate":"2027-01-23","status":"open","condition":null,"sourceSpans":[{"startLine":19,"endLine":21,"quote":"Jules will own the procedure update, due 2027-01-23."}],"criticality":"normal","resolutionTags":["reassignment","rescission"]},
+    {"owner":"Gavin Cole","action":"check contractor-account naming compliance","dueDate":"2027-01-20","status":"open","condition":null,"sourceSpans":[{"startLine":25,"endLine":28,"quote":"Reassign that check to Gavin, due 2027-01-20"}],"criticality":"normal","resolutionTags":["reassignment"]},
+    {"owner":"Jules Martin","action":"remove an obsolete approval step","dueDate":null,"status":"conditional","condition":"procedure review finds an obsolete approval step; within two business days of finding","sourceSpans":[{"startLine":30,"endLine":31,"quote":"If the procedure review finds an obsolete approval step, I will remove it within two business days of that finding."}],"criticality":"normal","resolutionTags":["conditional"]},
+    {"owner":"Farah Ali","action":"archive the reviewer comments","dueDate":"2027-01-24","status":"open","condition":null,"sourceSpans":[{"startLine":33,"endLine":37,"quote":"I will archive the reviewer comments by 2027-01-24."}],"criticality":"critical","resolutionTags":["retained-owner"]},
+    {"owner":"Hana Sato","action":"verify stale accounts remain disabled","dueDate":"2027-01-19","status":"conditional","condition":"Security change approval arrives by 2027-01-16","sourceSpans":[{"startLine":38,"endLine":38,"quote":"only if change approval arrives by 2027-01-16"}],"criticality":"critical","resolutionTags":["conditional"]},
+    {"owner":"Jules Martin","action":"send the revised procedure to control owners","dueDate":"2027-01-25","status":"conditional","condition":"Farah confirms the evidence package index","sourceSpans":[{"startLine":40,"endLine":41,"quote":"after Farah confirms the evidence package index"}],"criticality":"normal","resolutionTags":["conditional"]},
+    {"owner":"Isaac Bell","action":"follow up on missing manager attestations","dueDate":"2027-01-22","status":"open","condition":null,"sourceSpans":[{"startLine":47,"endLine":48,"quote":"I will follow up on missing manager attestations by 2027-01-22."}],"criticality":"normal","resolutionTags":["distinct-follow-up"]}
+  ],
+  "expectedOmissions": [
+    {"lines":[4,4],"reason":"suggestion"},
+    {"lines":[17,18],"reason":"future idea without owner"},
+    {"lines":[42,43],"reason":"dashboard explicitly denied"},
+    {"lines":[44,46],"reason":"presentation canceled with no replacement deliverable"}
+  ]
+}
