@@ -1,0 +1,520 @@
+{
+  "formatVersion": 2,
+  "protocolId": "action-item-extraction-v2",
+  "phase": "development-unit",
+  "runId": "DEV-ACTION-V2-A4-7C31",
+  "transcriptId": "dev-cedar-release-review",
+  "sessionId": "e425214f-37a5-5af8-a17e-3272c6176f28",
+  "startedAt": "2026-08-01T17:03:45.838Z",
+  "endedAt": "2026-08-01T17:04:40.918Z",
+  "disposition": "measured-failure",
+  "operationalSuccess": false,
+  "treatmentAdherent": false,
+  "failureReasons": [
+    "debug parent/worker Tools schemas missing or incomplete",
+    "fatal unknown-tool warning observed"
+  ],
+  "mechanism": {
+    "projectSkillLoads": 1,
+    "parentModel": "gpt-5.6-sol",
+    "taskStarts": 1,
+    "taskToolCallId": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+    "workerAgentId": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+    "workerUsageIds": [
+      "call_hrDKjuo78Aa0A2TBqw23ZoNM"
+    ],
+    "workerAgent": "action-ledger-v2-haiku",
+    "workerModel": "claude-haiku-4.5",
+    "workerStarts": 1,
+    "workerCompletes": 1
+  },
+  "boundary": {
+    "workerTranscriptViewStarts": 1,
+    "workerTranscriptViewCompleted": true,
+    "workerLedgerEditStarts": 1,
+    "workerLedgerEditCompleted": true,
+    "parentViews": 0,
+    "parentEdits": 0,
+    "unexpectedFileCalls": 0,
+    "candidateFiles": [
+      ".github/agents/action-ledger-v2-haiku.agent.md",
+      ".github/skills/action-ledger-v2/SKILL.md",
+      "input/transcript.txt",
+      "output/ledger.json"
+    ],
+    "sentinelSha256": "52894944489d0cf113f0e96350ecc2b91250bce2560c325def44f611ebb42400",
+    "ledgerSha256": "4c33fad5e373e68e4c101766a88b4aa13e9e2652955169419385c2e5ce4adfda",
+    "ledgerBytes": 7731,
+    "rawEventBytes": 706444,
+    "stderrDebugBytes": 0
+  },
+  "debugToolSchemas": {
+    "parentCaptured": false,
+    "workerCaptured": false,
+    "parentExcerpt": null,
+    "workerExcerpt": null,
+    "workerContainsStructuredView": false,
+    "workerContainsBuiltinEdit": false,
+    "workerSource": null,
+    "workerSourceIndex": null,
+    "workerRegistryStderrIndex": null,
+    "distinctParentAndWorkerBlocks": false,
+    "blocksObserved": 1
+  },
+  "unknownToolWarnings": {
+    "observed": [
+      {
+        "source": "event",
+        "eventIndex": 3,
+        "agentId": null,
+        "message": "Unknown tool name in the tool allowlist: \"edit\""
+      }
+    ],
+    "accepted": [],
+    "rejected": [
+      {
+        "source": "event",
+        "eventIndex": 3,
+        "agentId": null,
+        "message": "Unknown tool name in the tool allowlist: \"edit\""
+      }
+    ],
+    "acceptanceRule": "Only exact bare/source-qualified parent edit warning before child registry; worker schema and successful edit required."
+  },
+  "schema": {
+    "valid": true,
+    "errors": []
+  },
+  "returnBoundary": {
+    "expectedStatus": "DEV-ACTION-V2-A4-7C31 | X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v2-runtime\\candidates\\DEV-ACTION-V2-A4-7C31\\output\\ledger.json | 12 | 3710a49e37dcab239ad5d9bc0cf8c368cc5509bc733b7b60d65f52464fa0ce73",
+    "workerStatus": "DEV-ACTION-V2-A4-7C31 | X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v2-runtime\\candidates\\DEV-ACTION-V2-A4-7C31\\output\\ledger.json | 12 | 3710a49e37dcab239ad5d9bc0cf8c368cc5509bc733b7b60d65f52464fa0ce73",
+    "parentStatus": "DEV-ACTION-V2-A4-7C31 | X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v2-runtime\\candidates\\DEV-ACTION-V2-A4-7C31\\output\\ledger.json | 12 | 3710a49e37dcab239ad5d9bc0cf8c368cc5509bc733b7b60d65f52464fa0ce73",
+    "compact": true
+  },
+  "isolation": {
+    "valid": true,
+    "candidateHasOnlyFourFiles": true,
+    "limitation": "CLI tool restrictions and context minimization are measured; no independent Windows security boundary is claimed."
+  },
+  "contextAndUsage": {
+    "parent": {
+      "completions": 2,
+      "inputTokens": 16512,
+      "outputTokens": 714,
+      "reasoningTokens": 33,
+      "totalModelTokens": 17226,
+      "nanoAiu": 7922775000,
+      "activeTimeMs": 7826,
+      "models": [
+        "gpt-5.6-sol"
+      ]
+    },
+    "worker": {
+      "completions": 3,
+      "inputTokens": 18055,
+      "outputTokens": 3129,
+      "reasoningTokens": 369,
+      "totalModelTokens": 21184,
+      "nanoAiu": 3069285000,
+      "activeTimeMs": 31399,
+      "models": [
+        "claude-haiku-4.5"
+      ]
+    },
+    "unexpectedActors": {
+      "completions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "reasoningTokens": 0,
+      "totalModelTokens": 0,
+      "nanoAiu": 0,
+      "activeTimeMs": 0,
+      "models": []
+    },
+    "total": {
+      "completions": 5,
+      "inputTokens": 34567,
+      "outputTokens": 3843,
+      "reasoningTokens": 402,
+      "totalModelTokens": 38410,
+      "nanoAiu": 10992060000,
+      "activeTimeMs": 39225,
+      "models": [
+        "claude-haiku-4.5",
+        "gpt-5.6-sol"
+      ]
+    },
+    "rows": [
+      {
+        "id": 1,
+        "session_id": "e425214f-37a5-5af8-a17e-3272c6176f28",
+        "turn_index": 0,
+        "agent_id": null,
+        "parent_tool_call_id": null,
+        "model": "gpt-5.6-sol",
+        "input_tokens": 7896,
+        "output_tokens": 616,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 7893,
+        "reasoning_tokens": 33,
+        "total_nano_aiu": 6782625000,
+        "duration_ms": 6464,
+        "reasoning_effort": "medium",
+        "finish_reason": "tool_calls",
+        "created_at": "2026-08-01T17:03:57.157Z"
+      },
+      {
+        "id": 2,
+        "session_id": "e425214f-37a5-5af8-a17e-3272c6176f28",
+        "turn_index": 0,
+        "agent_id": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+        "parent_tool_call_id": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+        "model": "claude-haiku-4.5",
+        "input_tokens": 3503,
+        "output_tokens": 474,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 369,
+        "total_nano_aiu": 587300000,
+        "duration_ms": 5829,
+        "reasoning_effort": null,
+        "finish_reason": "tool_calls",
+        "created_at": "2026-08-01T17:04:12.883Z"
+      },
+      {
+        "id": 3,
+        "session_id": "e425214f-37a5-5af8-a17e-3272c6176f28",
+        "turn_index": 0,
+        "agent_id": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+        "parent_tool_call_id": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+        "model": "claude-haiku-4.5",
+        "input_tokens": 5782,
+        "output_tokens": 2540,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 5776,
+        "reasoning_tokens": 0,
+        "total_nano_aiu": 1992600000,
+        "duration_ms": 22478,
+        "reasoning_effort": null,
+        "finish_reason": "tool_calls",
+        "created_at": "2026-08-01T17:04:35.767Z"
+      },
+      {
+        "id": 4,
+        "session_id": "e425214f-37a5-5af8-a17e-3272c6176f28",
+        "turn_index": 0,
+        "agent_id": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+        "parent_tool_call_id": "call_hrDKjuo78Aa0A2TBqw23ZoNM",
+        "model": "claude-haiku-4.5",
+        "input_tokens": 8770,
+        "output_tokens": 115,
+        "cache_read_tokens": 5776,
+        "cache_write_tokens": 2989,
+        "reasoning_tokens": 0,
+        "total_nano_aiu": 489385000,
+        "duration_ms": 3092,
+        "reasoning_effort": null,
+        "finish_reason": "stop",
+        "created_at": "2026-08-01T17:04:38.957Z"
+      },
+      {
+        "id": 5,
+        "session_id": "e425214f-37a5-5af8-a17e-3272c6176f28",
+        "turn_index": 0,
+        "agent_id": null,
+        "parent_tool_call_id": null,
+        "model": "gpt-5.6-sol",
+        "input_tokens": 8616,
+        "output_tokens": 98,
+        "cache_read_tokens": 7893,
+        "cache_write_tokens": 720,
+        "reasoning_tokens": 0,
+        "total_nano_aiu": 1140150000,
+        "duration_ms": 1362,
+        "reasoning_effort": "medium",
+        "finish_reason": "stop",
+        "created_at": "2026-08-01T17:04:40.411Z"
+      }
+    ]
+  },
+  "timing": {
+    "wallTimeMs": 55080
+  },
+  "terminal": {
+    "processStatus": 0,
+    "processSignal": null,
+    "resultEventCount": 1
+  },
+  "quality": {
+    "formatVersion": 2,
+    "protocolId": "action-item-extraction-v2",
+    "runId": "DEV-ACTION-V2-A4-7C31",
+    "transcriptId": "dev-cedar-release-review",
+    "tuple": {
+      "candidateCount": 12,
+      "goldCount": 12,
+      "matchedCount": 12,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    "fieldAccuracy": {
+      "owner": 1,
+      "action": 1,
+      "dueDate": 1,
+      "status": 1,
+      "condition": 0.8333333333333334,
+      "criticality": 0.9166666666666666
+    },
+    "changeHandling": {
+      "rescission": {
+        "eligible": 1,
+        "correct": 1,
+        "rate": 1
+      },
+      "reassignment": {
+        "eligible": 1,
+        "correct": 1,
+        "rate": 1
+      },
+      "dateChange": {
+        "eligible": 1,
+        "correct": 1,
+        "rate": 1
+      }
+    },
+    "unsupportedCommitments": 0,
+    "unsupportedCriticalActions": 0,
+    "unsupportedCandidateIndexes": [],
+    "schema": {
+      "valid": true,
+      "errors": []
+    },
+    "duplicates": 0,
+    "sourceGrounding": {
+      "matchedItems": 12,
+      "groundedItems": 1,
+      "rate": 0.08333333333333333
+    },
+    "matches": [
+      {
+        "candidateIndex": 0,
+        "goldIndex": 0,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 1,
+        "goldIndex": 1,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 2,
+        "goldIndex": 2,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "date-change",
+          "retained-owner"
+        ]
+      },
+      {
+        "candidateIndex": 3,
+        "goldIndex": 3,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": false,
+        "criticality": false,
+        "grounded": false,
+        "resolutionTags": [
+          "conditional"
+        ]
+      },
+      {
+        "candidateIndex": 4,
+        "goldIndex": 4,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "reassignment"
+        ]
+      },
+      {
+        "candidateIndex": 5,
+        "goldIndex": 5,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": false,
+        "criticality": true,
+        "grounded": true,
+        "resolutionTags": [
+          "blocked"
+        ]
+      },
+      {
+        "candidateIndex": 6,
+        "goldIndex": 6,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "explicit-no-date"
+        ]
+      },
+      {
+        "candidateIndex": 7,
+        "goldIndex": 7,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 8,
+        "goldIndex": 8,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "team-owner"
+        ]
+      },
+      {
+        "candidateIndex": 9,
+        "goldIndex": 9,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 10,
+        "goldIndex": 10,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      },
+      {
+        "candidateIndex": 11,
+        "goldIndex": 11,
+        "similarity": 1,
+        "owner": true,
+        "action": true,
+        "dueDate": true,
+        "status": true,
+        "condition": true,
+        "criticality": true,
+        "grounded": false,
+        "resolutionTags": [
+          "direct"
+        ]
+      }
+    ]
+  },
+  "launch": {
+    "executable": "copilot",
+    "exactArgs": [
+      "-p",
+      "{\"arm\":\"A4\",\"formatVersion\":2,\"instruction\":\"Follow the loaded action-ledger-v2 project Skill exactly once. Delegate exactly once to action-ledger-v2-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured runtime view of the whole transcript and exactly one structured runtime edit replacing the exact supplied precreated sentinel with the complete ledger. Do not retry. Return only the worker compact line.\",\"ledgerPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v2-runtime\\\\candidates\\\\DEV-ACTION-V2-A4-7C31\\\\output\\\\ledger.json\",\"ledgerSentinel\":\"{\\\"sentinel\\\":\\\"ACTION_ITEM_EXTRACTION_V2_REPLACE_ME\\\"}\\n\",\"phase\":\"development-unit\",\"policy\":[\"Include only final explicit commitments with attributable owners.\",\"Apply the last explicit owner, due date, status, and condition.\",\"Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.\",\"Record materially ambiguous apparent commitments in ambiguities without inventing an owner, date, condition, or action.\",\"Source quotes must be verbatim and their line ranges must contain them.\",\"Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking.\"],\"protocolId\":\"action-item-extraction-v2\",\"runId\":\"DEV-ACTION-V2-A4-7C31\",\"schema\":{\"ambiguities\":[{\"note\":\"grounded omission or qualification reason\",\"sourceLine\":\"positive integer\"}],\"items\":[{\"action\":\"normalized action\",\"condition\":\"string or null\",\"criticality\":\"critical|normal\",\"dueDate\":\"YYYY-MM-DD or null\",\"itemId\":\"AI-001 sequentially\",\"owner\":\"canonical person or team\",\"sourceSpans\":[{\"endLine\":\"positive integer\",\"quote\":\"verbatim transcript text\",\"startLine\":\"positive integer\"}],\"status\":\"open|conditional|blocked\"}],\"runId\":\"exact supplied run ID\",\"schemaVersion\":\"action-ledger.v2\",\"transcriptId\":\"exact supplied transcript ID\"},\"statusHash\":\"3710a49e37dcab239ad5d9bc0cf8c368cc5509bc733b7b60d65f52464fa0ce73\",\"transcriptId\":\"dev-cedar-release-review\",\"transcriptPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v2-runtime\\\\candidates\\\\DEV-ACTION-V2-A4-7C31\\\\input\\\\transcript.txt\"}",
+      "--session-id",
+      "e425214f-37a5-5af8-a17e-3272c6176f28",
+      "--model",
+      "gpt-5.6-sol",
+      "--output-format",
+      "json",
+      "--log-level",
+      "debug",
+      "-C",
+      "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v2-runtime\\candidates\\DEV-ACTION-V2-A4-7C31",
+      "--allow-all-tools",
+      "--available-tools=task,view,edit",
+      "--disable-builtin-mcps",
+      "--disallow-temp-dir",
+      "--no-custom-instructions",
+      "--no-ask-user",
+      "--no-remote-export",
+      "--no-auto-update",
+      "--experimental",
+      "--context",
+      "default",
+      "--effort",
+      "medium",
+      "--secret-env-vars=COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+    ],
+    "cliVersion": "1.0.77",
+    "environment": {
+      "HOME": "<isolated-profile>",
+      "USERPROFILE": "<isolated-profile>",
+      "COPILOT_HOME": "<isolated-profile>/.copilot"
+    }
+  }
+}

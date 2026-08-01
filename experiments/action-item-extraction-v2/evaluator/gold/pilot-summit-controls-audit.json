@@ -1,0 +1,299 @@
+{
+  "formatVersion": 2,
+  "protocolId": "action-item-extraction-v2",
+  "evaluatorOnly": true,
+  "transcriptId": "pilot-summit-controls-audit",
+  "expectedItems": [
+    {
+      "owner": "Greta Olsen",
+      "action": "publish the final exception runbook",
+      "dueDate": "2026-09-16",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 8,
+          "endLine": 8,
+          "quote": "I will publish the final exception runbook by 2026-09-16."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "June Park",
+      "action": "reconcile the control coverage matrix against the approved scope",
+      "dueDate": "2026-09-17",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 11,
+          "endLine": 11,
+          "quote": "I will reconcile the control coverage matrix against the approved scope by 2026-09-17."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Owen Ford",
+      "action": "configure the evidence telemetry alert set",
+      "dueDate": "2026-09-22",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 14,
+          "endLine": 14,
+          "quote": "I will configure the evidence telemetry alert set by 2026-09-18."
+        },
+        {
+          "startLine": 38,
+          "endLine": 38,
+          "quote": "Correction to my evidence telemetry commitment: move its due date from 2026-09-18 to 2026-09-22; I still own it."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "date-change",
+        "retained-owner"
+      ]
+    },
+    {
+      "owner": "Priyanka Shah",
+      "action": "approve the security exception",
+      "dueDate": "2026-09-21",
+      "status": "conditional",
+      "condition": "only if the penetration-test retest is green",
+      "sourceSpans": [
+        {
+          "startLine": 17,
+          "endLine": 17,
+          "quote": "I will approve the security exception by 2026-09-21 only if the penetration-test retest is green; until then this item is conditional."
+        }
+      ],
+      "criticality": "critical",
+      "resolutionTags": [
+        "conditional"
+      ]
+    },
+    {
+      "owner": "Lin Zhao",
+      "action": "draft the customer-facing auditor brief",
+      "dueDate": "2026-09-18",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 20,
+          "endLine": 20,
+          "quote": "I will draft the customer-facing auditor brief by 2026-09-18."
+        },
+        {
+          "startLine": 42,
+          "endLine": 42,
+          "quote": "Lin Zhao will own the customer-facing auditor brief instead of Wes Carter, with the same due date 2026-09-18; Wes Carter is released."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "reassignment"
+      ]
+    },
+    {
+      "owner": "Hassan Malik",
+      "action": "package the auditor walkthrough build",
+      "dueDate": "2026-09-22",
+      "status": "blocked",
+      "condition": "until the signing service returns to service",
+      "sourceSpans": [
+        {
+          "startLine": 23,
+          "endLine": 23,
+          "quote": "I will package the auditor walkthrough build by 2026-09-22; it is blocked until the signing service returns to service."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "blocked"
+      ]
+    },
+    {
+      "owner": "Darius King",
+      "action": "record the final launch decision and distribute the signed decision log",
+      "dueDate": null,
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 26,
+          "endLine": 26,
+          "quote": "I will record the final launch decision and distribute the signed decision log; there is no fixed due date."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "explicit-no-date"
+      ]
+    },
+    {
+      "owner": "Priyanka Shah",
+      "action": "complete the launch-blocking credential audit",
+      "dueDate": "2026-09-22",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 29,
+          "endLine": 29,
+          "quote": "I will complete the launch-blocking credential audit by 2026-09-22."
+        }
+      ],
+      "criticality": "critical",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Release Operations",
+      "action": "verify the overnight escalation roster",
+      "dueDate": "2026-09-23",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 32,
+          "endLine": 32,
+          "quote": "Release Operations will verify the overnight escalation roster by 2026-09-23."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "team-owner"
+      ]
+    },
+    {
+      "owner": "June Park",
+      "action": "archive the reconciled evidence bundle",
+      "dueDate": "2026-09-24",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 45,
+          "endLine": 45,
+          "quote": "After the review, I will archive the reconciled evidence bundle by 2026-09-24."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Wes Carter",
+      "action": "publish the customer-blocking support escalation matrix",
+      "dueDate": "2026-09-23",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 48,
+          "endLine": 48,
+          "quote": "I will publish the customer-blocking support escalation matrix by 2026-09-23."
+        }
+      ],
+      "criticality": "critical",
+      "resolutionTags": [
+        "direct"
+      ]
+    },
+    {
+      "owner": "Darius King",
+      "action": "circulate the final ownership table",
+      "dueDate": "2026-09-24",
+      "status": "open",
+      "condition": null,
+      "sourceSpans": [
+        {
+          "startLine": 52,
+          "endLine": 52,
+          "quote": "I will circulate the final ownership table by 2026-09-24."
+        }
+      ],
+      "criticality": "normal",
+      "resolutionTags": [
+        "direct"
+      ]
+    }
+  ],
+  "expectedOmissions": [
+    {
+      "category": "noncommitment-suggestion",
+      "sourceSpans": [
+        {
+          "startLine": 6,
+          "endLine": 6,
+          "quote": "Maybe we should create a second auditor brief with screenshots; that is a suggestion, not a commitment."
+        }
+      ],
+      "reason": "suggestion explicitly disclaimed"
+    },
+    {
+      "category": "negation",
+      "sourceSpans": [
+        {
+          "startLine": 10,
+          "endLine": 10,
+          "quote": "I will not rebuild the legacy simulator, and nobody is assigned that work."
+        }
+      ],
+      "reason": "explicit refusal and no assignment"
+    },
+    {
+      "category": "rescission",
+      "owner": "Wes Carter",
+      "action": "schedule the broad training session",
+      "sourceSpans": [
+        {
+          "startLine": 35,
+          "endLine": 35,
+          "quote": "I will schedule the broad training session by 2026-09-23."
+        },
+        {
+          "startLine": 40,
+          "endLine": 40,
+          "quote": "I withdraw my training-session commitment completely; do not carry it into the ledger and no replacement owner is assigned."
+        }
+      ],
+      "reason": "commitment fully withdrawn without replacement"
+    },
+    {
+      "category": "decision-only",
+      "sourceSpans": [
+        {
+          "startLine": 47,
+          "endLine": 47,
+          "quote": "We decided to use a single launch channel. That is a decision only; nobody is assigned channel setup here."
+        }
+      ],
+      "reason": "decision has no assigned action"
+    },
+    {
+      "category": "material-ambiguity",
+      "sourceSpans": [
+        {
+          "startLine": 50,
+          "endLine": 50,
+          "quote": "I can probably take care of the fallback review soon, though I am not saying whether that is a commitment or what \"soon\" means."
+        }
+      ],
+      "reason": "speaker disclaims whether statement is a commitment and gives no definite date"
+    }
+  ]
+}

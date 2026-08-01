@@ -1,0 +1,124 @@
+{
+  "formatVersion": 2,
+  "protocolId": "action-item-extraction-v2",
+  "phase": "development-unit",
+  "run": {
+    "runId": "DEV-ACTION-V2-A4-7C31",
+    "sessionId": "e425214f-37a5-5af8-a17e-3272c6176f28",
+    "taskEnvelope": {
+      "formatVersion": 2,
+      "protocolId": "action-item-extraction-v2",
+      "phase": "development-unit",
+      "arm": "A4",
+      "runId": "DEV-ACTION-V2-A4-7C31",
+      "transcriptId": "dev-cedar-release-review",
+      "transcriptPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v2-runtime\\candidates\\DEV-ACTION-V2-A4-7C31\\input\\transcript.txt",
+      "ledgerPath": "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v2-runtime\\candidates\\DEV-ACTION-V2-A4-7C31\\output\\ledger.json",
+      "ledgerSentinel": "{\"sentinel\":\"ACTION_ITEM_EXTRACTION_V2_REPLACE_ME\"}\n",
+      "statusHash": "3710a49e37dcab239ad5d9bc0cf8c368cc5509bc733b7b60d65f52464fa0ce73",
+      "instruction": "Follow the loaded action-ledger-v2 project Skill exactly once. Delegate exactly once to action-ledger-v2-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured runtime view of the whole transcript and exactly one structured runtime edit replacing the exact supplied precreated sentinel with the complete ledger. Do not retry. Return only the worker compact line.",
+      "schema": {
+        "schemaVersion": "action-ledger.v2",
+        "runId": "exact supplied run ID",
+        "transcriptId": "exact supplied transcript ID",
+        "items": [
+          {
+            "itemId": "AI-001 sequentially",
+            "owner": "canonical person or team",
+            "action": "normalized action",
+            "dueDate": "YYYY-MM-DD or null",
+            "status": "open|conditional|blocked",
+            "condition": "string or null",
+            "sourceSpans": [
+              {
+                "startLine": "positive integer",
+                "endLine": "positive integer",
+                "quote": "verbatim transcript text"
+              }
+            ],
+            "criticality": "critical|normal"
+          }
+        ],
+        "ambiguities": [
+          {
+            "sourceLine": "positive integer",
+            "note": "grounded omission or qualification reason"
+          }
+        ]
+      },
+      "policy": [
+        "Include only final explicit commitments with attributable owners.",
+        "Apply the last explicit owner, due date, status, and condition.",
+        "Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.",
+        "Record materially ambiguous apparent commitments in ambiguities without inventing an owner, date, condition, or action.",
+        "Source quotes must be verbatim and their line ranges must contain them.",
+        "Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking."
+      ]
+    },
+    "exactCliArgs": [
+      "-p",
+      "{\"arm\":\"A4\",\"formatVersion\":2,\"instruction\":\"Follow the loaded action-ledger-v2 project Skill exactly once. Delegate exactly once to action-ledger-v2-haiku. The parent must not view the transcript or view/edit the ledger. The worker must make exactly one structured runtime view of the whole transcript and exactly one structured runtime edit replacing the exact supplied precreated sentinel with the complete ledger. Do not retry. Return only the worker compact line.\",\"ledgerPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v2-runtime\\\\candidates\\\\DEV-ACTION-V2-A4-7C31\\\\output\\\\ledger.json\",\"ledgerSentinel\":\"{\\\"sentinel\\\":\\\"ACTION_ITEM_EXTRACTION_V2_REPLACE_ME\\\"}\\n\",\"phase\":\"development-unit\",\"policy\":[\"Include only final explicit commitments with attributable owners.\",\"Apply the last explicit owner, due date, status, and condition.\",\"Omit suggestions, brainstorming, negated work, decisions without assigned action, and fully rescinded work.\",\"Record materially ambiguous apparent commitments in ambiguities without inventing an owner, date, condition, or action.\",\"Source quotes must be verbatim and their line ranges must contain them.\",\"Critical means explicitly launch-, security-, legal-, compliance-, outage-, or customer-blocking.\"],\"protocolId\":\"action-item-extraction-v2\",\"runId\":\"DEV-ACTION-V2-A4-7C31\",\"schema\":{\"ambiguities\":[{\"note\":\"grounded omission or qualification reason\",\"sourceLine\":\"positive integer\"}],\"items\":[{\"action\":\"normalized action\",\"condition\":\"string or null\",\"criticality\":\"critical|normal\",\"dueDate\":\"YYYY-MM-DD or null\",\"itemId\":\"AI-001 sequentially\",\"owner\":\"canonical person or team\",\"sourceSpans\":[{\"endLine\":\"positive integer\",\"quote\":\"verbatim transcript text\",\"startLine\":\"positive integer\"}],\"status\":\"open|conditional|blocked\"}],\"runId\":\"exact supplied run ID\",\"schemaVersion\":\"action-ledger.v2\",\"transcriptId\":\"exact supplied transcript ID\"},\"statusHash\":\"3710a49e37dcab239ad5d9bc0cf8c368cc5509bc733b7b60d65f52464fa0ce73\",\"transcriptId\":\"dev-cedar-release-review\",\"transcriptPath\":\"X:\\\\code\\\\copilot-worktrees\\\\agentskill-pattern\\\\action-item-extraction-v2-runtime\\\\candidates\\\\DEV-ACTION-V2-A4-7C31\\\\input\\\\transcript.txt\"}",
+      "--session-id",
+      "e425214f-37a5-5af8-a17e-3272c6176f28",
+      "--model",
+      "gpt-5.6-sol",
+      "--output-format",
+      "json",
+      "--log-level",
+      "debug",
+      "-C",
+      "X:\\code\\copilot-worktrees\\agentskill-pattern\\action-item-extraction-v2-runtime\\candidates\\DEV-ACTION-V2-A4-7C31",
+      "--allow-all-tools",
+      "--available-tools=task,view,edit",
+      "--disable-builtin-mcps",
+      "--disallow-temp-dir",
+      "--no-custom-instructions",
+      "--no-ask-user",
+      "--no-remote-export",
+      "--no-auto-update",
+      "--experimental",
+      "--context",
+      "default",
+      "--effort",
+      "medium",
+      "--secret-env-vars=COPILOT_GITHUB_TOKEN,GH_TOKEN,GITHUB_TOKEN"
+    ]
+  },
+  "fixture": {
+    "phase": "development-unit",
+    "runId": "DEV-ACTION-V2-A4-7C31",
+    "transcriptId": "dev-cedar-release-review",
+    "partition": "development",
+    "transcriptPath": "fixtures/development/dev-cedar-release-review.txt",
+    "transcriptBytes": 6598,
+    "transcriptSha256": "6bb4b02574639cf2aabd1cc8e7c589c7a22aa616534f8fc691c2c96d8904eecc",
+    "goldPath": "evaluator/gold/dev-cedar-release-review.json",
+    "goldBytes": 8454,
+    "goldSha256": "3a79f177ecf33df714093ad351e73b8ef1d22afb0c4f5d8ab90c0399534fc7d0",
+    "sessionId": "e425214f-37a5-5af8-a17e-3272c6176f28",
+    "taskEnvelopeSha256": "60cd805e4a1bc8e72310a0c9caaf1f126f4c52c71800c018eff4168b80dcab47"
+  },
+  "permanentlyExcludedFromConfirmation": true,
+  "frozenBeforeStart": true,
+  "executeExactlyOnceLater": true,
+  "passRequirements": {
+    "operationalSuccess": true,
+    "treatmentAdherent": true,
+    "skillLoadedFromProject": true,
+    "oneDelegationToFixedWorker": true,
+    "workerViewStartComplete": 1,
+    "workerEditStartComplete": 1,
+    "sentinelReplaced": true,
+    "parentTranscriptOrLedgerFileCalls": 0,
+    "workerToolsSchemasContain": [
+      "view",
+      "edit"
+    ],
+    "validSchema": true,
+    "compactReturn": true,
+    "candidateIsolation": true,
+    "totalModelTokensMaximum": 40000,
+    "wallTimeMsMaximum": 180000
+  },
+  "failureRule": "Preserve evidence, persist NO-GO, start zero pilots, and stop without retry."
+}

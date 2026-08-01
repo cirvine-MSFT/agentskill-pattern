@@ -1,0 +1,83 @@
+{
+  "formatVersion": 2,
+  "protocolId": "action-item-extraction-v2",
+  "frozenBeforeAnyRun": true,
+  "v1ImmutabilityReference": {
+    "mergeCommit": "4900bdde8250292c86d4040d242359359ac050a0",
+    "pullRequest": 26,
+    "contentReadOrCopiedByV2Validation": false
+  },
+  "candidate": {
+    "files": [
+      {
+        "path": ".github/agents/action-ledger-v2-haiku.agent.md",
+        "bytes": 1689,
+        "sha256": "ea999b33a7ac8fbae96c0164306c88f549e9d44cb7d73b199a7b2b6afdc6dea5"
+      },
+      {
+        "path": ".github/skills/action-ledger-v2/SKILL.md",
+        "bytes": 732,
+        "sha256": "918b5b7910b2efbf471304bb2a15c89dc80a9044aad782253a3b45e194ced3d7"
+      }
+    ],
+    "fileSetSha256": "b7210df308ea17dcfb0d69e8eae01b24a2256a08cbe247006c20519ffb3d6a88"
+  },
+  "fixtures": [
+    {
+      "phase": "development-unit",
+      "runId": "DEV-ACTION-V2-A4-7C31",
+      "transcriptId": "dev-cedar-release-review",
+      "partition": "development",
+      "transcriptPath": "fixtures/development/dev-cedar-release-review.txt",
+      "transcriptBytes": 6598,
+      "transcriptSha256": "6bb4b02574639cf2aabd1cc8e7c589c7a22aa616534f8fc691c2c96d8904eecc",
+      "goldPath": "evaluator/gold/dev-cedar-release-review.json",
+      "goldBytes": 8454,
+      "goldSha256": "3a79f177ecf33df714093ad351e73b8ef1d22afb0c4f5d8ab90c0399534fc7d0",
+      "sessionId": "e425214f-37a5-5af8-a17e-3272c6176f28",
+      "taskEnvelopeSha256": "60cd805e4a1bc8e72310a0c9caaf1f126f4c52c71800c018eff4168b80dcab47"
+    },
+    {
+      "phase": "excluded-pilot",
+      "runId": "PILOT-ACTION-V2-A4-19B2",
+      "transcriptId": "pilot-orchid-data-cutover",
+      "partition": "excluded-pilot",
+      "transcriptPath": "fixtures/excluded-pilot/pilot-orchid-data-cutover.txt",
+      "transcriptBytes": 6633,
+      "transcriptSha256": "6eeda414cda52c52796ebd1f2970eadac17f53c2857494f2b15b288e138184f3",
+      "goldPath": "evaluator/gold/pilot-orchid-data-cutover.json",
+      "goldBytes": 8452,
+      "goldSha256": "66dc80247a7c56e540521d53dbeb252c21c50e30e3bb3c4fa50b46a9390c067c",
+      "sessionId": "504d4999-6298-55a5-8f3b-2bf61cabf3c4",
+      "taskEnvelopeSha256": "70270f24759bae0eadbe9becea0f089696771511d747df705e74c82036060842"
+    },
+    {
+      "phase": "excluded-pilot",
+      "runId": "PILOT-ACTION-V2-A4-53E8",
+      "transcriptId": "pilot-quartz-mobile-launch",
+      "partition": "excluded-pilot",
+      "transcriptPath": "fixtures/excluded-pilot/pilot-quartz-mobile-launch.txt",
+      "transcriptBytes": 6648,
+      "transcriptSha256": "b7d44eff474a130f7104254b74373a40cf1097080ba05c1ce93b88ebe64d6ca2",
+      "goldPath": "evaluator/gold/pilot-quartz-mobile-launch.json",
+      "goldBytes": 8487,
+      "goldSha256": "84b5766f8c1ea0602734a4a1cd4990bba68806306c920ab4459a2e4fb8fb2d78",
+      "sessionId": "de72a9b9-d6e4-5c45-ad87-44486f32fa47",
+      "taskEnvelopeSha256": "094e26818d01aa311ce5f732a27a1922a08546b5ca504d74b9cf5b2833fa0e50"
+    },
+    {
+      "phase": "excluded-pilot",
+      "runId": "PILOT-ACTION-V2-A4-8DA4",
+      "transcriptId": "pilot-summit-controls-audit",
+      "partition": "excluded-pilot",
+      "transcriptPath": "fixtures/excluded-pilot/pilot-summit-controls-audit.txt",
+      "transcriptBytes": 6625,
+      "transcriptSha256": "0fbdb0f417eecf6441721f70fc1222f4636647aca8f74510ffda04450ec80397",
+      "goldPath": "evaluator/gold/pilot-summit-controls-audit.json",
+      "goldBytes": 8470,
+      "goldSha256": "8436e68809a88e490cd29510bd24058e1b22cbec3a41e646d081d919e168bb76",
+      "sessionId": "4aecce03-97f0-5b27-9a70-4448cace20f7",
+      "taskEnvelopeSha256": "5fb7397c0e096c1818a073064d770a96bbbde3c07af3bb6f5d96878d868adbe2"
+    }
+  ]
+}
