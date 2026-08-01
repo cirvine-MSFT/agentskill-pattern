@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 function typeMatches(value, type) {
   if (type === "array") return Array.isArray(value);
   if (type === "integer") return Number.isInteger(value);
+  if (type === "number") return typeof value === "number" && Number.isFinite(value);
   if (type === "object") return value !== null && typeof value === "object" && !Array.isArray(value);
   if (type === "null") return value === null;
   return typeof value === type;

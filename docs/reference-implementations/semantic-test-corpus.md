@@ -9,8 +9,8 @@ migration execution, the expected-output oracle, traces, and mutant scoring.
 | Role | Implementation |
 | --- | --- |
 | Skill router | [`.github/skills/semantic-test-corpus/SKILL.md`](../../.github/skills/semantic-test-corpus/SKILL.md) |
-| Custom agent | [`.github/agents/semantic-test-corpus.agent.md`](../../.github/agents/semantic-test-corpus.agent.md) |
-| Model | Inherited from the authenticated caller/session binding |
+| Custom agents | [inherited model](../../.github/agents/semantic-test-corpus.agent.md); [benchmark fixed Haiku](../../.github/agents/semantic-test-corpus-haiku.agent.md) |
+| Model | Inherited normally; fixed to `claude-haiku-4.5` only for the target profile |
 | Agent tools | Four namespaced `semantic-corpus/*` MCP tools only |
 | MCP server | [`tools/semantic-corpus-mcp/server.mjs`](../../tools/semantic-corpus-mcp/server.mjs), dependency-free Node 20+ stdio |
 | Tests | [`tests/semantic-corpus-mcp/`](../../tests/semantic-corpus-mcp/) |
@@ -19,10 +19,10 @@ The agent profile has no generic `read`, `edit`, `search`, `execute`, `web`, or 
 tool. Omitting `agent` is the structural recursion guard. All filesystem capability
 comes from the local MCP process.
 
-The profile deliberately has no `model` field. Frontier and inexpensive runs use the
-same `semantic-test-corpus` identity and byte-identical tool/request/output contract;
-signed per-run platform evidence authenticates the model actually bound to each caller
-and, when delegated, worker.
+The normal profile deliberately has no `model` field. The benchmark target profile is
+generated from it with only name/model changed. Normalized bytes, MCP tools,
+instructions, task bytes, and return contract are identical; observed lifecycle/usage
+evidence must authenticate the selected worker model.
 
 ## Mandatory launcher boundary
 

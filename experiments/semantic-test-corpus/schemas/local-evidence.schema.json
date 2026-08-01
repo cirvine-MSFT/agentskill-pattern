@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-evidence.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "evidenceTier", "runId", "blockId", "armId",
+    "identity", "source", "trust", "availability", "models", "attempt", "usage", "operationalUsage",
+    "parentContext", "tools", "successfulWrites", "toolErrors", "delegation", "timing", "budgets", "events", "deviations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "evidenceTier": {"const": "descriptive-local-v1"},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"type": "integer", "minimum": 1, "maximum": 5},
+    "identity": {
+      "type": "object",
+      "required": [
+        "appProjectSessionId", "cliSessionId", "sourceCommit", "sourceTree",
+        "sourceBlobs", "terminalCommit", "candidateSnapshotSha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "appProjectSessionId": {"type": "string", "minLength": 1},
+        "cliSessionId": {"type": "string", "minLength": 1},
+        "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+        "sourceTree": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+        "sourceBlobs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["path", "blob"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "blob": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"}
+            }
+          }
+        },
+        "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+        "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "events", "usage", "sessionCreation", "candidateBoundary", "runManifest",
+        "runAttempt", "preSessionFailures", "preSessionFailureReceipts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "events": {"$ref": "local-file-source.schema.json"},
+        "usage": {"$ref": "local-file-source.schema.json"},
+        "sessionCreation": {"$ref": "local-file-source.schema.json"},
+        "candidateBoundary": {"$ref": "local-file-source.schema.json"},
+        "runManifest": {"$ref": "local-file-source.schema.json"},
+        "runAttempt": {"$ref": "local-file-source.schema.json"},
+        "preSessionFailures": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {"$ref": "local-file-source.schema.json"}
+        },
+        "preSessionFailureReceipts": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {"$ref": "local-file-source.schema.json"}
+        }
+      }
+    },
+    "trust": {
+      "type": "object",
+      "required": ["status", "signed", "complianceProof", "limitations"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"const": "local-hash-bound"},
+        "signed": {"const": false},
+        "complianceProof": {"const": false},
+        "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      }
+    },
+    "availability": {
+      "type": "object",
+      "required": ["session", "model", "mechanism", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "session": {"$ref": "evidence-availability.schema.json"},
+        "model": {"$ref": "evidence-availability.schema.json"},
+        "mechanism": {"$ref": "evidence-availability.schema.json"},
+        "fields": {
+          "type": "object",
+          "required": [
+            "premiumRequests", "toolSchemas", "exposedTools", "compaction",
+            "reasoningTokens", "latencyDetails", "requestMultiplier", "parentWait",
+            "sourceReadOnly"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "premiumRequests": {"$ref": "evidence-availability.schema.json"},
+            "toolSchemas": {"$ref": "evidence-availability.schema.json"},
+            "exposedTools": {"$ref": "evidence-availability.schema.json"},
+            "compaction": {"$ref": "evidence-availability.schema.json"},
+            "reasoningTokens": {"$ref": "evidence-availability.schema.json"},
+            "latencyDetails": {"$ref": "evidence-availability.schema.json"},
+            "requestMultiplier": {"$ref": "evidence-availability.schema.json"},
+            "parentWait": {"$ref": "evidence-availability.schema.json"},
+            "sourceReadOnly": {"$ref": "evidence-availability.schema.json"}
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "required": ["requested", "observed"],
+      "additionalProperties": false,
+      "properties": {
+        "requested": {"$ref": "model-roles.schema.json"},
+        "observed": {"$ref": "model-roles.schema.json"}
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "required": ["attemptId", "number", "preSessionFailureCount", "outcomesOpened"],
+      "additionalProperties": false,
+      "properties": {
+        "attemptId": {"type": "string", "minLength": 1},
+        "number": {"const": 1},
+        "preSessionFailureCount": {"type": "integer", "minimum": 0, "maximum": 1},
+        "outcomesOpened": {"type": "boolean"}
+      }
+    },
+    "usage": {
+      "type": "object",
+      "required": ["parent", "worker", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": {"$ref": "local-usage-metrics.schema.json"},
+        "worker": {"$ref": "local-usage-metrics.schema.json"},
+        "total": {"$ref": "local-usage-metrics.schema.json"}
+      }
+    },
+    "operationalUsage": {
+      "type": "object",
+      "required": ["parent", "worker", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": {"$ref": "local-usage-metrics.schema.json"},
+        "worker": {"$ref": "local-usage-metrics.schema.json"},
+        "total": {"$ref": "local-usage-metrics.schema.json"}
+      }
+    },
+    "parentContext": {
+      "type": "object",
+      "required": ["cumulativeInputTokens", "peakInputTokens"],
+      "additionalProperties": false,
+      "properties": {
+        "cumulativeInputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "peakInputTokens": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "tools": {
+      "type": "object",
+      "required": ["schemas", "exposed", "calls", "callCount", "resultCount", "resultBytes"],
+      "additionalProperties": false,
+      "properties": {
+        "schemas": {
+          "type": "object",
+          "required": ["available", "count", "names"],
+          "additionalProperties": false,
+          "properties": {
+            "available": {"type": "boolean"},
+            "count": {"type": ["integer", "null"], "minimum": 0},
+            "names": {"type": ["array", "null"], "items": {"type": "string"}}
+          }
+        },
+        "exposed": {
+          "type": "object",
+          "required": ["available", "names"],
+          "additionalProperties": false,
+          "properties": {
+            "available": {"const": false},
+            "names": {"type": "null"}
+          }
+        },
+        "calls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["role", "name", "count"],
+            "additionalProperties": false,
+            "properties": {
+              "role": {"type": "string", "enum": ["parent", "worker"]},
+              "name": {"type": "string"},
+              "count": {"type": "integer", "minimum": 1}
+            }
+          }
+        },
+        "callCount": {"type": "integer", "minimum": 0},
+        "resultCount": {"type": "integer", "minimum": 0},
+        "resultBytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "toolErrors": {
+      "type": "array",
+      "maxItems": 120,
+      "items": {
+        "type": "object",
+        "required": ["callId", "toolName", "argumentsSha256", "code", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "callId": {"type": "string", "minLength": 1},
+          "toolName": {"type": "string", "minLength": 1},
+          "argumentsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "scenarioId": {"type": "string"},
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "successfulWrites": {
+      "type": "array",
+      "maxItems": 61,
+      "items": {
+        "type": "object",
+        "required": ["callId", "toolName", "argumentsSha256"],
+        "additionalProperties": false,
+        "properties": {
+          "callId": {"type": "string", "minLength": 1},
+          "toolName": {
+            "type": "string",
+            "enum": [
+              "semantic-corpus/write_scenario_input",
+              "semantic-corpus/write_scenario_manifest"
+            ]
+          },
+          "argumentsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "scenarioId": {"type": "string"}
+        }
+      }
+    },
+    "delegation": {
+      "type": "object",
+      "required": ["invoked", "completed", "agentName", "compactReturn", "compactReturnBytes"],
+      "additionalProperties": false,
+      "properties": {
+        "invoked": {"type": "boolean"},
+        "completed": {"type": "boolean"},
+        "agentName": {"type": ["string", "null"]},
+        "compactReturn": {"type": ["string", "null"]}
+        ,"compactReturnBytes": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "timing": {
+      "type": "object",
+      "required": [
+        "startedAt", "endedAt", "globalOrder", "wallMs", "parentActiveMs",
+        "workerActiveMs", "parentWaitMs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "startedAt": {"type": ["string", "null"]},
+        "endedAt": {"type": ["string", "null"]},
+        "globalOrder": {"type": "integer", "minimum": 1, "maximum": 72},
+        "wallMs": {"type": ["integer", "null"], "minimum": 0},
+        "parentActiveMs": {"type": ["number", "null"], "minimum": 0},
+        "workerActiveMs": {"type": ["number", "null"], "minimum": 0},
+        "parentWaitMs": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "required": ["limits", "observed", "status", "reasons"],
+      "additionalProperties": false,
+      "properties": {
+        "limits": {
+          "type": "object",
+          "required": ["wallMs", "toolCalls", "modelTokens"],
+          "additionalProperties": false,
+          "properties": {
+            "wallMs": {"const": 1800000},
+            "toolCalls": {"const": 120},
+            "modelTokens": {"const": 100000}
+          }
+        },
+        "observed": {
+          "type": "object",
+          "required": ["wallMs", "toolCalls", "modelTokens"],
+          "additionalProperties": false,
+          "properties": {
+            "wallMs": {"type": ["integer", "null"], "minimum": 0},
+            "toolCalls": {"type": "integer", "minimum": 0},
+            "modelTokens": {"type": ["integer", "null"], "minimum": 0}
+          }
+        },
+        "status": {"type": "string", "enum": ["within-budget", "exceeded", "unavailable"]},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "events": {
+      "type": "object",
+      "required": ["count", "completionCount", "compactionCount"],
+      "additionalProperties": false,
+      "properties": {
+        "count": {"type": "integer", "minimum": 1},
+        "completionCount": {"type": "integer", "minimum": 0}
+        ,"compactionCount": {"type": "null"}
+      }
+    },
+    "deviations": {"type": "array", "items": {"type": "string"}}
+  }
+}

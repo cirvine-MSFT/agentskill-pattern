@@ -1,0 +1,45 @@
+{
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "version": 2,
+  "policy": "Point estimates and all twelve within-block values only; no inferential labels or claims.",
+  "targetArmDecisionRule": {
+    "armId": 5,
+    "label": "descriptive practical point-estimate signal",
+    "requiredComparableBlocks": 12,
+    "qualityFloorsAgainstArm": 0,
+    "qualityFloors": {
+      "promotionRateDifferenceMinimum": -0.05,
+      "pathCoverageDifferenceMinimum": -0.03,
+      "mutantKillRateDifferenceMinimum": -0.05
+    },
+    "positiveEfficiencySignalAgainstArm": 1,
+    "positiveEfficiencySignalRequires": {
+      "allQualityFloors": true,
+      "parentCumulativeInputTokensRatioMaximum": 0.85,
+      "totalNanoAiuRatioMaximum": 0.9,
+      "totalAiCreditsRatioMaximum": 0.9
+    },
+    "requiredCostReporting": ["totalNanoAiu", "totalAiCredits"],
+    "secondaryWallTarget": {
+      "endpoint": "wallMs",
+      "ratioMaximum": 0.8,
+      "requiredForPositiveEfficiencySignal": false
+    }
+  },
+  "contrasts": [
+    {"id": "script-vs-gpt-inline", "label": "GPT inline - script", "coefficients": {"0": -1, "1": 1}},
+    {"id": "script-vs-gpt-gpt", "label": "GPT->GPT - script", "coefficients": {"0": -1, "2": 1}},
+    {"id": "script-vs-haiku-inline", "label": "Haiku inline - script", "coefficients": {"0": -1, "3": 1}},
+    {"id": "script-vs-haiku-haiku", "label": "Haiku->Haiku - script", "coefficients": {"0": -1, "4": 1}},
+    {"id": "script-vs-gpt-haiku", "label": "GPT->Haiku - script", "coefficients": {"0": -1, "5": 1}},
+    {"id": "gpt-delegation", "label": "GPT->GPT - GPT inline", "coefficients": {"1": -1, "2": 1}},
+    {"id": "delegated-worker-tier", "label": "GPT->Haiku - GPT->GPT", "coefficients": {"2": -1, "5": 1}},
+    {"id": "haiku-delegation", "label": "Haiku->Haiku - Haiku inline", "coefficients": {"3": -1, "4": 1}},
+    {"id": "gpt-inline-vs-target", "label": "GPT->Haiku - GPT inline", "coefficients": {"1": -1, "5": 1}},
+    {"id": "factorial-model-tier", "label": "Frontier - cheap marginal mean", "coefficients": {"1": 0.5, "2": 0.5, "3": -0.5, "4": -0.5}},
+    {"id": "factorial-delegation", "label": "Delegated - inline marginal mean", "coefficients": {"1": -0.5, "2": 0.5, "3": -0.5, "4": 0.5}},
+    {"id": "factorial-interaction", "label": "Frontier delegation effect - cheap delegation effect", "coefficients": {"1": -1, "2": 1, "3": 1, "4": -1}},
+    {"id": "factorial-tier-inline", "label": "GPT inline - Haiku inline", "coefficients": {"1": 1, "3": -1}},
+    {"id": "factorial-tier-delegated", "label": "GPT->GPT - Haiku->Haiku", "coefficients": {"2": 1, "4": -1}}
+  ]
+}

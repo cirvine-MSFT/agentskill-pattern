@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "execution-preflight.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "capturedAt", "cli", "capabilities", "arm5Probe", "arms"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "capturedAt": {"type": "string"},
+    "cli": {
+      "type": "object",
+      "required": ["command", "version", "capabilityExitCode"],
+      "additionalProperties": false,
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"]},
+        "capabilityExitCode": {"type": ["integer", "null"]}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": [
+        "atomicCreateSession", "localExecution", "promptFile", "parentModel",
+        "customAgent", "fixedModelCustomAgent", "rawEvents", "usageExport",
+        "preSessionFailureReceipt", "zeroUsageReceipt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "atomicCreateSession": {"type": "boolean"},
+        "localExecution": {"type": "boolean"},
+        "promptFile": {"type": "boolean"},
+        "parentModel": {"type": "boolean"},
+        "customAgent": {"type": "boolean"},
+        "fixedModelCustomAgent": {"type": "boolean"},
+        "rawEvents": {"type": "boolean"},
+        "usageExport": {"type": "boolean"},
+        "preSessionFailureReceipt": {"type": "boolean"},
+        "zeroUsageReceipt": {"type": "boolean"}
+      }
+    },
+    "arm5Probe": {
+      "type": "object",
+      "required": [
+        "exitCode", "atomicKickoff", "selectedAgent", "observedWorkerModel",
+        "workerSessionId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "exitCode": {"type": ["integer", "null"]},
+        "atomicKickoff": {"type": "boolean"},
+        "selectedAgent": {"type": ["string", "null"]},
+        "observedWorkerModel": {"type": ["string", "null"]},
+        "workerSessionId": {"type": ["string", "null"]}
+      }
+    },
+    "arms": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["armId", "status", "reasons"],
+        "additionalProperties": false,
+        "properties": {
+          "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+          "status": {"type": "string", "enum": ["available", "unavailable"]},
+          "reasons": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

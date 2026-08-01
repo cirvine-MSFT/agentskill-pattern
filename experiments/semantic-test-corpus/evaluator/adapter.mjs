@@ -12,13 +12,23 @@ import {
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateStaging } from "../validators/staging.mjs";
+import { validateJsonSchema } from "../validators/json-schema.mjs";
 import { readAuthenticatedExport } from "../scripts/authenticated-export.mjs";
+import { preflightLocalModel } from "../scripts/preflight-local-model.mjs";
+import { validateLocalEvidence } from "../scripts/validate-local-evidence.mjs";
 import { computeRequestHash } from "../../../tools/semantic-corpus-mcp/lib.mjs";
 
 const benchmarkRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const frozenRequest = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "corpus-request.json"), "utf8"));
 const frozenSchedule = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "schedule.json"), "utf8"));
 const frozenSeeds = JSON.parse(readFileSync(resolve(benchmarkRoot, "design", "seeds.json"), "utf8"));
+const schemaRoot = resolve(benchmarkRoot, "schemas");
+const localEvidenceSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "local-evidence.schema.json"), "utf8")
+);
+const localPreflightSchema = JSON.parse(
+  readFileSync(resolve(schemaRoot, "local-model-preflight.schema.json"), "utf8")
+);
 const MCP_TOOLS = new Set([
   "semantic-corpus/list_contract_files",
   "semantic-corpus/read_contract_file",
@@ -124,8 +134,18 @@ function snapshotManifest(stagingRoot, request) {
   if (!existsSync(path)) return null;
   const bytes = readExactFile(stagingRoot, "manifest.json", request.maxSizes.manifestBytes);
   const manifest = JSON.parse(bytes);
-  if (manifest.requestHash !== request.requestHash) {
-    throw new Error("Staged manifest requestHash differs from the immutable request");
+  const expected = {
+    version: 1,
+    kind: "semantic-source-scenarios",
+    requestHash: request.requestHash,
+    scenarioCount: request.targetCount,
+    scenarios: request.scenarios.map(({ scenarioId, category }) => ({
+      scenarioId,
+      category
+    }))
+  };
+  if (canonicalJson(manifest) !== canonicalJson(expected)) {
+    throw new Error("Staged manifest content differs from the immutable request");
   }
   return {
     path: "corpus-staging/manifest.json",
@@ -209,10 +229,14 @@ function verifyAuthenticatedWrites({ cases, manifest, events, runId, request }) 
   const scenarioCalls = successfulCalls.filter((event) =>
     event.toolName === "semantic-corpus/write_scenario_input");
   const casesById = new Map(cases.map((scenario) => [scenario.id, scenario]));
+  const calledIds = new Set(scenarioCalls.map((call) => call.scenarioId));
   if (scenarioCalls.length !== cases.length
+    || calledIds.size !== scenarioCalls.length
+    || cases.some((scenario) => !calledIds.has(scenario.id))
     || scenarioCalls.some((call) => !casesById.has(call.scenarioId))) {
     throw new Error("Staged scenario IDs differ from authenticated successful writes");
   }
+
   for (const call of scenarioCalls) {
     const scenario = casesById.get(call.scenarioId);
     if (call.argumentsSha256 !== argumentsSha256({
@@ -222,6 +246,7 @@ function verifyAuthenticatedWrites({ cases, manifest, events, runId, request }) 
       throw new Error(`Staged scenario differs from authenticated arguments: ${call.scenarioId}`);
     }
   }
+
   const manifestCalls = successfulCalls.filter((event) =>
     event.toolName === "semantic-corpus/write_scenario_manifest");
   if (manifestCalls.length !== (manifest ? 1 : 0)) {
@@ -231,6 +256,56 @@ function verifyAuthenticatedWrites({ cases, manifest, events, runId, request }) 
     && manifestCalls[0].argumentsSha256 !== argumentsSha256({ scenarios: request.scenarios })) {
     throw new Error("Staged manifest differs from authenticated arguments");
   }
+}
+
+function verifyLocalWrites({ cases, manifest, successfulWrites, request }) {
+  const scenarioWrites = successfulWrites.filter((write) =>
+    write.toolName === "semantic-corpus/write_scenario_input");
+  const casesById = new Map(cases.map((scenario) => [scenario.id, scenario]));
+  const writtenIds = new Set(scenarioWrites.map((write) => write.scenarioId));
+  if (scenarioWrites.length !== cases.length
+    || writtenIds.size !== scenarioWrites.length
+    || cases.some((scenario) => !writtenIds.has(scenario.id))
+    || scenarioWrites.some((write) => !casesById.has(write.scenarioId))) {
+    throw new Error("Staged scenario IDs differ from local successful writes");
+  }
+
+  for (const write of scenarioWrites) {
+    const scenario = casesById.get(write.scenarioId);
+    if (write.argumentsSha256 !== argumentsSha256({
+      scenarioId: write.scenarioId,
+      config: scenario.input
+    })) {
+      throw new Error(`Staged scenario differs from local write arguments: ${write.scenarioId}`);
+    }
+  }
+  const manifestWrites = successfulWrites.filter((write) =>
+    write.toolName === "semantic-corpus/write_scenario_manifest");
+  if (manifestWrites.length !== (manifest ? 1 : 0)) {
+    throw new Error("Staged manifest differs from local successful writes");
+  }
+  if (manifestWrites.length === 1
+    && manifestWrites[0].argumentsSha256 !== argumentsSha256({
+      scenarios: request.scenarios
+    })) {
+    throw new Error("Staged manifest differs from local write arguments");
+  }
+}
+
+export function verifyLocalSnapshotWrites(snapshotBytes, localEvidence) {
+  const snapshot = JSON.parse(snapshotBytes);
+  if (!canonicalStagingBytes(snapshot).equals(snapshotBytes)) {
+    throw new Error("Local snapshot is not canonical staging bytes");
+  }
+  if (snapshot.adapter?.requestHash !== frozenRequest.requestHash) {
+    throw new Error("Local snapshot request hash differs from the immutable request");
+  }
+  verifyLocalWrites({
+    cases: snapshot.cases,
+    manifest: snapshot.adapter?.manifest ?? null,
+    successfulWrites: localEvidence.successfulWrites,
+    request: frozenRequest
+  });
 }
 
 export function snapshotCorpusStaging({
@@ -319,6 +394,114 @@ export function snapshotCorpusStaging({
     snapshotSha256: sha256(bytes),
     submittedCases: cases.length,
     toolErrorCount: toolErrors.length
+  };
+}
+
+export function snapshotLocalCorpusStaging({
+  corpusContractRoot,
+  corpusStagingRoot,
+  localEvidence,
+  localEvidenceBytes,
+  modelPreflight,
+  sourceArtifactRoot,
+  sourceCandidateRoot,
+  outputPath
+}) {
+  const evidenceErrors = validateJsonSchema(localEvidence, localEvidenceSchema, {
+    schemaDir: schemaRoot
+  });
+  if (evidenceErrors.length > 0) {
+    throw new Error(`Local evidence is invalid: ${evidenceErrors[0].path} ${evidenceErrors[0].message}`);
+  }
+  const preflightErrors = validateJsonSchema(modelPreflight, localPreflightSchema, {
+    schemaDir: schemaRoot
+  });
+  if (preflightErrors.length > 0) {
+    throw new Error(`Local model preflight is invalid: ${preflightErrors[0].path} ${preflightErrors[0].message}`);
+  }
+  const localEvidenceErrors = validateLocalEvidence(localEvidence, {
+    artifactRoot: sourceArtifactRoot,
+    candidateRoot: sourceCandidateRoot
+  });
+  if (localEvidenceErrors.length > 0) {
+    throw new Error(`Local evidence source validation failed: ${localEvidenceErrors[0]}`);
+  }
+  const recomputedPreflight = preflightLocalModel(localEvidence, localEvidenceBytes);
+  if (JSON.stringify(modelPreflight) !== JSON.stringify(recomputedPreflight)
+    || modelPreflight.status !== "pass"
+    || modelPreflight.beforeOutcomesOpened !== true
+    || localEvidence.attempt.outcomesOpened !== false
+    || modelPreflight.runId !== localEvidence.runId
+    || modelPreflight.evidenceSha256 !== sha256(localEvidenceBytes)) {
+    throw new Error("Local evaluator snapshot requires exact passing pre-outcome model evidence");
+  }
+  const planned = frozenSchedule.runs.find((item) => item.runId === localEvidence.runId);
+  if (!planned
+    || planned.blockId !== localEvidence.blockId
+    || planned.armId !== localEvidence.armId) {
+    throw new Error("Local evidence run identity differs from the frozen schedule");
+  }
+  if (!localEvidence.timing.endedAt) {
+    throw new Error("Local evaluator snapshot requires observed model completion");
+  }
+
+  const contractRoot = resolve(corpusContractRoot);
+  const contractStats = lstatSync(contractRoot);
+  if (!contractStats.isDirectory() || contractStats.isSymbolicLink()
+    || !samePath(realpathSync.native(contractRoot), contractRoot)) {
+    throw new Error("corpus-contract root must be a regular non-symlink directory");
+  }
+  const request = JSON.parse(readExactFile(contractRoot, "request.json", 1024 * 1024));
+  validateImmutableRequest(request);
+  const stagingRoot = resolve(corpusStagingRoot);
+  const rootStats = lstatSync(stagingRoot);
+  if (!rootStats.isDirectory() || rootStats.isSymbolicLink()
+    || !samePath(realpathSync.native(stagingRoot), stagingRoot)) {
+    throw new Error("corpus-staging root must be a regular non-symlink directory");
+  }
+  const cases = snapshotCases(stagingRoot, request);
+  const manifest = snapshotManifest(stagingRoot, request);
+  verifyLocalWrites({
+    cases,
+    manifest,
+    successfulWrites: localEvidence.successfulWrites,
+    request
+  });
+  const staging = {
+    formatVersion: 1,
+    generator: {
+      armId: planned.armId,
+      blockId: planned.blockId,
+      seed: planned.seed
+    },
+    adapter: {
+      version: 1,
+      requestHash: request.requestHash,
+      sourceRoot: "corpus-staging/",
+      successfulWrites: cases.length,
+      toolErrorCount: localEvidence.toolErrors.length,
+      manifest
+    },
+    cases,
+    toolErrors: localEvidence.toolErrors
+  };
+  const errors = validateStaging(staging);
+  if (errors.length > 0) {
+    throw new Error(`Local adapter produced invalid benchmark staging: ${JSON.stringify(errors)}`);
+  }
+  const bytes = canonicalStagingBytes(staging);
+  verifyLocalSnapshotWrites(bytes, localEvidence);
+  const target = resolve(outputPath);
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, bytes, { flag: "wx" });
+  return {
+    evidenceTier: "descriptive-local-v1",
+    staging,
+    bytes,
+    stagingPath: target,
+    snapshotSha256: sha256(bytes),
+    submittedCases: cases.length,
+    toolErrorCount: localEvidence.toolErrors.length
   };
 }
 

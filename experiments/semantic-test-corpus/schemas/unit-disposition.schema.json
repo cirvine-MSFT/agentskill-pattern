@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "unit-disposition.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "blockId", "armId", "status",
+    "reason", "evidenceKind", "sourcePath", "sourceSha256",
+    "orderSourcePath", "orderSourceSha256", "partialUsagePath",
+    "partialUsageSha256"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+    "status": {"type": "string", "enum": ["unavailable", "excluded"]},
+    "reason": {"type": "string", "minLength": 1},
+    "evidenceKind": {
+      "type": "string",
+      "enum": [
+        "preflight-unavailable", "retry-exhausted", "started-uncertain",
+        "model-excluded"
+      ]
+    },
+    "sourcePath": {"type": "string", "minLength": 1},
+    "sourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "orderSourcePath": {"type": "string", "minLength": 1},
+    "orderSourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "partialUsagePath": {"type": ["string", "null"]},
+    "partialUsageSha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

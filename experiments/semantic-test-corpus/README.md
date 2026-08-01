@@ -1,239 +1,154 @@
-# Semantic migration corpus benchmark
+# Semantic migration corpus benchmark — execution v2
 
-Dependency-free Node 20 fixture and preregistration for comparing a strong
-deterministic corpus generator with a full 2x2 model-tier by delegation design.
-It migrates deterministic v1 service configurations to v2, promotes staged
-inputs only through an independent oracle, emits semantic rule/path traces, and
-scores 33 hidden mapping/invariant mutants.
+This directory contains the sole executable protocol: a frozen 12-block, six-arm,
+descriptive benchmark for generating semantic v1 migration-test inputs. **No measured
+AI trials have run.** `protocol.md` is preserved only as historical v1 provenance and
+is unavailable for execution or inference.
 
-**No AI trials have been run.** Checked results are deterministic arm-0
-foundation measurements only.
+## Frozen arms
 
-## Checked deterministic foundation
+| Arm | Execution |
+|---:|---|
+| 0 | General deterministic script using only public schema/rules/invariants |
+| 1 | GPT-5.6 Sol inline |
+| 2 | GPT-5.6 Sol → registered `semantic-test-corpus` agent, inherited GPT |
+| 3 | Claude Haiku 4.5 inline |
+| 4 | Claude Haiku 4.5 → registered `semantic-test-corpus`, inherited Haiku |
+| 5 | GPT-5.6 Sol → registered `semantic-test-corpus-haiku`, profile-fixed Haiku |
 
-| Measure | Result |
-|---|---:|
-| Unique staged/promoted cases | 60 / 60 |
-| Semantically valid / intentional invalid cases | 40 / 20 |
-| Rule coverage | 12 / 12 (100%) |
-| Decision-path coverage | 67 / 67 (100%) |
-| Invariant coverage | 15 / 15 (100%) |
-| Semantic diagnostic categories | 5 / 5 (100%) |
-| Hidden mutants killed | 33 / 33 (100%) |
-| Exact duplicate inputs | 0 |
+Arms 2, 4, and 5 use the same Skill route, four MCP tools, instructions, worker task
+bytes, staging behavior, and compact return. The Haiku profile is generated
+byte-identically from the registered profile except name/model. Arm 5 is unavailable
+unless real atomic preflight observes that profile and `claude-haiku-4.5`.
+The fixed profile is the frozen mechanism because real same-invocation model override
+is unavailable; an invocation override must not be substituted.
 
-These values are reproduced from `evaluator/artifacts/baseline-report.json`; mutation
-score is not evidence that the oracle is correct. Goldens and metamorphic
-properties are separate prerequisites.
+## Validate and reproduce
 
-## Quick start
-
-From this directory:
+Run from this directory:
 
 ```powershell
 npm test
 npm run reproduce
 ```
 
-Run the candidate migration with a JSON file or standard input:
+The checked general-script result is intentionally not oracle/mutant optimized:
+60/60 structurally valid inputs, 12/12 rules, 55/67 semantic paths, 15/15
+invariants, and 19/33 mutants killed. Evaluator-only mutant viability references
+are isolated in `evaluator/mutants/oracle-tuned-reference.json`; the baseline import
+test rejects evaluator, held-out, oracle, mutant, or golden dependencies.
+
+Regenerate the frozen schedule:
 
 ```powershell
-node .\fixture\cli.mjs .\path\to\v1-config.json
-Get-Content .\path\to\v1-config.json -Raw | node .\fixture\cli.mjs
+npm run randomize
 ```
 
-Regenerate the deterministic foundation:
+## Real preflight
+
+Preflight performs no corpus generation. Arm 5 availability requires an atomic custom
+agent selection probe with observed agent/session/model evidence:
 
 ```powershell
-node .\baseline\generate.mjs --out .\staging\baseline.json
-node .\scripts\validate-staging.mjs .\staging\baseline.json
-node .\evaluator\promote.mjs --in .\staging\baseline.json `
-  --out .\evaluator\artifacts\baseline-corpus.json `
-  --promoted-at 2026-07-29T00:00:00.000Z
-node .\evaluator\mutants\run.mjs `
-  --corpus .\evaluator\artifacts\baseline-corpus.json `
-  --out .\evaluator\artifacts\baseline-kill-matrix.json
-node .\evaluator\report.mjs `
-  --corpus .\evaluator\artifacts\baseline-corpus.json `
-  --matrix .\evaluator\artifacts\baseline-kill-matrix.json `
-  --out .\evaluator\artifacts\baseline-report.json
+node .\scripts\preflight-execution.mjs `
+  --cli copilot `
+  --out C:\benchmark-runs\execution-preflight.json
 ```
 
-Generate the frozen 12-block schedule:
+The command fails closed with exit code 2 unless the CLI/adapter proves atomic local
+session creation, prompt-file/model binding, exact raw event and usage export, and
+the mechanisms needed by each arm. Stock CLI builds that do not expose the explicit
+capability contract mark AI arms unavailable. In particular, missing fixed-model custom-agent selection or observed probe evidence
+marks arm 5 unavailable before benchmark kickoff.
+
+## Dry-run and execute
+
+Use empty external candidate and artifact directories. The harness rejects in-repo
+measured candidates, materializes only the immutable commit/tree/blob pin in
+`design/source-pin.json`, writes the seeded task and kickoff bytes, creates contract,
+staging, MCP, and sandbox configuration, and forms one atomic kickoff command.
 
 ```powershell
-node .\scripts\randomize.mjs --out .\design\schedule.json
+node .\scripts\run-controlled-harness.mjs `
+  --cli C:\trusted\copilot-benchmark-adapter.mjs `
+  --project-id <external-candidate-project-id> `
+  --candidate-root C:\benchmark-candidates\B01-A4 `
+  --artifact-root C:\benchmark-artifacts\B01-A4 `
+  --start-index C:\benchmark-artifacts\start-index.json `
+  --block B01 --arm 4 --dry-run
 ```
 
-Materialize a candidate repository outside the entire source repository:
+Remove `--dry-run` only after reviewing preflight. The adapter contract executes a
+single `create-session` command containing local execution, autopilot mode, exact
+parent model, candidate commit, prompt file/hash, and—for delegated arms—the exact
+registered agent/worker model. The harness machine-generates, rather than accepts
+hand-authored:
+
+- session request/response and exact app/CLI session IDs;
+- immutable raw events and usage export;
+- candidate source commit/tree/blobs, terminal commit, and boundary hash;
+- attempt, manifest, local evidence, model preflight, snapshot, metrics, evaluation,
+  start capture, and capture provenance artifacts.
+
+Generated task and kickoff bytes must match each frozen schedule SHA before launch and
+again at collection. A write-once lifecycle marker is durable before every kickoff or
+deterministic process. Raw artifacts are created once, hashed, and made read-only. They remain unsigned,
+local, descriptive evidence—not signed audit, sandbox compliance, or causal proof.
+
+Validate the complete captured start sequence:
 
 ```powershell
-node .\scripts\materialize-candidate.mjs --out C:\benchmark-runs\B01-A1
+node .\scripts\validate-start-order.mjs `
+  --in C:\benchmark-artifacts\start-index.json
 ```
 
-The materialized repository contains the real `semantic-test-corpus` profile,
-the dependency-free `semantic-corpus` MCP server, the immutable 60-slot request,
-and public contract. A trusted coordinator must copy these into a disposable
-non-repository run and establish the mandatory container/restricted-mount/ACL
-boundary before server initialization. There is no in-repository lifetime
-launcher or unsafe fallback.
+All 72 ordered records must derive from immutable sources and increase in the frozen
+global sequence. Preflight-unavailable slots are recorded and advance it. Anything
+after the lifecycle marker is started/uncertain, preserves partial files and costs, and
+is never retried. A single retry requires an authoritative no-kickoff, no-session,
+zero-usage receipt.
 
-After signed model completion, run the evaluator-only adapter outside model
-context:
+## Descriptive analysis
+
+The analyzer requires exactly 72 validated unit records. Each is either an eligible
+artifact or an evidence-bound unavailable/excluded record; omission fails. The
+manifest must bind the finalized 72-record start index and its SHA-256 file. Every
+unavailable/excluded disposition is cross-bound to that index and its typed raw
+preflight, uncertainty, retry-exhaustion, or model-preflight evidence. Eligible
+runs require observed exact session, parent/worker model, Skill/agent mechanism,
+tool/role lifecycle, budget, source, terminal commit, and candidate hash evidence
+are eligible. Unavailable units are explicit and excluded.
 
 ```powershell
-node .\evaluator\adapter.mjs `
-  --corpus-contract C:\isolated-runs\B01-A1\corpus-contract `
-  --corpus-staging C:\isolated-runs\B01-A1\corpus-staging `
-  --payload .\raw\model-complete-export.json `
-  --signature .\raw\model-complete-export.sig `
-  --public-key C:\trusted\copilot-platform-ed25519.pem `
-  --run-id B01-A1 --block-id B01 --arm-id 1 --seed 1812433253 `
-  --out .\staging\B01-A1.json
+npm run analyze -- `
+  --in C:\benchmark-artifacts\descriptive-artifacts.json `
+  --out C:\benchmark-artifacts\descriptive-summary.json
 ```
 
-Its compact stdout reports the canonical staging path/hash and observed counts.
-The full corpus remains evaluator-only.
+The frozen contrasts are script versus each AI arm; GPT inline versus GPT→GPT;
+GPT→GPT versus GPT→Haiku; Haiku inline versus Haiku→Haiku; GPT inline versus the
+GPT→Haiku target; and the complete 2×2 model/delegation contrasts. Outputs contain
+only per-arm/block point values and all available within-block differences.
 
-Derive the canonical evaluator metrics artifact from that exact snapshot:
+The target-arm practical rule uses point estimates: promotion must be at least baseline
+minus 5 percentage points, path coverage baseline minus 3 points, and mutant kill rate
+baseline minus 5 points. A positive efficiency signal additionally requires parent
+cumulative input at most 85% of GPT inline and both total nano-AIU and total credits at
+most 90% of GPT inline; report both costs. All target comparisons require the same 12
+complete blocks. Wall time at most 80% is secondary.
 
-```powershell
-node .\evaluator\metrics.mjs `
-  --snapshot .\staging\B01-A1.json `
-  --run-id B01-A1 --block-id B01 --arm-id 1 `
-  --out .\metrics\B01-A1.json
-```
-
-The run record binds both snapshot and metrics hashes. A signed
-`metrics.computed` event also binds the evaluator-code, mapping-spec, independent
-oracle-code, and mutant-harness hashes. Statistics reloads the snapshot and
-deterministically rederives the artifact; callers cannot supply promotion,
-coverage, mutation, or diversity values.
-Arm 0 is regenerated from its frozen block seed and must match canonical bytes;
-the artifact also binds the generator commit and committed blob hashes. Metrics
-events bind a dedicated evaluator session/process distinct from all measured run
-identities, and signed boundaries—not caller latency—enforce baseline duration.
-
-For every measured AI run, bind its run record to the exact raw signed platform
-export and verify all required parent/worker sessions:
-
-```powershell
-node .\scripts\preflight-models.mjs `
-  --payload .\raw\platform-export.json `
-  --signature .\raw\platform-export.sig `
-  --public-key C:\trusted\copilot-platform-ed25519.pem `
-  --runs .\raw\run-records.json `
-  --out .\raw\availability.json
-```
-
-Exit code 2 means at least one measured run/role is unavailable. Do not substitute
-a model or run a silent partial factorial.
-
-Only after every run's signed isolation/budget audit is verified, execute the
-registered primary analyses. The CLI authenticates the raw export itself:
-
-```powershell
-node .\evaluator\statistics.mjs `
-  --in .\raw\blinded-run-artifacts.json `
-  --payload .\raw\platform-export.json `
-  --signature .\raw\platform-export.sig `
-  --public-key C:\trusted\copilot-platform-ed25519.pem `
-  --out .\raw\baseline-analysis.json
-```
-
-The evaluator runs 12 one-sided noninferiority hypotheses with one Holm
-adjustment and 12 two-sided equality hypotheses with a separate Holm adjustment.
-Only common complete blocks enter the paired tests. More than two incomplete
-blocks forces `confirmatoryAvailable: false` and null noninferiority decisions.
-Any AI run with unavailable frozen model evidence also withholds all
-factorial/confirmatory decisions, even when 11 complete blocks remain.
-The same output includes per-arm summaries, paired tier/delegation/interaction
-and conditional simple-effect contrasts with the registered bootstrap, plus
-0/1 and worst/best missing-outcome sensitivity bounds. With zero complete
-blocks, paired comparisons and factorial results are null while deterministic
-arm availability and descriptive summaries remain.
-Input follows `schemas/statistics-input.schema.json`: each row supplies only
-run identity, a metrics-artifact path, and (for AI runs) isolation roots. Run
-records bind the snapshot and metrics hashes. The CLI rederives all outcome
-values and derives model availability, isolation compliance, and budgets from
-the authenticated export; caller outcome values, flags, and hashes are
-forbidden. It also rejects
-`input.options` and all top-level analysis overrides; alpha
-0.05, the three registered margins, 10,000 draws, and seed 20260729 are frozen.
-
-After the run, derive isolation compliance from that signed export:
-
-```powershell
-node .\scripts\verify-isolation-evidence.mjs `
-  --payload .\raw\platform-export.json `
-  --signature .\raw\platform-export.sig `
-  --public-key C:\trusted\copilot-platform-ed25519.pem `
-  --arm-id 1 `
-  --run-id B01-A1 `
-  --contract-root C:\isolated-runs\B01-A1\corpus-contract `
-  --staging-root C:\isolated-runs\B01-A1\corpus-staging `
-  --evaluator-root (Join-Path $PWD evaluator) `
-  --snapshot-path (Join-Path $PWD staging\B01-A1.json) `
-  --out .\raw\B01-A1-isolation.json
-```
-
-Isolation verification also requires signed completion and unblinding
-boundaries. Any authenticated `outcome.accessed` event before either boundary
-fails compliance.
-Every network event from an authenticated run session must carry its run/arm/
-role, actor session, call ID, endpoint, and allow/deny decision; unscoped or
-mismapped signed events fail closed. Scoping checks both `sessionId` and
-`actorSessionId`, and a dataset-wide attribution pass rejects unknown,
-ambiguous, or cross-run identities before any per-run audit.
-
-### Real Copilot smoke audit availability
-
-`fixtures/platform-audit/` contains privacy-bounded, byte-exact relevant JSONL
-event captures from real Copilot CLI 1.0.77 smoke sessions for direct inline MCP
-calls and parent-to-`semantic-test-corpus` delegation. Replay them with:
-
-```powershell
-node .\scripts\platform-audit-adapter.mjs `
-  --in .\fixtures\platform-audit\inline-smoke.captured.jsonl `
-  --cell inline --out .\raw\inline-smoke-audit.json
-```
-
-The captures record actual runtime MCP names, parent/worker attribution,
-and delegation lifecycle, but Copilot CLI JSONL does not export the required
-detached Ed25519 signature, sandbox policy/filesystem audit, or signed run,
-adapter, and metrics boundaries. The adapter therefore exits 2 and marks both
-smoke cells/protocol cells **unavailable**. It never fabricates a signed
-platform export. Synthetic signed-event streams remain unit tests only.
-
-## Layout
-
-| Path | Purpose |
-|---|---|
-| `protocol.md` | Immutable arms, budgets, isolation, metrics, thresholds, and analysis |
-| `fixture/spec/` | Executable public mapping and invariant program |
-| `fixture/migration/` | Candidate spec interpreter |
-| `schemas/`, `validators/` | Input, staging, metrics, audit, promotion, and telemetry contracts |
-| `baseline/` | Decision, boundary, pairwise, grammar/property, and solver generator |
-| `candidate-template/`, `design/candidate-manifest.json` | External candidate materialization allowlist |
-| `evaluator/` | Isolated adapter, oracle, metrics, acceptance, mutants, statistics, goldens, and tests |
-| `design/` | Immutable MCP request, shared prompt/Skill, evidence contract, fixed models, seeds, and schedule |
-| `staging/` | Canonical evaluator snapshots; expected output is forbidden |
-
-Measured generators run only against disposable launcher-confined contract and
-staging roots; the evaluator directory and repository are inaccessible. Signed
-platform policy/access exports prove contract-read-only/staging-read-write
-access and network denial. Inline parents and delegated workers use the same
-four actual MCP tools. Both delegated arms invoke the same bytes at the actual
-registered `.github/skills/semantic-test-corpus/SKILL.md` path and the
-`semantic-test-corpus` agent, returning only its
-terminal success/failure line; parents never read the corpus.
-Dataset-wide attribution covers tool/results, filesystem, network, outcome,
-delegation, completion, and unblinding events; generation activity at or after
-completion fails closed.
-Signed start sequence/timestamps enforce the frozen within-block order. Signed
-completion, tool-call counts, and parent-plus-worker token reports derive the
-30-minute/120-call/100,000-token run budgets.
-The materializer's in-tree `.test-work/` allowance exists only for the cleaned
-regression test and is forbidden for measured runs.
-Production materialization canonicalizes source and destination with `realpath`
-and rejects symlink, junction, or reparse components before containment checks.
+Comparable telemetry includes compact-return bytes, compaction availability,
+completion counts, cached/reasoning tokens, TTFT/inter-token latency, request
+multiplier/credits, exposed-tool availability, calls/results/result bytes, selected
+attempt usage, and all-attempt operational usage. Unsupported fields are explicit
+`null` with availability reasons.
+Started excluded units retain validated local evidence and are reported separately in
+excluded operational-usage totals; they never enter eligible quality estimates.
+Started-uncertain units also publish a typed, hash-bound partial-usage record. Available
+credits, nano-AIU, input/output/model tokens, completions, duration, and tool
+call/result counts contribute to all-attempt operational totals. Missing usage or event
+fields remain explicit unavailable measurements with reasons. Partial attempts never
+enter selected quality outcomes.
+Malformed or cross-session usage/events are not parsed into metrics: their normal
+source path/hash fields are null, while typed `invalidSources` entries preserve kind,
+path, SHA-256, byte length, and validation error.

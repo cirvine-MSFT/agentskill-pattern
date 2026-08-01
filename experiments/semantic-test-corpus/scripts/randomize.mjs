@@ -2,6 +2,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  kickoffSha256ForRun,
+  taskSha256ForSeed
+} from "./execution-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -26,15 +30,19 @@ function shuffle(values, seed) {
 export function createSchedule() {
   const design = JSON.parse(readFileSync(resolve(root, "design", "seeds.json"), "utf8"));
   return {
-    scheduleVersion: 1,
+    protocolId: "semantic-test-corpus-execution-v2",
+    scheduleVersion: 3,
     randomizationSeed: design.randomizationSeed,
-    runs: design.blocks.flatMap((block) =>
-      shuffle([0, 1, 2, 3, 4], block.seed).map((armId, order) => ({
+    runs: design.blocks.flatMap((block, blockIndex) =>
+      shuffle([0, 1, 2, 3, 4, 5], block.seed).map((armId, order) => ({
         runId: `${block.id}-A${armId}`,
         blockId: block.id,
         armId,
         order: order + 1,
-        seed: block.seed
+        globalOrder: blockIndex * 6 + order + 1,
+        seed: block.seed,
+        taskSha256: taskSha256ForSeed(block.seed),
+        kickoffSha256: armId === 0 ? null : kickoffSha256ForRun(armId, block.seed)
       })))
   };
 }
@@ -47,5 +55,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const target = resolve(process.argv[index + 1]);
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, `${JSON.stringify(createSchedule(), null, 2)}\n`);
-  process.stdout.write(`Wrote 60 preregistered run slots to ${target}\n`);
+  process.stdout.write(`Wrote 72 preregistered run slots to ${target}\n`);
 }

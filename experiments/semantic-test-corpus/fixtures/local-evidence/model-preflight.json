@@ -1,0 +1,37 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "runId": "B01-A2",
+  "attemptNumber": 1,
+  "evidenceSha256": "94cfc302d71e8a865f7b6093a1518de011854158aeccc8877cd68b0a05835135",
+  "status": "pass",
+  "retryEligible": false,
+  "beforeOutcomesOpened": true,
+  "expected": {
+    "parent": [
+      "gpt-5.6-sol"
+    ],
+    "worker": [
+      "gpt-5.6-sol"
+    ]
+  },
+  "observed": {
+    "parent": [
+      "gpt-5.6-sol"
+    ],
+    "worker": [
+      "gpt-5.6-sol"
+    ]
+  },
+  "checks": {
+    "session": true,
+    "model": true,
+    "mechanism": true,
+    "tools": true,
+    "roles": true,
+    "budgets": true,
+    "candidate": true,
+    "source": true
+  },
+  "reasons": []
+}

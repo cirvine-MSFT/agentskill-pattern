@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-usage-metrics.schema.json",
+  "type": "object",
+  "required": [
+    "available", "aiCredits", "premiumRequests", "nanoAiu", "inputTokens",
+    "outputTokens", "cacheReadTokens", "cacheWriteTokens", "cachedTokens",
+    "reasoningTokens", "modelTokens", "requestMultiplier", "durationMs",
+    "meanTimeToFirstTokenMs", "meanInterTokenLatencyMs", "completionCount"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "available": {"type": "boolean"},
+    "aiCredits": {"type": ["number", "null"], "minimum": 0},
+    "premiumRequests": {"type": "null"},
+    "nanoAiu": {"type": ["number", "null"], "minimum": 0},
+    "inputTokens": {"type": ["integer", "null"], "minimum": 0},
+    "outputTokens": {"type": ["integer", "null"], "minimum": 0},
+    "cacheReadTokens": {"type": ["integer", "null"], "minimum": 0},
+    "cacheWriteTokens": {"type": ["integer", "null"], "minimum": 0},
+    "cachedTokens": {"type": ["integer", "null"], "minimum": 0},
+    "reasoningTokens": {"type": ["integer", "null"], "minimum": 0},
+    "modelTokens": {"type": ["integer", "null"], "minimum": 0},
+    "requestMultiplier": {"type": ["number", "null"], "minimum": 0},
+    "durationMs": {"type": ["number", "null"], "minimum": 0},
+    "meanTimeToFirstTokenMs": {"type": ["number", "null"], "minimum": 0},
+    "meanInterTokenLatencyMs": {"type": ["number", "null"], "minimum": 0},
+    "completionCount": {"type": "integer", "minimum": 0}
+  }
+}

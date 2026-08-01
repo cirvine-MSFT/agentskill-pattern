@@ -316,7 +316,9 @@ export function evaluateStartOrder(payload, blockId) {
   const starts = payload.events.filter((event) =>
     event.type === "run.started" && event.blockId === blockId);
   const plannedStarts = schedule.runs.filter((run) => run.blockId === blockId);
-  if (starts.length !== 5) violations.push(`block ${blockId} requires exactly five signed run starts`);
+  if (starts.length !== plannedStarts.length) {
+    violations.push(`block ${blockId} requires exactly ${plannedStarts.length} signed run starts`);
+  }
   if (new Set(starts.map((event) => event.sessionId)).size !== starts.length
     || new Set(starts.map((event) => event.processId)).size !== starts.length) {
     violations.push(`block ${blockId} run starts require unique session/process boundaries`);
@@ -862,7 +864,7 @@ export function evaluateIsolationEvidence(authenticated, {
         violations.push("delegation invocation does not bind the authenticated parent and worker");
       }
       if (invocation.skillName !== armContract.delegationContract.invocation
-        || invocation.agentName !== armContract.delegationContract.agentName) {
+        || invocation.agentName !== arm.agentName) {
         violations.push("delegated arm used the wrong semantic-test-corpus identity");
       }
       if (invocation.skillPath !== armContract.delegationContract.registeredPath) {
@@ -877,7 +879,7 @@ export function evaluateIsolationEvidence(authenticated, {
       if (completion.sessionId !== roleSessions.parent) {
         violations.push("delegation completion was not received by the authenticated parent");
       }
-      if (completion.agentName !== armContract.delegationContract.agentName
+      if (completion.agentName !== arm.agentName
         || !terminalLineIsValid(completion.returnText)) {
         violations.push("delegated arm returned a noncanonical semantic-test-corpus terminal line");
       }

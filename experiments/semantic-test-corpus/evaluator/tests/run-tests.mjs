@@ -5,7 +5,11 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, wr
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { generateBaseline, PAIRWISE_FACTORS } from "../../baseline/generate.mjs";
+import {
+  GENERAL_GENERATOR_DEPENDENCIES,
+  generateBaseline,
+  PAIRWISE_FACTORS
+} from "../../baseline/generate.mjs";
 import { FiniteDomainSolver } from "../../baseline/finite-domain-solver.mjs";
 import { findUncoveredPairs, generatePairwiseCoveringArray } from "../../baseline/pairwise.mjs";
 import { compareCodePointStrings, mappingSpec, migrateV1ToV2 } from "../../fixture/migration/index.mjs";
@@ -17,12 +21,34 @@ import { authenticateExport, readAuthenticatedExport } from "../../scripts/authe
 import { materializeCandidate } from "../../scripts/materialize-candidate.mjs";
 import { adaptPlatformAudit } from "../../scripts/platform-audit-adapter.mjs";
 import { evaluateModelBindings } from "../../scripts/preflight-models.mjs";
+import { collectLocalEvidence } from "../../scripts/collect-local-evidence.mjs";
+import { createUsageExport } from "../../scripts/export-local-usage.mjs";
+import { preflightLocalModel } from "../../scripts/preflight-local-model.mjs";
+import {
+  generateHaikuProfile,
+  normalizedProfile
+} from "../../scripts/generate-haiku-agent-profile.mjs";
+import {
+  kickoffBytesForRun,
+  kickoffSha256ForRun
+} from "../../scripts/execution-contract.mjs";
+import { preflightExecution } from "../../scripts/preflight-execution.mjs";
 import { createSchedule } from "../../scripts/randomize.mjs";
+import { runControlledHarness } from "../../scripts/run-controlled-harness.mjs";
+import { runDeterministicBlock } from "../../scripts/run-deterministic-block.mjs";
+import { validateStartOrder } from "../../scripts/validate-start-order.mjs";
+import { validateExecutionRecords } from "../../scripts/validate-execution-records.mjs";
+import { validateLocalEvidence } from "../../scripts/validate-local-evidence.mjs";
 import {
   evaluateGlobalAttribution,
   evaluateIsolationEvidence
 } from "../../scripts/verify-isolation-evidence.mjs";
-import { canonicalStagingBytes, snapshotCorpusStaging } from "../adapter.mjs";
+import {
+  canonicalStagingBytes,
+  snapshotCorpusStaging,
+  snapshotLocalCorpusStaging
+} from "../adapter.mjs";
+import { buildDescriptiveRuns, summarizeDescriptive } from "../descriptive-v2.mjs";
 import { promoteStaging, promoteSubmission } from "../promote.mjs";
 import { buildReport } from "../report.mjs";
 import { assertExactArtifact, canonicalArtifactBytes } from "../reproduce.mjs";
@@ -44,7 +70,23 @@ const root = resolve(evaluatorRoot, "..");
 const readRootJson = (...parts) => JSON.parse(readFileSync(resolve(root, ...parts), "utf8"));
 const readEvaluatorJson = (...parts) => JSON.parse(readFileSync(resolve(evaluatorRoot, ...parts), "utf8"));
 const frozenSchedule = readRootJson("design", "schedule.json");
+const frozenContract = readRootJson("design", "arm-contract.json");
 const tests = [];
+const evidenceCandidateRoot = resolve(
+  process.env.TEMP ?? resolve(root, ".."),
+  `semantic-evidence-candidate-${process.pid}`
+);
+
+function ensureEvidenceCandidate() {
+  if (!existsSync(resolve(evidenceCandidateRoot, ".git"))
+    || !existsSync(resolve(evidenceCandidateRoot, ".benchmark-boundary.json"))) {
+    rmSync(evidenceCandidateRoot, { recursive: true, force: true });
+    materializeCandidate(evidenceCandidateRoot, {
+      blockId: "B01"
+    });
+  }
+  return evidenceCandidateRoot;
+}
 
 function test(name, action) {
   tests.push({ name, action });
@@ -118,7 +160,7 @@ function modelEvidencePayload() {
     });
   };
   for (const run of frozenSchedule.runs.filter((item) => item.armId !== 0)) {
-    const modelId = [1, 2].includes(run.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5";
+    const arm = frozenContract.arms.find((item) => item.id === run.armId);
     const parentSessionId = `${run.runId}-parent`;
     events.push({
       eventId: `${run.runId}-started`,
@@ -132,9 +174,9 @@ function modelEvidencePayload() {
       role: "parent",
       sequence: run.order
     });
-    addSession(run, "parent", parentSessionId, modelId);
-    if ([2, 4].includes(run.armId)) {
-      addSession(run, "worker", `${run.runId}-worker`, modelId, parentSessionId);
+    addSession(run, "parent", parentSessionId, arm.model);
+    if (arm.delegated) {
+      addSession(run, "worker", `${run.runId}-worker`, arm.workerModel, parentSessionId);
     }
   }
   return {
@@ -149,7 +191,8 @@ function modelEvidencePayload() {
 
 function modelRunRecords(authenticated) {
   return frozenSchedule.runs.filter((run) => run.armId !== 0).map((run) => {
-    const roles = (run.armId === 2 || run.armId === 4 ? ["parent", "worker"] : ["parent"])
+    const arm = frozenContract.arms.find((item) => item.id === run.armId);
+    const roles = (arm.delegated ? ["parent", "worker"] : ["parent"])
       .map((role) => {
         const created = authenticated.payload.events.find((event) =>
           event.runId === run.runId && event.role === role && event.type === "session.created");
@@ -193,20 +236,23 @@ function bindingAvailabilityFor(observations, unavailableRunIds = []) {
       publicKeySha256: "c".repeat(64)
     },
     runs: observations.filter((observation) => observation.armId !== 0).map((observation) => ({
+      ...(() => {
+        const arm = frozenContract.arms.find((item) => item.id === observation.armId);
+        return {
+          requestedModel: arm.model,
+          requestedWorkerModel: arm.workerModel ?? null,
+          roles: (arm.delegated ? ["parent", "worker"] : ["parent"])
+            .map((role) => ({
+              role,
+              sessionId: `${observation.runId}-${role}`,
+              observedModel: role === "worker" ? arm.workerModel : arm.model
+            }))
+        };
+      })(),
       runId: observation.runId,
       blockId: observation.blockId,
       armId: observation.armId,
-      requestedModel: [1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5",
-      requestedWorkerModel: [2, 4].includes(observation.armId)
-        ? ([1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5")
-        : null,
       status: unavailable.has(observation.runId) ? "unavailable" : "available",
-      roles: (observation.armId === 2 || observation.armId === 4 ? ["parent", "worker"] : ["parent"])
-        .map((role) => ({
-          role,
-          sessionId: `${observation.runId}-${role}`,
-          observedModel: [1, 2].includes(observation.armId) ? "gpt-5.6-sol" : "claude-haiku-4.5"
-        }))
     }))
   };
 }
@@ -407,21 +453,1304 @@ test("baseline is deterministic and staging-valid", () => {
   assert.deepEqual(generateBaseline(), checked);
   assert.equal(checked.cases.length, 60);
   assert.deepEqual(validateStaging(checked), []);
-  for (const tag of ["decision-table", "boundary-partition", "pairwise-covering", "grammar-property", "constraint-solver"]) {
+  for (const tag of [
+    "schema-pairwise", "schema-enumeration", "schema-optional",
+    "public-contract-value", "generic-boundary", "generic-string-partition",
+    "seeded-schema-property"
+  ]) {
     assert(checked.cases.some((scenario) => scenario.sourceTags.includes(tag)), `missing strategy ${tag}`);
   }
+  assert(GENERAL_GENERATOR_DEPENDENCIES.every((path) =>
+    !/evaluator|held-out|mutant|oracle/iu.test(path)));
 });
 
 test("randomized complete-block schedule is frozen", () => {
   const schedule = createSchedule();
   assert.deepEqual(schedule, readRootJson("design", "schedule.json"));
-  assert.equal(schedule.runs.length, 60);
+  assert.equal(schedule.protocolId, "semantic-test-corpus-execution-v2");
+  assert.equal(schedule.runs.length, 72);
+  assert.equal(schedule.runs.filter((run) => run.armId === 0).length, 12);
+  assert.equal(schedule.runs.filter((run) => run.armId !== 0).length, 60);
   for (let block = 1; block <= 12; block += 1) {
     const id = `B${String(block).padStart(2, "0")}`;
     const rows = schedule.runs.filter((run) => run.blockId === id);
-    assert.deepEqual(rows.map((run) => run.armId).toSorted(), [0, 1, 2, 3, 4]);
-    assert.deepEqual(rows.map((run) => run.order).toSorted(), [1, 2, 3, 4, 5]);
+    assert.deepEqual(rows.map((run) => run.armId).toSorted(), [0, 1, 2, 3, 4, 5]);
+    assert.deepEqual(rows.map((run) => run.order).toSorted(), [1, 2, 3, 4, 5, 6]);
   }
+  assert.deepEqual(schedule.runs.map((run) => run.globalOrder),
+    Array.from({ length: 72 }, (_, index) => index + 1));
+});
+
+test("captured timestamps enforce the strict 72-run global start order", () => {
+  const temporary = resolve(root, ".order-test-work");
+  rmSync(temporary, { recursive: true, force: true });
+  mkdirSync(temporary, { recursive: true });
+  try {
+    const captures = frozenSchedule.runs.map((run, index) => {
+      const startedAt = new Date(Date.parse("2026-07-31T20:00:00.000Z") + index * 1000)
+        .toISOString();
+      const sourcePath = `${run.runId}.start`;
+      const disposition = index % 11 === 0 ? "unavailable" : "started";
+      const bytes = Buffer.from(`${JSON.stringify({
+        runId: run.runId,
+        disposition,
+        recordedAt: startedAt,
+        startedAt: disposition === "started" ? startedAt : null
+      })}\n`);
+      writeFileSync(resolve(temporary, sourcePath), bytes);
+      return {
+        runId: run.runId,
+        blockId: run.blockId,
+        armId: run.armId,
+        sequence: run.globalOrder,
+        disposition,
+        recordedAt: startedAt,
+        startedAt: disposition === "started" ? startedAt : null,
+        sourcePath,
+        sourceSha256: createHash("sha256").update(bytes).digest("hex")
+      };
+    });
+    const index = {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      captures
+    };
+    assert.deepEqual(validateStartOrder(index, { baseDir: temporary }), []);
+    const reordered = structuredClone(index);
+    [reordered.captures[0], reordered.captures[1]] =
+      [reordered.captures[1], reordered.captures[0]];
+    assert(validateStartOrder(reordered, { baseDir: temporary })
+      .some((error) => error.includes("global start sequence")));
+    const forged = structuredClone(index);
+    forged.captures[1].recordedAt = forged.captures[0].recordedAt;
+    assert(validateStartOrder(forged, { baseDir: temporary })
+      .some((error) => error.includes("strictly increasing")
+        || error.includes("not derived")));
+  } finally {
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("fake CLI preflight and harness capture a complete immutable run", () => {
+  const fakeCli = resolve(root, "fixtures", "fake-copilot-cli.mjs");
+  const available = preflightExecution(fakeCli, "2026-07-31T20:00:00.000Z");
+  assert(available.arms.every((arm) => arm.status === "available"));
+  const unsupported = preflightExecution(process.execPath, "2026-07-31T20:00:00.000Z");
+  assert.equal(unsupported.arms[5].status, "unavailable");
+  assert(unsupported.arms[5].reasons.some((reason) =>
+    reason.includes("fixed-model custom-agent")
+      || reason.includes("real atomic probe")));
+
+  const repositoryRoot = resolve(root, "..", "..");
+  const temporary = resolve(repositoryRoot, "..", `.semantic-harness-${process.pid}`);
+  const candidateRoot = resolve(temporary, "candidate");
+  const artifactRoot = resolve(temporary, "artifacts");
+  const startIndexPath = resolve(temporary, "start-index.json");
+  rmSync(temporary, { recursive: true, force: true });
+  mkdirSync(temporary, { recursive: true });
+  try {
+    const dryRun = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot,
+      artifactRoot,
+      startIndexPath,
+      blockId: "B01",
+      armId: 4,
+      dryRun: true,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(dryRun.status, "dry-run");
+    assert(dryRun.plan.atomicCommand.args.includes("--prompt-file"));
+    assert(dryRun.plan.atomicCommand.args.includes("--model"));
+    assert.equal(dryRun.plan.atomicCommand.args.includes("--worker-model"), false);
+    const targetDryRun = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "target-candidate"),
+      artifactRoot: resolve(temporary, "target-artifacts"),
+      startIndexPath,
+      blockId: "B01",
+      armId: 5,
+      dryRun: true,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(targetDryRun.plan.atomicCommand.args.includes("--worker-model"), false);
+    assert.equal(targetDryRun.preflight.arm5Probe.selectedAgent,
+      "semantic-test-corpus-haiku");
+    assert.equal(targetDryRun.preflight.arm5Probe.observedWorkerModel,
+      "claude-haiku-4.5");
+
+    const result = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot,
+      artifactRoot,
+      startIndexPath,
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(result.status, "complete", result.modelPreflight?.reasons.join("\n"));
+    assert.equal(result.modelPreflight.status, "pass");
+    assert.equal(result.evidence.trust.signed, false);
+    assert.equal(result.evidence.trust.complianceProof, false);
+    assert.equal(result.evidence.delegation.agentName, "semantic-test-corpus");
+    assert.equal(result.evidence.models.observed.worker[0], "claude-haiku-4.5");
+    assert.equal(result.provenance.evidence, "unsigned-descriptive-only");
+    const startIndex = JSON.parse(readFileSync(startIndexPath, "utf8"));
+    assert.deepEqual(validateStartOrder(startIndex, {
+      requireComplete: false,
+      baseDir: temporary
+    }), []);
+    assert(existsSync(resolve(artifactRoot, "staging.json")));
+    assert(existsSync(resolve(artifactRoot, "metrics.json")));
+    assert(existsSync(resolve(artifactRoot, "capture-provenance.json")));
+
+    for (const armId of [1, 3]) {
+      runControlledHarness({
+        cli: fakeCli,
+        projectId: "fixture-project",
+        candidateRoot: resolve(temporary, `candidate-arm-${armId}`),
+        artifactRoot: resolve(temporary, `artifacts-arm-${armId}`),
+        startIndexPath,
+        blockId: "B01",
+        armId,
+        capturedAt: "2026-07-31T20:00:00.000Z"
+      });
+    }
+    const targetResult = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "candidate-arm-5"),
+      artifactRoot: resolve(temporary, "artifacts-arm-5"),
+      startIndexPath,
+      blockId: "B01",
+      armId: 5,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(targetResult.status, "complete");
+    assert.equal(targetResult.evidence.delegation.agentName,
+      "semantic-test-corpus-haiku");
+    assert.deepEqual(targetResult.evidence.models.observed.worker,
+      ["claude-haiku-4.5"]);
+
+    process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
+    const failureRoot = resolve(temporary, "failure");
+    const failure = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(failureRoot, "candidate"),
+      artifactRoot: resolve(failureRoot, "artifacts"),
+      startIndexPath: resolve(failureRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_CREATE_FAILURE;
+    assert.equal(failure.status, "pre-session-failure");
+    assert.equal(failure.failure.kickoffStarted, false);
+    assert.equal(failure.failure.usage.modelTokens, 0);
+    const failureReceiptPath = resolve(
+      dirname(failure.failurePath),
+      failure.failure.receipt.path
+    );
+    assert(existsSync(failureReceiptPath));
+
+    process.env.FAKE_COPILOT_CREATE_FAILURE = "1";
+    const retryRoot = resolve(temporary, "retry-exhausted");
+    const retry = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(retryRoot, "candidate"),
+      artifactRoot: resolve(retryRoot, "artifacts"),
+      startIndexPath: resolve(retryRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      preSessionFailurePath: failure.failurePath,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_CREATE_FAILURE;
+    assert.equal(retry.status, "unavailable");
+    assert.equal(retry.disposition.evidenceKind, "retry-exhausted");
+
+    const tamperedRoot = resolve(temporary, "tampered-receipt");
+    mkdirSync(tamperedRoot, { recursive: true });
+    const tamperedFailurePath = resolve(tamperedRoot, "failure.json");
+    writeFileSync(tamperedFailurePath, readFileSync(failure.failurePath));
+    writeFileSync(
+      resolve(tamperedRoot, failure.failure.receipt.path),
+      Buffer.from('{"receiptKind":"authoritative-pre-session-failure"}\n')
+    );
+    const rejectedRetryRoot = resolve(temporary, "rejected-retry");
+    assert.throws(() => runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(rejectedRetryRoot, "candidate"),
+      artifactRoot: resolve(rejectedRetryRoot, "artifacts"),
+      startIndexPath: resolve(rejectedRetryRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      preSessionFailurePath: tamperedFailurePath,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    }), /Prior pre-session failure is invalid/);
+    assert.equal(existsSync(
+      resolve(rejectedRetryRoot, "start-index.json.slot-01.lock")
+    ), false);
+
+    const prelaunchRoot = resolve(temporary, "prelaunch-failure");
+    const nonemptyCandidate = resolve(prelaunchRoot, "candidate");
+    mkdirSync(nonemptyCandidate, { recursive: true });
+    writeFileSync(resolve(nonemptyCandidate, "occupied.txt"), "occupied");
+    assert.throws(() => runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: nonemptyCandidate,
+      artifactRoot: resolve(prelaunchRoot, "artifacts"),
+      startIndexPath: resolve(prelaunchRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    }), /Candidate root must be absent or empty/);
+    assert.equal(existsSync(
+      resolve(prelaunchRoot, "start-index.json.slot-01.lock")
+    ), false);
+
+    const unavailableRoot = resolve(temporary, "preflight-unavailable");
+    const unavailable = runControlledHarness({
+      cli: process.execPath,
+      projectId: "fixture-project",
+      candidateRoot: resolve(unavailableRoot, "candidate"),
+      artifactRoot: resolve(unavailableRoot, "artifacts"),
+      startIndexPath: resolve(unavailableRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    assert.equal(unavailable.status, "unavailable");
+    const unavailableIndex = JSON.parse(
+      readFileSync(resolve(unavailableRoot, "start-index.json"), "utf8")
+    );
+    assert.equal(unavailableIndex.captures.length, 1);
+    assert.equal(unavailableIndex.captures[0].disposition, "unavailable");
+    assert(existsSync(resolve(unavailableRoot, "artifacts", "unit-disposition.json")));
+
+    process.env.FAKE_COPILOT_MISSING_USAGE = "1";
+    const uncertainRoot = resolve(temporary, "started-uncertain");
+    const uncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(uncertainRoot, "candidate"),
+      artifactRoot: resolve(uncertainRoot, "artifacts"),
+      startIndexPath: resolve(uncertainRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    assert.equal(uncertain.status, "started-uncertain");
+    assert(existsSync(resolve(uncertainRoot, "artifacts", "lifecycle-start.json")));
+    assert(existsSync(resolve(uncertainRoot, "artifacts", "captured.events.jsonl")));
+    assert(existsSync(resolve(uncertainRoot, "artifacts", "unit-disposition.json")));
+    const uncertainIndex = JSON.parse(
+      readFileSync(resolve(uncertainRoot, "start-index.json"), "utf8")
+    );
+    assert.equal(uncertainIndex.captures[0].disposition, "started");
+    assert.equal(uncertain.partialUsage.metrics.aiCredits.available, false);
+    assert.equal(uncertain.partialUsage.metrics.nanoAiu.available, false);
+    assert.equal(uncertain.partialUsage.metrics.modelTokens.available, false);
+    assert.equal(uncertain.partialUsage.metrics.completionCount.available, false);
+    assert.equal(uncertain.partialUsage.metrics.durationMs.available, false);
+    assert.equal(uncertain.partialUsage.metrics.toolCallCount.available, true);
+    assert.equal(uncertain.partialUsage.attempt.available, false);
+    assert.equal(
+      uncertain.disposition.partialUsageSha256,
+      createHash("sha256")
+        .update(readFileSync(uncertain.partialUsagePath)).digest("hex")
+    );
+    process.env.FAKE_COPILOT_UNEXPECTED_STAGING = "1";
+    const partialRoot = resolve(temporary, "started-uncertain-partial");
+    const partial = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(partialRoot, "candidate"),
+      artifactRoot: resolve(partialRoot, "artifacts"),
+      startIndexPath: resolve(partialRoot, "start-index.json"),
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    assert.equal(partial.status, "started-uncertain");
+    assert.equal(partial.partialUsage.metrics.aiCredits.value, 2);
+    assert.equal(partial.partialUsage.metrics.nanoAiu.value, 2_000_000_000);
+    assert.equal(partial.partialUsage.metrics.inputTokens.value, 300);
+    assert.equal(partial.partialUsage.metrics.outputTokens.value, 30);
+    assert.equal(partial.partialUsage.metrics.modelTokens.value, 330);
+    assert.equal(partial.partialUsage.metrics.completionCount.value, 2);
+    assert.equal(partial.partialUsage.metrics.durationMs.value, 1000);
+    assert.equal(partial.partialUsage.metrics.toolCallCount.value, 4);
+    assert.equal(partial.partialUsage.metrics.toolResultCount.value, 4);
+    assert.equal(partial.partialUsage.attempt.available, true);
+    assert.equal(partial.partialUsage.attempt.attemptId, "B01-A4-attempt-1");
+
+    for (const [environmentName, invalidKind, costsAvailable] of [
+      ["FAKE_COPILOT_MALFORMED_USAGE", "usage", false],
+      ["FAKE_COPILOT_USAGE_SESSION_MISMATCH", "usage", false],
+      ["FAKE_COPILOT_MALFORMED_EVENTS", "events", true],
+      ["FAKE_COPILOT_EVENTS_SESSION_MISMATCH", "events", true]
+    ]) {
+      process.env[environmentName] = "1";
+      const invalidRoot = resolve(temporary, environmentName.toLowerCase());
+      const invalid = runControlledHarness({
+        cli: fakeCli,
+        projectId: "fixture-project",
+        candidateRoot: resolve(invalidRoot, "candidate"),
+        artifactRoot: resolve(invalidRoot, "artifacts"),
+        startIndexPath: resolve(invalidRoot, "start-index.json"),
+        blockId: "B01",
+        armId: 4,
+        capturedAt: "2026-07-31T20:00:00.000Z"
+      });
+      delete process.env[environmentName];
+      assert.equal(invalid.status, "started-uncertain", environmentName);
+      assert(existsSync(invalid.dispositionPath), environmentName);
+      const invalidSource = invalid.partialUsage.invalidSources.find((source) =>
+        source.kind === invalidKind);
+      assert(invalidSource, environmentName);
+      assert.match(invalidSource.sha256, /^[a-f0-9]{64}$/);
+      assert(invalidSource.byteLength > 0);
+      assert(invalidSource.validationError.length > 0);
+      assert.equal(invalid.partialUsage.sources[invalidKind].available, false);
+      assert.equal(invalid.partialUsage.sources[invalidKind].path, null);
+      assert.equal(invalid.partialUsage.sources[invalidKind].sha256, null);
+      assert.equal(
+        invalid.partialUsage.metrics.aiCredits.available,
+        costsAvailable,
+        environmentName
+      );
+    }
+  } finally {
+    delete process.env.FAKE_COPILOT_CREATE_FAILURE;
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    delete process.env.FAKE_COPILOT_MALFORMED_USAGE;
+    delete process.env.FAKE_COPILOT_USAGE_SESSION_MISMATCH;
+    delete process.env.FAKE_COPILOT_MALFORMED_EVENTS;
+    delete process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH;
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("condition instructions freeze the generated fixed-Haiku target mechanism", () => {
+  const conditions = readRootJson("design", "condition-instructions.json");
+  assert.equal(conditions.protocolId, "semantic-test-corpus-execution-v2");
+  assert.deepEqual(conditions.conditions.map((condition) => condition.armId), [0, 1, 2, 3, 4, 5]);
+  assert.equal(conditions.conditions.find((condition) => condition.armId === 5).workerModel,
+    "claude-haiku-4.5");
+  const target = conditions.conditions.find((condition) => condition.armId === 5);
+  assert.equal(target.agentName, "semantic-test-corpus-haiku");
+  assert.match(target.kickoff, /registered semantic-test-corpus-haiku agent/);
+  const baseBytes = readFileSync(resolve(root, "..", "..", ".github", "agents",
+    "semantic-test-corpus.agent.md"));
+  const haikuBytes = readFileSync(resolve(root, "..", "..", ".github", "agents",
+    "semantic-test-corpus-haiku.agent.md"));
+  assert.deepEqual(haikuBytes, generateHaikuProfile(baseBytes));
+  assert.equal(normalizedProfile(haikuBytes), normalizedProfile(baseBytes));
+  const kickoff = kickoffBytesForRun(5, 1812433253);
+  assert.match(kickoff.toString("utf8"), /Benchmark block seed: 1812433253/);
+  assert.equal(
+    createHash("sha256").update(kickoff).digest("hex"),
+    kickoffSha256ForRun(5, 1812433253)
+  );
+});
+
+test("v2 analyzer emits six-arm point estimates and pairs without inference", () => {
+  const endpointNames = Object.keys(
+    readRootJson("schemas", "descriptive-input.schema.json")
+      .properties.runs.items.properties.endpoints.properties
+  );
+  const runs = frozenSchedule.runs.map((run) => ({
+    runId: run.runId,
+    blockId: run.blockId,
+    armId: run.armId,
+    endpoints: {
+      ...Object.fromEntries(endpointNames.map((name) => [name, 0])),
+      promotionRate: run.armId / 10,
+      pathCoverage: run.armId / 10,
+      mutantKillRate: run.armId / 10,
+      parentCumulativeInputTokens: run.armId === 1 ? 100 : run.armId === 5 ? 80 : 0,
+      totalNanoAiu: run.armId === 1 ? 100 : run.armId === 5 ? 85 : 0,
+      totalAiCredits: run.armId === 1 ? 100 : run.armId === 5 ? 85 : 0,
+      wallMs: run.armId === 1 ? 100 : run.armId === 5 ? 75 : 0
+    }
+  }));
+  const summary = summarizeDescriptive(runs);
+  assert.equal(summary.analysis, "descriptive-point-estimates-and-within-block-pairs-only");
+  assert.equal(summary.observedRuns, 72);
+  assert.equal(summary.armPoints.length, 6);
+  assert.equal(summary.pairs.find((pair) =>
+    pair.armId === 5 && pair.endpoint === "promotionRate").blockPairs.length, 12);
+  assert.equal(summary.pairs.find((pair) =>
+    pair.armId === 5 && pair.endpoint === "promotionRate").mean, 0.5);
+  assert.deepEqual(
+    [...new Set(summary.registeredContrasts.map((contrast) => contrast.id))],
+    [
+      "script-vs-gpt-inline",
+      "script-vs-gpt-gpt",
+      "script-vs-haiku-inline",
+      "script-vs-haiku-haiku",
+      "script-vs-gpt-haiku",
+      "gpt-delegation",
+      "delegated-worker-tier",
+      "haiku-delegation",
+      "gpt-inline-vs-target",
+      "factorial-model-tier",
+      "factorial-delegation",
+      "factorial-interaction",
+      "factorial-tier-inline",
+      "factorial-tier-delegated"
+    ]
+  );
+  assert.equal(summary.unavailableRuns.length, 0);
+  assert(summary.registeredContrasts
+    .filter((contrast) => contrast.id.startsWith("script-vs-"))
+    .every((contrast) => contrast.blockValues.length === 12));
+  assert.equal(summary.targetArmDecisionRule.positiveEfficiencySignal, true);
+  assert.equal(summary.targetArmDecisionRule.secondaryWallTarget.met, true);
+  const incompletePairs = structuredClone(runs);
+  incompletePairs.find((run) =>
+    run.blockId === "B01" && run.armId === 5).endpoints.totalNanoAiu = null;
+  const incompleteSummary = summarizeDescriptive(incompletePairs);
+  assert.equal(
+    incompleteSummary.targetArmDecisionRule
+      .efficiencyComparisons.totalNanoAiu.n,
+    11
+  );
+  assert.equal(incompleteSummary.targetArmDecisionRule.positiveEfficiencySignal, false);
+  assert.throws(() => summarizeDescriptive(runs.slice(1)), /Exactly 72/);
+  assert.doesNotMatch(JSON.stringify(summary),
+    /pValue|confidenceInterval|noninferior|bootstrap|holm/i);
+});
+
+test("v2 analyzer derives measurements only from exact evaluator artifacts", () => {
+  const temporary = resolve(process.env.TEMP ?? root, `semantic-descriptive-${process.pid}`);
+  rmSync(temporary, { recursive: true, force: true });
+  mkdirSync(temporary, { recursive: true });
+  try {
+    const fakeCli = resolve(root, "fixtures", "fake-copilot-cli.mjs");
+    const partialIndexPath = resolve(temporary, "partial-start-index.json");
+    process.env.FAKE_COPILOT_START_ISO = new Date(Date.now() - 30_000)
+      .toISOString();
+    process.env.FAKE_COPILOT_UNEXPECTED_STAGING = "1";
+    const partialUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "partial-candidate"),
+      artifactRoot: resolve(temporary, "partial-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 4,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    process.env.FAKE_COPILOT_MISSING_USAGE = "1";
+    const noUsageUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "no-usage-candidate"),
+      artifactRoot: resolve(temporary, "no-usage-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 1,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    process.env.FAKE_COPILOT_MALFORMED_USAGE = "1";
+    const malformedUsageUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "malformed-usage-candidate"),
+      artifactRoot: resolve(temporary, "malformed-usage-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 3,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_MALFORMED_USAGE;
+    process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH = "1";
+    const mismatchedEventsUncertain = runControlledHarness({
+      cli: fakeCli,
+      projectId: "fixture-project",
+      candidateRoot: resolve(temporary, "mismatched-events-candidate"),
+      artifactRoot: resolve(temporary, "mismatched-events-artifacts"),
+      startIndexPath: partialIndexPath,
+      blockId: "B01",
+      armId: 5,
+      capturedAt: "2026-07-31T20:00:00.000Z"
+    });
+    delete process.env.FAKE_COPILOT_EVENTS_SESSION_MISMATCH;
+    delete process.env.FAKE_COPILOT_START_ISO;
+    assert.equal(partialUncertain.status, "started-uncertain");
+    assert.equal(noUsageUncertain.status, "started-uncertain");
+    assert.equal(malformedUsageUncertain.status, "started-uncertain");
+    assert.equal(mismatchedEventsUncertain.status, "started-uncertain");
+    const partialCaptures = JSON.parse(
+      readFileSync(partialIndexPath, "utf8")
+    ).captures;
+    const uncertainDefinitions = new Map([
+      ["B01-A4", {
+        runId: "B01-A4",
+        blockId: "B01",
+        armId: 4,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: partialUncertain.dispositionPath
+      }],
+      ["B01-A1", {
+        runId: "B01-A1",
+        blockId: "B01",
+        armId: 1,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: noUsageUncertain.dispositionPath
+      }],
+      ["B01-A3", {
+        runId: "B01-A3",
+        blockId: "B01",
+        armId: 3,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: malformedUsageUncertain.dispositionPath
+      }],
+      ["B01-A5", {
+        runId: "B01-A5",
+        blockId: "B01",
+        armId: 5,
+        status: "unavailable",
+        snapshotPath: null,
+        metricsPath: null,
+        executionPath: null,
+        localEvidencePath: null,
+        modelPreflightPath: null,
+        candidateRoot: null,
+        evaluationPath: null,
+        startEvidencePath: null,
+        endEvidencePath: null,
+        dispositionPath: mismatchedEventsUncertain.dispositionPath
+      }]
+    ]);
+    const orderBaseMs = Date.parse(partialCaptures.at(-1).recordedAt) - 1;
+    const baselineStartedAt = new Date(orderBaseMs + 5).toISOString();
+    const baselinePlan = frozenSchedule.runs.find((run) => run.runId === "B01-A0");
+    const baseline = runDeterministicBlock("B01", {
+      startEvidence: {
+        formatVersion: 1,
+        protocolId: "semantic-test-corpus-execution-v2",
+        runId: baselinePlan.runId,
+        blockId: baselinePlan.blockId,
+        armId: 0,
+        seed: baselinePlan.seed,
+        scheduleOrder: baselinePlan.order,
+        globalOrder: baselinePlan.globalOrder,
+        disposition: "started",
+        recordedAt: baselineStartedAt,
+        startedAt: baselineStartedAt
+      }
+    });
+    const baselineSnapshotPath = resolve(temporary, "B01-A0.json");
+    const baselineExecutionPath = resolve(temporary, "B01-A0.execution.json");
+    const baselineMetricsPath = resolve(temporary, "B01-A0.metrics.json");
+    const baselineEvaluationPath = resolve(temporary, "B01-A0.evaluation.json");
+    const baselineStartPath = resolve(temporary, "B01-A0.start.json");
+    const baselineEndPath = resolve(temporary, "B01-A0.end.json");
+    writeFileSync(baselineSnapshotPath, baseline.bytes);
+    writeFileSync(baselineExecutionPath, `${JSON.stringify(baseline.execution, null, 2)}\n`);
+    writeFileSync(baselineStartPath, baseline.startBytes);
+    writeFileSync(baselineEndPath, baseline.endBytes);
+    const baselineMetrics = deriveMetricsArtifact(baseline.bytes, {
+      runId: "B01-A0",
+      blockId: "B01",
+      armId: 0
+    });
+    const baselineMetricsBytes = canonicalMetricsBytes(baselineMetrics);
+    writeFileSync(baselineMetricsPath, baselineMetricsBytes);
+    writeFileSync(baselineEvaluationPath, `${JSON.stringify({
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      runId: "B01-A0",
+      blockId: "B01",
+      armId: 0,
+      attemptId: null,
+      snapshotPath: baselineSnapshotPath,
+      snapshotSha256: createHash("sha256").update(baseline.bytes).digest("hex"),
+      metricsPath: baselineMetricsPath,
+      metricsSha256: createHash("sha256").update(baselineMetricsBytes).digest("hex"),
+      executionSha256: createHash("sha256")
+        .update(readFileSync(baselineExecutionPath)).digest("hex"),
+      localEvidenceSha256: null,
+      modelPreflightSha256: null,
+      createdAt: "2026-07-31T08:00:00.000Z"
+    }, null, 2)}\n`);
+
+    const aiSnapshot = {
+      formatVersion: 1,
+      generator: { armId: 2, blockId: "B01", seed: 1812433253 },
+      adapter: {
+        version: 1,
+        requestHash: readRootJson("design", "corpus-request.json").requestHash,
+        sourceRoot: "corpus-staging/",
+        successfulWrites: 0,
+        toolErrorCount: 0,
+        manifest: null
+      },
+      cases: [],
+      toolErrors: []
+    };
+    const aiSnapshotBytes = canonicalStagingBytes(aiSnapshot);
+    const aiSnapshotPath = resolve(temporary, "B01-A2.json");
+    const aiMetricsPath = resolve(temporary, "B01-A2.metrics.json");
+    const aiEvaluationPath = resolve(temporary, "B01-A2.evaluation.json");
+    writeFileSync(aiSnapshotPath, aiSnapshotBytes);
+    const aiMetrics = deriveMetricsArtifact(aiSnapshotBytes, {
+      runId: "B01-A2",
+      blockId: "B01",
+      armId: 2
+    });
+    const aiMetricsBytes = canonicalMetricsBytes(aiMetrics);
+    writeFileSync(aiMetricsPath, aiMetricsBytes);
+    const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+    const fixtureEvidenceBytes = readFileSync(resolve(fixtureRoot, "expected.json"));
+    const fixturePreflightBytes = readFileSync(resolve(fixtureRoot, "model-preflight.json"));
+    const aiEvaluation = {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      runId: "B01-A2",
+      blockId: "B01",
+      armId: 2,
+      attemptId: "B01-A2-attempt-1",
+      snapshotPath: aiSnapshotPath,
+      snapshotSha256: createHash("sha256").update(aiSnapshotBytes).digest("hex"),
+      metricsPath: aiMetricsPath,
+      metricsSha256: createHash("sha256").update(aiMetricsBytes).digest("hex"),
+      executionSha256: null,
+      localEvidenceSha256: createHash("sha256").update(fixtureEvidenceBytes).digest("hex"),
+      modelPreflightSha256: createHash("sha256").update(fixturePreflightBytes).digest("hex"),
+      createdAt: "2026-07-31T08:00:00.000Z"
+    };
+    writeFileSync(aiEvaluationPath, `${JSON.stringify(aiEvaluation, null, 2)}\n`);
+    const eligibleDefinitions = new Map([
+      ["B01-A0", {
+          runId: "B01-A0",
+          blockId: "B01",
+          armId: 0,
+          status: "eligible",
+          snapshotPath: baselineSnapshotPath,
+          metricsPath: baselineMetricsPath,
+          executionPath: baselineExecutionPath,
+          localEvidencePath: null,
+          modelPreflightPath: null,
+          candidateRoot: null,
+          evaluationPath: baselineEvaluationPath,
+          startEvidencePath: baselineStartPath,
+          endEvidencePath: baselineEndPath,
+          dispositionPath: null
+        }],
+      ["B01-A2", {
+          runId: "B01-A2",
+          blockId: "B01",
+          armId: 2,
+          status: "eligible",
+          snapshotPath: aiSnapshotPath,
+          metricsPath: aiMetricsPath,
+          executionPath: null,
+          localEvidencePath: resolve(fixtureRoot, "expected.json"),
+          modelPreflightPath: resolve(fixtureRoot, "model-preflight.json"),
+          candidateRoot: ensureEvidenceCandidate(),
+          evaluationPath: aiEvaluationPath,
+          startEvidencePath: null,
+          endEvidencePath: null,
+          dispositionPath: null
+        }]
+    ]);
+    const captures = [];
+    const unitDefinitions = frozenSchedule.runs.map((planned, index) => {
+      if (uncertainDefinitions.has(planned.runId)) {
+        captures.push(partialCaptures.find((capture) =>
+          capture.runId === planned.runId));
+        return uncertainDefinitions.get(planned.runId);
+      }
+      const recordedAt = new Date(
+        orderBaseMs + index
+      ).toISOString();
+      const eligible = eligibleDefinitions.get(planned.runId);
+      const disposition = eligible ? "started" : "unavailable";
+      const syntheticSourcePath = resolve(temporary, `${planned.runId}.order-source.json`);
+      const syntheticSourceBytes = Buffer.from(`${JSON.stringify({
+        runId: planned.runId,
+        blockId: planned.blockId,
+        armId: planned.armId,
+        disposition,
+        recordedAt,
+        startedAt: eligible ? recordedAt : null
+      })}\n`);
+      const sourcePath = planned.runId === "B01-A0"
+        ? baselineStartPath
+        : syntheticSourcePath;
+      const sourceBytes = planned.runId === "B01-A0"
+        ? baseline.startBytes
+        : syntheticSourceBytes;
+      if (sourcePath === syntheticSourcePath) writeFileSync(sourcePath, sourceBytes);
+      captures.push({
+        runId: planned.runId,
+        blockId: planned.blockId,
+        armId: planned.armId,
+        sequence: planned.globalOrder,
+        disposition,
+        recordedAt,
+        startedAt: eligible ? recordedAt : null,
+        sourcePath: sourcePath.slice(temporary.length + 1),
+        sourceSha256: createHash("sha256").update(sourceBytes).digest("hex")
+      });
+      if (eligible) return eligible;
+      const dispositionPath = resolve(temporary, `${planned.runId}.disposition.json`);
+      writeFileSync(dispositionPath, `${JSON.stringify({
+       formatVersion: 1,
+       protocolId: "semantic-test-corpus-execution-v2",
+       runId: planned.runId,
+       blockId: planned.blockId,
+       armId: planned.armId,
+       status: "unavailable",
+       reason: "fixture unavailable evidence",
+       evidenceKind: "preflight-unavailable",
+       sourcePath: sourcePath.slice(temporary.length + 1),
+       sourceSha256: createHash("sha256").update(sourceBytes).digest("hex"),
+       orderSourcePath: sourcePath.slice(temporary.length + 1),
+       orderSourceSha256: createHash("sha256").update(sourceBytes).digest("hex"),
+       partialUsagePath: null,
+       partialUsageSha256: null
+      }, null, 2)}\n`);
+      return {
+       runId: planned.runId,
+       blockId: planned.blockId,
+       armId: planned.armId,
+       status: "unavailable",
+       snapshotPath: null,
+       metricsPath: null,
+       executionPath: null,
+       localEvidencePath: null,
+       modelPreflightPath: null,
+       candidateRoot: null,
+       evaluationPath: null,
+       startEvidencePath: null,
+       endEvidencePath: null,
+       dispositionPath
+      };
+    });
+    const startIndexPath = resolve(temporary, "start-index.json");
+    const startIndexBytes = Buffer.from(`${JSON.stringify({
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      captures
+    }, null, 2)}\n`);
+    writeFileSync(startIndexPath, startIndexBytes);
+    const startIndexSha256Path = resolve(temporary, "start-index.json.sha256");
+    writeFileSync(
+      startIndexSha256Path,
+      `${createHash("sha256").update(startIndexBytes).digest("hex")}\n`
+    );
+    const definitions = {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      startIndexPath,
+      startIndexSha256Path,
+      runs: unitDefinitions
+    };
+    const runs = buildDescriptiveRuns(definitions, temporary);
+    assert.equal(runs.length, 2);
+    assert.equal(runs.find((run) => run.armId === 0).endpoints.totalModelTokens, 0);
+    assert.equal(runs.find((run) => run.armId === 0)
+      .endpoints.sessionEvidenceAvailable, 0);
+    assert.equal(runs.find((run) => run.armId === 0)
+      .endpoints.modelEvidenceAvailable, 0);
+    assert.equal(runs.find((run) => run.armId === 0)
+      .endpoints.mechanismEvidenceAvailable, 0);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.totalModelTokens, 1850);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.modelEvidenceAvailable, 1);
+    assert.equal(runs.find((run) => run.armId === 2).endpoints.mechanismEvidenceAvailable, 1);
+    const operationalSummary = summarizeDescriptive(runs)
+      .allAttemptOperationalUsage;
+    assert.equal(operationalSummary.totals.aiCredits.value, 10);
+    assert.equal(operationalSummary.totals.nanoAiu.value, 10_000_000_000);
+    assert.equal(operationalSummary.totals.inputTokens.value, 2300);
+    assert.equal(operationalSummary.totals.outputTokens.value, 210);
+    assert.equal(operationalSummary.totals.modelTokens.value, 2510);
+    assert.equal(operationalSummary.totals.completionCount.value, 6);
+    assert.equal(operationalSummary.totals.durationMs.value, 7200);
+    assert.equal(operationalSummary.totals.toolCallCount.value, 16);
+    assert.equal(operationalSummary.totals.toolResultCount.value, 16);
+    assert.deepEqual(
+      operationalSummary.totals.aiCredits.unavailableRunIds,
+      ["B01-A1", "B01-A3"]
+    );
+    const partialRun = operationalSummary.runs.find((run) =>
+      run.runId === "B01-A4");
+    const noUsageRun = operationalSummary.runs.find((run) =>
+      run.runId === "B01-A1");
+    assert.equal(partialRun.metrics.aiCredits.available, true);
+    assert.equal(noUsageRun.metrics.aiCredits.available, false);
+    assert.match(noUsageRun.metrics.aiCredits.reason, /usage export was not produced/);
+    assert.deepEqual(
+      operationalSummary.totals.toolCallCount.unavailableRunIds,
+      ["B01-A5"]
+    );
+
+    const unavailableDefinition = definitions.runs.find((run) =>
+      run.status === "unavailable"
+      && !["B01-A4", "B01-A1", "B01-A3", "B01-A5"].includes(run.runId));
+    const dispositionBytes = readFileSync(unavailableDefinition.dispositionPath);
+    const forgedDisposition = JSON.parse(dispositionBytes);
+    forgedDisposition.orderSourceSha256 = "0".repeat(64);
+    writeFileSync(
+      unavailableDefinition.dispositionPath,
+      `${JSON.stringify(forgedDisposition, null, 2)}\n`
+    );
+    assert.throws(() => buildDescriptiveRuns(definitions, temporary),
+      /lacks exact evidence binding/);
+    writeFileSync(unavailableDefinition.dispositionPath, dispositionBytes);
+
+    const tampered = structuredClone(aiMetrics);
+    tampered.metrics.promotion.promotionRate = -1;
+    writeFileSync(aiMetricsPath, canonicalMetricsBytes(tampered));
+    assert.throws(() => buildDescriptiveRuns(definitions, temporary),
+      /Evaluation record|not exact deterministic output/);
+    assert.throws(() => buildDescriptiveRuns({
+      ...definitions,
+      runs: definitions.runs.slice(1)
+    }, temporary),
+      /exactly 72|Descriptive artifact manifest/i);
+  } finally {
+    delete process.env.FAKE_COPILOT_UNEXPECTED_STAGING;
+    delete process.env.FAKE_COPILOT_MISSING_USAGE;
+    delete process.env.FAKE_COPILOT_START_ISO;
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("deterministic runner executes every frozen baseline block", () => {
+  const executions = frozenContract.arms[0].id === 0
+    ? Array.from({ length: 12 }, (_, index) =>
+      runDeterministicBlock(`B${String(index + 1).padStart(2, "0")}`))
+    : [];
+  assert.equal(executions.length, 12);
+  for (const result of executions) {
+    assert.equal(result.staging.cases.length, 60);
+    assert.equal(result.execution.cases, 60);
+    assert.equal(result.execution.armId, 0);
+    assert.equal(result.staging.generator.blockId, result.execution.blockId);
+    assert.equal(result.staging.generator.seed, result.execution.seed);
+    assert.match(result.execution.stagingSha256, /^[a-f0-9]{64}$/);
+  }
+});
+
+test("captured local evidence is reproducible, fail-closed, and model-bound", () => {
+  const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+  const candidateRoot = ensureEvidenceCandidate();
+  const eventsPath = resolve(fixtureRoot, "captured.events.jsonl");
+  const usagePath = resolve(fixtureRoot, "captured.usage.json");
+  const sessionCreationPath = resolve(fixtureRoot, "session-creation.json");
+  const candidateBoundaryPath = resolve(fixtureRoot, "candidate-boundary.json");
+  const runManifestPath = resolve(fixtureRoot, "run-manifest.json");
+  const runAttemptPath = resolve(fixtureRoot, "attempt-1.json");
+  const eventsBytes = readFileSync(eventsPath);
+  const usageBytes = readFileSync(usagePath);
+  const sessionCreationBytes = readFileSync(sessionCreationPath);
+  const candidateBoundaryBytes = readFileSync(candidateBoundaryPath);
+  const runManifestBytes = readFileSync(runManifestPath);
+  const runAttemptBytes = readFileSync(runAttemptPath);
+  const manifest = readRootJson("fixtures", "local-evidence", "run-manifest.json");
+  const evidence = collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes,
+    usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    candidateRoot,
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+
+  assert.deepEqual(evidence, readRootJson("fixtures", "local-evidence", "expected.json"));
+  assert.deepEqual(validateLocalEvidence(evidence, {
+    artifactRoot: fixtureRoot,
+    candidateRoot: ensureEvidenceCandidate()
+  }), []);
+  assert.equal(evidence.trust.signed, false);
+  assert.equal(evidence.trust.complianceProof, false);
+  assert.equal(evidence.availability.fields.premiumRequests.status, "unavailable");
+  assert.equal(evidence.usage.total.aiCredits, 6);
+  assert.equal(evidence.usage.total.cachedTokens, 1450);
+  assert.equal(evidence.delegation.compactReturn,
+    "corpus-staging - 0 scenarios - FAILURE: SCHEMA_ERROR");
+
+  const decimalUsage = JSON.parse(usageBytes);
+  decimalUsage.rows[0].request_multiplier = 0.25;
+  decimalUsage.rows[1].request_multiplier = 0.5;
+  decimalUsage.rows[0].total_nano_aiu = 1_000_000_000.25;
+  decimalUsage.rows[1].total_nano_aiu = 2_000_000_000.5;
+  decimalUsage.rows[0].duration_ms = 500.25;
+  decimalUsage.rows[1].duration_ms = 600.5;
+  decimalUsage.rows[0].time_to_first_token_ms = 100.25;
+  decimalUsage.rows[1].time_to_first_token_ms = 200.5;
+  decimalUsage.rows[0].inter_token_latency_ms = 10.25;
+  decimalUsage.rows[1].inter_token_latency_ms = 20.5;
+  const decimalUsageBytes = Buffer.from(`${JSON.stringify(decimalUsage, null, 2)}\n`);
+  const decimalEvidence = collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes: decimalUsageBytes,
+    usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    candidateRoot,
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+  assert.equal(decimalEvidence.usage.total.requestMultiplier, 0.75);
+  assert.equal(decimalEvidence.usage.total.nanoAiu, 3_000_000_000.75);
+  assert.equal(decimalEvidence.usage.total.durationMs, 1100.75);
+  assert.equal(decimalEvidence.usage.total.meanTimeToFirstTokenMs, 150.375);
+  assert.equal(decimalEvidence.usage.total.meanInterTokenLatencyMs, 15.375);
+  const invalidUsage = structuredClone(decimalUsage);
+  invalidUsage.rows[0].request_multiplier = Number.POSITIVE_INFINITY;
+  assert.throws(() => createUsageExport(invalidUsage.rows, {
+    cliSessionId: invalidUsage.source.cliSessionId,
+    exportedAt: invalidUsage.source.exportedAt
+  }), /invalid/);
+
+  const evidenceBytes = Buffer.from(`${JSON.stringify(evidence, null, 2)}\n`);
+  assert.equal(preflightLocalModel(evidence, evidenceBytes).status, "pass");
+  const metadataOnlyMismatch = structuredClone(evidence);
+  metadataOnlyMismatch.models.observed.worker = ["claude-haiku-4.5"];
+  assert.equal(preflightLocalModel(
+    metadataOnlyMismatch,
+    Buffer.from(`${JSON.stringify(metadataOnlyMismatch, null, 2)}\n`)
+  ).status, "unavailable");
+
+  const mismatchUsage = JSON.parse(usageBytes);
+  mismatchUsage.rows.find((row) => row.agent_id !== null).model = "claude-haiku-4.5";
+  const mismatchBytes = Buffer.from(`${JSON.stringify(mismatchUsage, null, 2)}\n`);
+  const mismatch = collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes: mismatchBytes,
+    usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    candidateRoot: ensureEvidenceCandidate(),
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+  const rejected = preflightLocalModel(mismatch,
+    Buffer.from(`${JSON.stringify(mismatch, null, 2)}\n`));
+  assert.equal(rejected.status, "unavailable");
+  assert.equal(rejected.retryEligible, false);
+  assert(rejected.reasons.some((reason) => reason.includes("post-start retry is forbidden")));
+  const unboundUsage = JSON.parse(usageBytes);
+  const unboundWorker = unboundUsage.rows.find((row) => row.agent_id !== null);
+  unboundWorker.agent_id = "wrong-agent";
+  const unboundBytes = Buffer.from(`${JSON.stringify(unboundUsage, null, 2)}\n`);
+  const unbound = collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes: unboundBytes,
+    usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    candidateRoot: ensureEvidenceCandidate(),
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+  assert.equal(unbound.availability.model.status, "unavailable");
+  assert(unbound.availability.model.reasons.some((reason) =>
+    reason.includes("exact parent/worker lifecycle")));
+  const openedEvidence = structuredClone(evidence);
+  openedEvidence.attempt.outcomesOpened = true;
+  const opened = preflightLocalModel(openedEvidence,
+    Buffer.from(`${JSON.stringify(openedEvidence, null, 2)}\n`));
+  assert.equal(opened.status, "unavailable");
+  assert.equal(opened.beforeOutcomesOpened, false);
+
+  const unexpectedEvent = {
+    type: "tool.execution_start",
+    data: {
+      toolCallId: "fixture-prohibited",
+      toolName: "powershell",
+      arguments: { command: "Get-Content corpus-staging" },
+      turnId: "0",
+      model: "gpt-5.6-sol"
+    },
+    id: "fixture-prohibited-event",
+    timestamp: "2026-07-31T07:00:05.000Z",
+    parentId: "fixture-mcp-complete"
+  };
+  const prohibitedBytes = Buffer.concat([
+    eventsBytes,
+    Buffer.from(`${JSON.stringify(unexpectedEvent)}\n`)
+  ]);
+  const prohibited = collectLocalEvidence({
+    eventsBytes: prohibitedBytes,
+    eventsPath,
+    usageBytes,
+    usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    candidateRoot: ensureEvidenceCandidate(),
+    runManifest: manifest,
+    runManifestBytes,
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  });
+  assert.equal(prohibited.availability.mechanism.status, "unavailable");
+  assert(prohibited.availability.mechanism.reasons.some((reason) =>
+    reason.includes("prohibited tool powershell")));
+
+  const wrongBoundaryManifest = {
+    ...manifest,
+    candidateSnapshotSha256: "0".repeat(64)
+  };
+  assert.throws(() => collectLocalEvidence({
+    eventsBytes,
+    eventsPath,
+    usageBytes,
+    usagePath,
+    sessionCreationBytes,
+    sessionCreationPath,
+    candidateBoundaryBytes,
+    candidateBoundaryPath,
+    candidateRoot: ensureEvidenceCandidate(),
+    runManifest: wrongBoundaryManifest,
+    runManifestBytes: Buffer.from(`${JSON.stringify(wrongBoundaryManifest, null, 2)}\n`),
+    runManifestPath,
+    runAttempt: JSON.parse(runAttemptBytes),
+    runAttemptBytes,
+    runAttemptPath
+  }), /Candidate boundary SHA-256/);
+});
+
+test("local evaluator adapter snapshots only after passing model preflight", () => {
+  const fixtureRoot = resolve(root, "fixtures", "local-evidence");
+  const candidateRoot = ensureEvidenceCandidate();
+  const evidenceBytes = readFileSync(resolve(fixtureRoot, "expected.json"));
+  const evidence = JSON.parse(evidenceBytes);
+  const preflight = preflightLocalModel(evidence, evidenceBytes);
+  const temporary = resolve(process.env.TEMP ?? root, `semantic-local-adapter-${process.pid}`);
+  const contractRoot = resolve(temporary, "corpus-contract");
+  const stagingRoot = resolve(temporary, "corpus-staging");
+  const outputPath = resolve(temporary, "snapshot", "B01-A2.json");
+  rmSync(temporary, { recursive: true, force: true });
+  try {
+    mkdirSync(resolve(stagingRoot, "scenarios"), { recursive: true });
+    mkdirSync(contractRoot, { recursive: true });
+    writeFileSync(resolve(contractRoot, "request.json"),
+      readFileSync(resolve(root, "design", "corpus-request.json")));
+    writeFileSync(resolve(stagingRoot, "scenarios", "scenario-001.json"),
+      `${JSON.stringify(generateBaseline().cases[0].input, null, 2)}\n`);
+    assert.throws(() => snapshotLocalCorpusStaging({
+      corpusContractRoot: contractRoot,
+      corpusStagingRoot: stagingRoot,
+      localEvidence: evidence,
+      localEvidenceBytes: evidenceBytes,
+      modelPreflight: preflight,
+      sourceArtifactRoot: fixtureRoot,
+      sourceCandidateRoot: ensureEvidenceCandidate(),
+      outputPath
+    }), /local successful writes/);
+    rmSync(resolve(stagingRoot, "scenarios", "scenario-001.json"));
+    const snapshot = snapshotLocalCorpusStaging({
+      corpusContractRoot: contractRoot,
+      corpusStagingRoot: stagingRoot,
+      localEvidence: evidence,
+      localEvidenceBytes: evidenceBytes,
+      modelPreflight: preflight,
+      sourceArtifactRoot: fixtureRoot,
+      sourceCandidateRoot: ensureEvidenceCandidate(),
+      outputPath
+    });
+    assert.equal(snapshot.evidenceTier, "descriptive-local-v1");
+    assert.equal(snapshot.submittedCases, 0);
+    assert.equal(snapshot.staging.generator.armId, 2);
+    assert.equal(snapshot.staging.adapter.successfulWrites, 0);
+    assert.deepEqual(snapshot.bytes, canonicalStagingBytes(snapshot.staging));
+
+    const unavailable = {
+      ...preflight,
+      status: "unavailable",
+      retryEligible: false,
+      reasons: ["started mechanism mismatch"]
+    };
+    assert.throws(() => snapshotLocalCorpusStaging({
+      corpusContractRoot: contractRoot,
+      corpusStagingRoot: stagingRoot,
+      localEvidence: evidence,
+      localEvidenceBytes: evidenceBytes,
+      modelPreflight: unavailable,
+      sourceArtifactRoot: fixtureRoot,
+      sourceCandidateRoot: ensureEvidenceCandidate(),
+      outputPath: resolve(temporary, "snapshot", "rejected.json")
+    }), /passing pre-outcome model evidence/);
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("local usage export and execution record schemas reject cross-session ambiguity", () => {
+  const usage = readRootJson("fixtures", "local-evidence", "captured.usage.json");
+  assert.deepEqual(createUsageExport(usage.rows, {
+    cliSessionId: usage.source.cliSessionId,
+    exportedAt: usage.source.exportedAt
+  }), usage);
+  const crossSession = structuredClone(usage.rows);
+  crossSession[0].session_id = "another-session";
+  assert.throws(() => createUsageExport(crossSession, {
+    cliSessionId: usage.source.cliSessionId,
+    exportedAt: usage.source.exportedAt
+  }), /another CLI session/);
+
+  const schemaSamples = [
+    ["run-manifest.schema.json", readRootJson("fixtures", "local-evidence", "run-manifest.json")],
+    ["run-attempt.schema.json", {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      attemptId: "B01-A2-attempt-1",
+      runId: "B01-A2",
+      attemptNumber: 1,
+      appProjectSessionId: "fixture-app-project-session",
+      cliSessionId: "fixture-cli-session",
+      requestedParentModel: "gpt-5.6-sol",
+      requestedWorkerModel: "gpt-5.6-sol",
+      status: "completed",
+      startedAt: "2026-07-31T07:00:00.000Z",
+      endedAt: "2026-07-31T07:00:10.000Z",
+      terminalReturn: "corpus-staging/manifest.json - 60 scenarios - SUCCESS",
+      localEvidencePath: "local-evidence.json",
+      modelPreflightPath: "model-preflight.json",
+      treatment: {
+        blockId: "B01",
+        armId: 2,
+        seed: 1812433253,
+        sourceCommit: "a".repeat(40),
+        sourceTree: "b".repeat(40),
+        terminalCommit: "a".repeat(40),
+        candidateSnapshotSha256: "b".repeat(64),
+        sharedTaskSha256: "c".repeat(64),
+        kickoffSha256: "d".repeat(64),
+        wallLimitMs: 1800000,
+        toolCallLimit: 120,
+        modelTokenLimit: 100000
+      },
+      evaluatorSnapshotPath: null,
+      outcomesOpenedAt: null,
+      deviations: []
+    }],
+    ["deviation.schema.json", {
+      formatVersion: 1,
+      protocolId: "semantic-test-corpus-execution-v2",
+      deviationId: "B01-A5-fixed-haiku-profile-unavailable",
+      runId: "B01-A5",
+      attemptId: null,
+      category: "mechanism",
+      observedAt: "2026-07-31T07:00:00.000Z",
+      description: "Fixed-Haiku custom-agent selection unavailable",
+      impact: "exclude",
+      outcomesOpened: false
+    }]
+  ];
+  for (const [schemaName, sample] of schemaSamples) {
+    assert.deepEqual(validateJsonSchema(sample, readRootJson("schemas", schemaName), {
+      schemaDir: resolve(root, "schemas")
+    }), []);
+  }
+  const manifest = readRootJson("fixtures", "local-evidence", "run-manifest.json");
+  const attempt = readRootJson("fixtures", "local-evidence", "attempt-1.json");
+  const fixtureEvidenceBytes = readFileSync(resolve(root, "fixtures", "local-evidence", "expected.json"));
+  const fixturePreflight = readRootJson("fixtures", "local-evidence", "model-preflight.json");
+  assert.deepEqual(validateExecutionRecords({
+    manifest,
+    attempts: [attempt],
+    preflights: [fixturePreflight],
+    evidenceBytes: [fixtureEvidenceBytes],
+    preSessionFailures: []
+  }), []);
+  const invalidSecondAttempt = { ...attempt, attemptId: "B01-A2-attempt-2", attemptNumber: 2 };
+  const invalidTwoAttemptManifest = {
+    ...manifest,
+    attemptNumber: 2,
+    attempts: ["attempt-1.json", "attempt-2.json"],
+    preflights: ["preflight-1.json", "preflight-2.json"]
+  };
+  assert(validateExecutionRecords({
+    manifest: invalidTwoAttemptManifest,
+    attempts: [attempt, invalidSecondAttempt],
+    preflights: [fixturePreflight, fixturePreflight],
+    evidenceBytes: [fixtureEvidenceBytes, fixtureEvidenceBytes],
+    preSessionFailures: []
+  }).length > 0);
 });
 
 test("pairwise array covers every two-factor tuple", () => {
@@ -668,7 +1997,7 @@ test("URL invariants reject malformed ports, credentials, paths, and queries", (
   }
 });
 
-test("all meaningful deterministic mutants are killed", () => {
+test("general baseline scores the full mutant catalog without tuned selection", () => {
   assert(mutants.length >= 20);
   const corpus = readEvaluatorJson("artifacts", "baseline-corpus.json");
   const declaredRuleIds = new Set([
@@ -686,19 +2015,10 @@ test("all meaningful deterministic mutants are killed", () => {
   const matrix = buildKillMatrix(corpus);
   assert.deepEqual(matrix, readEvaluatorJson("artifacts", "baseline-kill-matrix.json"));
   assert.equal(matrix.totals.total, 33);
-  assert.equal(matrix.totals.triggered, 33);
-  assert.equal(matrix.totals.untriggered, 0);
-  assert.equal(matrix.totals.survived, 0);
-  assert.equal(matrix.totals.mutationScore, 1);
-  for (const row of matrix.cases) {
-    for (const mutant of mutants) {
-      if (row.triggered[mutant.id]) assert.equal(row.kills[mutant.id], true, `${row.caseId}/${mutant.id}`);
-    }
-  }
-  for (const mutant of mutants) {
-    assert(corpus.cases.some((scenario) =>
-      JSON.stringify(executeMutant(mutant, scenario.input, scenario.expected)) !== JSON.stringify(scenario.expected)), mutant.id);
-  }
+  assert.equal(matrix.totals.killed + matrix.totals.survived, 33);
+  assert.equal(matrix.totals.triggered + matrix.totals.untriggered, 33);
+  assert(matrix.totals.killed > 0 && matrix.totals.killed < 33);
+  assert.equal(matrix.totals.mutationScore, matrix.totals.killed / 33);
 });
 
 test("untriggered mutants survive under the frozen full-catalog denominator", () => {
@@ -727,7 +2047,11 @@ test("baseline report is derived and complete", () => {
   const report = buildReport(corpus, matrix, mappingSpec);
   assert.deepEqual(report, readEvaluatorJson("artifacts", "baseline-report.json"));
   assert.equal(report.semanticCoverage.rules.rate, 1);
-  assert.equal(report.semanticCoverage.paths.rate, 1);
+  assert(report.semanticCoverage.paths.rate > 0 && report.semanticCoverage.paths.rate < 1);
+  assert.equal(
+    report.semanticCoverage.paths.exercised + report.semanticCoverage.paths.missing.length,
+    report.semanticCoverage.paths.total
+  );
   assert.equal(report.semanticCoverage.invariants.rate, 1);
   assert.equal(report.diagnosticCoverage.rate, 1);
   assert.equal(report.mutation.catalogValidation.validated, 33);
@@ -758,7 +2082,7 @@ test("baseline report is derived and complete", () => {
 });
 
 test("canonical metrics are snapshot-derived and reject outcome tampering", () => {
-  const temporary = resolve(root, ".test-work", "metrics-authentication");
+  const temporary = resolve(root, ".regression-work", "metrics-authentication");
   rmSync(temporary, { recursive: true, force: true });
   mkdirSync(temporary, { recursive: true });
   try {
@@ -772,15 +2096,29 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
       blockId: "B01",
       armId: 0
     });
-    assert.equal(artifact.metrics.coverage.paths.rate, 1);
+    assert(artifact.metrics.coverage.paths.rate > 0
+      && artifact.metrics.coverage.paths.rate <= 1);
     assert.equal(artifact.metrics.mutation.catalogSize, 33);
     assert.equal(artifact.metrics.mutation.triggered + artifact.metrics.mutation.untriggered, 33);
     assert.equal(artifact.metrics.mutation.killed + artifact.metrics.mutation.survived, 33);
     assert.deepEqual(artifact.provenance.oracle.files.map((file) => file.path),
       ["evaluator/oracle/index.mjs"]);
+    assert(artifact.provenance.mutants.files.some((file) =>
+      file.path === "evaluator/mutants/oracle-tuned-reference.json"));
+    for (const dependency of [
+      "evaluator/mutants/definitions.mjs",
+      "evaluator/mutants/run.mjs",
+      "evaluator/mutants/validate.mjs",
+      "evaluator/mutants/oracle-tuned-reference.json",
+      "evaluator/artifacts/baseline-corpus.json",
+      "evaluator/tests/golden-cases.json"
+    ]) {
+      assert(artifact.provenance.mutants.files.some((file) => file.path === dependency));
+    }
     assert.match(artifact.provenance.generator.commitSha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
+    assert.match(artifact.provenance.generator.treeSha, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
     assert(artifact.provenance.generator.files.some((file) =>
-      file.path === "baseline/generate.mjs"
+      file.path === "baseline/general-generate.mjs"
       && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(file.blobSha)));
     const relabeledBaseline = generateBaseline();
     relabeledBaseline.generator = { armId: 0, blockId: "B01", seed: 1812433253 };
@@ -833,7 +2171,7 @@ test("canonical metrics are snapshot-derived and reject outcome tampering", () =
           blockId: "B01",
           armId: 0,
           role: "baseline",
-          sequence: 5
+          sequence: 6
         },
         {
           eventId: "baseline-completed",
@@ -1044,20 +2382,29 @@ test("reproduction rejects JSON formatting, key-order, and newline tampering", (
   }
 });
 
-test("delegated arms use one byte-identical mechanism and tool contract", () => {
+test("delegated arms use one Skill and normalized byte-identical profiles", () => {
   const contract = readRootJson("design", "arm-contract.json");
   const frontier = contract.arms.find((arm) => arm.id === 2);
   const cheap = contract.arms.find((arm) => arm.id === 4);
+  const target = contract.arms.find((arm) => arm.id === 5);
   assert.equal(frontier.delegationContract, cheap.delegationContract);
+  assert.equal(frontier.delegationContract, target.delegationContract);
+  assert.equal(frontier.agentName, "semantic-test-corpus");
+  assert.equal(cheap.agentName, "semantic-test-corpus");
+  assert.equal(target.agentName, "semantic-test-corpus-haiku");
+  assert.equal(target.profileModel, "claude-haiku-4.5");
   assert.deepEqual(contract.delegationContract.toolSurface, contract.commonContract.toolSurface);
   assert.equal(contract.delegationContract.artifact, ".github/skills/semantic-test-corpus/SKILL.md");
   assert.equal(contract.delegationContract.artifact, contract.delegationContract.registeredPath);
   assert.equal(contract.delegationContract.invocation, "semantic-test-corpus");
-  assert.equal(contract.commonContract.agentName, "semantic-test-corpus");
+  assert.deepEqual(contract.commonContract.agentProfiles,
+    ["semantic-test-corpus", "semantic-test-corpus-haiku"]);
   assert(contract.commonContract.toolSurface.every((name) => name.startsWith("semantic-corpus/")));
   assert.equal(existsSync(resolve(root, "design", "delegated-worker-skill.md")), false);
   assert(!readRootJson("design", "candidate-manifest.json").files.some((file) =>
     file.source === "design/delegated-worker-skill.md"));
+  assert(readRootJson("design", "candidate-manifest.json").files.some((file) =>
+    file.destination === ".github/agents/semantic-test-corpus-haiku.agent.md"));
 });
 
 test("synthetic signed-event unit enforces the common delegated mechanism", () => {
@@ -1713,8 +3060,8 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
   const runRecords = modelRunRecords(authenticated);
   const available = evaluateModelBindings(authenticated, runRecords);
   assert.equal(available.allRunsAvailable, true);
-  assert.equal(available.plannedRuns, 48);
-  assert.equal(available.availableRuns, 48);
+  assert.equal(available.plannedRuns, 60);
+  assert.equal(available.availableRuns, 60);
   assert.deepEqual(validateJsonSchema(
     available,
     readRootJson("schemas", "model-preflight.schema.json"),
@@ -1842,46 +3189,75 @@ test("model preflight unit accepts only authenticated fresh atomic event evidenc
 });
 
 test("candidate materialization excludes evaluator assets in an external repository", () => {
-  const temporary = resolve(root, ".test-work", "semantic-candidate");
+  const temporary = resolve(root, ".regression-work", "semantic-candidate");
   const repositoryRoot = resolve(root, "..", "..");
   const repositorySibling = resolve(repositoryRoot, "..", `.semantic-candidate-sibling-${process.pid}`);
   rmSync(temporary, { recursive: true, force: true });
   rmSync(repositorySibling, { recursive: true, force: true });
   try {
-    const boundary = materializeCandidate(temporary, { allowTestDestination: true });
+    const boundary = materializeCandidate(temporary, {
+      allowTestDestination: true,
+      blockId: "B01"
+    });
     assert.equal(boundary.files.length, readRootJson("design", "candidate-manifest.json").files.length);
+    assert.equal(boundary.protocolId, "semantic-test-corpus-execution-v2");
+    assert.match(boundary.boundarySha256, /^[a-f0-9]{64}$/);
+    assert.match(boundary.terminalCommit, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/);
+    const sourcePin = readRootJson("design", "source-pin.json");
+    assert.equal(boundary.sourceCommit, sourcePin.sourceCommit);
+    assert.equal(boundary.sourceTree, sourcePin.sourceTree);
+    assert(boundary.files.every((file) =>
+      sourcePin.sourceBlobs[file.sourcePath] === file.sourceBlob));
     assert(boundary.files.every((file) => !file.path.startsWith("evaluator/")));
     assert.equal(existsSync(resolve(temporary, "evaluator")), false);
     assert.equal(spawnSync("git", ["status", "--short"], { cwd: temporary, encoding: "utf8" }).stdout, "");
     assert(existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus.agent.md")));
+    assert.equal(
+      existsSync(resolve(temporary, ".github", "agents", "semantic-test-corpus-haiku.agent.md")),
+      true
+    );
     assert(existsSync(resolve(temporary, "tools", "semantic-corpus-mcp", "server.mjs")));
     assert.equal(readRootJson("design", "corpus-request.json").targetCount, 60);
-    assert.throws(() => materializeCandidate(resolve(root, "candidate-output")), /outside the source repository/);
+    for (const script of ["materialize-candidate.mjs", "collect-local-evidence.mjs"]) {
+      assert.doesNotMatch(readFileSync(resolve(root, "scripts", script), "utf8"), /\bHEAD\b/u);
+    }
+    assert.throws(() => materializeCandidate(resolve(root, "candidate-output"), {
+      blockId: "B01"
+    }), /outside the source repository/);
     assert.throws(() => materializeCandidate(
-      resolve(root, "..", "semantic-candidate-sibling")
+      resolve(root, "..", "semantic-candidate-sibling"), { blockId: "B01" }
     ), /outside the source repository/);
-    assert.equal(materializeCandidate(repositorySibling).candidateRoot, repositorySibling);
-    assert.throws(() => materializeCandidate(resolve(repositoryRoot, "..")),
+    assert.equal(materializeCandidate(repositorySibling, {
+      blockId: "B01"
+    }).materializedRoot, repositorySibling);
+    assert.throws(() => materializeCandidate(resolve(repositoryRoot, ".."), {
+      blockId: "B01"
+    }),
       /cannot contain the source repository/);
 
     process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION = "1";
-    assert.throws(() => materializeCandidate(resolve(root, "environment-override")),
+    assert.throws(() => materializeCandidate(resolve(root, "environment-override"), {
+      blockId: "B01"
+    }),
       /outside the source repository/);
     delete process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION;
 
-    const junctionTarget = resolve(root, ".test-work", "junction-target");
-    const junction = resolve(root, ".test-work", "junction");
+    const junctionTarget = resolve(root, ".regression-work", "junction-target");
+    const junction = resolve(root, ".regression-work", "junction");
     mkdirSync(junctionTarget, { recursive: true });
     try {
       symlinkSync(junctionTarget, junction, process.platform === "win32" ? "junction" : "dir");
-      assert.throws(() => materializeCandidate(junction, { allowTestDestination: true }),
+      assert.throws(() => materializeCandidate(junction, {
+        allowTestDestination: true,
+        blockId: "B01"
+      }),
         /symbolic link, junction, or reparse/);
     } catch (error) {
       if (error.code !== "EPERM" && error.code !== "EACCES") throw error;
     }
   } finally {
     delete process.env.SEMANTIC_CORPUS_ALLOW_TEST_DESTINATION;
-    rmSync(resolve(root, ".test-work"), { recursive: true, force: true });
+    rmSync(resolve(root, ".regression-work"), { recursive: true, force: true });
     rmSync(repositorySibling, { recursive: true, force: true });
   }
 });
@@ -2066,7 +3442,7 @@ test("noninferiority and equality use separate multiplicity-adjusted families", 
 
 test("factorial summaries and missingness sensitivity match known synthetic values", () => {
   const armValues = new Map([[0, 0.5], [1, 0.6], [2, 0.7], [3, 0.4], [4, 0.45]]);
-  const observations = frozenSchedule.runs.map((run) => ({
+  const observations = frozenSchedule.runs.filter((run) => run.armId <= 4).map((run) => ({
     runId: run.runId,
     blockId: run.blockId,
     armId: run.armId,

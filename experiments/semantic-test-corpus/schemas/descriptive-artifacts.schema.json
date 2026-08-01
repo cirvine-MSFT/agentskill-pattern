@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "descriptive-artifacts.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "startIndexPath", "startIndexSha256Path",
+    "runs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "startIndexPath": {"type": "string", "minLength": 1},
+    "startIndexSha256Path": {"type": "string", "minLength": 1},
+    "runs": {
+      "type": "array",
+      "minItems": 72,
+      "maxItems": 72,
+      "items": {
+        "type": "object",
+        "required": [
+          "runId", "blockId", "armId", "status", "snapshotPath", "metricsPath",
+          "executionPath", "localEvidencePath", "modelPreflightPath", "candidateRoot",
+          "evaluationPath", "startEvidencePath", "endEvidencePath", "dispositionPath"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {"properties": {"status": {"const": "eligible"}}},
+            "then": {
+              "allOf": [
+                {
+                  "properties": {
+                    "snapshotPath": {"type": "string", "minLength": 1},
+                    "metricsPath": {"type": "string", "minLength": 1},
+                    "evaluationPath": {"type": "string", "minLength": 1},
+                    "dispositionPath": {"type": "null"}
+                  }
+                },
+                {
+                  "if": {"properties": {"armId": {"const": 0}}},
+                  "then": {
+                    "properties": {
+                      "executionPath": {"type": "string", "minLength": 1},
+                      "localEvidencePath": {"type": "null"},
+                      "modelPreflightPath": {"type": "null"},
+                      "candidateRoot": {"type": "null"},
+                      "startEvidencePath": {"type": "string", "minLength": 1},
+                      "endEvidencePath": {"type": "string", "minLength": 1}
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "executionPath": {"type": "null"},
+                      "localEvidencePath": {"type": "string", "minLength": 1},
+                      "modelPreflightPath": {"type": "string", "minLength": 1},
+                      "candidateRoot": {"type": "string", "minLength": 1},
+                      "startEvidencePath": {"type": "null"},
+                      "endEvidencePath": {"type": "null"}
+                    }
+                  }
+                }
+              ]
+            },
+            "else": {
+              "allOf": [
+                {
+                  "properties": {
+                    "snapshotPath": {"type": "null"},
+                    "metricsPath": {"type": "null"},
+                    "executionPath": {"type": "null"},
+                    "evaluationPath": {"type": "null"},
+                    "startEvidencePath": {"type": "null"},
+                    "endEvidencePath": {"type": "null"},
+                    "dispositionPath": {"type": "string", "minLength": 1}
+                  }
+                },
+                {
+                  "if": {"properties": {"status": {"const": "excluded"}}},
+                  "then": {
+                    "properties": {
+                      "localEvidencePath": {"type": "string", "minLength": 1},
+                      "modelPreflightPath": {"type": "string", "minLength": 1},
+                      "candidateRoot": {"type": "string", "minLength": 1}
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "localEvidencePath": {"type": "null"},
+                      "modelPreflightPath": {"type": "null"},
+                      "candidateRoot": {"type": "null"}
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+          "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+          "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+          "status": {"type": "string", "enum": ["eligible", "unavailable", "excluded"]},
+          "snapshotPath": {"type": ["string", "null"]},
+          "metricsPath": {"type": ["string", "null"]},
+          "executionPath": {"type": ["string", "null"]},
+          "localEvidencePath": {"type": ["string", "null"]},
+          "modelPreflightPath": {"type": ["string", "null"]},
+          "candidateRoot": {"type": ["string", "null"]},
+          "evaluationPath": {"type": ["string", "null"]},
+          "startEvidencePath": {"type": ["string", "null"]},
+          "endEvidencePath": {"type": ["string", "null"]},
+          "dispositionPath": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

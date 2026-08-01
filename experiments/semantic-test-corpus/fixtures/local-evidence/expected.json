@@ -1,0 +1,399 @@
+{
+  "formatVersion": 1,
+  "protocolId": "semantic-test-corpus-execution-v2",
+  "evidenceTier": "descriptive-local-v1",
+  "runId": "B01-A2",
+  "blockId": "B01",
+  "armId": 2,
+  "identity": {
+    "appProjectSessionId": "fixture-app-project-session",
+    "cliSessionId": "fixture-cli-session",
+    "sourceCommit": "6e455d0e4e631f0767e43832938c99c2a3038f11",
+    "sourceTree": "bbf4d8372a9666f2c42c9f347e5f0bf1e0c736f6",
+    "sourceBlobs": [
+      {
+        "path": ".github/agents/semantic-test-corpus-haiku.agent.md",
+        "blob": "6ed9d31fe036c39abdb87e961ae6f71c4a705adb"
+      },
+      {
+        "path": ".github/agents/semantic-test-corpus.agent.md",
+        "blob": "9a3068268d5223a94af800ce7b3aa6cafa252a5c"
+      },
+      {
+        "path": ".github/skills/semantic-test-corpus/SKILL.md",
+        "blob": "a335be260ecd57c62492f72ea05622979982ce5f"
+      },
+      {
+        "path": "experiments/semantic-test-corpus/candidate-template/package.json",
+        "blob": "375823f8278557b384b3363894ba5a7b90ec201c"
+      },
+      {
+        "path": "experiments/semantic-test-corpus/design/corpus-request.json",
+        "blob": "5f196dbb59c106afe6e6902560bd886ca1683451"
+      },
+      {
+        "path": "experiments/semantic-test-corpus/design/shared-task-prompt.txt",
+        "blob": "6feb972657488cf1d5dec073f2afe8ed9af08c06"
+      },
+      {
+        "path": "experiments/semantic-test-corpus/fixture/spec/mapping-spec.json",
+        "blob": "d84c06bf006ed0037ed2245ea748caac3c70d145"
+      },
+      {
+        "path": "experiments/semantic-test-corpus/schemas/scenario.schema.json",
+        "blob": "fe43959704eebd4aa2c092f6c723c57cf5387389"
+      },
+      {
+        "path": "experiments/semantic-test-corpus/schemas/staging.schema.json",
+        "blob": "b38752f9e2526d79043e6b51114409a37e4ee637"
+      },
+      {
+        "path": "experiments/semantic-test-corpus/schemas/v1-config.schema.json",
+        "blob": "6a109acfa4d610ed5eec6b0041b8524230f7c979"
+      },
+      {
+        "path": "tools/semantic-corpus-mcp/lib.mjs",
+        "blob": "fa94ac314c125340d3dd00181d88e2b03b79d778"
+      },
+      {
+        "path": "tools/semantic-corpus-mcp/protocol.mjs",
+        "blob": "c3798060c843c8fafcf0f33c99f2bcbad5448c83"
+      },
+      {
+        "path": "tools/semantic-corpus-mcp/server.mjs",
+        "blob": "ac9baf5ee9fb0666185069bd653daec2ea1eb296"
+      }
+    ],
+    "terminalCommit": "225edaada5bda3e982c5325ba58ec00400c22da7",
+    "candidateSnapshotSha256": "6f56ad104bd4e42ac1b75c950141ec02d8ffc8e7e576de650fc4bf954e6db858"
+  },
+  "source": {
+    "events": {
+      "path": "captured.events.jsonl",
+      "sha256": "738c4e83288936995e6a2df319addb35e218c78101ed0c7b29b82868d4eba375",
+      "bytes": 6209
+    },
+    "usage": {
+      "path": "captured.usage.json",
+      "sha256": "9abe7da7c9288fff100f177ae6fb38a50449463b31d62565c952e87e3ee4e155",
+      "bytes": 2309
+    },
+    "sessionCreation": {
+      "path": "session-creation.json",
+      "sha256": "d1741a5fc22322f601a5b25f80701a8c2f1b7df93e216b5b309d3ca3bc354511",
+      "bytes": 2174
+    },
+    "candidateBoundary": {
+      "path": "candidate-boundary.json",
+      "sha256": "6f56ad104bd4e42ac1b75c950141ec02d8ffc8e7e576de650fc4bf954e6db858",
+      "bytes": 4548
+    },
+    "runManifest": {
+      "path": "run-manifest.json",
+      "sha256": "c37a95eab7468cf3ffaf4af5b069ac76f1798c37b0a885e1473aae58d2d34ee1",
+      "bytes": 821
+    },
+    "runAttempt": {
+      "path": "attempt-1.json",
+      "sha256": "9a2a378f4f91280973f14aaa6b77d5da22e5cf2893128c64b91032686771f9bf",
+      "bytes": 1329
+    },
+    "preSessionFailures": [],
+    "preSessionFailureReceipts": []
+  },
+  "trust": {
+    "status": "local-hash-bound",
+    "signed": false,
+    "complianceProof": false,
+    "limitations": [
+      "No detached platform signature or external trust anchor",
+      "No signed sandbox, filesystem, network, run, adapter, or metrics envelope",
+      "Local hashes establish byte identity only"
+    ]
+  },
+  "availability": {
+    "session": {
+      "status": "available",
+      "reasons": []
+    },
+    "model": {
+      "status": "available",
+      "reasons": []
+    },
+    "mechanism": {
+      "status": "available",
+      "reasons": []
+    },
+    "fields": {
+      "premiumRequests": {
+        "status": "unavailable",
+        "reasons": [
+          "assistant_usage_events has no premium-request field"
+        ]
+      },
+      "toolSchemas": {
+        "status": "unavailable",
+        "reasons": [
+          "local events do not expose the complete tool schema payload"
+        ]
+      },
+      "exposedTools": {
+        "status": "unavailable",
+        "reasons": [
+          "local events do not expose the complete configured tool list"
+        ]
+      },
+      "compaction": {
+        "status": "unavailable",
+        "reasons": [
+          "local events do not expose an authoritative compaction counter"
+        ]
+      },
+      "reasoningTokens": {
+        "status": "available",
+        "reasons": []
+      },
+      "latencyDetails": {
+        "status": "available",
+        "reasons": []
+      },
+      "requestMultiplier": {
+        "status": "available",
+        "reasons": []
+      },
+      "parentWait": {
+        "status": "available",
+        "reasons": []
+      },
+      "sourceReadOnly": {
+        "status": "unavailable",
+        "reasons": [
+          "portable read-only state is not represented in the source formats"
+        ]
+      }
+    }
+  },
+  "models": {
+    "requested": {
+      "parent": [
+        "gpt-5.6-sol"
+      ],
+      "worker": [
+        "gpt-5.6-sol"
+      ]
+    },
+    "observed": {
+      "parent": [
+        "gpt-5.6-sol"
+      ],
+      "worker": [
+        "gpt-5.6-sol"
+      ]
+    }
+  },
+  "attempt": {
+    "attemptId": "B01-A2-attempt-1",
+    "number": 1,
+    "preSessionFailureCount": 0,
+    "outcomesOpened": false
+  },
+  "usage": {
+    "parent": {
+      "available": true,
+      "aiCredits": 2.5,
+      "premiumRequests": null,
+      "nanoAiu": 2500000000,
+      "inputTokens": 1000,
+      "outputTokens": 50,
+      "cacheReadTokens": 800,
+      "cacheWriteTokens": 100,
+      "reasoningTokens": 10,
+      "requestMultiplier": 1,
+      "durationMs": 1200,
+      "meanTimeToFirstTokenMs": 200,
+      "meanInterTokenLatencyMs": 20,
+      "cachedTokens": 900,
+      "modelTokens": 1050,
+      "completionCount": 1
+    },
+    "worker": {
+      "available": true,
+      "aiCredits": 3.5,
+      "premiumRequests": null,
+      "nanoAiu": 3500000000,
+      "inputTokens": 700,
+      "outputTokens": 100,
+      "cacheReadTokens": 500,
+      "cacheWriteTokens": 50,
+      "reasoningTokens": 20,
+      "requestMultiplier": 1,
+      "durationMs": 4000,
+      "meanTimeToFirstTokenMs": 300,
+      "meanInterTokenLatencyMs": 25,
+      "cachedTokens": 550,
+      "modelTokens": 800,
+      "completionCount": 1
+    },
+    "total": {
+      "available": true,
+      "aiCredits": 6,
+      "premiumRequests": null,
+      "nanoAiu": 6000000000,
+      "inputTokens": 1700,
+      "outputTokens": 150,
+      "cacheReadTokens": 1300,
+      "cacheWriteTokens": 150,
+      "cachedTokens": 1450,
+      "reasoningTokens": 30,
+      "modelTokens": 1850,
+      "requestMultiplier": 2,
+      "durationMs": 5200,
+      "meanTimeToFirstTokenMs": 250,
+      "meanInterTokenLatencyMs": 22.5,
+      "completionCount": 2
+    }
+  },
+  "operationalUsage": {
+    "parent": {
+      "available": true,
+      "aiCredits": 2.5,
+      "premiumRequests": null,
+      "nanoAiu": 2500000000,
+      "inputTokens": 1000,
+      "outputTokens": 50,
+      "cacheReadTokens": 800,
+      "cacheWriteTokens": 100,
+      "reasoningTokens": 10,
+      "requestMultiplier": 1,
+      "durationMs": 1200,
+      "meanTimeToFirstTokenMs": 200,
+      "meanInterTokenLatencyMs": 20,
+      "cachedTokens": 900,
+      "modelTokens": 1050,
+      "completionCount": 1
+    },
+    "worker": {
+      "available": true,
+      "aiCredits": 3.5,
+      "premiumRequests": null,
+      "nanoAiu": 3500000000,
+      "inputTokens": 700,
+      "outputTokens": 100,
+      "cacheReadTokens": 500,
+      "cacheWriteTokens": 50,
+      "reasoningTokens": 20,
+      "requestMultiplier": 1,
+      "durationMs": 4000,
+      "meanTimeToFirstTokenMs": 300,
+      "meanInterTokenLatencyMs": 25,
+      "cachedTokens": 550,
+      "modelTokens": 800,
+      "completionCount": 1
+    },
+    "total": {
+      "available": true,
+      "aiCredits": 6,
+      "premiumRequests": null,
+      "nanoAiu": 6000000000,
+      "inputTokens": 1700,
+      "outputTokens": 150,
+      "cacheReadTokens": 1300,
+      "cacheWriteTokens": 150,
+      "cachedTokens": 1450,
+      "reasoningTokens": 30,
+      "modelTokens": 1850,
+      "requestMultiplier": 2,
+      "durationMs": 5200,
+      "meanTimeToFirstTokenMs": 250,
+      "meanInterTokenLatencyMs": 22.5,
+      "completionCount": 2
+    }
+  },
+  "parentContext": {
+    "cumulativeInputTokens": 1000,
+    "peakInputTokens": 1000
+  },
+  "tools": {
+    "schemas": {
+      "available": false,
+      "count": null,
+      "names": null
+    },
+    "exposed": {
+      "available": false,
+      "names": null
+    },
+    "calls": [
+      {
+        "role": "parent",
+        "name": "skill",
+        "count": 1
+      },
+      {
+        "role": "parent",
+        "name": "task",
+        "count": 1
+      },
+      {
+        "role": "worker",
+        "name": "semantic-corpus/list_contract_files",
+        "count": 1
+      },
+      {
+        "role": "worker",
+        "name": "semantic-corpus/write_scenario_input",
+        "count": 1
+      }
+    ],
+    "callCount": 4,
+    "resultCount": 4,
+    "resultBytes": 233
+  },
+  "successfulWrites": [],
+  "toolErrors": [
+    {
+      "callId": "fixture-write-failure",
+      "toolName": "semantic-corpus/write_scenario_input",
+      "argumentsSha256": "969cd6fda49cb1c29f9c52b6377cf26b06244008afce789987bad1eba9b39546",
+      "scenarioId": "scenario-001",
+      "code": "SCHEMA_ERROR",
+      "message": "config is invalid"
+    }
+  ],
+  "delegation": {
+    "invoked": true,
+    "completed": true,
+    "agentName": "semantic-test-corpus",
+    "compactReturn": "corpus-staging - 0 scenarios - FAILURE: SCHEMA_ERROR",
+    "compactReturnBytes": 52
+  },
+  "timing": {
+    "startedAt": "2026-07-31T07:00:01.000Z",
+    "endedAt": "2026-07-31T07:00:10.000Z",
+    "wallMs": 9000,
+    "parentActiveMs": 1200,
+    "workerActiveMs": 4000,
+    "parentWaitMs": 7000,
+    "globalOrder": 5
+  },
+  "budgets": {
+    "limits": {
+      "wallMs": 1800000,
+      "toolCalls": 120,
+      "modelTokens": 100000
+    },
+    "observed": {
+      "wallMs": 9000,
+      "toolCalls": 4,
+      "modelTokens": 1850
+    },
+    "status": "within-budget",
+    "reasons": []
+  },
+  "events": {
+    "count": 14,
+    "completionCount": 2,
+    "compactionCount": null
+  },
+  "deviations": []
+}

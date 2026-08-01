@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "local-model-preflight.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "attemptNumber", "evidenceSha256",
+    "status", "retryEligible", "beforeOutcomesOpened", "expected", "observed",
+    "checks", "reasons"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string"},
+    "attemptNumber": {"const": 1},
+    "evidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "status": {"type": "string", "enum": ["pass", "unavailable"]},
+    "retryEligible": {"const": false},
+    "beforeOutcomesOpened": {"type": "boolean"},
+    "expected": {"$ref": "model-roles.schema.json"},
+    "observed": {"$ref": "model-roles.schema.json"},
+    "checks": {
+      "type": "object",
+      "required": [
+        "session", "model", "mechanism", "tools", "roles", "budgets",
+        "candidate", "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "session": {"type": "boolean"},
+        "model": {"type": "boolean"},
+        "mechanism": {"type": "boolean"},
+        "tools": {"type": "boolean"},
+        "roles": {"type": "boolean"},
+        "budgets": {"type": "boolean"},
+        "candidate": {"type": "boolean"},
+        "source": {"type": "boolean"}
+      }
+    },
+    "reasons": {"type": "array", "items": {"type": "string"}}
+  }
+}

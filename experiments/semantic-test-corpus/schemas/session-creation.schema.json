@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "session-creation.schema.json",
+  "type": "object",
+  "required": ["formatVersion", "operation", "capturedAt", "request", "response"],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "operation": {"const": "create_session"},
+    "capturedAt": {"type": "string"},
+    "request": {
+      "type": "object",
+      "required": [
+        "project_id", "execution_location", "coordinate_with_creator",
+        "kickoff", "candidate_commit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {"type": "string", "minLength": 1},
+        "execution_location": {"const": "local"},
+        "coordinate_with_creator": {"const": false},
+        "candidate_commit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+        "kickoff": {
+          "type": "object",
+          "required": [
+            "mode", "model", "prompt", "agent", "context_tier", "reasoning_effort"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {"const": "autopilot"},
+            "model": {"type": "string", "minLength": 1},
+            "prompt": {"type": "string", "minLength": 1},
+            "agent": {"type": "null"},
+            "context_tier": {"const": "default"},
+            "reasoning_effort": {"const": "medium"}
+          }
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": [
+        "project_session_id", "project_id", "execution_location",
+        "kickoff_mode", "kickoff_model", "kickoff_consumed",
+        "kickoff_prompt_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project_session_id": {"type": "string", "minLength": 1},
+        "project_id": {"type": "string", "minLength": 1},
+        "execution_location": {"const": "local"},
+        "kickoff_mode": {"const": "autopilot"},
+        "kickoff_model": {"type": "string", "minLength": 1}
+        ,"kickoff_consumed": {"const": true}
+        ,"kickoff_prompt_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    }
+  }
+}

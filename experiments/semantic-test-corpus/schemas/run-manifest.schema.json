@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-manifest.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "blockId", "armId", "seed",
+    "scheduleOrder", "globalOrder", "sourceCommit", "sourceTree",
+    "appProjectSessionId", "cliSessionId", "terminalCommit",
+    "candidateSnapshotSha256", "candidateBoundaryPath", "attemptNumber", "outcomesOpenedAt",
+    "attempts", "preflights", "preSessionFailures", "deviations"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"armId": {"const": 0}}},
+      "then": {
+        "properties": {
+          "appProjectSessionId": {"type": "null"},
+          "cliSessionId": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "appProjectSessionId": {"type": "string", "minLength": 1},
+          "cliSessionId": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  ],
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+    "seed": {"type": "integer"},
+    "scheduleOrder": {"type": "integer", "minimum": 1, "maximum": 6},
+    "globalOrder": {"type": "integer", "minimum": 1, "maximum": 72},
+    "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+    "sourceTree": {"type": "string", "pattern": "^[a-f0-9]{40,64}$"},
+    "appProjectSessionId": {"type": ["string", "null"]},
+    "cliSessionId": {"type": ["string", "null"]},
+    "terminalCommit": {"type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"},
+    "candidateSnapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "candidateBoundaryPath": {"type": "string", "minLength": 1},
+    "attemptNumber": {"const": 1},
+    "outcomesOpenedAt": {"type": ["string", "null"]},
+    "attempts": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string"}},
+    "preflights": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string"}},
+    "preSessionFailures": {"type": "array", "maxItems": 1, "items": {"type": "string"}},
+    "deviations": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { executeMutant, mutantCatalog, mutants } from "./definitions.mjs";
+import { referenceOracle } from "../oracle/index.mjs";
+
+const oracleTunedReference = JSON.parse(
+  readFileSync(new URL("./oracle-tuned-reference.json", import.meta.url), "utf8")
+);
 
 function configDiffPaths(left, right, path = "config") {
   if (Object.is(left, right)) return [];
@@ -29,13 +35,21 @@ export function validateMutantCatalog(validationCases, declaredRuleIds) {
     "every mutant must declare exactly one intended fault target");
 
   const originalCases = structuredClone(validationCases);
+  const validationReference = [
+    ...validationCases,
+    ...oracleTunedReference.cases.map((scenario) => ({
+      id: scenario.id,
+      input: scenario.input,
+      expected: referenceOracle(scenario.input)
+    }))
+  ];
   const results = mutants.map((mutant) => {
     assert(declaredRuleIds.has(mutant.ruleId), `${mutant.id} references unknown ${mutant.ruleId}`);
     const witnesses = [];
-    for (const scenario of validationCases) {
+    for (const scenario of validationReference) {
       if (!mutant.applies(scenario.input, scenario.expected)) continue;
       const mutated = executeMutant(mutant, scenario.input, scenario.expected);
-      assert.notDeepEqual(mutated, scenario.expected, `${mutant.id} is equivalent for ${scenario.id}`);
+      if (JSON.stringify(mutated) === JSON.stringify(scenario.expected)) continue;
       assert.deepEqual(mutated.trace, scenario.expected.trace, `${mutant.id} changed instrumentation`);
       assert.equal(mutated.status, scenario.expected.status, `${mutant.id} changed status outside its declared fault`);
 

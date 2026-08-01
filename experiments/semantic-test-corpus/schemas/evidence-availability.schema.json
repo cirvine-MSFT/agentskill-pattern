@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evidence-availability.schema.json",
+  "type": "object",
+  "required": ["status", "reasons"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {"type": "string", "enum": ["available", "unavailable"]},
+    "reasons": {"type": "array", "items": {"type": "string"}}
+  }
+}

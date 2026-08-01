@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model-roles.schema.json",
+  "type": "object",
+  "required": ["parent", "worker"],
+  "additionalProperties": false,
+  "properties": {
+    "parent": {"type": "array", "items": {"type": "string"}},
+    "worker": {"type": "array", "items": {"type": "string"}}
+  }
+}

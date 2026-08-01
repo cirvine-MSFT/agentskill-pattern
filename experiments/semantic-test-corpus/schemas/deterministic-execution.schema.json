@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "deterministic-execution.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "blockId", "armId", "seed",
+    "scheduleOrder", "globalOrder", "startedAt", "endedAt", "cases", "wallMs",
+    "stagingSha256", "startEvidenceSha256", "endEvidenceSha256"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A0$"},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"const": 0},
+    "seed": {"type": "integer"},
+    "scheduleOrder": {"type": "integer", "minimum": 1, "maximum": 6},
+    "globalOrder": {"type": "integer", "minimum": 1, "maximum": 72},
+    "startedAt": {"type": "string"},
+    "endedAt": {"type": "string"},
+    "cases": {"const": 60},
+    "wallMs": {"type": "integer", "minimum": 0, "maximum": 1800000},
+    "stagingSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    ,"startEvidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+    ,"endEvidenceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

@@ -1,5 +1,10 @@
 # Preregistered semantic migration corpus benchmark
 
+> **Historical v1 — unavailable for execution.** This file is provenance only.
+> Execution, collection, eligibility, retries, metrics, and analysis are defined
+> solely by `execution-amendment-v2.md` and the v2 harness in `README.md`.
+> No command or inferential procedure below is valid for v2.
+
 **Status:** protocol and deterministic foundation only. Initially frozen
 2026-07-29 against `48f44fbf3dca97a001ab2e822cf17faff869b846` (`main`) and
 revised 2026-07-30 in response to pre-run review. No AI arm has been run and this

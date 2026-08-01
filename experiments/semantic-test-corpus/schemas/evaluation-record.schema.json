@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evaluation-record.schema.json",
+  "type": "object",
+  "required": [
+    "formatVersion", "protocolId", "runId", "blockId", "armId", "attemptId",
+    "snapshotPath", "snapshotSha256", "metricsPath", "metricsSha256",
+    "executionSha256", "localEvidenceSha256", "modelPreflightSha256", "createdAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "formatVersion": {"const": 1},
+    "protocolId": {"const": "semantic-test-corpus-execution-v2"},
+    "runId": {"type": "string", "pattern": "^B\\d{2}-A[0-5]$"},
+    "blockId": {"type": "string", "pattern": "^B\\d{2}$"},
+    "armId": {"type": "integer", "minimum": 0, "maximum": 5},
+    "attemptId": {"type": ["string", "null"]},
+    "snapshotPath": {"type": "string", "minLength": 1},
+    "snapshotSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "metricsPath": {"type": "string", "minLength": 1},
+    "metricsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "executionSha256": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      ]
+    },
+    "localEvidenceSha256": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      ]
+    },
+    "modelPreflightSha256": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      ]
+    },
+    "createdAt": {"type": "string"}
+  }
+}
