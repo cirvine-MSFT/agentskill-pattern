@@ -1,10 +1,10 @@
-# Action-item extraction v3 preregistration
+# Action-item extraction v3 excluded pilot
 
-**Status: design frozen; no v3 AI unit has started.** This outcome-independent
-checkout correction only forces LF-pinned v3 text inputs to LF on every
-platform. The original three-unit schedule remains unconsumed. Protocol ID:
-`action-item-extraction-v3`. This namespace is separate from immutable v1 and v2
-inputs, IDs, sessions, schedules, hashes, evidence, thresholds, and dispositions.
+**Status: immutable NO-GO.** The three preregistered A4 units ran exactly once in
+frozen order after the outcome-independent LF checkout correction. All starts
+remain in intent-to-treat. Protocol ID: `action-item-extraction-v3`. This
+namespace is separate from immutable v1 and v2 inputs, IDs, sessions, schedules,
+hashes, evidence, thresholds, and dispositions.
 
 V2 remains immutable at PR #27 / merge
 `9f3add6986105dd18ac1b4ed8f3cdf2edd639f5a`: its one excluded development unit
@@ -26,27 +26,42 @@ No v2 pilot ran.
 - Exactly one worker whole-transcript view and one worker sentinel-replacing
   edit; zero parent transcript or ledger calls and no other worker tools.
 - Exact bracketed transcript-line citations required for every tuple.
-- No A0-A3 AI observation, development observation, main observation, or v3
-  lifecycle evidence exists in this design-only change.
+- No A0-A3 AI observation, development observation, or main observation exists.
 
-## Deterministic design commands
+## Excluded-pilot result
+
+| Run | Exact mechanism | Tuple F1 | Grounding | Model tokens | AIU credits | Wall time | Disposition |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `PILOT-ACTION-V3-A4-2F6C` | Yes | 0.385 | 21.43% | 39,274 | 12.035535 | 48.491s | Measured failure: ambiguity policy |
+| `PILOT-ACTION-V3-A4-71D9` | Yes | 0.231 | 7.14% | 38,375 | 11.266770 | 55.999s | Measured failure: ambiguity policy |
+| `PILOT-ACTION-V3-A4-C845` | No | 0.769 | 7.14% | 40,815 | 12.212910 | 67.044s | Measured failure: warning rule, ambiguity policy, token ceiling |
+
+All runs used one successful worker view and one successful worker edit with
+zero parent file calls. Schema, compact return, and candidate isolation passed
+3/3. The aggregate mean tuple F1 was 0.462, source grounding was not 100%, two
+runs produced an unsupported critical action, and one run exceeded 40,000 model
+tokens. The frozen aggregate disposition is NO-GO, which authorizes no further
+AI execution.
+
+The immutable raw events, usage, ledgers, reconstructed scores, hashes, start
+index, summary, and derived report are under
+[`results/excluded-pilot-v3`](results/excluded-pilot-v3/).
+
+## Deterministic commands
 
 From this directory:
 
 ```powershell
-npm run validate
-npm test
-npm run check
-npm run reproduce
+npm run evidence:check
+npm run report
 node --test ..\..\tests\action-item-v3-checkout.test.mjs
 ```
 
-`npm run fixtures` and `npm run freeze` are write-once and have already produced
-the checked-in foundation. `npm run pilot -- --execute` is the only AI lifecycle
-entry point. It is not authorized in this session and was not invoked.
+`npm run fixtures` and `npm run freeze` are write-once and produced the checked-in
+foundation. `npm run pilot -- --execute` was the sole AI lifecycle entry point
+and cannot be invoked again because the runtime and evidence roots now exist.
 The checkout regression creates and removes a temporary checkout with
-`core.autocrlf=true`; it does not invoke the lifecycle entry point or consume an
-ID.
+`core.autocrlf=true`; it does not invoke the lifecycle entry point.
 
 See [protocol-amendment-v3.md](protocol-amendment-v3.md),
 [design/execution-plan.json](design/execution-plan.json), and

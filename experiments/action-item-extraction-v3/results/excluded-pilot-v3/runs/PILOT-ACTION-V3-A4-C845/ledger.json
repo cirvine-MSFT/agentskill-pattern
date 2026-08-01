@@ -1,0 +1,347 @@
+{
+  "schemaVersion": "action-ledger.v3",
+  "runId": "PILOT-ACTION-V3-A4-C845",
+  "transcriptId": "v3-pilot-lumen-device-recovery",
+  "items": [
+    {
+      "itemId": "AI-001",
+      "action": "Publish the final restore runbook",
+      "owner": "Iris Novak",
+      "dueDate": "2026-11-02",
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[007]",
+          "endLineId": "[007]",
+          "quote": "[007] Iris Novak: I will publish the final restore runbook by 2026-11-02."
+        },
+        {
+          "startLineId": "[008]",
+          "endLineId": "[008]",
+          "quote": "[008] Jonas Blake: The restore runbook should identify the normal rollback boundary and the existing escalation room."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-002",
+      "action": "Reconcile the device coverage table with the approved scope",
+      "owner": "Mae Okafor",
+      "dueDate": "2026-11-03",
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[010]",
+          "endLineId": "[010]",
+          "quote": "[010] Mae Okafor: I will reconcile the device coverage table with the approved scope by 2026-11-03."
+        },
+        {
+          "startLineId": "[011]",
+          "endLineId": "[011]",
+          "quote": "[011] Arun Bose: Approved scope means the signed appendix, not the working spreadsheet attached to the calendar."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-003",
+      "action": "Configure the recovery health alerts",
+      "owner": "Pavel Cruz",
+      "dueDate": "2026-11-06",
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[012]",
+          "endLineId": "[012]",
+          "quote": "[012] Pavel Cruz: I will configure the recovery health alerts by 2026-11-04."
+        },
+        {
+          "startLineId": "[013]",
+          "endLineId": "[013]",
+          "quote": "[013] Pavel Cruz: The alert names need to preserve the current pager-search abbreviations."
+        },
+        {
+          "startLineId": "[028]",
+          "endLineId": "[028]",
+          "quote": "[028] Pavel Cruz: Correction: move my recovery health alerts due date from 2026-11-04 to 2026-11-06; I remain the owner."
+        },
+        {
+          "startLineId": "[029]",
+          "endLineId": "[029]",
+          "quote": "[029] Iris Novak: The corrected alert date supersedes the earlier date."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-004",
+      "action": "Approve the security exception",
+      "owner": "Zoe Hart",
+      "dueDate": "2026-11-05",
+      "status": "conditional",
+      "condition": "Independent retest is green; requires the signed assessment, not a chat message from the vendor",
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[014]",
+          "endLineId": "[014]",
+          "quote": "[014] Zoe Hart: I will approve the security exception by 2026-11-05 only if the independent retest is green; until then it is conditional."
+        },
+        {
+          "startLineId": "[015]",
+          "endLineId": "[015]",
+          "quote": "[015] Lena Price: A green retest requires the signed assessment, not a chat message from the vendor."
+        },
+        {
+          "startLineId": "[044]",
+          "endLineId": "[044]",
+          "quote": "[044] Zoe Hart: If the retest fails, the exception stays conditional and is not silently approved."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-005",
+      "action": "Draft the support handoff",
+      "owner": "Lena Price",
+      "dueDate": "2026-11-04",
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[016]",
+          "endLineId": "[016]",
+          "quote": "[016] Kenji Sato: I will draft the support handoff by 2026-11-04."
+        },
+        {
+          "startLineId": "[032]",
+          "endLineId": "[032]",
+          "quote": "[032] Lena Price: Lena Price will own the support handoff instead of Kenji Sato, keeping the due date 2026-11-04; Kenji Sato is released."
+        },
+        {
+          "startLineId": "[033]",
+          "endLineId": "[033]",
+          "quote": "[033] Kenji Sato: Confirmed: I am released from delivery and remain available only for questions."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-006",
+      "action": "Package the recovery launch build",
+      "owner": "Jonas Blake",
+      "dueDate": "2026-11-06",
+      "status": "blocked",
+      "condition": "Blocked until the signing service is restored",
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[018]",
+          "endLineId": "[018]",
+          "quote": "[018] Jonas Blake: I will package the recovery launch build by 2026-11-06; this is blocked until the signing service is restored."
+        },
+        {
+          "startLineId": "[019]",
+          "endLineId": "[019]",
+          "quote": "[019] Pavel Cruz: The signing-service incident already has an owner outside this meeting, so do not create a duplicate task."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-007",
+      "action": "Record the final go/no-go decision and distribute the signed decision record",
+      "owner": "Arun Bose",
+      "dueDate": null,
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[020]",
+          "endLineId": "[020]",
+          "quote": "[020] Arun Bose: I will record the final go/no-go decision and distribute the signed decision record; there is no fixed due date."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-008",
+      "action": "Complete the launch-blocking credential escrow review",
+      "owner": "Zoe Hart",
+      "dueDate": "2026-11-06",
+      "status": "open",
+      "condition": null,
+      "criticality": "critical",
+      "sourceCitations": [
+        {
+          "startLineId": "[022]",
+          "endLineId": "[022]",
+          "quote": "[022] Zoe Hart: I will complete the launch-blocking credential escrow review by 2026-11-06."
+        },
+        {
+          "startLineId": "[023]",
+          "endLineId": "[023]",
+          "quote": "[023] Iris Novak: Launch-blocking is explicit for that review, so it is critical rather than merely urgent."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-009",
+      "action": "Verify the overnight escalation roster",
+      "owner": "Service Operations",
+      "dueDate": "2026-11-09",
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[024]",
+          "endLineId": "[024]",
+          "quote": "[024] Pavel Cruz: Service Operations will verify the overnight escalation roster by 2026-11-09."
+        },
+        {
+          "startLineId": "[025]",
+          "endLineId": "[025]",
+          "quote": "[025] Pavel Cruz: Service Operations is the canonical owner even if the individual on-call engineer changes."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-010",
+      "action": "Archive the reconciled evidence bundle",
+      "owner": "Mae Okafor",
+      "dueDate": "2026-11-10",
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[034]",
+          "endLineId": "[034]",
+          "quote": "[034] Mae Okafor: I will archive the reconciled evidence bundle by 2026-11-10."
+        },
+        {
+          "startLineId": "[035]",
+          "endLineId": "[035]",
+          "quote": "[035] Mae Okafor: That bundle is separate from the already archived prototype evidence."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-011",
+      "action": "Publish the customer-blocking escalation matrix",
+      "owner": "Kenji Sato",
+      "dueDate": "2026-11-09",
+      "status": "open",
+      "condition": null,
+      "criticality": "critical",
+      "sourceCitations": [
+        {
+          "startLineId": "[037]",
+          "endLineId": "[037]",
+          "quote": "[037] Kenji Sato: I will publish the customer-blocking escalation matrix by 2026-11-09."
+        },
+        {
+          "startLineId": "[038]",
+          "endLineId": "[038]",
+          "quote": "[038] Kenji Sato: The escalation matrix is explicitly customer-blocking because support coverage is a launch prerequisite."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-012",
+      "action": "Circulate the final ownership table",
+      "owner": "Arun Bose",
+      "dueDate": "2026-11-10",
+      "status": "open",
+      "condition": null,
+      "criticality": "normal",
+      "sourceCitations": [
+        {
+          "startLineId": "[041]",
+          "endLineId": "[041]",
+          "quote": "[041] Arun Bose: I will circulate the final ownership table by 2026-11-10."
+        },
+        {
+          "startLineId": "[042]",
+          "endLineId": "[042]",
+          "quote": "[042] Lena Price: The ownership table must show the reassignment and exclude the withdrawn training session."
+        }
+      ]
+    },
+    {
+      "itemId": "AI-013",
+      "action": "Authorize recovery launch",
+      "owner": "Iris Novak",
+      "dueDate": "2026-11-10",
+      "status": "conditional",
+      "condition": "Only after the critical credential escrow review closes; remains conditional even if the package arrives early",
+      "criticality": "critical",
+      "sourceCitations": [
+        {
+          "startLineId": "[045]",
+          "endLineId": "[045]",
+          "quote": "[045] Iris Novak: I will authorize recovery launch only after the critical credential escrow review closes, with a target of 2026-11-10."
+        },
+        {
+          "startLineId": "[046]",
+          "endLineId": "[046]",
+          "quote": "[046] Iris Novak: That authorization remains conditional even if the package arrives early."
+        }
+      ]
+    }
+  ],
+  "ambiguities": [
+    {
+      "note": "Jonas Blake stated 'I can probably handle the fallback review soon, but I am not confirming ownership or a deadline' [039]. Iris Novak instructed to treat this as ambiguity, not an action item [040], because no explicit commitment, definite deadline, or confirmed ownership was made.",
+      "sourceCitations": [
+        {
+          "startLineId": "[039]",
+          "endLineId": "[039]",
+          "quote": "[039] Jonas Blake: I can probably handle the fallback review soon, but I am not confirming ownership or a deadline."
+        },
+        {
+          "startLineId": "[040]",
+          "endLineId": "[040]",
+          "quote": "[040] Iris Novak: Treat the fallback-review statement as ambiguity, not as an action item."
+        }
+      ]
+    },
+    {
+      "note": "Kenji Sato's commitment to 'schedule a broad training session by 2026-11-09' [026] was withdrawn completely [030]. Lena Price noted that 'A possible training session next quarter does not revive the withdrawn commitment' [031], so this is fully rescinded and omitted from action items.",
+      "sourceCitations": [
+        {
+          "startLineId": "[026]",
+          "endLineId": "[026]",
+          "quote": "[026] Kenji Sato: I will schedule a broad training session by 2026-11-09."
+        },
+        {
+          "startLineId": "[030]",
+          "endLineId": "[030]",
+          "quote": "[030] Kenji Sato: I withdraw the training-session commitment completely; omit it and assign no replacement."
+        },
+        {
+          "startLineId": "[031]",
+          "endLineId": "[031]",
+          "quote": "[031] Lena Price: A possible training session next quarter does not revive the withdrawn commitment."
+        }
+      ]
+    },
+    {
+      "note": "Kenji Sato's suggestion to 'add screenshots to the support handoff' [005] is a suggestion only [006]. Lena Price clarified that 'A preference or suggestion remains outside the ledger until somebody makes a definite commitment' [006]. No explicit commitment was made.",
+      "sourceCitations": [
+        {
+          "startLineId": "[005]",
+          "endLineId": "[005]",
+          "quote": "[005] Kenji Sato: It might be useful to add screenshots to the support handoff, but I am only suggesting it."
+        },
+        {
+          "startLineId": "[006]",
+          "endLineId": "[006]",
+          "quote": "[006] Lena Price: A preference or suggestion remains outside the ledger until somebody makes a definite commitment."
+        }
+      ]
+    }
+  ]
+}

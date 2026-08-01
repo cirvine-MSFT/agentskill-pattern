@@ -1,12 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { experimentRoot } from "../scripts/lib.mjs";
+import { evidenceRoot, experimentRoot } from "../scripts/lib.mjs";
 import { validateFoundation } from "../scripts/validate-foundation.mjs";
 
-test("frozen v3 design validates without AI execution", () => {
-  assert.deepEqual(validateFoundation(), {
+test("frozen v3 foundation validates in the current lifecycle phase", () => {
+  assert.deepEqual(validateFoundation({ requireNoRun: !existsSync(evidenceRoot) }), {
     transcripts: 3,
     goldItems: 39,
     candidateFiles: 2,
