@@ -1,0 +1,119 @@
+{
+  "formatVersion": 1,
+  "protocolId": "release-note-synthesis-v2-repair",
+  "permanentlyExcludedFromConfirmation": true,
+  "disposition": "NO-GO",
+  "recommendation": "Abandon the release-note Agent Skill Pattern candidate on the current runtime; do not retry, tune, or run confirmation.",
+  "smoke": {
+    "runId": "DEV-V2-A4-01",
+    "disposition": "measured-failure",
+    "failureReasons": [
+      "unknown-tool warnings were emitted",
+      "canonical MCP tools lack exact worker-owned structured start/complete lifecycles",
+      "custom-agent schema did not resolve to the exact singleton canonical surface",
+      "Skill surface is not the exact singleton project Skill",
+      "MCP audit sequence is not exact",
+      "sandbox root or credential isolation attestation failed",
+      "compact status envelope differs from the MCP write result",
+      "status envelope integrity does not bind the exact run output",
+      "total model-token ceiling failed"
+    ],
+    "modelTokens": 26000,
+    "wallTimeMs": 44950
+  },
+  "pilot": {
+    "authorized": false,
+    "started": 0,
+    "operationalSuccess": 0,
+    "treatmentAdherent": 0,
+    "unsupportedCriticalClaims": null,
+    "evaluationsAvailable": false,
+    "runs": []
+  },
+  "semanticQualityTested": false,
+  "semanticQualityStatement": "Release-note semantic quality was not tested because the frozen development abandonment rule stopped the pilot.",
+  "abandonmentRuleFired": true,
+  "confirmationRunsExecuted": 0,
+  "diagnosis": {
+    "formatVersion": 1,
+    "runId": "DEV-V2-A4-01",
+    "frozenDisposition": "NO-GO",
+    "abandonmentRuleFired": true,
+    "canonicalToolContract": {
+      "required": [
+        "release-notes/read_release_dossier",
+        "release-notes/write_release_note_draft"
+      ],
+      "unknownToolWarnings": [
+        {
+          "actor": "parent",
+          "message": "Unknown tool name in the tool allowlist: \"release-notes/read_release_dossier\""
+        },
+        {
+          "actor": "parent",
+          "message": "Unknown tool name in the tool allowlist: \"release-notes/write_release_note_draft\""
+        },
+        {
+          "actor": "worker",
+          "message": "Unknown tool name in the tool allowlist: \"release-notes/read_release_dossier\""
+        },
+        {
+          "actor": "worker",
+          "message": "Unknown tool name in the tool allowlist: \"release-notes/write_release_note_draft\""
+        }
+      ],
+      "structuredWorkerCalls": 0,
+      "satisfied": false
+    },
+    "sandboxIsolation": {
+      "releaseNotesMcpFailures": [
+        "GenericFailure, backend_unavailable: BaseContainer is unavailable; DACL fallback requires write-DAC permission on 'C:\\ProgramData\\chocolatey\\bin', which the current user lacks (ERROR_ACCESS_DENIED (WRITE_DAC not granted))."
+      ],
+      "mcpConnected": false,
+      "attestationProduced": false,
+      "satisfied": false
+    },
+    "surfaceIsolation": {
+      "skills": [
+        {
+          "name": "release-note-synthesis",
+          "source": "project"
+        },
+        {
+          "name": "customize-cloud-agent",
+          "source": "builtin"
+        }
+      ],
+      "unexpectedSkills": [
+        {
+          "name": "customize-cloud-agent",
+          "source": "builtin"
+        }
+      ],
+      "customAgentSchemaEventCount": 0,
+      "satisfied": false
+    },
+    "modelBehavior": {
+      "parentModel": "gpt-5.6-sol",
+      "workerModel": "claude-haiku-4.5",
+      "pseudoToolCallMessages": 1,
+      "compactEnvelopeValid": false
+    },
+    "ceilings": {
+      "totalModelTokens": 26000,
+      "totalModelTokensMaximum": 20000,
+      "tokenExcess": 6000,
+      "wallTimeMs": 44950,
+      "resultEventElapsedMs": 44580,
+      "wallTimeMsMaximum": 300000,
+      "tokenCeilingSatisfied": false,
+      "wallTimeCeilingSatisfied": true
+    },
+    "downstream": {
+      "pilotGateFrozen": false,
+      "pilotUnitsStarted": 0,
+      "confirmationUnitsStarted": 0,
+      "semanticQualityTested": false
+    }
+  }
+}

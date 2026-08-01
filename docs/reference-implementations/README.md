@@ -2,7 +2,8 @@
 
 - [Release-note synthesis](../../experiments/release-note-synthesis/) — one frozen
   public-source dossier read, one direct customer-facing draft write, and a compact
-  integrity-only return. The included pilot is excluded from any later confirmation.
+  integrity-only return. Immutable v0 and v2 NO-GO evidence supports abandoning this
+  candidate on the current runtime; semantic quality was not tested.
 
 | Reference | What it demonstrates | Status |
 | --- | --- | --- |

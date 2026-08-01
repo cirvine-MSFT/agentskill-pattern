@@ -1,0 +1,47 @@
+{
+  "formatVersion": 1,
+  "protocolId": "release-note-synthesis-v2-repair",
+  "canonicalTools": [
+    "release-notes/read_release_dossier",
+    "release-notes/write_release_note_draft"
+  ],
+  "files": [
+    {
+      "source": "experiments/release-note-synthesis/v2/candidate/.github/agents/release-note-haiku.agent.md",
+      "target": ".github/agents/release-note-haiku.agent.md",
+      "bytes": 1233,
+      "sha256": "c1552d23547c85bc2d4d451a74113a9310779ae64cb2abba44bd9e3f9e9f97d0"
+    },
+    {
+      "source": "experiments/release-note-synthesis/v2/candidate/.github/skills/release-note-synthesis/SKILL.md",
+      "target": ".github/skills/release-note-synthesis/SKILL.md",
+      "bytes": 766,
+      "sha256": "c1eefe701c079ef59569e416f4cb7a4b9e73f1541c3a57cd04823db6382ab397"
+    },
+    {
+      "source": "experiments/release-note-synthesis/v2/candidate/tools/release-note-mcp/v2-server.mjs",
+      "target": "tools/release-note-mcp/v2-server.mjs",
+      "bytes": 3034,
+      "sha256": "4bd5f1e988b58c6fa94e9860bf482fedbc4ab00d2d8b084db1587292896ad5da"
+    },
+    {
+      "source": "tools/release-note-mcp/lib.mjs",
+      "target": "tools/release-note-mcp/lib.mjs",
+      "bytes": 12879,
+      "sha256": "f01c2ef77d97eb6521af89c9a80542c542aec56143c4dcc93a162ee17a688c77"
+    },
+    {
+      "source": "tools/release-note-mcp/protocol.mjs",
+      "target": "tools/release-note-mcp/protocol.mjs",
+      "bytes": 2317,
+      "sha256": "510adbaede421d16a693ca4c58f13658c90cb11038ff1764a55332ef5b410741"
+    },
+    {
+      "source": "tools/release-note-mcp/server.mjs",
+      "target": "tools/release-note-mcp/server-core.mjs",
+      "bytes": 1416,
+      "sha256": "7df6e46aec4b342eb0668b9b9763bb9c4cc54a8845af079e25f924a5bf8516b8"
+    }
+  ],
+  "fileSetSha256": "97081373d713b83a6634aebcef9eeb7cae1b0d93f0a298dcc11dad629cd25a88"
+}

@@ -5,12 +5,12 @@ customer-facing release-note draft from one frozen public PR/issue dossier. It i
 to avoid the prior semantic-corpus failure shape: a worker gets one bounded read, one
 direct write, no general tools, no recursion, and returns only integrity metadata.
 
-**Current status:** foundation plus an explicitly excluded A4 feasibility pilot with a
-frozen **NO-GO (0/3 operational successes)**. The worker emitted pseudo tool calls as
-assistant text, no MCP read/write occurred, no draft artifact was written, all runs
-exceeded the token cap, and runtime evaluator isolation was not established. The
-development dossier and all three pilot dossiers are permanently excluded from a later
-confirmation. No main-study dossier, schedule, prompt, or run is present or authorized.
+**Current status:** foundation plus two immutable **NO-GO** outcomes. The v0 excluded A4
+pilot had 0/3 operational successes. The single permitted v2 repair then stopped at its
+permanently excluded development smoke: CLI 1.0.77 rejected the required canonical MCP
+tool names, the Windows MCP sandbox could not start, an unrelated built-in Skill remained
+loaded, and the run used 26,000 model tokens. No v2 pilot gate was frozen and no v2 pilot
+or confirmatory unit ran. Release-note semantic quality remains untested.
 
 ## Contents
 
@@ -25,6 +25,8 @@ confirmation. No main-study dossier, schedule, prompt, or run is present or auth
   service.
 - [`results/excluded-pilot/`](results/excluded-pilot/): immutable pilot evidence after
   the one allowed execution.
+- [`results/v2-repair/`](results/v2-repair/): immutable one-shot v2 development evidence,
+  exact CLI/help capture, isolation failure, hashes, and frozen abandonment disposition.
 
 ## Deterministic checks
 
@@ -33,9 +35,18 @@ npm test
 npm run reproduce
 ```
 
-`npm run reproduce` validates hashes and separation, regenerates the A0 development and
-excluded-pilot drafts, evaluates all checked drafts, and verifies the frozen pilot gate.
-It never starts a model.
+`npm run reproduce` validates foundation separation, regenerates the deterministic A0
+drafts and evaluations, verifies the immutable v0 evidence package hash, and regenerates
+and checks the v2 diagnosis. It never rewrites v0 pilot evidence or starts a model.
+
+The consumed v2 lifecycle command is preserved for audit only and now refuses any rerun:
+
+```powershell
+npm run v2:run -- --execute --work-root X:\path\to\empty\isolated-runtime
+```
+
+Use `npm run v2:finalize` and `npm run v2:check` to deterministically regenerate and check
+the v2 diagnosis from preserved raw evidence without starting a model.
 
 ## Excluded pilot
 

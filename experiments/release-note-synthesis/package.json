@@ -16,7 +16,10 @@
     "pilot:check": "node scripts/check-pilot-evidence.mjs",
     "pilot:package": "node scripts/package-pilot-evidence.mjs",
     "pilot:package:check": "node scripts/package-pilot-evidence.mjs --check",
+    "v2:run": "node v2/run-v2.mjs",
+    "v2:finalize": "node v2/finalize-v2.mjs",
+    "v2:check": "node v2/check-v2.mjs",
     "test": "node --test tests/*.test.mjs ../../tests/release-note-mcp/*.test.mjs",
-    "reproduce": "npm run validate && npm run baseline && npm run evaluate && npm run pilot:audit && npm run pilot:check && npm run pilot:package:check"
+    "reproduce": "npm run validate && npm run baseline && npm run evaluate && npm run pilot:package:check && npm run v2:finalize && npm run v2:check"
   }
 }
