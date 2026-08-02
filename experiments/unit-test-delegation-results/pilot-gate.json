@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sourceManifestRootHash": "001c6d95cec2e3ef22e76f643afad7b54f65f7d6c0dd35f25f3587c2ed8d0f69",
+  "observations": [
+    "pilot-P01-r01-A1",
+    "pilot-P01-r01-A2",
+    "pilot-P02-r01-A1",
+    "pilot-P02-r01-A2"
+  ],
+  "decision": "NO-GO",
+  "reasons": [
+    "not all observations completed",
+    "feature correctness below 100%",
+    "A2 adherence failure",
+    "A2 tests did not compile/pass against candidate and gold",
+    "A2 mutant kill below 0.60",
+    "A2 false positive against gold",
+    "resource telemetry unavailable",
+    "resource envelope exceeded"
+  ]
+}
