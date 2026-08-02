@@ -118,7 +118,8 @@ test("no-run attestation permits only the guarded excluded pilot without startin
     pilot: "authorized",
     main: "forbidden",
     evidencePresent: false,
-    observationsStarted: 0
+    observationsStarted: 0,
+    idsConsumed: 0
   });
 });
 

@@ -41,14 +41,21 @@ store, verifies frozen order and IDs, and requires the external private root to 
 It does not create result/runtime roots or start an observation.
 
 ```powershell
-npm --prefix experiments/unit-test-delegation run pilot:preflight -- --cli copilot --session-store <session-store.db> --private-root <absent-durable-private-root>
+npm --prefix experiments/unit-test-delegation run pilot:preflight -- -- --cli copilot --session-store <session-store.db> --private-root <absent-durable-private-root>
 ```
 
 The only lifecycle command is:
 
 ```powershell
-npm --prefix experiments/unit-test-delegation run pilot:execute -- --cli copilot --session-store <session-store.db> --private-root <absent-durable-private-root> --execute
+npm --prefix experiments/unit-test-delegation run pilot:execute -- -- --cli copilot --session-store <session-store.db> --private-root <absent-durable-private-root> --execute
 ```
+
+The two consecutive `--` delimiters are required for npm 10.9.2 under Windows
+PowerShell. The first ends npm option parsing; the second prevents PowerShell/npm
+command packaging from removing the forwarded option names. The package wrapper
+rejects positional, missing, malformed, unknown, and duplicate arguments before
+the frozen runner is invoked, and `pilot:execute` still requires an explicit
+forwarded `--execute`.
 
 The runner materializes exactly four isolated candidate repositories in frozen order,
 uses write-once session/worktree locks, allows no retry or substitution, and retains

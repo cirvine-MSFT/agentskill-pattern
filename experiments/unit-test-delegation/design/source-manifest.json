@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "README.md",
-      "sha256": "c83dc44e1b3f5e1a694bbe6ead8ca5475e39cfd13fc63cb4eb1086a30e195474"
+      "sha256": "a0d65b7d0034ba44388d8e680348c24f132888bcd644fec3ecb1832beafd3919"
     },
     {
       "path": "candidate/.github/agents/unit-test-author-haiku.agent.md",
@@ -24,7 +24,7 @@
     },
     {
       "path": "design/no-run-attestation.json",
-      "sha256": "3fc2f1c4653a3207778ff0fef7af56cf42ccfa9c4d1b22584e9d8d4cb244ad99"
+      "sha256": "79a407b598faaa7bbbb1590eb2a3b3ba55b06ee039db720a944f778727c79ffc"
     },
     {
       "path": "design/preregistration-source-manifest.json",
@@ -44,11 +44,11 @@
     },
     {
       "path": "package.json",
-      "sha256": "1f67b53c4d8668efd1daea3c974f18d4f4d831bbbe1018011931fa70041fc195"
+      "sha256": "160a53df43f0f78a46e878cd0ca0b6838b957c031c7fddc4224d84483c343c71"
     },
     {
       "path": "protocol.md",
-      "sha256": "b922de71231eef9f6ad7bcf3ba158c3dde0af958cfa2213df0fdd1f9a038e65f"
+      "sha256": "401380fc035202d6ad381abf6cbb57bdcd3d31ae9ede3ab803dc6de042cc2355"
     },
     {
       "path": "schemas/observation.schema.json",
@@ -72,7 +72,11 @@
     },
     {
       "path": "scripts/lib.mjs",
-      "sha256": "6a342d9c341dfc7239de89d15afd51a2cfeda43c3e76bc7c9a02584687f806a7"
+      "sha256": "1b92f48ee8a95b037039a1642df0bc89b149bf2a7abc4ab15c8338d1694cceee"
+    },
+    {
+      "path": "scripts/pilot-command.mjs",
+      "sha256": "b44e6784c5cd023b5b0fd1bc8114701f03bec2ec065c2aefe4b6dc007256137c"
     },
     {
       "path": "scripts/pilot-contract.mjs",
@@ -92,12 +96,20 @@
     },
     {
       "path": "tests/design.test.mjs",
-      "sha256": "69ea8cb9de0626722bce0e09ebb71c32dd9a891c1281eab36b0144087fa82f7a"
+      "sha256": "9df7b6af57a38b2d667fb534d240309898bdbe2e5ccb21896edee8fd3647ceb2"
+    },
+    {
+      "path": "tests/pilot-command.integration.mjs",
+      "sha256": "ad4367d9c5a4e4913c67f32b4c8bbd69edfe4e24f22ac4c92c11da43cc21e070"
+    },
+    {
+      "path": "tests/pilot-command.test.mjs",
+      "sha256": "f921e1658df878ff6a6963436fd5fbfb3c3cedcad85eb204b3592007bdd17da6"
     },
     {
       "path": "tests/pilot-runner.test.mjs",
       "sha256": "c72459a2ea601384569272a1158b6fd301ffe2a1a61b9a22767e3dfc24136eaf"
     }
   ],
-  "rootHash": "4a00d3368d11420fc26afef9c69b85d33eb1e9ef1313e3818619491d989a163b"
+  "rootHash": "6631684dc257aee1c806ca00a450269e0dffd4c8ee15ec8f70ca5403d206773f"
 }

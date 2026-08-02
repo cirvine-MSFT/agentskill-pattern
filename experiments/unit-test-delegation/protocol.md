@@ -157,3 +157,10 @@ The prospective no-run attestation still records zero started observations and z
 result evidence files. Passing deterministic checks or holding authorization is not
 execution: only the guarded command with explicit `--execute` may cross the lifecycle
 boundary. Main remains forbidden.
+
+After runner merge and before any lifecycle start, Windows PowerShell with pinned npm
+10.9.2 was found to remove forwarded option names from the single-delimiter runbook
+command while leaving their values. The packaging-only correction uses two npm
+delimiters and a strict wrapper around the unchanged hash-reviewed runner. The defect
+and its reproduction consumed zero pilot IDs, started zero observations, and created
+no result or private evidence roots.
