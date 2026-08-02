@@ -172,7 +172,12 @@ test("fresh autocrlf checkout has stable hashes and passes documented preflight 
     );
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      run("npm.cmd", ["--prefix", "experiments/unit-test-delegation", "run", "hashes"], checkout);
+      const generated = runPowerShell(
+        "npm --prefix experiments/unit-test-delegation run hashes",
+        process.env,
+        checkout
+      );
+      assert.equal(generated.status, 0, generated.stderr);
       assert.equal(run("git", ["status", "--porcelain"], checkout).stdout, "");
     }
 
