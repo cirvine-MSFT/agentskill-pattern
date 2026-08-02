@@ -8,13 +8,14 @@ import {fileURLToPath} from "node:url";
 import {evaluateAdherence} from "../../../experiments/documentation-delegation/scripts/evaluate-adherence.mjs";
 import {
   RUNNER_PROTOCOL_ID,
+  assertAuthorizationFresh,
   assertFrozenOrder,
   auditTelemetry,
   buildCanonicalSummary,
   buildCopilotArgs,
   buildWorkerHandoff,
   computePilotDecision,
-  currentApprovingReviews,
+  createExecutionAuthorization,
   defaultLifecycleIndex,
   frozenMaterializationId,
   jsonBytes,
@@ -24,10 +25,43 @@ import {
   runnerPackageDigest,
   settleUsage
 } from "../core.mjs";
-import {executePilot, preflight, runObservation} from "../runner.mjs";
+import {
+  buildCandidateEnvironment,
+  captureCandidateInputs,
+  executePilot,
+  freezeCandidatePolicy,
+  inspectCandidateLaunch,
+  preflight,
+  runNegativeControlProbes,
+  runObservation,
+  verifyCandidateOutputs
+} from "../runner.mjs";
 
 function temporary(name) {
   return resolve(tmpdir(), `${name}-${process.pid}-${Math.random().toString(16).slice(2)}`);
+}
+
+function executionAuthorization() {
+  const now = new Date();
+  return {
+    approved: true,
+    basis: "merged-prospective-amendment-plus-explicit-execute",
+    issuedAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString(),
+    nonce: "synthetic-authorization-nonce",
+    authorizationBlobSha256: "a".repeat(64)
+  };
+}
+
+function passingProbes() {
+  return {
+    pass: true,
+    reasons: [],
+    launcherStatus: 0,
+    candidateReadable: true,
+    deniedPathCount: 7,
+    deniedReadableCount: 0
+  };
 }
 
 function usageRow(id, run, worker = false) {
@@ -162,6 +196,7 @@ function syntheticEvents(run, candidateRoot, {parentReadAfter = false} = {}) {
 function boundary(candidateRoot) {
   return {
     caseSensitivePaths: process.platform !== "win32",
+    candidateRoot,
     docTarget: resolve(candidateRoot, "docs", "guide.md"),
     allowedWorkerReads: [
       resolve(candidateRoot, "TASK.md"),
@@ -317,14 +352,14 @@ test("synthetic full lifecycle retains evidence without AI calls", () => {
   const candidateRoot = resolve(root, "candidates");
   const expected = readDesign().manifest.generatedBundles;
   const options = {
-    cli: "never-called",
+    cli: process.execPath,
     sessionStore: "synthetic",
     artifactRoot,
     candidateRoot,
     sandboxLauncher: "never-called",
     sandboxSha256: "0".repeat(64),
     configuredMcpServers: ["azure"],
-    authorizationFile: "synthetic-authorization.json"
+    authorizationFile: null
   };
   try {
     mkdirSync(root);
@@ -332,7 +367,7 @@ test("synthetic full lifecycle retains evidence without AI calls", () => {
       preflight: () => ({
         pass: true,
         reasons: [],
-        authorization: {authorizationBlobSha256: "a".repeat(64)},
+        authorization: executionAuthorization(),
         configuredMcpServers: ["azure"]
       }),
       materializeFixture: fakeMaterialize,
@@ -348,6 +383,7 @@ test("synthetic full lifecycle retains evidence without AI calls", () => {
         initialCommit: "1".repeat(40),
         initialTree: "2".repeat(40)
       }),
+      runNegativeControlProbes: passingProbes,
       execute: ({run, candidateRoot: candidate}) => ({
         status: 0,
         signal: null,
@@ -413,19 +449,19 @@ test("post-spawn malformed telemetry is retained as ITT failure without retry", 
   try {
     mkdirSync(root);
     const result = executePilot({
-      cli: "never-called",
+      cli: process.execPath,
       sessionStore: "synthetic",
       artifactRoot,
       candidateRoot,
       sandboxLauncher: "never-called",
       sandboxSha256: "0".repeat(64),
       configuredMcpServers: [],
-      authorizationFile: "synthetic-authorization.json"
+      authorizationFile: null
     }, {
       preflight: () => ({
         pass: true,
         reasons: [],
-        authorization: {authorizationBlobSha256: "a".repeat(64)}
+        authorization: executionAuthorization()
       }),
       materializeFixture: fakeMaterialize,
       directoryDigest: (path) => {
@@ -439,6 +475,7 @@ test("post-spawn malformed telemetry is retained as ITT failure without retry", 
         initialCommit: "1".repeat(40),
         initialTree: "2".repeat(40)
       }),
+      runNegativeControlProbes: passingProbes,
       execute: () => ({
         status: 23,
         signal: null,
@@ -497,7 +534,7 @@ test("real evaluator preparation branch is reachable without AI execution", () =
     `pilot/${run.fixtureId}/${run.variantId}`
   ];
   const options = {
-    cli: "never-called",
+    cli: process.execPath,
     sessionStore: "synthetic",
     artifactRoot: resolve(root, "artifacts"),
     candidateRoot: resolve(root, "candidates"),
@@ -518,6 +555,7 @@ test("real evaluator preparation branch is reachable without AI execution", () =
         initialCommit: "1".repeat(40),
         initialTree: "2".repeat(40)
       }),
+      runNegativeControlProbes: passingProbes,
       execute: ({run: current, candidateRoot}) => ({
         status: 0,
         signal: null,
@@ -555,37 +593,34 @@ test("runner package digest is deterministic and excludes future approvals", () 
   assert.equal(first, second);
 });
 
-test("approval review settlement uses each reviewer's latest state", () => {
-  assert.deepEqual(currentApprovingReviews([
-    {
-      id: 1,
-      state: "APPROVED",
-      submitted_at: "2026-08-01T00:00:00Z",
-      user: {login: "alice"}
-    },
-    {
-      id: 2,
-      state: "CHANGES_REQUESTED",
-      submitted_at: "2026-08-01T01:00:00Z",
-      user: {login: "alice"}
-    },
-    {
-      id: 3,
-      state: "APPROVED",
-      commit_id: "final-head",
-      submitted_at: "2026-08-01T02:00:00Z",
-      user: {login: "bob"}
-    }
-  ], "final-head"), ["bob"]);
-  assert.deepEqual(currentApprovingReviews([
-    {
-      id: 4,
-      state: "APPROVED",
-      commit_id: "old-head",
-      submitted_at: "2026-08-01T03:00:00Z",
-      user: {login: "carol"}
-    }
-  ], "final-head"), []);
+test("execution authorization is fresh, nonce-bound, and expires", () => {
+  const root = temporary("documentation-pilot-authorization");
+  const cli = resolve(root, "copilot.exe");
+  try {
+    mkdirSync(root);
+    writeFileSync(cli, "synthetic cli");
+    const now = new Date("2026-08-01T00:00:00.000Z");
+    const authorization = createExecutionAuthorization({
+      cli,
+      sessionStore: resolve(root, "store.db"),
+      artifactRoot: resolve(root, "artifacts"),
+      candidateRoot: resolve(root, "candidates"),
+      sandboxSha256: "0".repeat(64)
+    }, {
+      pass: true,
+      head: "1".repeat(40),
+      canonicalRemoteMain: "1".repeat(40)
+    }, now, "reviewed-execution-nonce");
+    assert.doesNotThrow(() => assertAuthorizationFresh(authorization, now));
+    assert.throws(
+      () => assertAuthorizationFresh(authorization, new Date(authorization.expiresAt)),
+      /stale/u
+    );
+    assert.equal(authorization.basis, "merged-prospective-amendment-plus-explicit-execute");
+    assert.equal(authorization.runnerSourceCommit, "1".repeat(40));
+  } finally {
+    rmSync(root, {recursive: true, force: true});
+  }
 });
 
 test("request-generation preflight succeeds without self-authorizing execution", () => {
@@ -614,12 +649,7 @@ test("request-generation preflight succeeds without self-authorizing execution",
         pass: true,
         reasons: [],
         sha256: "0".repeat(64),
-        receipt: {
-          filesystemIsolation: true,
-          candidateOnly: true,
-          networkDeny: true,
-          evaluatorSeparation: true
-        }
+        verification: "hash-only"
       }),
       assertNoConsumedIds: () => {}
     });
@@ -639,7 +669,7 @@ test("spawned process with empty usage is evaluated then stopped as start-unveri
     `pilot/${run.fixtureId}/${run.variantId}`
   ];
   const options = {
-    cli: "never-called",
+    cli: process.execPath,
     sessionStore: "synthetic",
     artifactRoot: resolve(root, "artifacts"),
     candidateRoot: resolve(root, "candidates"),
@@ -660,6 +690,7 @@ test("spawned process with empty usage is evaluated then stopped as start-unveri
         initialCommit: "1".repeat(40),
         initialTree: "2".repeat(40)
       }),
+      runNegativeControlProbes: passingProbes,
       execute: ({run: current, candidateRoot}) => ({
         status: 0,
         signal: null,
@@ -677,6 +708,146 @@ test("spawned process with empty usage is evaluated then stopped as start-unveri
     assert.equal(result.disposition, "start-unverifiable");
     assert.deepEqual(result.evaluation, fakeEvaluation());
     assert.match(result.failure, /start boundary is unverifiable/u);
+  } finally {
+    rmSync(root, {recursive: true, force: true});
+  }
+});
+
+test("candidate launch omits hidden roots and permits only Copilot control-plane policy", () => {
+  const root = temporary("documentation-pilot-disclosure");
+  const candidateRoot = resolve(root, "candidate");
+  const evidenceRoot = resolve(root, "evidence");
+  const evaluatorRoot = resolve(evidenceRoot, "evaluator");
+  const run = pilotRuns()[0];
+  const args = buildCopilotArgs({run, candidateRoot});
+  const environment = buildCandidateEnvironment({
+    PATH: process.env.PATH,
+    GITHUB_WORKSPACE: evidenceRoot,
+    SAFE_VALUE: "candidate-safe"
+  }, [evidenceRoot, evaluatorRoot]);
+  const inspection = inspectCandidateLaunch({
+    candidateRoot,
+    executable: process.execPath,
+    args,
+    environment,
+    forbiddenPaths: [evidenceRoot, evaluatorRoot]
+  });
+  assert.equal(inspection.pass, true);
+  assert.equal("GITHUB_WORKSPACE" in environment, false);
+  assert.match(inspection.launcherArguments.join(" "), /copilot-control-plane/u);
+  assert.doesNotMatch(JSON.stringify({args, environment}), /evidence|evaluator/u);
+  const disclosed = inspectCandidateLaunch({
+    candidateRoot,
+    executable: process.execPath,
+    args: [...args, evidenceRoot],
+    environment,
+    forbiddenPaths: [evidenceRoot]
+  });
+  assert.equal(disclosed.pass, false);
+});
+
+test("runner-owned policy survives candidate manifest tampering and rejects it", () => {
+  const root = temporary("documentation-pilot-policy");
+  const candidateRoot = resolve(root, "candidate");
+  const evaluatorRoot = resolve(root, "evaluator");
+  try {
+    fakeMaterialize({candidateRoot, evaluatorRoot, observationId: "synthetic"});
+    const policy = freezeCandidatePolicy(candidateRoot);
+    const captured = captureCandidateInputs(candidateRoot, policy);
+    writeFileSync(policy.docTarget, "allowed output\n");
+    assert.equal(verifyCandidateOutputs(candidateRoot, captured).pass, true);
+    writeFileSync(resolve(candidateRoot, "CANDIDATE.json"), jsonBytes({
+      sourcePath: "..\\hidden\\source.mjs",
+      docTarget: "..\\hidden\\gold.md",
+      allowedWorkerReads: ["..\\hidden"],
+      allowedWorkerWrites: ["..\\hidden"]
+    }));
+    const result = verifyCandidateOutputs(candidateRoot, captured);
+    assert.equal(result.pass, false);
+    assert.match(result.reasons.join("\n"), /CANDIDATE\.json/u);
+    assert.equal(policy.docTarget, resolve(candidateRoot, "docs", "guide.md"));
+    assert.equal(policy.boundary.allowedWorkerReads.every((path) =>
+      path.startsWith(candidateRoot)), true);
+  } finally {
+    rmSync(root, {recursive: true, force: true});
+  }
+});
+
+test("negative controls fail against an unconfined Windows-compatible launch", () => {
+  const root = temporary("documentation-pilot-probes");
+  const candidateRoot = resolve(root, "candidate");
+  const hiddenRoot = resolve(root, "hidden");
+  try {
+    mkdirSync(candidateRoot, {recursive: true});
+    mkdirSync(hiddenRoot, {recursive: true});
+    writeFileSync(resolve(candidateRoot, "public.txt"), "public");
+    writeFileSync(resolve(hiddenRoot, "gold.txt"), "hidden");
+    const result = runNegativeControlProbes({
+      launcher: "synthetic-launcher",
+      candidateRoot,
+      deniedPaths: [hiddenRoot],
+      spawn: (_launcher, args, options) => {
+        assert.equal(args[args.indexOf("--network") + 1], "copilot-control-plane");
+        const separator = args.indexOf("--");
+        return spawnSync(args[separator + 1], args.slice(separator + 2), options);
+      }
+    });
+    assert.equal(result.pass, false);
+    assert.equal(result.deniedReadableCount, 1);
+    assert.match(result.reasons.join("\n"), /forbidden coordinator path/u);
+  } finally {
+    rmSync(root, {recursive: true, force: true});
+  }
+});
+
+test("telemetry rejects unexpected tools and coordinator paths", () => {
+  const run = pilotRuns().find((item) => item.arm === "A2");
+  const candidate = temporary("documentation-pilot-unexpected-tool");
+  const hidden = resolve(dirname(candidate), "hidden-evaluator");
+  const events = syntheticEvents(run, candidate);
+  events.splice(events.length - 1, 0, event("tool.execution_start", {
+    toolCallId: "unexpected-web",
+    toolName: "web_search",
+    arguments: {path: hidden}
+  }, "2026-08-01T00:00:00.900Z"));
+  const result = auditTelemetry(events, {
+    run,
+    boundary: boundary(candidate),
+    evaluateAdherence,
+    forbiddenPaths: [hidden]
+  });
+  assert.equal(result.adherent, false);
+  assert.match(result.reasons.join("\n"), /unexpected tool|forbidden coordinator path/u);
+});
+
+test("execute authorization requires verified current main and exact resource bindings", () => {
+  const root = temporary("documentation-pilot-main-authorization");
+  const cli = resolve(root, "copilot.exe");
+  try {
+    mkdirSync(root);
+    writeFileSync(cli, "synthetic cli");
+    const options = {
+      cli,
+      sessionStore: resolve(root, "store.db"),
+      artifactRoot: resolve(root, "artifacts"),
+      candidateRoot: resolve(root, "candidates"),
+      sandboxSha256: "0".repeat(64)
+    };
+    assert.throws(
+      () => createExecutionAuthorization(options, {
+        pass: false,
+        reasons: ["HEAD is not the current canonical main commit"]
+      }),
+      /current canonical main/u
+    );
+    const authorization = createExecutionAuthorization(options, {
+      pass: true,
+      head: "2".repeat(40),
+      canonicalRemoteMain: "2".repeat(40)
+    }, new Date(), "fresh-main-execution-nonce");
+    assert.equal(authorization.runnerSourceCommit, "2".repeat(40));
+    assert.match(authorization.bindingsSha256, /^[a-f0-9]{64}$/u);
+    assert.match(authorization.bindings.cliSha256, /^[a-f0-9]{64}$/u);
   } finally {
     rmSync(root, {recursive: true, force: true});
   }

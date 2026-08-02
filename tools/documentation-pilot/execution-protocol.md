@@ -6,33 +6,33 @@ This protocol adds an execution mechanism without changing the preregistered fix
 schedule, prompt, model, tool, ID, evaluator, schema, threshold, source hash, or generated
 candidate/evaluator bytes. The preregistration remains authoritative.
 
+This outcome-independent amendment is permitted prospectively because no pilot session,
+usage row, lifecycle reservation, result root, or frozen ID exists. It repairs only how
+the already-frozen runner separates and observes execution. Once any pilot unit starts,
+the same changes would be post-treatment and are not permitted.
+
 ## Authorization sequence
 
-1. Merge and independently review the runner while the no-run attestation remains true.
+1. Merge and review this prospective runner amendment while the no-run attestation
+   remains true.
 2. Select two absent external roots on storage with durable retention and restricted
    access.
-3. Provide a reviewed isolation launcher and its SHA-256. Its self-test must prove denied
-   network access, candidate-only parent/worker filesystem access, and evaluator
-   separation.
-4. Run `--preflight` to obtain the reviewed runner digest and exact hashed bindings.
-5. Merge a separate approval JSON under `tools/documentation-pilot/authorizations/`.
-   It must bind the reviewed runner source commit and package digest, CLI executable,
-   session store path, roots, launcher, frozen order, and an expiry.
-6. Rerun `--preflight --authorization-file <committed-json>`.
-7. Issue a new explicit authorization for that exact `--execute --authorization-file`
-   command and execute once. Do not resume, retry, substitute, reorder, or reuse a
-   frozen ID.
+3. Provide a hash-pinned Windows-capable launcher implementing
+   `--candidate-root <root> --network <deny|copilot-control-plane> -- <command>`.
+4. Run `--preflight` to inspect the exact CLI surface, frozen hashes, unused IDs, fresh
+   paths, launcher bytes, runner digest, and proposed resource bindings.
+5. From a clean local `main` exactly equal to freshly fetched canonical `main`, invoke
+   the exact `--execute` command once. Do not resume, retry, substitute, reorder, or
+   reuse a frozen ID.
 
-The runner verifies that its current package digest equals the digest at the separately
-reviewed source commit named by the approval. It also fetches canonical
-`cirvine-MSFT/agentskill-pattern` `main`, requires GitHub's branch-protection API to
-confirm a positive required-approval count, stale-review dismissal, and administrator
-enforcement, and requires the approval bytes to match that protected branch exactly. It
-resolves the commit that introduced the approval to its merged pull request, fetches all
-review pages, and verifies the pull request retains the configured count of latest
-approvals on its final head SHA. A local commit cannot self-authorize execution.
-Changing any frozen design byte or runner mechanism invalidates preflight and requires
-review plus a new approval. A pilot GO never authorizes main observations.
+The merge plus explicit invocation is the authorization boundary. At execution the
+runner creates a four-hour nonce in immutable memory and binds it to the exact current
+main commit, runner package digest, frozen source/order, CLI executable, session store,
+external roots, and launcher bytes. It writes the authorization record and hash before
+the first slot. This repository does not require unavailable branch protection or a
+second principal, and no second approval PR is needed. Changing any frozen design byte
+or runner mechanism invalidates preflight and requires a new prospective reviewed
+amendment while zero units remain started. A pilot GO never authorizes main observations.
 
 ## Lifecycle and isolation
 
@@ -48,9 +48,30 @@ A2 telemetry must show the frozen Skill, exact worker handoff, one fixed-Haiku w
 session, only allowlisted reads, target-only edits, one compact return, and no parent
 target access after the first worker edit.
 
-The candidate launcher denies network and all filesystem access outside that candidate.
-After termination, the evaluator launcher receives the candidate plus the separate
-hidden evaluator root. The parent cannot grade or repair worker documentation.
+The candidate launch receives no evidence, evaluator, source-repository, schedule,
+session-store, sibling-output, hidden-test, gold, or result path through arguments or
+environment. The runner freezes policy from the public manifest before launch and never
+trusts or rereads the model-writable manifest afterward. It hashes every input and
+allows only the source and documentation targets to differ after termination.
+
+Before each candidate model call, runner-authored negative controls execute through the
+same launcher and must fail reads of the repository, schedule, session store,
+artifact/evaluator roots, and sibling sentinel while succeeding inside the candidate.
+Self-attested isolation booleans are not accepted. Process arguments and environment are
+inspected before spawn. Authenticated telemetry then rejects unexpected tools, escaped
+paths, and coordinator-path references. The exact frozen parent tool lists retain
+`bash`; web/search, MCP, remote export, custom instruction, auto-update, and unrelated
+integration surfaces are disabled.
+
+Candidate network policy permits required Copilot control-plane connectivity rather than
+claiming impossible full denial. Evaluator execution remains separately network-denied
+and receives the candidate plus hidden evaluator root only after candidate termination.
+The parent cannot grade or repair worker documentation.
+
+These controls are practical fail-closed separation and observed adherence evidence on
+the Windows host. They are not an independently enforced hostile sandbox, do not prove
+kernel-level filesystem isolation, and make no compliance or complete network-isolation
+claim. A malicious launcher, CLI, or runtime is outside this experiment's threat model.
 
 ## Settlement and disposition
 

@@ -6,11 +6,12 @@ import {
   existsSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   renameSync,
   writeFileSync
 } from "node:fs";
-import {basename, dirname, relative, resolve, sep} from "node:path";
+import {basename, dirname, isAbsolute, relative, resolve, sep} from "node:path";
 import {fileURLToPath} from "node:url";
 import {evaluate} from "../../experiments/documentation-delegation/scripts/evaluate.mjs";
 import {evaluateAdherence} from "../../experiments/documentation-delegation/scripts/evaluate-adherence.mjs";
@@ -22,6 +23,7 @@ import {
   AUTHORIZATION_DECISION,
   RUNNER_PROTOCOL_ID,
   SOURCE_COMMIT,
+  assertAuthorizationFresh,
   authorizationBindings,
   assertExternalFreshRoots,
   assertFrozenOrder,
@@ -37,6 +39,7 @@ import {
   frozenMaterializationId,
   inspectCleanRepository,
   inspectCli,
+  inspectMergedMain,
   inspectSandboxLauncher,
   jsonBytes,
   parseJsonl,
@@ -49,7 +52,7 @@ import {
   settleUsage,
   sha256,
   unavailableUsage,
-  verifyAuthorization,
+  createExecutionAuthorization,
   verifyFrozenSources,
   writeOnce
 } from "./core.mjs";
@@ -77,8 +80,8 @@ function usage() {
   return [
     "Usage:",
     "  node runner.mjs --dry-run",
-    "  node runner.mjs --preflight --cli <absolute-copilot> --session-store <db> --artifact-root <abs> --candidate-root <abs> --sandbox-launcher <path> --sandbox-sha256 <sha256> [--authorization-file <committed-json>]",
-    "  node runner.mjs --execute --authorization-file <committed-json> <same required options>"
+    "  node runner.mjs --preflight --cli <absolute-copilot> --session-store <db> --artifact-root <abs> --candidate-root <abs> --sandbox-launcher <path> --sandbox-sha256 <sha256>",
+    "  node runner.mjs --execute <same required options>  # only from clean, current canonical main"
   ].join("\n");
 }
 
@@ -141,10 +144,7 @@ function requiredOptions(values) {
     artifactRoot: resolve(values["artifact-root"]),
     candidateRoot: resolve(values["candidate-root"]),
     sandboxLauncher: resolve(values["sandbox-launcher"]),
-    sandboxSha256: values["sandbox-sha256"],
-    authorizationFile: values["authorization-file"]
-      ? resolve(values["authorization-file"])
-      : null
+    sandboxSha256: values["sandbox-sha256"]
   };
 }
 
@@ -162,19 +162,19 @@ export function preflight(options, dependencies = {}) {
   assertExternalFreshRoots(options);
   if (!existsSync(options.sessionStore)) throw new Error("Session usage store is missing");
   (dependencies.assertNoConsumedIds ?? assertNoConsumedIds)(options.sessionStore);
+  let mergedMain = null;
   let authorization = null;
   let authorizationError = null;
-  if (options.authorizationFile) {
+  if (options.requireAuthorization === true) {
     try {
-      authorization = (dependencies.verifyAuthorization ?? verifyAuthorization)(
-        options.authorizationFile,
-        options
+      mergedMain = (dependencies.inspectMergedMain ?? inspectMergedMain)();
+      authorization = (dependencies.createExecutionAuthorization ?? createExecutionAuthorization)(
+        options,
+        mergedMain
       );
     } catch (error) {
       authorizationError = error instanceof Error ? error.message : String(error);
     }
-  } else if (options.requireAuthorization === true) {
-    authorizationError = "a separately committed approval artifact is required";
   }
   const reasons = [
     ...frozen.errors,
@@ -193,16 +193,19 @@ export function preflight(options, dependencies = {}) {
     clean,
     cli,
     sandbox,
+    mergedMain,
     authorization,
     executionAuthorized: authorization !== null,
     authorizationRequest: {
       schemaVersion: 1,
       runnerProtocolId: RUNNER_PROTOCOL_ID,
       decision: AUTHORIZATION_DECISION,
-      approved: true,
+      approved: false,
+      requiresExplicitExecute: true,
       runnerSourceCommit: frozen.head,
       runnerSha256: runnerPackageDigest(),
-      bindings: authorizationBindings(options)
+      bindings: authorizationBindings(options),
+      authorizationBasis: "merge this prospective amendment, then invoke --execute from clean current main"
     },
     roots: {
       artifact: "fresh-external",
@@ -237,7 +240,7 @@ function appendIndex(path, index, run, disposition) {
   return next;
 }
 
-function runSandboxed({
+function runEvaluatorSandboxed({
   launcher,
   candidateRoot,
   evaluatorRoot = null,
@@ -274,19 +277,39 @@ function runSandboxed({
   return result;
 }
 
-function candidateBoundary(candidateRoot) {
-  const manifest = JSON.parse(readFileSync(resolve(candidateRoot, "CANDIDATE.json"), "utf8"));
-  const absolute = (path) => resolve(candidateRoot, path);
-  return {
-    caseSensitivePaths: process.platform !== "win32",
-    docTarget: absolute(manifest.docTarget),
-    allowedWorkerReads: manifest.allowedWorkerReads.map(absolute),
-    allowedWorkerWrites: manifest.allowedWorkerWrites.map(absolute)
-  };
+function candidatePath(candidateRoot, value) {
+  if (typeof value !== "string" || value.length === 0 || isAbsolute(value)) {
+    throw new Error("candidate policy contains an invalid relative path");
+  }
+  const absolute = resolve(candidateRoot, value);
+  const path = relative(candidateRoot, absolute);
+  if (path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path)) {
+    throw new Error("candidate policy path escapes the candidate root");
+  }
+  return absolute;
 }
 
-function candidateManifest(candidateRoot) {
-  return JSON.parse(readFileSync(resolve(candidateRoot, "CANDIDATE.json"), "utf8"));
+export function freezeCandidatePolicy(candidateRoot) {
+  const manifest = JSON.parse(readFileSync(resolve(candidateRoot, "CANDIDATE.json"), "utf8"));
+  const boundary = {
+    caseSensitivePaths: process.platform !== "win32",
+    candidateRoot: resolve(candidateRoot),
+    docTarget: candidatePath(candidateRoot, manifest.docTarget),
+    allowedWorkerReads: manifest.allowedWorkerReads.map((path) =>
+      candidatePath(candidateRoot, path)),
+    allowedWorkerWrites: manifest.allowedWorkerWrites.map((path) =>
+      candidatePath(candidateRoot, path))
+  };
+  return Object.freeze({
+    manifest: Object.freeze({...manifest}),
+    boundary: Object.freeze({
+      ...boundary,
+      allowedWorkerReads: Object.freeze(boundary.allowedWorkerReads),
+      allowedWorkerWrites: Object.freeze(boundary.allowedWorkerWrites)
+    }),
+    sourcePath: candidatePath(candidateRoot, manifest.sourcePath),
+    docTarget: boundary.docTarget
+  });
 }
 
 function prepareEvaluatorRuntime(evaluatorRoot) {
@@ -306,7 +329,7 @@ function invokeEvaluator(options, candidateRoot, evaluatorRoot, rawRoot, suffix)
   const outputPath = resolve(rawRoot, `evaluation-${suffix}.json`);
   const stderrPath = resolve(rawRoot, `evaluation-${suffix}.stderr.txt`);
   const script = resolve(evaluatorRoot, ".runtime", "evaluate.mjs");
-  const result = runSandboxed({
+  const result = runEvaluatorSandboxed({
     launcher: options.sandboxLauncher,
     candidateRoot,
     evaluatorRoot,
@@ -325,12 +348,186 @@ function invokeEvaluator(options, candidateRoot, evaluatorRoot, rawRoot, suffix)
   if (result.error || result.status !== 0 || !existsSync(outputPath)) {
     throw new Error(`deterministic evaluator ${suffix} failed`);
   }
-
   return {
     value: JSON.parse(readFileSync(outputPath, "utf8")),
     bytes: readFileSync(outputPath)
   };
 }
+
+function candidateFiles(candidateRoot) {
+    const files = {};
+    function walk(directory) {
+      for (const entry of readdirSync(directory, {withFileTypes: true})
+        .sort((left, right) => left.name.localeCompare(right.name))) {
+        if (entry.name === ".git") continue;
+        const path = resolve(directory, entry.name);
+        if (entry.isDirectory()) walk(path);
+        else if (entry.isFile()) {
+          files[relative(candidateRoot, path).split(sep).join("/")] = sha256(readFileSync(path));
+        }
+      }
+    }
+    walk(candidateRoot);
+    return files;
+  }
+
+  export function captureCandidateInputs(candidateRoot, policy) {
+    return Object.freeze({
+      files: Object.freeze(candidateFiles(candidateRoot)),
+      allowedOutputs: Object.freeze([
+        relative(candidateRoot, policy.sourcePath).split(sep).join("/"),
+        relative(candidateRoot, policy.docTarget).split(sep).join("/")
+      ])
+    });
+  }
+
+  export function verifyCandidateOutputs(candidateRoot, captured) {
+    const terminal = candidateFiles(candidateRoot);
+    const allowed = new Set(captured.allowedOutputs);
+    const reasons = [];
+    for (const [name, digest] of Object.entries(captured.files)) {
+      if (allowed.has(name)) continue;
+      if (terminal[name] !== digest) reasons.push(`immutable candidate input changed: ${name}`);
+    }
+    for (const name of Object.keys(terminal)) {
+      if (!Object.hasOwn(captured.files, name) && !allowed.has(name)) {
+        reasons.push(`unexpected candidate output: ${name}`);
+      }
+    }
+    return {
+      pass: reasons.length === 0,
+      reasons,
+      initialSha256: sha256(jsonBytes(captured.files)),
+      terminalSha256: sha256(jsonBytes(terminal)),
+      allowedOutputs: captured.allowedOutputs
+    };
+  }
+
+  const PROBE_SCRIPT = [
+    "const fs=require('node:fs');",
+    "const [candidate,...denied]=process.argv.slice(1);",
+    "const canRead=p=>{try{const s=fs.statSync(p);if(s.isDirectory())fs.readdirSync(p);else fs.readFileSync(p);return true}catch{return false}};",
+    "process.stdout.write(JSON.stringify({candidateReadable:canRead(candidate),denied:denied.map(path=>({path,readable:canRead(path)}))}));"
+  ].join("");
+
+  export function runNegativeControlProbes({
+    launcher,
+    candidateRoot,
+    deniedPaths,
+    executable = process.execPath,
+    spawn = spawnSync
+  }) {
+    const result = spawn(launcher, [
+      "--candidate-root", candidateRoot,
+      "--network", "copilot-control-plane",
+      "--",
+      executable,
+      "-e", PROBE_SCRIPT,
+      candidateRoot,
+      ...deniedPaths
+    ], {
+      cwd: candidateRoot,
+      encoding: "utf8",
+      env: buildCandidateEnvironment(process.env, deniedPaths),
+      windowsHide: true
+    });
+    let receipt = null;
+    try {
+      receipt = JSON.parse(result.stdout);
+    } catch {
+      // The runner treats malformed probe output as a failed negative control.
+    }
+    const reasons = [];
+    if (result.error || result.status !== 0) reasons.push("candidate boundary probe failed to execute");
+    if (receipt?.candidateReadable !== true) reasons.push("candidate root is not readable inside launch boundary");
+    if (!Array.isArray(receipt?.denied)
+      || receipt.denied.length !== deniedPaths.length
+      || receipt.denied.some((item) => item.readable !== false)) {
+      reasons.push("candidate launch boundary can read a forbidden coordinator path");
+    }
+    return {
+      pass: reasons.length === 0,
+      reasons,
+      launcherStatus: result.status,
+      candidateReadable: receipt?.candidateReadable === true,
+      deniedPathCount: deniedPaths.length,
+      deniedReadableCount: Array.isArray(receipt?.denied)
+        ? receipt.denied.filter((item) => item.readable === true).length
+        : null
+    };
+  }
+
+  const DROPPED_ENVIRONMENT = /^(?:GH_TOKEN|GITHUB_TOKEN|COPILOT_GITHUB_TOKEN|OPENAI_API_KEY|AZURE_.+(?:KEY|TOKEN|SECRET)|GITHUB_WORKSPACE|PWD|OLDPWD|INIT_CWD|npm_.+)$/iu;
+
+  export function buildCandidateEnvironment(environment, forbiddenPaths) {
+    const forbidden = forbiddenPaths.map((path) => resolve(path).toLowerCase());
+    return Object.fromEntries(Object.entries(environment)
+      .filter(([name, value]) =>
+        typeof value === "string"
+        && !DROPPED_ENVIRONMENT.test(name)
+        && !forbidden.some((path) => value.toLowerCase().includes(path))));
+  }
+
+  export function inspectCandidateLaunch({candidateRoot, executable, args, environment, forbiddenPaths}) {
+    const disclosed = forbiddenPaths.filter((path) => {
+      const normalized = resolve(path).toLowerCase();
+      return args.some((value) =>
+        typeof value === "string" && value.toLowerCase().includes(normalized))
+        || Object.values(environment).some((value) =>
+          typeof value === "string" && value.toLowerCase().includes(normalized));
+    });
+    const expectedSurface = args.filter((item) =>
+      item.startsWith("-") && item !== args[1]);
+    return {
+      pass: disclosed.length === 0,
+      reasons: disclosed.length === 0
+        ? []
+        : ["candidate arguments or environment disclose coordinator paths"],
+      executableSha256: sha256(readFileSync(executable)),
+      cwd: "candidate-root",
+      launcherArguments: ["--candidate-root", "<candidate-root>", "--network",
+        "copilot-control-plane", "--", "<copilot-cli>", "<frozen-cli-arguments>"],
+      environmentNames: Object.keys(environment).sort(),
+      cliSurface: expectedSurface,
+      controlPlaneConnectivity: "allowed by launcher policy",
+      otherNetworkIsolationClaimed: false
+    };
+  }
+
+  function runCandidateSandboxed({
+    launcher,
+    candidateRoot,
+    executable,
+    args,
+    environment,
+    stdoutPath,
+    stderrPath,
+    timeout
+  }) {
+    const stdoutFd = openSync(stdoutPath, "wx");
+    const stderrFd = openSync(stderrPath, "wx");
+    let result;
+    try {
+      result = spawnSync(launcher, [
+        "--candidate-root", candidateRoot,
+        "--network", "copilot-control-plane",
+        "--",
+        executable,
+        ...args
+      ], {
+        cwd: candidateRoot,
+        env: environment,
+        stdio: ["ignore", stdoutFd, stderrFd],
+        timeout,
+        killSignal: "SIGTERM",
+        windowsHide: true
+      });
+    } finally {
+      closeSync(stdoutFd);
+      closeSync(stderrFd);
+    }
+    return result;
+  }
 
 function settleRows(options, run, telemetry, dependencies) {
   const provider = dependencies.readUsageRows ?? readUsageRows;
@@ -505,6 +702,8 @@ export function runObservation(options, run, dependencies = {}) {
     if (digest !== expected.candidateSha256 || evaluatorDigest !== expected.evaluatorSha256) {
       throw new Error("materialized candidate/evaluator bytes differ from the frozen manifest");
     }
+    const policy = freezeCandidatePolicy(candidateRoot);
+    const capturedInputs = captureCandidateInputs(candidateRoot, policy);
     if (!dependencies.evaluate) prepareEvaluatorRuntime(evaluatorRoot);
     phase = "candidate-git-boundary";
     const gitBoundary = (dependencies.createCandidateGitRoot ?? createCandidateGitRoot)(candidateRoot);
@@ -513,6 +712,32 @@ export function runObservation(options, run, dependencies = {}) {
       candidateRoot,
       disabledMcpServers: options.configuredMcpServers
     });
+    const forbiddenPaths = [
+      repositoryRoot,
+      resolve(repositoryRoot, "experiments", "documentation-delegation", "design", "schedule.json"),
+      options.sessionStore,
+      options.artifactRoot,
+      rawRoot,
+      evaluatorRoot,
+      resolve(options.candidateRoot, ".runner-negative-control")
+    ];
+    const environment = buildCandidateEnvironment(process.env, forbiddenPaths);
+    const launchInspection = inspectCandidateLaunch({
+      candidateRoot,
+      executable: options.cli,
+      args,
+      environment,
+      forbiddenPaths
+    });
+    if (!launchInspection.pass) {
+      throw new Error(launchInspection.reasons.join("; "));
+    }
+    const probes = (dependencies.runNegativeControlProbes ?? runNegativeControlProbes)({
+      launcher: options.sandboxLauncher,
+      candidateRoot,
+      deniedPaths: forbiddenPaths
+    });
+    if (!probes.pass) throw new Error(`negative controls failed: ${probes.reasons.join("; ")}`);
     writeOnce(resolve(rawRoot, "launch.json"), jsonBytes({
       runnerProtocolId: RUNNER_PROTOCOL_ID,
       observationId: run.observationId,
@@ -522,9 +747,14 @@ export function runObservation(options, run, dependencies = {}) {
       workerModel: run.arm === "A2" ? readDesign().contract.cli.workerModel : null,
       parentTools: args.find((item) => item.startsWith("--available-tools=")),
       promptSha256: sha256(Buffer.from(args[1], "utf8")),
+      cliArgumentsSha256: sha256(jsonBytes(args)),
+      disabledMcpServers: options.configuredMcpServers,
       candidateSha256: digest,
       evaluatorSha256: evaluatorDigest,
-      gitBoundary
+      candidateInputsSha256: sha256(jsonBytes(capturedInputs.files)),
+      gitBoundary,
+      probes,
+      processInspection: launchInspection
     }));
     phase = "process-spawn";
     writeOnce(resolve(lifecycleRoot, "spawned.json"), jsonBytes({
@@ -535,13 +765,13 @@ export function runObservation(options, run, dependencies = {}) {
     const stdoutPath = resolve(rawRoot, "events.jsonl");
     const stderrPath = resolve(rawRoot, "process.stderr.txt");
     const execution = dependencies.execute
-      ? dependencies.execute({run, candidateRoot, evaluatorRoot, rawRoot, args})
-      : runSandboxed({
+      ? dependencies.execute({run, candidateRoot, args, environment})
+      : runCandidateSandboxed({
           launcher: options.sandboxLauncher,
           candidateRoot,
-          evidenceRoot: rawRoot,
           executable: options.cli,
           args,
+          environment,
           stdoutPath,
           stderrPath,
           timeout: 30 * 60_000
@@ -554,6 +784,9 @@ export function runObservation(options, run, dependencies = {}) {
     }
     const stdout = readFileSync(stdoutPath);
     const issues = [];
+    const candidateOutputs = verifyCandidateOutputs(candidateRoot, capturedInputs);
+    issues.push(...candidateOutputs.reasons);
+    writeOnce(resolve(rawRoot, "candidate-outputs.json"), jsonBytes(candidateOutputs));
     let events = [];
     let eventError = null;
     try {
@@ -586,8 +819,8 @@ export function runObservation(options, run, dependencies = {}) {
         reason: "authoritative parent usage could not establish the frozen start boundary"
       }));
     }
-    const boundary = candidateBoundary(candidateRoot);
-    const manifestRecord = candidateManifest(candidateRoot);
+    const boundary = policy.boundary;
+    const manifestRecord = policy.manifest;
     let telemetry = {
       adherent: false,
       adherence: {
@@ -607,6 +840,7 @@ export function runObservation(options, run, dependencies = {}) {
           run,
           boundary,
           evaluateAdherence,
+          forbiddenPaths,
           expectedWorkerPrompt: run.arm === "A2"
             ? buildWorkerHandoff(manifestRecord)
             : null
@@ -616,6 +850,18 @@ export function runObservation(options, run, dependencies = {}) {
         issues.push(reason);
         telemetry.adherence.violations = [reason];
         telemetry.reasons = [reason];
+      }
+      if (!candidateOutputs.pass) {
+        telemetry.adherent = false;
+        telemetry.reasons = [...new Set([...telemetry.reasons, ...candidateOutputs.reasons])].sort();
+        telemetry.adherence = {
+          ...telemetry.adherence,
+          adherent: false,
+          violations: [...new Set([
+            ...telemetry.adherence.violations,
+            ...candidateOutputs.reasons
+          ])].sort()
+        };
       }
     }
     issues.push(...telemetry.reasons);
@@ -651,8 +897,8 @@ export function runObservation(options, run, dependencies = {}) {
       events: stdout,
       stderr: readFileSync(stderrPath),
       usage: jsonBytes(rows),
-      publicSource: readFileSync(resolve(candidateRoot, manifestRecord.sourcePath)),
-      documentation: readFileSync(resolve(candidateRoot, manifestRecord.docTarget)),
+      publicSource: readFileSync(policy.sourcePath),
+      documentation: readFileSync(policy.docTarget),
       evaluation: jsonBytes(evaluation)
     });
     if (!privacy.pass) issues.push("privacy audit detected secret-bearing raw evidence");
@@ -773,7 +1019,6 @@ function reproduce(options, observations, dependencies) {
 }
 
 export function executePilot(options, dependencies = {}) {
-  if (!options.authorizationFile) throw new Error("A committed authorization file is required");
   const preflightResult = dependencies.preflight
     ? dependencies.preflight(options)
     : preflight({...options, requireAuthorization: true}, dependencies);
@@ -787,8 +1032,13 @@ export function executePilot(options, dependencies = {}) {
       ?? options.configuredMcpServers
       ?? []
   };
+  assertAuthorizationFresh(preflightResult.authorization);
   mkdirSync(options.artifactRoot, {recursive: false});
   mkdirSync(options.candidateRoot, {recursive: false});
+  writeOnce(
+    resolve(options.candidateRoot, ".runner-negative-control"),
+    Buffer.from("coordinator-only negative control\n", "utf8")
+  );
   writeOnce(resolve(options.artifactRoot, "execution-preflight.json"), jsonBytes(preflightResult));
   writeOnce(resolve(options.artifactRoot, "pilot.lock"), jsonBytes({
     runnerProtocolId: RUNNER_PROTOCOL_ID,
@@ -846,7 +1096,9 @@ export function dryRun() {
     authorization: {
       executeFlagRequired: true,
       decision: AUTHORIZATION_DECISION,
-      committedApprovalRequired: true,
+      committedApprovalRequired: false,
+      mergedProspectiveAmendmentRequired: true,
+      cleanCanonicalMainRequired: true,
       runnerSha256: runnerPackageDigest(),
       mainAuthorized: false
     }

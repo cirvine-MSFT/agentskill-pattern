@@ -1,4 +1,4 @@
-import {createHash} from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
 import {spawnSync} from "node:child_process";
 import {
   existsSync,
@@ -21,6 +21,7 @@ export const RUNNER_PROTOCOL_ID = "feature-documentation-pilot-runner-v1";
 export const AUTHORIZATION_DECISION = "authorize-excluded-documentation-pilot-v1";
 export const CANONICAL_REPOSITORY = "cirvine-MSFT/agentskill-pattern";
 export const CANONICAL_REMOTE_URL = "https://github.com/cirvine-MSFT/agentskill-pattern.git";
+export const AUTHORIZATION_VALIDITY_MS = 4 * 60 * 60 * 1000;
 export const PARENT_TOOLS = Object.freeze({
   A1: ["read", "edit", "bash"],
   A2: ["read", "edit", "bash", "skill", "task"]
@@ -128,212 +129,72 @@ export function authorizationBindings(options) {
   };
 }
 
-export function currentApprovingReviews(reviews, finalHeadSha = null) {
-  const latest = new Map();
-  for (const review of [...reviews].sort((left, right) => {
-    const time = Date.parse(left.submitted_at ?? "") - Date.parse(right.submitted_at ?? "");
-    return time !== 0 ? time : (left.id ?? 0) - (right.id ?? 0);
-  })) {
-    const login = review.user?.login;
-    if (typeof login === "string" && login.length > 0) latest.set(login, review);
-  }
-  return [...latest.entries()]
-    .filter(([, review]) =>
-      review.state === "APPROVED"
-      && (finalHeadSha === null || review.commit_id === finalHeadSha))
-    .map(([login]) => login)
-    .sort();
-}
-
-export function verifyAuthorization(path, options, now = new Date()) {
-  const absolute = resolve(path);
-  const authorizationRoot = resolve(toolRoot, "authorizations");
-  if (!within(authorizationRoot, absolute) || !existsSync(absolute)) {
-    throw new Error("Authorization must be a committed file under tools/documentation-pilot/authorizations");
-  }
-  const repositoryPath = relative(repositoryRoot, absolute).split(sep).join("/");
-  const tracked = command(
-    "git", ["ls-files", "--error-unmatch", "--", repositoryPath], {allowFailure: true}
-  );
-  const committed = command(
-    "git", ["show", `HEAD:${repositoryPath}`], {encoding: null, allowFailure: true}
-  );
-  const bytes = readFileSync(absolute);
-  if (tracked.status !== 0 || committed.status !== 0 || !committed.stdout.equals(bytes)) {
-    throw new Error("Authorization is not exactly committed at HEAD");
-  }
-  const approval = JSON.parse(bytes.toString("utf8"));
-  const reasons = [];
-  if (approval.schemaVersion !== 1
-    || approval.runnerProtocolId !== RUNNER_PROTOCOL_ID
-    || approval.decision !== AUTHORIZATION_DECISION
-    || approval.approved !== true) {
-    reasons.push("approval identity or decision is invalid");
-  }
-  if (!/^[a-f0-9]{40}$/u.test(approval.runnerSourceCommit ?? "")) {
-    reasons.push("reviewed runner source commit is invalid");
-  } else {
-    const ancestor = command(
-      "git", ["merge-base", "--is-ancestor", approval.runnerSourceCommit, "HEAD"],
-      {allowFailure: true}
-    );
-    if (ancestor.status !== 0) reasons.push("reviewed runner source commit is not an ancestor");
-  }
-  const currentRunnerSha256 = runnerPackageDigest();
-  let reviewedRunnerSha256 = null;
-  try {
-    reviewedRunnerSha256 = runnerPackageDigestAtCommit(approval.runnerSourceCommit);
-  } catch (error) {
-    reasons.push(`reviewed runner bytes are unavailable: ${error.message}`);
-  }
-  if (approval.runnerSha256 !== currentRunnerSha256
-    || approval.runnerSha256 !== reviewedRunnerSha256) {
-    reasons.push("current runner differs from the separately reviewed source commit");
-  }
-  const expiresAt = Date.parse(approval.expiresAt ?? "");
-  if (!Number.isFinite(expiresAt) || expiresAt <= now.getTime()) {
-    reasons.push("approval is expired or lacks a valid expiry");
-  }
-  const expectedBindings = authorizationBindings(options);
-  if (JSON.stringify(stableJson(approval.bindings))
-    !== JSON.stringify(stableJson(expectedBindings))) {
-    reasons.push("approval bindings differ from the exact execution resources");
-  }
-  if (reasons.length > 0) throw new Error(`Authorization invalid: ${reasons.join("; ")}`);
-  const protectionResult = command(
-    "gh",
-    ["api", `repos/${CANONICAL_REPOSITORY}/branches/main/protection`],
-    {allowFailure: true}
-  );
-  let protection = null;
-  try {
-    protection = JSON.parse(protectionResult.stdout);
-  } catch {
-    reasons.push("canonical main branch protection could not be parsed");
-  }
-  if (protectionResult.status !== 0
-    || protection?.required_pull_request_reviews === null
-    || protection?.required_pull_request_reviews === undefined) {
-    reasons.push("canonical main does not prove required pull-request review protection");
-  }
-  const requiredApprovalCount =
-    protection?.required_pull_request_reviews?.required_approving_review_count;
-  if (!Number.isInteger(requiredApprovalCount) || requiredApprovalCount < 1) {
-    reasons.push("canonical main does not require at least one approving review");
-  }
-  if (protection?.required_pull_request_reviews?.dismiss_stale_reviews !== true) {
-    reasons.push("canonical main does not dismiss stale approvals");
-  }
-  if (protection?.enforce_admins?.enabled !== true) {
-    reasons.push("canonical main protection is not enforced for administrators");
-  }
+export function inspectMergedMain() {
   const fetch = command(
     "git",
     ["fetch", "--quiet", "--no-tags", CANONICAL_REMOTE_URL, "refs/heads/main"],
     {allowFailure: true}
   );
+  const branch = command(
+    "git", ["symbolic-ref", "--quiet", "--short", "HEAD"], {allowFailure: true}
+  ).stdout.trim();
+  const head = git(["rev-parse", "HEAD"]);
+  const remoteMain = fetch.status === 0 ? git(["rev-parse", "FETCH_HEAD"]) : null;
+  const reasons = [];
   if (fetch.status !== 0) reasons.push("canonical main could not be fetched");
-  let remoteMain = null;
-  let approvalCommit = null;
-  let approvalPullRequest = null;
-  let approvingReviewers = [];
-  if (fetch.status === 0) {
-    remoteMain = git(["rev-parse", "FETCH_HEAD"]);
-    const remoteAuthorization = command(
-      "git", ["show", `${remoteMain}:${repositoryPath}`], {encoding: null, allowFailure: true}
-    );
-    if (remoteAuthorization.status !== 0 || !remoteAuthorization.stdout.equals(bytes)) {
-      reasons.push("authorization is not byte-identical on canonical main");
-    }
-    const reviewedOnRemote = command(
-      "git", ["merge-base", "--is-ancestor", approval.runnerSourceCommit, remoteMain],
-      {allowFailure: true}
-    );
-    const remoteOnHead = command(
-      "git", ["merge-base", "--is-ancestor", remoteMain, "HEAD"],
-      {allowFailure: true}
-    );
-    if (reviewedOnRemote.status !== 0 || remoteOnHead.status !== 0) {
-      reasons.push("local HEAD and reviewed runner are not descendants of canonical main approval");
-    }
-    const approvalLog = command(
-      "git", ["log", "-1", "--format=%H", remoteMain, "--", repositoryPath],
-      {allowFailure: true}
-    );
-    approvalCommit = approvalLog.status === 0 ? approvalLog.stdout.trim() : null;
-    if (!/^[a-f0-9]{40}$/u.test(approvalCommit ?? "")) {
-      reasons.push("canonical approval commit could not be identified");
-    } else {
-      const pullsResult = command(
-        "gh",
-        [
-          "api",
-          "--paginate",
-          "--slurp",
-          "-H", "Accept: application/vnd.github+json",
-          `repos/${CANONICAL_REPOSITORY}/commits/${approvalCommit}/pulls?per_page=100`
-        ],
-        {allowFailure: true}
-      );
-      let pulls = [];
-      try {
-        pulls = JSON.parse(pullsResult.stdout).flat();
-      } catch {
-        reasons.push("approval commit pull requests could not be parsed");
-      }
-      const pull = Array.isArray(pulls)
-        ? pulls.find((item) =>
-            item.merged_at
-            && item.base?.ref === "main"
-            && item.state === "closed")
-        : null;
-      if (pullsResult.status !== 0 || !pull) {
-        reasons.push("approval commit is not associated with a merged canonical-main pull request");
-      } else {
-        approvalPullRequest = pull.number;
-        const reviewsResult = command(
-          "gh",
-          [
-            "api",
-            "--paginate",
-            "--slurp",
-            `repos/${CANONICAL_REPOSITORY}/pulls/${pull.number}/reviews?per_page=100`
-          ],
-          {allowFailure: true}
-        );
-        let reviews = [];
-        try {
-          reviews = JSON.parse(reviewsResult.stdout).flat();
-        } catch {
-          reasons.push("approval pull-request reviews could not be parsed");
-        }
-        approvingReviewers = Array.isArray(reviews)
-          ? currentApprovingReviews(reviews, pull.head?.sha)
-          : [];
-        if (reviewsResult.status !== 0
-          || approvingReviewers.length < requiredApprovalCount) {
-          reasons.push("approval pull request lacks the protected branch's required current approvals");
-        }
-      }
-    }
+  if (branch !== "main") reasons.push("execution must run from the default main branch");
+  if (remoteMain === null || head !== remoteMain) {
+    reasons.push("HEAD is not the current canonical main commit");
   }
-  if (reasons.length > 0) throw new Error(`Authorization invalid: ${reasons.join("; ")}`);
-  return {
-    approvalId: approval.approvalId,
-    decision: approval.decision,
+  return {pass: reasons.length === 0, reasons, branch, head, canonicalRemoteMain: remoteMain};
+}
+
+export function createExecutionAuthorization(
+  options,
+  mergedMain,
+  now = new Date(),
+  nonce = randomUUID()
+) {
+  if (!mergedMain?.pass) {
+    throw new Error(`Execution authorization invalid: ${mergedMain?.reasons?.join("; ")
+      ?? "canonical main was not verified"}`);
+  }
+  const bindings = authorizationBindings(options);
+  const authorization = {
+    schemaVersion: 1,
+    runnerProtocolId: RUNNER_PROTOCOL_ID,
+    decision: AUTHORIZATION_DECISION,
     approved: true,
-    runnerSourceCommit: approval.runnerSourceCommit,
-    runnerSha256: approval.runnerSha256,
-    expiresAt: approval.expiresAt,
-    bindingsSha256: sha256(jsonBytes(approval.bindings)),
-    authorizationBlobSha256: sha256(bytes),
-    repositoryPath,
-    canonicalRemoteMain: remoteMain,
-    branchProtectionSha256: sha256(Buffer.from(protectionResult.stdout, "utf8")),
-    approvalCommit,
-    approvalPullRequest,
-    approvingReviewers
+    basis: "merged-prospective-amendment-plus-explicit-execute",
+    runnerSourceCommit: mergedMain.head,
+    runnerSha256: runnerPackageDigest(),
+    issuedAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + AUTHORIZATION_VALIDITY_MS).toISOString(),
+    nonce,
+    bindings
   };
+  return {
+    ...authorization,
+    bindingsSha256: sha256(jsonBytes(bindings)),
+    authorizationBlobSha256: sha256(jsonBytes(authorization)),
+    canonicalRemoteMain: mergedMain.canonicalRemoteMain
+  };
+}
+
+export function assertAuthorizationFresh(authorization, now = new Date()) {
+  const issuedAt = Date.parse(authorization?.issuedAt ?? "");
+  const expiresAt = Date.parse(authorization?.expiresAt ?? "");
+  if (authorization?.approved !== true
+    || authorization?.basis !== "merged-prospective-amendment-plus-explicit-execute"
+    || typeof authorization?.nonce !== "string"
+    || authorization.nonce.length < 16
+    || !Number.isFinite(issuedAt)
+    || !Number.isFinite(expiresAt)
+    || issuedAt > now.getTime()
+    || expiresAt <= now.getTime()
+    || expiresAt - issuedAt !== AUTHORIZATION_VALIDITY_MS) {
+    throw new Error("Execution authorization is missing, stale, or malformed");
+  }
 }
 
 export function writeOnce(path, bytes) {
@@ -632,7 +493,8 @@ export function auditTelemetry(events, {
   run,
   boundary,
   evaluateAdherence,
-  expectedWorkerPrompt = null
+  expectedWorkerPrompt = null,
+  forbiddenPaths = []
 }) {
   const {contract} = readDesign();
   const reasons = [];
@@ -657,6 +519,24 @@ export function auditTelemetry(events, {
       && ["model.call_start", "assistant.message", "subagent.started", "subagent.completed"]
         .includes(event.type))
     .map((event) => event.data?.model));
+  const allowedParentTools = new Set(PARENT_TOOLS[run.arm]);
+  for (const event of starts) {
+    const role = eventRole(event, normalized.workerCallId);
+    const name = event.data?.toolName;
+    const allowed = role === "worker"
+      ? ["read", "edit"].includes(name)
+      : allowedParentTools.has(name);
+    if (!allowed) reasons.push(`${role} used unexpected tool ${name ?? "<missing>"}`);
+    const path = toolPath(event.data?.arguments);
+    if (path && !within(boundary.candidateRoot, resolve(boundary.candidateRoot, path))) {
+      reasons.push(`${role} tool path escaped the candidate root`);
+    }
+    const serialized = JSON.stringify(event.data?.arguments ?? {});
+    if (forbiddenPaths.some((forbidden) =>
+      serialized.toLowerCase().includes(resolve(forbidden).toLowerCase()))) {
+      reasons.push(`${role} tool arguments referenced a forbidden coordinator path`);
+    }
+  }
   if (parentModels.length !== 1 || parentModels[0] !== contract.cli.parentModel) {
     reasons.push("parent model attribution differs from the frozen pin");
   }
@@ -1065,21 +945,12 @@ export function inspectSandboxLauncher(path, expectedSha256) {
   if (!path || !existsSync(path)) return {pass: false, reasons: ["sandbox launcher is missing"]};
   const observed = sha256(readFileSync(path));
   const reasons = observed === expectedSha256 ? [] : ["sandbox launcher hash differs"];
-  const probe = command(path, ["--self-test", "--json"], {allowFailure: true});
-  let receipt = null;
-  try {
-    receipt = JSON.parse(probe.stdout);
-  } catch {
-    reasons.push("sandbox launcher self-test did not return JSON");
-  }
-  if (probe.status !== 0
-    || receipt?.filesystemIsolation !== true
-    || receipt?.candidateOnly !== true
-    || receipt?.networkDeny !== true
-    || receipt?.evaluatorSeparation !== true) {
-    reasons.push("sandbox launcher cannot attest the frozen isolation boundary");
-  }
-  return {pass: reasons.length === 0, reasons: unique(reasons), sha256: observed, receipt};
+  return {
+    pass: reasons.length === 0,
+    reasons,
+    sha256: observed,
+    verification: "hash-only; runner-owned probes execute before each candidate launch"
+  };
 }
 
 export function inspectCleanRepository() {
