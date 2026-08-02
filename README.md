@@ -1,145 +1,90 @@
 # Agent Skill Pattern
 
-**Agent Skill Pattern** is repository-local terminology for a specific composition of
-already-established agent mechanisms: a small, progressively disclosed Agent **Skill**
-that helps a parent model discover a bounded need, which in turn instructs or causes
-the runtime to delegate to a separate, cost-tiered, tool-minimized **custom subagent**.
-The subagent writes its output artifact directly to the workspace and returns a compact
-status to the parent, instead of streaming the work through the parent's own context.
+**Agent Skill Pattern** is repository-local terminology for composing established
+agent mechanisms:
 
-This is **not presented as a novel technique**. Progressive disclosure, cost-tiered
-model selection, narrow tool allowlists, isolated subagent contexts, and compact returns
-are independently documented across multiple platforms. Direct subagent artifact writes
-are a more specific implementation tactic; LangChain Deep Agents is the closest
-documented match found in the survey. What this repository names is the particular
-*wiring* of these mechanisms and tactics, for use as shared vocabulary within this
-repository and its reference implementations. See
-[Research and prior art](#research-and-prior-art) below for the evidence behind that
-claim.
+1. a small, progressively disclosed Agent **Skill** recognizes a bounded subtask;
+2. the parent delegates that subtask to a separate, usually cheaper custom agent;
+3. the worker receives a narrow tool surface and isolated context;
+4. the worker writes the artifact directly and returns compact status.
 
-## Pattern summary
+The name describes this wiring, not a novel primitive. See
+[`docs/agent-skill-pattern.md`](docs/agent-skill-pattern.md) for the detailed
+architecture and [`docs/research/prior-art.md`](docs/research/prior-art.md) for the
+evidence and terminology review.
+
+## When it may fit
+
+Use the pattern only for a repeatable, well-bounded task that does not need the
+parent's full history and can be evaluated independently. Delegation can isolate
+working context and move work to a cheaper model, but it adds routing, tool, latency,
+and reliability costs. Model price alone is not evidence that the complete workflow is
+cheaper or good enough.
 
 | Role | Responsibility |
 | --- | --- |
-| **Harness** | Hosts the parent session, surfaces installed Skills and custom agents, and performs the actual delegation when the parent chooses to invoke a subagent. |
-| **Parent** | Maintains session continuity and access to relevant repository state, subject to the model's finite context window (and potentially lossy compaction over a long session). Sees only Skill metadata until a Skill is triggered. |
-| **Skill** | A minimal, progressively disclosed router. Its job is *discovery and routing only* — recognizing that a bounded task matches its description and instructing the parent to delegate to a named subagent. It does not do the work itself. |
-| **Subagent** | A separate custom agent, usually on a cheaper/smaller model, with a narrow, task-specific tool allowlist and an isolated context window. It performs the bounded work, writes the resulting artifact directly, and returns a terse status. |
+| Harness | Exposes Skills and agents and performs delegation. |
+| Parent | Owns the main task and decides whether the Skill applies. |
+| Skill | Provides progressive discovery and routing instructions only. |
+| Worker | Performs the bounded subtask with minimal tools, writes the artifact, and returns compact status. |
 
-See [`docs/agent-skill-pattern.md`](docs/agent-skill-pattern.md) for the full breakdown
-of roles, the discovery/progressive-disclosure flow, model selection, artifact-write
-semantics, recursive-delegation protection, failure modes, and when *not* to use this
-pattern.
+Editable architecture diagrams and rendered PNGs are in
+[`docs/diagrams/`](docs/diagrams/).
 
-## When and why to use it
+## Implementations
 
-Use this pattern when a parent session repeatedly recognizes a **narrow, well-bounded**
-sub-task (for example, generating one asset in a fixed format) that:
-
-- doesn't need the parent's full conversation history or repository context to complete, and
-- can be done correctly by a smaller/cheaper model with a small, fixed set of tools.
-
-The intended benefit is context and cost reduction, but the mechanism differs by role:
-the **parent** benefits because the delegated work's reasoning, tool calls, and artifact
-content stay isolated in the subagent and never enter the parent's (more expensive)
-context — only a compact status returns. The **subagent** benefits separately because
-its own narrow tool allowlist means fewer tool schemas, fewer competing choices, and
-fewer irrelevant results for *it* to reason over — this does not reduce the parent's
-tool schema footprint, since the parent's own toolset is unchanged. Reduced tool surface
-on the subagent is also a secondary safety benefit, not the primary motivation for either
-role. It is a poor fit for open-ended, conversational, or broad-tool-access work; see
-[`docs/agent-skill-pattern.md`](docs/agent-skill-pattern.md#when-not-to-use-this-pattern).
-
-## Architecture
-
-Editable [Excalidraw](https://aka.ms/excalidraw) sources live in
-[`docs/diagrams/`](docs/diagrams/) alongside their PNG exports.
-
-[![Agent Skill discovery and invocation flow](docs/diagrams/discovery-and-invocation.png)](docs/diagrams/discovery-and-invocation.excalidraw)
-
-*Discovery and invocation* — [editable source](docs/diagrams/discovery-and-invocation.excalidraw)
-
-[![Parent and specialist context boundaries](docs/diagrams/context-and-cost-boundary.png)](docs/diagrams/context-and-cost-boundary.excalidraw)
-
-*Context and cost boundary* — [editable source](docs/diagrams/context-and-cost-boundary.excalidraw)
-
-See [`docs/diagrams/README.md`](docs/diagrams/README.md) for full alt text and
-descriptions of both diagrams.
-
-## Reference implementations
-
-| Reference | Live components | Status |
+| Use case | Components | Status |
 | --- | --- | --- |
-| **ASCII art** | [`ascii-art` Skill](.github/skills/ascii-art/SKILL.md), [custom agent](.github/agents/ascii-art.agent.md), and [implementation notes](docs/reference-implementations/ascii-art.md) | Implemented; the [completed case study](experiments/ascii-art-powershell-cli) tests the pattern's small-task cost/quality hypothesis. |
-| **Semantic test corpus** | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [inherited-model agent](.github/agents/semantic-test-corpus.agent.md), [fixed-Haiku target agent](.github/agents/semantic-test-corpus-haiku.agent.md), [implementation notes](docs/reference-implementations/semantic-test-corpus.md), and [research](docs/research/semantic-corpus-generation.md) | Implemented; the [completed six-arm protocol-v5 case study](experiments/semantic-test-corpus/report.md) reports 12 complete randomized blocks and descriptive ITT results. |
-| **Release-note synthesis** | [`release-note-synthesis` Skill](.github/skills/release-note-synthesis/SKILL.md), [fixed-Haiku agent](.github/agents/release-note-haiku.agent.md), [two-tool boundary](tools/release-note-mcp/), and [experiment foundation](experiments/release-note-synthesis/) | Abandoned on the current runtime after immutable v0 and v2 NO-GO evidence; semantic quality was not tested and no confirmation is authorized. |
-| **Grounded action-item extraction v1** | [Immutable excluded feasibility case study](experiments/action-item-extraction/) with a candidate-local routing Skill and fixed-Haiku `read`/`edit` worker | Immutable development-smoke NO-GO at merge `4900bdde8250292c86d4040d242359359ac050a0` / PR #26; no pilot, confirmation, or main unit was authorized. |
-| **Grounded action-item extraction v2** | [Corrected excluded feasibility case study](experiments/action-item-extraction-v2/) using the exact CLI `task,view,edit` surface and sentinel replacement | Immutable development NO-GO: one development unit ran, the required parent/worker `Tools:` schemas were not captured, and the documented parent `edit` warning therefore could not be accepted. Zero pilots started; no confirmation or main execution is authorized. |
-| **Grounded action-item extraction v3** | [Immutable excluded-pilot results](experiments/action-item-extraction-v3/) with exact prefixed-line citations and a prospective CLI 1.0.77 warning rule | Immutable NO-GO: all three preregistered A4 units ran once in frozen order and remain in ITT; mean tuple F1 was 0.462, source grounding was not 100%, and no main execution is authorized. |
+| ASCII art | [`ascii-art` Skill](.github/skills/ascii-art/SKILL.md), [agent](.github/agents/ascii-art.agent.md), [notes](docs/reference-implementations/ascii-art.md) | Implemented; controlled benchmark was faster but costlier and lower quality. |
+| Semantic test corpus | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [agents](.github/agents/semantic-test-corpus.agent.md), [confined MCP](tools/semantic-corpus-mcp/), [notes](docs/reference-implementations/semantic-test-corpus.md) | Implemented; controlled benchmark saved AI credits and parent context but lost held-out quality and reliability. |
+| Release-note synthesis | [`release-note-synthesis` Skill](.github/skills/release-note-synthesis/SKILL.md), [agent](.github/agents/release-note-haiku.agent.md), [two-tool MCP](tools/release-note-mcp/) | Feasibility only; runtime wiring failed before semantic quality could be tested. |
+| Action-item extraction | [retained v3 Skill and agent](experiments/action-item-extraction/candidate/) | Feasibility only; context isolation worked, but held-out tuple quality and grounding failed. |
 
-In the semantic reference, migration and expected-output oracle behavior remain
-deterministic. AI is limited to proposing semantic v1 source scenarios, with staged
-writes isolated behind a [path-constrained MCP server](tools/semantic-corpus-mcp/server.mjs)
-and its [tests](tests/semantic-corpus-mcp/). An enforceable OS sandbox is mandatory:
-use a container, restricted mounts, restricted VM, or dedicated ACL identity. The [completed protocol-v5 benchmark](experiments/semantic-test-corpus/report.md)
-compares one deterministic baseline, a 2x2 model-tier-by-delegation design, and
-the GPT-parent-to-fixed-Haiku target arm. Earlier protocols, including
-`protocol.md`, are historical only.
+## What the experiments found
 
-## Evidence and experiments
+The compact [experiment index](experiments/README.md) is the canonical cross-study
+summary. Each study retains one concise protocol and one canonical report.
 
-The ASCII art case study is available at
-[`experiments/ascii-art-powershell-cli`](experiments/ascii-art-powershell-cli). Its
-immutable control is tag `experiment-control-v1` at
-`6e2812c0e181502cb1aafbc5fa3e31761b4b54ed`; its frozen treatment is tag
-`experiment-treatment-v1` at `ac0895c23c4c811cf10e5af5b42efcde12c14849`.
-In 20 complete intent-to-treat pairs, treatment used 55.5% more total nano-AIU and
-53.9% more parent cumulative input, with deterministic pass 25 percentage points
-lower and blinded overall quality 0.883 points lower; wall latency was 54.9% lower.
-Neither preregistered efficiency marker (10% lower total nano-AIU and 15% lower
-parent cumulative input) was reached.
-Fourteen of 60 schedules are missing, so inference and significance claims are
-withheld. See the [report](experiments/ascii-art-powershell-cli/report.md),
-[raw evidence](experiments/ascii-art-powershell-cli/raw/), and
-[machine-readable results](experiments/ascii-art-powershell-cli/results/).
+- **Semantic corpus:** the target GPT-parent-to-Haiku-worker arm used 38.8% fewer
+  combined AI credits and 58.0% less parent cumulative input than GPT inline, but
+  used 88.0% more total model tokens, took 72.0% longer, missed held-out path and
+  mutant-quality floors, and was treatment-adherent in only 1/12 units.
+- **ASCII:** treatment finished 54.9% faster among 20 complete pairs, but used 69.7%
+  more combined AI credits and 53.9% more parent cumulative input, with deterministic
+  pass 25 percentage points lower and blinded overall quality 0.883 points lower.
+- **Release notes:** the Skill and worker were reached, but canonical MCP tools never
+  executed and no draft artifact was produced. Semantic quality was never tested.
+- **Action items:** the v3 mechanics isolated transcript/file work from the parent, but
+  the three excluded pilots averaged 0.462 tuple F1 and failed the 100% grounding
+  requirement.
 
-The semantic test-corpus case study completed all 72 protocol-v5 units in 12
-randomized complete blocks. The target arm used 38.8% fewer credits/nano-AIU and
-58.0% less parent cumulative input than GPT inline, but used 88.0% more total model
-tokens, took 72.0% longer, missed the path and mutant-quality floors, and was
-treatment-adherent in only 1/12 units. The preregistered positive-efficiency signal
-was not met. See the [final report](experiments/semantic-test-corpus/report.md),
-[self-contained results dashboard](experiments/semantic-test-corpus/results/v5-results-dashboard.html),
-[GitHub-renderable static charts](experiments/semantic-test-corpus/results/v5-charts/),
-[immutable evidence package](experiments/semantic-test-corpus/results/v5-b01/), and
-[machine-readable summary](experiments/semantic-test-corpus/results/v5-final-summary.json).
-These local, unsigned results are descriptive only.
+Quality was assessed by repository-owned deterministic external evaluators and, for
+ASCII, blinded artifact judging. The parent model did not grade its own output.
+Release-note and action-item runs were excluded feasibility probes without valid
+control arms; they are not controlled evidence. No main study followed any probe.
 
-## Research and prior art
+AI credits are the runtime's available usage measure, not a portable dollar cost.
+Combined values include parent and worker usage and exclude evaluator/judge usage
+unless explicitly stated.
 
-[`docs/research/prior-art.md`](docs/research/prior-art.md) is the source-of-truth
-survey behind the claims above. In summary: no source surveyed documents this exact
-composition as a single named pattern. **LangChain's Deep Agents `SubAgent` schema is
-the closest documented structural match** — combining a model override, an explicitly
-minimal tool allowlist, isolated per-subagent progressive-disclosure skills, and a
-structured return on one object — but even Deep Agents does not document a Skill's own
-activation as the mechanism that causes the parent to invoke the subagent, which is the
-narrower distinction this repository's pattern draws. See the report's
-[terminology recommendation](docs/research/prior-art.md#7-terminology-recommendation)
-and [conclusion](docs/research/prior-art.md#8-conclusion) for the full reasoning, and
-[`docs/research/evidence.csv`](docs/research/evidence.csv) /
-[`docs/research/search-log.md`](docs/research/search-log.md) for supporting evidence and
-search methodology.
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| [`.github/skills/`](.github/skills/) and [`.github/agents/`](.github/agents/) | Live routing Skills and custom agents |
+| [`tools/`](tools/) and [`tests/`](tests/) | Confined MCP implementations and tests |
+| [`docs/`](docs/) | Pattern, diagrams, prior art, and implementation notes |
+| [`experiments/`](experiments/) | Protocols, canonical results, and retained reproducibility source |
+
+The repository intentionally excludes raw event streams, copied runtime payloads,
+per-run evidence bundles, generated dashboards, and obsolete one-shot harnesses.
+Negative findings, limitations, preregistered dispositions, and the Git history that
+contains the original evidence packages remain explicit.
 
 ## Status
 
-This repository contains the pattern documentation, benchmark foundation, and live
-GitHub Copilot reference implementations. Both case studies are complete and
-descriptive only. The ASCII dataset is incomplete and dispatch-affected. The semantic
-protocol-v5 dataset contains all 72 scheduled units, but its local, unsigned evidence
-and preregistered analysis still do not support significance, causal, compliance, or
-population-generalization claims.
-
-## License
+The pattern remains a research pattern, not a validated optimization. The controlled
+studies did not establish a positive quality-adjusted efficiency result, the feasibility
+probes did not authorize confirmation, and no main study was run.
 
 Released under the [MIT License](LICENSE).

@@ -1,0 +1,5 @@
+study,evidence_class,comparator,n,parent_credits,worker_credits,combined_credits,parent_context_direction,total_model_tokens_direction,wall_time_direction,quality_reliability,result
+ascii,controlled,"treatment vs control",20,"25.40 vs 16.40","2.43 vs 0","27.83 vs 16.40 (+69.7%)","+53.9% parent cumulative input","+59.3% complete-system model tokens","-54.9%","deterministic pass -25 pp; blinded overall -0.883/5","faster but costlier and lower quality; inference withheld"
+semantic-corpus,controlled,"A5 vs A1",12,"9.251 vs 43.324","17.256 vs 0","26.507 vs 43.324 (-38.8%)","-58.0% cumulative input","+88.0%","+72.0%","path -21.3 pp vs A1; mutant kill -43.9 pp; adherence 1/12","credits saved but quality/reliability lost"
+release-notes,excluded-feasibility,"none",3,8.703,0.517,9.220,"not estimable","mean 31041","mean 49.4 s","0/3 operational; semantic quality untested","runtime wiring failed before semantics"
+action-items,excluded-feasibility,"none",3,8.456,3.383,11.838,"parent isolated; no control","mean 39488","mean 57.2 s","mean tuple F1 0.462; grounding failed","mechanics isolated context but held-out quality failed"

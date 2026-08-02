@@ -11,21 +11,8 @@
     "promote": "node evaluator/promote.mjs --in staging/baseline.json --out evaluator/artifacts/baseline-corpus.json",
     "mutate": "node evaluator/mutants/run.mjs --corpus evaluator/artifacts/baseline-corpus.json --out evaluator/artifacts/baseline-kill-matrix.json",
     "report": "node evaluator/report.mjs --corpus evaluator/artifacts/baseline-corpus.json --matrix evaluator/artifacts/baseline-kill-matrix.json --out evaluator/artifacts/baseline-report.json",
-    "analyze": "node evaluator/descriptive-v2.mjs",
-    "adapt:local": "node evaluator/local-adapter-v2.mjs",
-    "metrics": "node evaluator/metrics.mjs",
-    "preflight": "node scripts/preflight-execution.mjs",
-    "preflight:live": "node scripts/live-preflight.mjs",
-    "harness": "node scripts/run-controlled-harness.mjs",
-    "validate-starts": "node scripts/validate-start-order.mjs",
-    "evidence:v5": "node scripts/package-v5-evidence.mjs",
-    "evidence:v5:verify": "node scripts/package-v5-evidence.mjs --verify --out results/v5-b01",
-    "report:v5": "node scripts/generate-v5-report.mjs",
-    "report:v5:check": "node scripts/generate-v5-report.mjs --check",
-    "visualize:v5": "node scripts/generate-v5-visualization.mjs",
-    "visualize:v5:check": "node scripts/generate-v5-visualization.mjs --check",
     "randomize": "node scripts/randomize.mjs --out design/v5/schedule.json",
-    "reproduce": "node scripts/generate-haiku-agent-profile.mjs && node evaluator/reproduce.mjs && node scripts/reproduce-local-evidence.mjs",
-    "test": "node scripts/generate-haiku-agent-profile.mjs && node baseline/assert-public-only.mjs && node evaluator/tests/run-tests.mjs && node --test evaluator/tests/evidence-package.test.mjs evaluator/tests/report-v5.test.mjs evaluator/tests/visualization-v5.test.mjs ../../tests/semantic-corpus-mcp/*.test.mjs"
+    "reproduce": "node scripts/generate-haiku-agent-profile.mjs && node evaluator/reproduce.mjs",
+    "test": "node scripts/generate-haiku-agent-profile.mjs && node baseline/assert-public-only.mjs && node evaluator/tests/run-tests.mjs && node --test ../../tests/semantic-corpus-mcp/*.test.mjs"
   }
 }
