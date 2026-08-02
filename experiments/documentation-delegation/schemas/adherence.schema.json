@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adherence.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "arm", "adherent", "violations"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "arm": {"enum": ["A1", "A2"]},
+    "adherent": {"type": "boolean"},
+    "violations": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  }
+}
