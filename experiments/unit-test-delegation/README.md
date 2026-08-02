@@ -33,6 +33,11 @@ node experiments/unit-test-delegation/scripts/study.mjs no-run
 checks schemas and source hashes, and confirms candidate materialization contains no
 evaluator assets. It does not invoke an AI model.
 
+When mutable launcher or test files change, stage their final bytes before running
+`npm --prefix experiments/unit-test-delegation run hashes`. The generator hashes the
+Git index, rejects unstaged or untracked current-source files, verifies that checkout
+bytes match the staged bytes, and excludes `design/source-manifest.json` itself.
+
 ## Excluded-pilot runbook
 
 Run preflight first. It probes only static CLI/version/tool surfaces, validates exact
@@ -68,3 +73,8 @@ Bulky events, usage exports, candidate repositories, and diagnostics stay under 
 access-controlled external private root. Hash-bound sanitized gate, disposition,
 observation-hash, and paired-summary files are the only artifacts suitable for a later
 result PR. Do not commit the private root. Main remains forbidden even after pilot GO.
+
+The post-merge current-source manifest correction changes only this mutable integrity
+check and its no-run regression/attestation. It consumed no observation IDs, started no
+AI observations, and created no private root. Pilot execution remains subject to a fresh
+reviewed authorization boundary after this correction; main remains forbidden.

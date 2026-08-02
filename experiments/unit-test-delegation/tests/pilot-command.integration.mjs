@@ -14,19 +14,30 @@ function quote(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
 
-function runPowerShell(command, env = process.env) {
+function runPowerShell(command, env = process.env, cwd = repositoryRoot) {
   return spawnSync("powershell.exe", [
     "-NoProfile",
     "-NonInteractive",
     "-Command",
     command
   ], {
-    cwd: repositoryRoot,
+    cwd,
     env,
     encoding: "utf8",
     windowsHide: true,
     maxBuffer: 16 * 1024 * 1024
   });
+}
+
+function run(command, args, cwd = repositoryRoot) {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+    maxBuffer: 16 * 1024 * 1024
+  });
+  assert.equal(result.status, 0, result.stderr);
+  return result;
 }
 
 function createSessionStore(file) {
@@ -131,6 +142,56 @@ test("documented Windows PowerShell npm command preserves names and values witho
       assert.notEqual(rejected.status, 0);
       assert.equal(fs.existsSync(privateRoot), false);
     }
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test("fresh autocrlf checkout has stable hashes and passes documented preflight without starting the pilot", {
+  skip: process.platform !== "win32"
+}, () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "utd-fresh-checkout-"));
+  const checkout = path.join(parent, "checkout");
+  const resources = path.join(parent, "resources");
+  const fakeCli = path.join(resources, "fake-copilot.mjs");
+  const sessionStore = path.join(resources, "session-store.db");
+  const privateRoot = path.join(resources, "absent-private-root");
+  const probeLog = path.join(resources, "cli-probes.jsonl");
+  const env = { ...process.env, PILOT_COMMAND_PROBE_LOG: probeLog };
+  fs.mkdirSync(resources);
+  createFakeCli(fakeCli);
+  createSessionStore(sessionStore);
+
+  try {
+    run("git", ["clone", "--local", "--no-hardlinks", "--no-checkout", repositoryRoot, checkout]);
+    run("git", ["config", "core.autocrlf", "true"], checkout);
+    run("git", ["checkout", "--detach", "HEAD"], checkout);
+    assert.match(
+      run("git", ["ls-files", "--eol", "experiments/unit-test-delegation/scripts/pilot-command.mjs"], checkout).stdout,
+      /i\/lf\s+w\/lf\s+attr\/text eol=lf/u
+    );
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      run("npm", ["--prefix", "experiments/unit-test-delegation", "run", "hashes"], checkout);
+      assert.equal(run("git", ["status", "--porcelain"], checkout).stdout, "");
+    }
+
+    const options = [
+      "--cli", quote(fakeCli),
+      "--session-store", quote(sessionStore),
+      "--private-root", quote(privateRoot)
+    ];
+    const result = runPowerShell(npmCommand("pilot:preflight", options), env, checkout);
+    assert.equal(result.status, 0, result.stderr);
+    const jsonStart = result.stdout.indexOf("{");
+    assert(jsonStart >= 0, result.stdout);
+    const preflight = JSON.parse(result.stdout.slice(jsonStart));
+    assert.equal(preflight.ok, true);
+    assert.equal(preflight.repositoryHead, run("git", ["rev-parse", "HEAD"], checkout).stdout.trim());
+    assert.equal(preflight.rootsCreated, false);
+    assert.equal(preflight.observationsStarted, 0);
+    assert.deepEqual(preflight.consumedIds, []);
+    assert.equal(fs.existsSync(privateRoot), false);
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
   }
