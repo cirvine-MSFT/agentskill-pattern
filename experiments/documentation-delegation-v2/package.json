@@ -15,6 +15,7 @@
     "reproduce": "node scripts/reproduce.mjs",
     "runner:dry": "node scripts/pilot-runner.mjs --dry-run",
     "runner:preflight": "node scripts/pilot-runner.mjs --preflight",
+    "runner:execute": "node scripts/pilot-runner.mjs --execute",
     "test": "node --test tests/*.test.mjs"
   }
 }

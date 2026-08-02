@@ -1,11 +1,14 @@
 {
   "protocolId": "feature-documentation-delegation-v2-sonnet",
-  "recordedAt": "2026-08-01T00:00:00Z",
+  "recordedAt": "2026-08-02T06:00:00Z",
   "aiObservationsStarted": 0,
   "pilotObservationsStarted": 0,
   "mainObservationsStarted": 0,
   "resultEvidenceCreated": false,
   "v1IdentifiersReused": false,
   "forbiddenPathsAbsent": ["evidence", "results", "runs", "raw-telemetry"],
-  "statement": "Design, corpus, evaluator, routing profiles, manifests, and non-executing runner were prepared without starting pilot or main observations."
+  "authorizationPrepared": true,
+  "pilotAuthorizedAfterMerge": true,
+  "mainAuthorized": false,
+  "statement": "The excluded-pilot authorization and guarded execute boundary were prepared prospectively. Zero pilot or main observations were started, no frozen ID was consumed, and no result root was created."
 }

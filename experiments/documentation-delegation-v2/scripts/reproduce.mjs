@@ -23,14 +23,38 @@ function assertBytes(path, expected) {
 
 assertBytes(resolve(experimentRoot, "design", "schedule.json"), createSchedule());
 const frozenManifest = readJson(resolve(experimentRoot, "design", "source-manifest.json"));
+const authorization = readJson(resolve(experimentRoot, "design", "authorization.json"));
+const mutable = new Set(authorization.reviewedMutablePaths);
 for (const [path, entry] of Object.entries(frozenManifest.sources)) {
+  if (mutable.has(path)) continue;
   const bytes = indexBytes(path);
   if (bytes.length !== entry.bytes || sha256(bytes) !== entry.indexSha256) {
     throw new Error(`Git-index source drift: ${path}`);
   }
 }
-if (stableStringify(frozenManifest) !== stableStringify(createSourceManifest())) {
-  throw new Error("generated bundle or source manifest drift");
+const current = createSourceManifest();
+if (stableStringify(frozenManifest.generatedBundles)
+  !== stableStringify(current.generatedBundles)) {
+  throw new Error("generated candidate or evaluator bundle drift");
+}
+const authorizationManifestPath = resolve(
+  experimentRoot,
+  "design",
+  "authorization-index-manifest.json"
+);
+const authorizationManifestBytes = indexBytes(repoRelative(authorizationManifestPath));
+if (sha256(authorizationManifestBytes) !== authorization.authorizationIndexManifestSha256) {
+  throw new Error("authorization index manifest byte hash drift");
+}
+const authorizationManifest = JSON.parse(authorizationManifestBytes);
+if (sha256(stableStringify(authorizationManifest.files)) !== authorizationManifest.rootHash) {
+  throw new Error("authorization index manifest root hash drift");
+}
+for (const entry of authorizationManifest.files) {
+  const bytes = indexBytes(entry.path);
+  if (bytes.length !== entry.bytes || sha256(bytes) !== entry.indexSha256) {
+    throw new Error(`authorized Git-index source drift: ${entry.path}`);
+  }
 }
 verifyNoRun();
 checkLinks();
