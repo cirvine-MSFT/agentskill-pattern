@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 2,
+  "protocolId": "feature-documentation-delegation-v2-sonnet",
+  "authorizationId": "feature-documentation-delegation-v2-sonnet-excluded-pilot-8849393a",
+  "authorizationNonce": "8849393a16fc49a0dc7f620a64779230",
+  "issuedAt": "2026-08-02T06:00:00Z",
+  "expiresAt": "2026-08-09T06:00:00Z",
+  "pilotAuthorized": true,
+  "mainAuthorized": false,
+  "requiresExecuteFlag": true,
+  "preregistrationMergeCommit": "d7140a5662ec636b30085b872079bb22a7e6adaa",
+  "preregistrationSourceRootHash": "69c37c0c5918ca2abec96924e7863b3a903a00e9f7e199576caf46e18efbbcf4",
+  "authorizationIndexManifestSha256": "00869a62fc634605f5c56bdd6d89b556b20281c775ee4475fa19c534fd52c3b1",
+  "cli": {
+    "version": "1.0.77",
+    "binarySha256": "e28d03ca2b41b099c1d7d657f039d5d244a4e39c4977033ba003de6a7a52713a",
+    "parentModel": "gpt-5.6-sol",
+    "parentEffort": "medium",
+    "workerModelRequested": "claude-sonnet-4.6",
+    "workerModelObserved": "claude-sonnet-4.6"
+  },
+  "sessionStore": {
+    "mode": "read-only",
+    "usageTable": "assistant_usage_events",
+    "usageSchemaSha256": "8376ad944a627186713bf1ca53780d9398f620753faf7f4af5ade19bd9b5f408"
+  },
+  "workerIdentity": {
+    "scheduledValue": "preregistered-study-identity",
+    "runtimeValue": "observed-task-control-plane-call",
+    "publishedRuntimeValue": "sha256-only"
+  },
+  "paths": {
+    "cliSha256": "ad9df0d4ec044e0f2f79f2e6c2df6c525886f48aba9476498d33264ac88ab89e",
+    "sessionStoreSha256": "e60bd19fb39d6de2b09ac5752585f539185ea223ec435eca6baac2bbddb4d84f",
+    "artifactRootSha256": "01469e6805a22cb762a541ad98b4fe053723a9fadaade7acaca36a063ed12a4b",
+    "candidateRootSha256": "7575af7af1390eef3162c2ebcd808e84451eea19791957dc5181fd5c3a683bfe"
+  },
+  "pilotIdentities": [
+    {
+      "observationId": "V2P-01-A2-15f62ce532",
+      "parentSessionId": "e8845f13-3e1a-4a6f-a5d3-e35f609b5602",
+      "workerSessionId": "c56a4251-c313-4967-a75d-8da71ba2afd9",
+      "worktreeId": "5e9613b2-e815-4d34-aaa0-47711081aff6"
+    },
+    {
+      "observationId": "V2P-01-A1-331ac11add",
+      "parentSessionId": "7b26846d-7d4f-4097-af46-a33d4c89b287",
+      "workerSessionId": null,
+      "worktreeId": "fa6e2138-203e-4a4c-a48d-4eff5ecb0c78"
+    },
+    {
+      "observationId": "V2P-02-A1-7a60e558ae",
+      "parentSessionId": "cc5d2601-d3f4-4d0a-a8d8-1b29ca32f3e5",
+      "workerSessionId": null,
+      "worktreeId": "643de213-a733-40f8-a177-7f8707cf29e4"
+    },
+    {
+      "observationId": "V2P-02-A2-e4517c4b10",
+      "parentSessionId": "fe290293-97cb-4e35-ae31-4bd10200c8c2",
+      "workerSessionId": "fb9c0c14-91d0-49bf-a202-168600a8255c",
+      "worktreeId": "49f0ec78-df1e-42f9-ad38-2036d5cb13af"
+    },
+    {
+      "observationId": "V2P-03-A1-9e3af9bd37",
+      "parentSessionId": "8adc4eb8-a8dd-4d54-ada7-c566efce43f5",
+      "workerSessionId": null,
+      "worktreeId": "9214b9b6-48c5-4562-ad95-9bd3be42aeff"
+    },
+    {
+      "observationId": "V2P-03-A2-37a1edfd82",
+      "parentSessionId": "0b3d86ab-f8d7-451d-a23e-deb178b7207d",
+      "workerSessionId": "540fa453-893d-49f0-aaa0-d99152685f34",
+      "worktreeId": "e1261b82-7fe5-4dd9-afda-354a6545216e"
+    },
+    {
+      "observationId": "V2P-04-A2-7132a374f4",
+      "parentSessionId": "38ecdc7f-32c4-4a06-ae40-d67c16ec9e32",
+      "workerSessionId": "c215e64d-546f-4fb6-a0a8-0899774b8efe",
+      "worktreeId": "55c5f35e-ebb2-4666-ad93-09c617538886"
+    },
+    {
+      "observationId": "V2P-04-A1-12009132e1",
+      "parentSessionId": "d1240ad0-9054-4e42-ac56-462c9d0acd66",
+      "workerSessionId": null,
+      "worktreeId": "08f2b483-76ed-4d17-acdd-185f2ca35868"
+    },
+    {
+      "observationId": "V2P-05-A2-7a28a0be04",
+      "parentSessionId": "423ec5b3-860c-4cee-a957-f817eeddff07",
+      "workerSessionId": "98e6feba-cd82-430a-a9db-742bd4362e86",
+      "worktreeId": "c5106b30-14ed-4c32-ac17-0a8d3fb01f0a"
+    },
+    {
+      "observationId": "V2P-05-A1-06a9fd759e",
+      "parentSessionId": "e168529d-e806-48a8-ae58-b59a0de14b18",
+      "workerSessionId": null,
+      "worktreeId": "a32b88a7-c4a9-4ec0-aae0-073e93009e38"
+    },
+    {
+      "observationId": "V2P-06-A1-38e08fb291",
+      "parentSessionId": "950b4278-3a85-419a-a424-8dadf8fad578",
+      "workerSessionId": null,
+      "worktreeId": "65cb925a-1dc7-499e-a372-ea19f77f6af4"
+    },
+    {
+      "observationId": "V2P-06-A2-5506441ef0",
+      "parentSessionId": "bef8765d-6e2c-42e5-a17b-41c0a04fd171",
+      "workerSessionId": "44d16472-65ab-466b-a3fc-b94e337fd1cf",
+      "worktreeId": "63f56963-45d7-4e8d-af7c-c16e31f99899"
+    }
+  ],
+  "reviewedMutablePaths": [
+    "experiments/documentation-delegation-v2/README.md",
+    "experiments/documentation-delegation-v2/design/execution-boundary.json",
+    "experiments/documentation-delegation-v2/design/no-run-attestation.json",
+    "experiments/documentation-delegation-v2/package.json",
+    "experiments/documentation-delegation-v2/protocol.md",
+    "experiments/documentation-delegation-v2/scripts/pilot-contract.mjs",
+    "experiments/documentation-delegation-v2/scripts/pilot-runner.mjs",
+    "experiments/documentation-delegation-v2/scripts/reproduce.mjs",
+    "experiments/documentation-delegation-v2/scripts/verify-no-run.mjs",
+    "experiments/documentation-delegation-v2/tests/runner.test.mjs"
+  ],
+  "exactWindowsNpmInvocation": "$ErrorActionPreference='Stop'; git fetch origin main; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git switch main; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git pull --ff-only; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Location experiments\\documentation-delegation-v2; $cli=(Get-Command copilot).Source; $store=Join-Path $HOME '.copilot\\session-store.db'; $artifact=Join-Path $HOME '.copilot\\pilot-evidence\\documentation-delegation-v2-sonnet-8849393a16fc49a0dc7f620a64779230'; $candidates=Join-Path $HOME '.copilot\\pilot-candidates\\documentation-delegation-v2-sonnet-8849393a16fc49a0dc7f620a64779230'; npm run runner:execute -- --cli $cli --session-store $store --artifact-root $artifact --candidate-root $candidates; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+  "reason": "Authorizes exactly the 12 permanently excluded pilot observations after merge. Main execution remains forbidden.",
+  "payloadSha256": "83221aa333c4e87485e38f7cae102f845a20ae46b92b3d96bfac7377df153f24"
+}

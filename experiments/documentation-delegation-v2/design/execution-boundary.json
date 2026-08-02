@@ -1,8 +1,8 @@
 {
   "protocolId": "feature-documentation-delegation-v2-sonnet",
-  "pilotAuthorized": false,
+  "pilotAuthorized": true,
   "mainAuthorized": false,
-  "executeEntryPoint": null,
-  "runnerModes": ["dry-run", "preflight"],
-  "statement": "This design PR cannot create a model session or consume an observation ID. Pilot and main execution require later, separate, hash-bound authorization."
+  "executeEntryPoint": "npm run runner:execute --",
+  "runnerModes": ["dry-run", "preflight", "execute"],
+  "statement": "This prospective no-run change authorizes only the 12 permanently excluded pilot slots after merge, fresh-current-main preflight, and an explicit execute flag. Main remains forbidden."
 }

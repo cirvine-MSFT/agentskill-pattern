@@ -1,7 +1,8 @@
 # Feature documentation delegation protocol v2
 
-**Status:** prospective design only. Zero AI observations have started. Neither the
-permanently excluded pilot nor held-out main is authorized.
+**Status:** prospective excluded-pilot authorization. Zero AI observations have started.
+The 12 permanently excluded pilot slots are authorized only after this separate no-run
+change merges and passes its exact current-main preflight. Held-out main remains forbidden.
 
 ## Question and estimand
 
@@ -198,19 +199,57 @@ Published evidence is the minimum hash-bound routing, usage, disposition, and sc
 summary needed for audit. Privacy checks reject machine paths, usernames, environment
 values, credentials, and unrelated content. Bulky raw evidence is never committed.
 
-## Freeze and execution boundary
+## Authorization and execution boundary
 
 [`design/source-manifest.json`](design/source-manifest.json) binds staged Git-index bytes
 and every generated candidate/evaluator bundle. Reproduction also checks links,
 schedule bytes, schemas, candidate isolation, fresh identifiers, and the no-run
 attestation.
 
-The checked-in `pilot-runner.mjs` implements dry-run and preflight only. It has no model
-spawn or execute mode, and `design/execution-boundary.json` denies both phases. This is a
-deliberate separate no-run boundary: merge of this PR cannot execute an observation.
+[`design/authorization.json`](design/authorization.json) authorizes only the frozen
+excluded pilot. It self-hashes its payload and binds merge `d7140a5`, the merged
+preregistration root, Git-index bytes for every reviewed authorization delta, all parent,
+worker-study, observation, and worktree identities, the exact 1.0.77 CLI binary and path,
+the read-only usage-store path and schema, two absent external-root identities, a nonce,
+and an expiry. The authorization changes no corpus, order, prompts, models, tools,
+evaluator, gates, or thresholds.
 
-Any later pilot authorization must be a separate reviewed change from clean current
-canonical main, bind the merged source-manifest root, runner bytes, exact CLI bytes,
-fresh external roots, schedule, and expiry, and add an explicit execution entry point.
-Main requires a later pilot GO plus separate authorization. Changing tasks, prompts,
-models, evaluator, thresholds, IDs, or analysis requires a new preregistration.
+The execute path requires an explicit `--execute` through the exact Windows/npm command
+in [`README.md`](README.md). Static preflight creates no roots and requires a clean fresh
+checkout with `HEAD == origin/main`, the preregistration merge as an ancestor, matching
+index bytes, exact CLI bytes, unused frozen IDs, an unmodified read-only usage schema, and
+both roots absent and disjoint. Candidate policy is frozen in memory before launch and is
+never reread.
+
+The frozen worker UUID is a preregistered study identity because CLI 1.0.77 does not accept
+a caller-selected worker session UUID. Runtime never pretends it was observed or consumed:
+the authenticated task control-plane `call_*` identity is captured from events and usage,
+matched across the task, subagent, model, and tool records, and published only as SHA-256.
+
+Runtime evidence checks the exact parent session and model, parent tool surface, one A2
+Skill load, one named Sonnet task, requested and observed `claude-sonnet-4.6`, the
+observed control-plane worker call, worker read/edit paths, one complete target
+replacement, terminal JSON, and all parent access after worker editing. Direct agent
+bypass or parent post-worker documentation access fails adherence. Candidate arguments,
+environment, and files receive no evaluator, evidence, schedule, source-repository, or
+sibling paths. Built-in and configured MCP servers are disabled for the candidate, while
+ordinary Copilot control-plane access remains allowed.
+
+Each started observation is permanently ITT. There are no retries. Proven pre-start
+failure consumes no ID. Ordinary post-start implementation, routing, quality, timeout,
+model, tool, or process failures retain measured usage and do not stop the remaining
+schedule. Only impossible event integrity, usage attribution, deterministic evaluation,
+lifecycle locking, isolation, or privacy evidence stops later starts; every remaining
+slot still receives one not-started terminal disposition.
+
+The external evaluator executes twice with zero AI credits. Private evidence includes raw
+JSONL, read-only usage rows, initial/terminal tree hashes, call/path audit, and write-once
+lifecycle records. Sanitized output contains only observation hashes, dispositions,
+scores, parent/worker/combined credit splits, pilot gate math, and a root evidence hash.
+This is a practical context/tool audit, not a hostile sandbox or compliance claim.
+
+Merge authorizes no automatic run: zero observations remain the attested state until a
+human deliberately issues the exact execute command after merge. A pilot GO still cannot
+execute main. Main requires a later pilot result, decision, and separate authorization.
+Changing tasks, prompts, models, evaluator, thresholds, IDs, or analysis requires a new
+preregistration.
