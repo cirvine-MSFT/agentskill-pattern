@@ -113,8 +113,13 @@ test("rejects unsupported disabled types", () => {
   }
 });
 
-test("no-run attestation rejects observation artifacts and authorization", () => {
-  assert.deepEqual(assertNoRun(), { pilot: "forbidden", main: "forbidden", evidencePresent: false });
+test("no-run attestation permits only the guarded excluded pilot without starting it", () => {
+  assert.deepEqual(assertNoRun(), {
+    pilot: "authorized",
+    main: "forbidden",
+    evidencePresent: false,
+    observationsStarted: 0
+  });
 });
 
 function syntheticObservation({ observationId, blockId, taskId, repetition, arm }) {

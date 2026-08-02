@@ -1,10 +1,12 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "attestedAtDesignDate": "2026-08-01",
-  "baseCommit": "61c1391c7c712a8d8defbbaa6c54212c00ac9ce5",
+  "baseCommit": "22b7d0ebbea9db6b1d10eb14fcacbd4bbdebd605",
+  "authorizationId": "unit-test-delegation-excluded-pilot-v1",
   "aiObservationsStarted": 0,
   "resultEvidenceFiles": 0,
-  "pilotAuthorized": false,
+  "pilotAuthorized": true,
   "mainAuthorized": false,
-  "statement": "This preregistration was prepared without starting pilot or main AI observations."
+  "requiresExecuteFlag": true,
+  "statement": "This prospective runner and pilot-only authorization were prepared without starting pilot or main AI observations. Authorization alone does not execute the pilot."
 }

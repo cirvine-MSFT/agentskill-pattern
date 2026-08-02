@@ -1,6 +1,57 @@
 {
-  "schemaVersion": 1,
-  "pilot": "forbidden",
+  "schemaVersion": 2,
+  "authorizationId": "unit-test-delegation-excluded-pilot-v1",
+  "pilot": "authorized",
   "main": "forbidden",
-  "reason": "Design-only preregistration. A separate reviewed commit is required before any AI observation."
+  "requiresExecuteFlag": true,
+  "authorizedAfterMerge": "22b7d0ebbea9db6b1d10eb14fcacbd4bbdebd605",
+  "preregistrationSourceManifestRootHash": "def40cf7d53e098c58afffdd76859955910b0eea16fa9a263a3395de720e5538",
+  "reviewedMutableFiles": [
+    "README.md",
+    "design/authorization.json",
+    "design/no-run-attestation.json",
+    "package.json",
+    "protocol.md",
+    "scripts/lib.mjs",
+    "tests/design.test.mjs"
+  ],
+  "pilotIdentities": [
+    {
+      "observationId": "pilot-P01-r01-A1",
+      "sessionId": "574a81c9-ab35-549a-aa17-c61d57658a59",
+      "worktreeId": "worktree-ba44bafe5347f89cd96b5bb0"
+    },
+    {
+      "observationId": "pilot-P01-r01-A2",
+      "sessionId": "9ea18a47-ed12-5ad2-a7b8-8b5a277ff865",
+      "worktreeId": "worktree-6c0da6c2d30cd157a45785d1"
+    },
+    {
+      "observationId": "pilot-P02-r01-A2",
+      "sessionId": "e99118e9-81a7-500f-9c75-a9e48c913a0d",
+      "worktreeId": "worktree-25e14038458ca74aff9a061d"
+    },
+    {
+      "observationId": "pilot-P02-r01-A1",
+      "sessionId": "5c967daa-bfe6-58bb-b7f8-0dd67643dd26",
+      "worktreeId": "worktree-19d8d69cc3f1f17dd58efd6a"
+    }
+  ],
+  "generatedCandidateManifestHashes": {
+    "pilot-P01-r01-A1": "d58422aa93b215be431e2670389fa329dbface56ab4fc339ef3b8325c9b24468",
+    "pilot-P01-r01-A2": "c35f087299e4fa7f5c4a30547947f3fee53254828b10f865cb9b914008df3a7b",
+    "pilot-P02-r01-A2": "a6ceb6dd0c17e729b5941ef6832f8060a06f09556ef4aa1bf2fa274919ebd4b8",
+    "pilot-P02-r01-A1": "090ec23812b951faebc55f63f60348474731433e09c531d0e62039e039765283"
+  },
+  "reviewedExecutionFiles": [
+    {
+      "path": "scripts/pilot-contract.mjs",
+      "sha256": "e337a7d94d44226632f5ea98fb7063d25905e1139765c0479c39791d87127b6d"
+    },
+    {
+      "path": "scripts/pilot-runner.mjs",
+      "sha256": "d2823e459155f30f2aefe477d5c7bb0ec482fcb0cecec8fa68efc6feb13cc7f9"
+    }
+  ],
+  "reason": "Reviewed authorization for the four permanently excluded pilot observations only. Main execution remains forbidden."
 }

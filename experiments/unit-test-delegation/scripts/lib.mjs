@@ -370,14 +370,17 @@ export function sourceEntries() {
 export function assertNoRun() {
   const authorization = readJson(path.join(root, "design", "authorization.json"));
   const attestation = readJson(path.join(root, "design", "no-run-attestation.json"));
-  assert.equal(authorization.pilot, "forbidden");
+  assert.equal(authorization.pilot, "authorized");
   assert.equal(authorization.main, "forbidden");
+  assert.equal(authorization.requiresExecuteFlag, true);
   assert.equal(attestation.aiObservationsStarted, 0);
   assert.equal(attestation.resultEvidenceFiles, 0);
-  assert.equal(attestation.pilotAuthorized, false);
+  assert.equal(attestation.pilotAuthorized, true);
   assert.equal(attestation.mainAuthorized, false);
+  assert.equal(attestation.requiresExecuteFlag, true);
+  assert.equal(attestation.authorizationId, authorization.authorizationId);
   assert(!fs.existsSync(path.join(root, "evidence")), "evidence directory must not exist");
   const forbidden = listFiles(root).filter((file) => /(?:^|\/)(?:observations?|usage|event-stream|run-marker|pilot-result|main-result)(?:[.-]|$)/iu.test(file) && !file.startsWith("schemas/"));
   assert.deepEqual(forbidden, [], `observation-like artifacts present: ${forbidden.join(", ")}`);
-  return { pilot: authorization.pilot, main: authorization.main, evidencePresent: false };
+  return { pilot: authorization.pilot, main: authorization.main, evidencePresent: false, observationsStarted: 0 };
 }
