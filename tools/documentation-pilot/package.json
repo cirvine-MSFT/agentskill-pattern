@@ -1,0 +1,16 @@
+{
+  "name": "documentation-pilot-runner",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dry-run": "node runner.mjs --dry-run",
+    "preflight": "node runner.mjs --preflight",
+    "execute": "node runner.mjs --execute",
+    "no-run": "node verify-no-run.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}
