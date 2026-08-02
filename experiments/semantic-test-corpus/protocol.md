@@ -1,530 +1,76 @@
-# Preregistered semantic migration corpus benchmark
+# Semantic corpus protocol v5 summary
 
-> **Historical v1 — unavailable for execution.** This file is provenance only.
-> Execution, collection, eligibility, retries, metrics, and analysis are defined
-> solely by `execution-amendment-v2.md` and the v2 harness in `README.md`.
-> No command or inferential procedure below is valid for v2.
+This is the concise canonical reader summary. The immutable machine contract remains
+bound to [`execution-amendment-v5.md`](execution-amendment-v5.md); this summary does
+not replace or amend it.
 
-**Status:** protocol and deterministic foundation only. Initially frozen
-2026-07-29 against `48f44fbf3dca97a001ab2e822cf17faff869b846` (`main`) and
-revised 2026-07-30 in response to pre-run review. No AI arm has been run and this
-repository contains no AI outcomes.
+## Question
 
-Any protocol change after a measured session starts is a deviation. Preserve the
-original protocol, record the deviation in the run record, and do not overwrite
-the preregistered schedule or thresholds.
+For generating semantic acceptance scenarios for a deterministic configuration
+migration, how do model tier and delegation affect external quality, parent context,
+complete-system cost, latency, and reliability?
 
-## Question and estimands
+The experimental unit was one fresh run producing up to 60 confined source scenarios.
+The model never received expected outputs, held-out examples, mutants, or evaluator
+code. After the run, an external deterministic adapter, oracle, and mutation evaluator
+scored the captured source.
 
-For generation of semantic acceptance scenarios for a deterministic v1-to-v2
-configuration migration:
+## Frozen arms and schedule
 
-1. Does model tier affect corpus quality?
-2. Does direct delegation affect corpus quality?
-3. Does the delegation effect interact with model tier?
-4. Is each AI arm noninferior to a strong deterministic baseline, and does any
-   arm provide a materially better quality/resource tradeoff?
+Twelve randomized complete blocks contained all six arms:
 
-The experimental unit is one fresh model run producing 0-60 confined scenario files,
-followed by one evaluator-only canonical staging snapshot.
-The primary run-level quality endpoints are promotion rate, instrumented semantic
-path coverage, and held-out mutant kill rate. Rule/invariant coverage, diagnostic
-category coverage, diversity, latency, usage, tool behavior, and compliance are
-secondary endpoints. Oracle correctness is a prerequisite, not an endpoint.
+| Arm | Execution |
+| ---: | --- |
+| A0 | Deterministic public-only generator |
+| A1 | GPT-5.6 Sol inline |
+| A2 | GPT parent -> inherited GPT worker |
+| A3 | Claude Haiku 4.5 inline |
+| A4 | Haiku parent -> inherited Haiku worker |
+| A5 | GPT parent -> profile-fixed Haiku worker |
 
-## Fixture and semantic contract
+`design/v5/` retains the exact arm contract, condition instructions, schedule, seeds,
+and immutable source pin. A5 versus A1 was the primary Agent Skill Pattern comparison.
+All 72 scheduled units reached a final disposition. Started failures remained
+intent-to-treat; there were no retries, missing slots, or outcome-driven replacements.
 
-The fixture migrates a v1 service configuration into a deterministic v2 shape.
-The public, machine-executable mapping and invariant program is
-`fixture/spec/mapping-spec.json`. It contains stable rule, branch-path, invariant,
-and diagnostic IDs. The candidate implementation in `fixture/migration/index.mjs`
-interprets that program. The evaluator-only reference oracle in
-`evaluator/oracle/index.mjs` is an
-independent explicit implementation: it does not import the candidate, mapping
-interpreter, or candidate schema validator.
+## Boundary
 
-The migration covers:
+Every AI arm received the same semantic task and four path-constrained MCP operations:
+list contract files, read a contract file, write one scenario input, and write the
+manifest. Delegated workers owned those operations; delegated parents could only load
+the Skill, invoke the worker, and receive compact status.
 
-- service-name normalization; environment-specific port and timeout defaults;
-- canonical and deprecated region mappings;
-- log-level rename and production format precedence;
-- disabled, memory, and Redis cache semantics;
-- SQLite, PostgreSQL, and MySQL projections and default ports;
-- fixed/exponential retries with a 60-second cap;
-- CORS canonicalization/deduplication and feature normalization/sorting;
-- domain and cross-field invariants for production safety, cache requirements,
-  effective port conflicts, retry bounds, origin syntax, and normalized collisions.
+Only source scenario inputs entered staging. The deterministic evaluator independently:
 
-Origin and Redis endpoint invariants use URL parsing rather than regular
-expressions. HTTP origins require `http`/`https`, a host, optional port 1-65535,
-and no credentials, non-root path, query, or fragment. Redis endpoints require
-`redis`/`rediss`, a host, optional valid port and numeric database path, and no
-credentials, query, or fragment. Candidate and oracle implement these checks
-independently.
-Both inspect the raw string before parsing and reject any embedded ASCII control
-or whitespace (`U+0000`-`U+0020`, `U+007F`), raw/empty userinfo, or forbidden
-path/query/fragment marker that URL normalization could otherwise erase.
+1. validated each scenario;
+2. generated expected migration outcomes with a separate oracle;
+3. measured promotion, declared rules, semantic paths, invariants, and diagnostics;
+4. ran 33 held-out mutants; and
+5. measured semantic diversity and duplicates.
 
-Every structurally valid case emits the exact rule IDs, decision-path IDs, and
-applicable invariant IDs it exercised. Invalid semantic inputs still execute all
-mapping decisions, but the returned `config` is `null`. This keeps diagnostics
-and trace coverage observable without treating invalid configurations as
-successful migrations.
+This external evaluator, not a parent-model judgment, defined quality.
 
-## Oracle prerequisite and trust checks
+## Positive-signal rule
 
-Do not start a measured session unless all of these pass:
+A5 had to satisfy all quality floors versus A0:
 
-1. The manually derived assertions in `evaluator/tests/golden-cases.json` agree with both
-   the oracle and candidate.
-2. Metamorphic checks pass for property order, full-outcome equivalence of
-   ignored disabled-cache fields, canonical/legacy region equivalence, timeout
-   scaling, and origin duplication.
-3. Candidate/oracle parity holds for the complete deterministic corpus and the
-   acceptance-only examples.
-4. All trace IDs are declared by the mapping program.
-5. Staging, promotion, mutation, and report artifacts reproduce exactly.
+- promotion no worse than -5 percentage points;
+- path coverage no worse than -3 points;
+- mutant kill no worse than -5 points.
 
-The 33 mutants test corpus sensitivity only. A high mutation score cannot repair
-or establish a wrong oracle. If any prerequisite fails, the benchmark is
-invalidated until the oracle/goldens are reviewed and the preregistration is
-versioned before outcomes are inspected.
+It also had to satisfy all efficiency thresholds versus A1:
 
-## Arms
+- parent cumulative input at most 85%;
+- total nano-AIU at most 90%;
+- total AI credits at most 90%.
 
-The fixed model IDs are part of the treatment, not labels that may be silently
-substituted.
+Wall time at most 80% of A1 was secondary. Failure of any required quality or
+efficiency conjunct meant no positive signal.
 
-| Arm | Model tier | Delegation | Fixed execution model |
-|---:|---|---|---|
-| 0 | None | No | Strong deterministic baseline |
-| 1 | Frontier | No | `gpt-5.6-sol`, inline |
-| 2 | Frontier | Yes | `gpt-5.6-sol` parent and worker through the common delegated Skill |
-| 3 | Cheap | No | `claude-haiku-4.5`, inline |
-| 4 | Cheap | Yes | `claude-haiku-4.5` parent and worker through the common delegated Skill |
+## Evidence boundary
 
-Arms 1-4 form the complete 2x2 model-tier by delegation factorial. Arm 0 is the
-external baseline. All AI arms use the byte-identical shared task, immutable
-`design/corpus-request.json`, actual `semantic-corpus/*` MCP tools, and MCP
-request/output semantics. Arms 2 and 4 invoke the same `semantic-test-corpus`
-agent through the actual registered `.github/skills/semantic-test-corpus/SKILL.md`;
-the agent profile
-has no fixed model and inherits the authenticated worker binding. Inline parents
-receive those same four MCP tools directly. Model tier and delegation are the
-only intended factors.
-
-### Authenticated per-run model binding
-
-For every measured AI run, before generation starts:
-
-1. Create a fresh parent session and, for delegated arms, a fresh worker session
-   using the exact requested bindings.
-2. Obtain the platform's raw JSON event export, detached Ed25519 signature, and
-   trusted platform public key under `design/platform-evidence-contract.json`.
-3. Record signed `run.started`, `session.created`, and atomic `model.bound` events
-   carrying the frozen run ID, block ID, arm ID, role, and unique session ID.
-4. Bind each run record to the exact export/payload/signature/key hashes and
-   signed event/session IDs, then run `scripts/preflight-models.mjs`.
-
-A run is available only when signature verification succeeds; its run record
-binds the exact raw evidence hashes and event IDs; every required role has a
-unique session created within ten minutes before that run; the signed atomic
-binding matches the requested model; `run.started` uses the authenticated parent;
-and delegated worker parentage is correct. The verifier evaluates all 48 AI runs
-and 72 parent/worker role sessions, not one representative probe per arm.
-Caller-provided verification/freshness strings are not inputs. Missing, reused,
-unsigned, fabricated, non-atomic, late, or model-mismatched evidence makes that
-run unavailable. If any AI run is unavailable, do not
-substitute a model, run only a marginal, or call the result a partial factorial.
-The factorial analysis is withheld; arm 0 may be reported descriptively.
-
-`scripts/platform-audit-adapter.mjs` accepts captured bytes without translating
-unsigned CLI telemetry into signed evidence. Real Copilot CLI 1.0.77 inline and
-delegated smoke captures under `fixtures/platform-audit/` show the actual
-`semantic-corpus-*` runtime tool names, MCP server/tool names, parent/worker
-attribution fields, and subagent lifecycle. They do not contain a detached
-Ed25519 signature, signed sandbox/filesystem audit, or signed run/adapter/metrics
-boundaries. Both smoke cells and every measured protocol cell are therefore
-currently **unavailable**. Synthetic signed-event streams are unit tests, never
-platform evidence.
-
-## Blocking, repetitions, and schedule
-
-There are 12 randomized complete blocks and 60 planned runs. Each block contains
-each arm exactly once. `design/seeds.json` freezes block seeds and
-`design/schedule.json` freezes within-block order. Arm 0 uses its block seed for
-the grammar/property component; the other deterministic components remain fixed.
-AI arms receive the same block seed as an input-design seed.
-Signed `run.started` events carry the frozen schedule order, and timestamps must
-be distinct and strictly increasing in that order within each block. Ties or
-reordering fail compliance.
-
-Twelve paired repetitions per arm were chosen to expose run-to-run session
-variation while retaining complete-block comparisons. Inference is at the run
-or block level; 60 cases within a run are not treated as 60 independent model
-replicates.
-
-## Common contract and budget
-
-Every run receives:
-
-- the shared prompt in `design/shared-task-prompt.txt`;
-- the immutable self-hashed request, public bounded contract, and exact 60
-  request-defined ID/category slots;
-- a fresh mandatory launcher-confined `corpus-contract/` and `corpus-staging/`
-  pair and one coordinator-selected block seed;
-- the exact tools `semantic-corpus/list_contract_files`,
-  `semantic-corpus/read_contract_file`, `semantic-corpus/write_scenario_input`,
-  and `semantic-corpus/write_scenario_manifest`;
-- the same 0-60 successful-write and rejected-attempt measurement semantics;
-- 30 wall-clock minutes, at most 120 tool calls, and at most 100,000 total model
-  tokens for AI arms;
-- no retry for semantic quality or low scores.
-
-The deterministic baseline has no model usage but is held to the same 60-case
-output and wall-clock ceiling. Resource differences are measured, not normalized
-away.
-AI budget compliance is derived from authenticated timestamps, signed tool-call
-events, and one signed usage report per required role. Duration is start through
-completion, calls are aggregated across parent and worker, and total tokens are
-the parent-plus-worker sum for delegated runs. Exceeding 30 minutes, 120 calls,
-or 100,000 tokens marks the run noncompliant/excluded.
-Each final usage report is emitted no earlier than run completion and covers an
-interval beginning at/before `run.started` and ending at/after `run.completed`.
-Premature, partial, duplicate, or missing role reports fail closed.
-Report timestamp and interval bounds use strict RFC 3339 `date-time` values and
-must satisfy `intervalStart <= run.started < run.completed <= intervalEnd <=
-report timestamp`; non-finite, timezone-less, overflowed, invalid-calendar, or
-reversed values are rejected before totals are used.
-All signed platform timestamps use canonical UTC `YYYY-MM-DDTHH:mm:ss.sssZ` or,
-for a consistently second-precision export, `YYYY-MM-DDTHH:mm:ssZ`. Offsets,
-mixed precision, fractions beyond three digits, leap/invalid normalized dates,
-and values that fail canonical `Date` round-trip are rejected, making integer
-millisecond ordering lossless.
-
-MCP staging contains inputs only: write-once
-`corpus-staging/scenarios/<scenario-id>.json` files and, only after all 60
-writes, `corpus-staging/manifest.json`. It never contains expected output,
-diagnostics, traces, rationales, or generic benchmark packaging. A rejected
-write is not retried.
-
-After signed `run.completed`, evaluator-only `evaluator/adapter.mjs` reads the
-exact confined files and authenticated MCP tool-error records outside model
-context. It writes canonical `staging/<run-id>.json`, retaining each source
-file path/byte count/SHA-256 and each rejected call's actual call ID, namespaced
-tool name, argument hash, error code, and message. The signed
-`adapter.snapshot` event binds the canonical byte SHA-256. Partial 0-60 writes
-and malformed/rejected attempts therefore remain measured outcomes. The parent
-and worker never package, reread, validate, promote, or copy the full corpus.
-The evaluator validates every present slot independently and oracle-promotes
-only valid cases. `promotionRate = promotedCases / 60`; expected outputs are
-created only after promotion.
-
-## Delegation and parent-context isolation
-
-Delegated workers call the same confined MCP tools used by inline parents. The
-actual caller owns each authenticated MCP call and its correlated filesystem
-effects. Workers do not stream corpus content through the parent. The parent
-receives only the agent's terminal line:
-`corpus-staging/manifest.json - <count> scenarios - SUCCESS` or
-`corpus-staging - <written-count> scenarios - FAILURE: <reason>`.
-
-Signed role mappings are derived from each run's `session.created` and
-`model.bound` events. In delegated arms, only the authenticated worker may call
-the four MCP tools; the parent may only invoke `semantic-test-corpus` and receive
-the exact terminal line. Any parent MCP call, parent staging access, generic
-file-tool substitution, normalized tool name presented as an actual call, or
-parent-does-all trace fails compliance. Inline arms have no worker and require
-the authenticated parent to own all MCP calls. Zero successful writes remains a
-valid measured failure and does not by itself violate actor isolation.
-
-For both arms 2 and 4, invoke the single materialized registered
-`.github/skills/semantic-test-corpus/SKILL.md` artifact and actual agent name
-`semantic-test-corpus`. The coordinator rejects any run whose signed
-tool/session evidence shows a different agent identity, delegation mechanism,
-terminal line, or worker access pattern.
-
-## Acceptance opacity and held-out provenance
-
-All hidden material is under the separate `evaluator/` package: oracle, goldens,
-held-out rules/examples, mutants, promoted artifacts, and evaluator tests.
-Measured sessions never use this benchmark checkout as their repository.
-`scripts/materialize-candidate.mjs` creates a new external Git repository from
-the exact allowlist in `design/candidate-manifest.json`; it refuses destinations
-inside or containing the entire source repository and never copies `evaluator/`,
-prior staging, the candidate migration implementation, seeds, or schedule.
-The sole in-tree exception is the cleaned `.test-work/` path used by the
-materializer regression test; measured runs must use an external destination.
-Production materialization rejects symbolic-link, junction, and reparse
-components, canonicalizes existing parents and targets with `realpath`, and
-performs both directions of source/destination containment on canonical paths.
-
-Before session creation, the trusted launcher must enforce the merged reference
-boundary: immutable contract and sandbox config, writable staging, no repository/
-parent/sibling/evaluator access, and denied network. The MCP server verifies
-launcher token/hash/root identity and write denial before initialization; these
-checks are defense in depth and do not replace container, restricted-mount, or
-dedicated-ACL confinement.
-Afterward, `scripts/verify-isolation-evidence.mjs` verifies the signed platform
-export and derives compliance from policy, file-access, network-access, and
-audit-completion events. Caller booleans are not accepted. An incomplete audit,
-outside-root/evaluator attempt, allowed network request, policy mismatch, or
-unexpected session is noncompliant.
-Every signed MCP call carries a unique call ID, actual namespaced tool name,
-SHA-256 of recursively key-sorted canonical JSON arguments (original array
-order), and authenticated actor, with exactly one matching
-`tool.result`. Rejections retain exact code/message. Successful scenario and
-manifest writes require a matching caller-owned staging `fs.access`; every
-filesystem event must correlate to an actual MCP call and remain under the
-attested read-only contract or read-write staging root. Duplicate scenario write
-attempts are corrective retries and fail compliance.
-
-Each run also records signed `run.completed` and `outcomes.unblinded` events
-from the authenticated parent. Any signed `outcome.accessed` event must identify
-an authenticated run session/role and occur after both timestamps. Premature or
-uncorrelated access is a compliance failure; post-boundary evaluator access is
-retained in the audit.
-
-Every signed `network.access` event associated with an authenticated run session
-must identify the run, block, arm, role, actor session, call ID, endpoint, and
-allow/deny decision. The verifier scans by authenticated session as well as run
-ID, including `actorSessionId`, so changing `sessionId` or run ID cannot hide a
-network event from an authenticated run actor. Before per-run checks, a global
-attribution pass requires every signed network event to resolve to exactly one
-scheduled run and authenticated role; unknown, ambiguous, reused, or mismatched
-identities fail the entire evidence dataset.
-
-The same dataset-wide attribution pass covers tool calls/results, filesystem
-access, outcome access, delegation, completion, and unblinding events. Every
-event must resolve to exactly one scheduled run and authenticated role/session.
-Arm 0 is mapped separately from its exact scheduled `run.started` baseline role,
-unique session, and unique process boundary. Its completion, unblinding, and
-optional zero-token usage events must retain that mapping and ordered interval;
-baseline model sessions/bindings, MCP tools, filesystem/network events, sandbox
-audits, and delegation are forbidden. Signed start/completion timestamps derive
-the baseline duration and enforce the 30-minute ceiling independently of caller
-telemetry. Each `metrics.computed` event has a run-record-bound evaluator
-session/process mapping that is globally distinct from every AI and baseline
-identity.
-All model generation tools, results, filesystem/network activity, delegation,
-and staging writes must occur strictly before `run.completed`. Exactly one
-evaluator-role `adapter.snapshot` occurs afterward under a session outside the
-model role map and authenticates the canonical staging bytes. Only outcome
-access strictly after both completion and unblinding is allowed.
-Delegated runs additionally require exactly one call-ID-matched lifecycle:
-invocation precedes every worker generation/write event, completion follows
-them, and delegation completion precedes run completion.
-
-`evaluator/acceptance/held-out-rules.json` and
-`evaluator/acceptance/held-out-examples.json` were newly authored on 2026-07-29
-against the frozen base commit. Materialization and signed access evidence prove
-only that they were not supplied to measured prompts/workspaces. They do **not**
-show that similar material was absent from model pretraining; no training-
-leakage claim is made.
-
-## Strong deterministic baseline
-
-Arm 0 is not a strawman. `baseline/generate.mjs` combines:
-
-1. explicit rule/invariant decision tables;
-2. in-range, edge, and just-outside boundary partitions;
-3. a greedy pairwise covering array over environment, region, cache, database,
-   retry, and logging dimensions, with executable proof that no pair is missing;
-4. seeded schema/grammar/property generation for names, origins, features, and
-   timeouts;
-5. `FiniteDomainSolver`, a dependency-free finite-domain constraint solver used
-   for valid multi-factor conjunctions.
-
-Exact-input deduplication happens after generation. If strategies produce the
-same input, source tags are merged rather than counting a duplicate as another
-case. The checked foundation corpus is 60 unique inputs.
-
-## Hidden mutants and acceptance
-
-`evaluator/mutants/definitions.mjs` defines a frozen catalog of 33 deterministic
-mapping/invariant faults. They
-include wrong aliases/defaults/units, precedence and canonicalization defects,
-omitted fields, retry-cap errors, and omitted domain/cross-field diagnostics.
-Definitions, triggers, and kill matrices are acceptance-only and never copied to
-generator workspaces.
-
-Before scoring, `evaluator/mutants/validate.mjs` independently verifies unique
-IDs, declared rule/invariant targets, a baseline/golden witness for every
-mutant, non-equivalence, no fixture mutation, unchanged instrumentation/status,
-and changes confined to one declared config or diagnostic fault surface.
-
-A mutant is killed when at least one promoted case exposes it. The denominator
-is always the frozen 33-mutant valid catalog. A mutant with no triggering case
-is an untriggered survivor, never removed as “not applicable.” The matrix records
-trigger and kill evidence per case, and reports `killed / 33`.
-
-## Metrics
-
-All quality metrics are computed after opaque oracle promotion.
-
-For every run, `evaluator/metrics.mjs` consumes the exact canonical snapshot and
-emits canonical `metrics/<run-id>.json`. The artifact binds its snapshot SHA-256
-and exact evaluator-code, mapping-spec, independent-oracle-code, and full
-mutant-harness file hashes. Arm 0 is regenerated from its frozen block seed and
-canonical-byte-compared; generator dependencies bind the Git commit and exact
-committed blob hashes, so relabeled baseline snapshots fail. The run
-record binds the metrics path/hash/snapshot hash, and one signed evaluator-role
-`metrics.computed` event repeats those bindings after completion and unblinding.
-`evaluator/statistics.mjs` validates canonical bytes and hashes, reloads the
-bound snapshot, reruns deterministic promotion/coverage/mutation/diversity, and
-requires byte-identical metrics before constructing observations. Its input
-schema has no outcome-value fields.
-
-| Metric | Definition |
-|---|---|
-| Structural validity | Staged cases passing scenario and v1 structural schemas / submitted cases |
-| Promotion rate | Cases accepted and oracle-promoted / 60 |
-| Semantic rule/path/invariant coverage | Distinct instrumented declared IDs exercised / declared IDs |
-| Hidden mutant kill rate | Mutants killed by at least one promoted case / frozen 33-mutant catalog |
-| Diagnostic category coverage | Distinct semantic diagnostic categories emitted / five declared categories |
-| Exact redundancy | Repeated SHA-256 of canonical JSON input; lower is better |
-| Semantic redundancy | Repeated signature of paths, invariant IDs, and diagnostic IDs |
-| Diversity | Unique semantic-signature rate and mean pairwise Jaccard distance over path/diagnostic sets |
-| Usage | Parent, worker, and total nano-AIU/credits plus input/output/total tokens |
-| Tool behavior | Actual namespaced MCP calls/results/errors by parent and worker; optional normalized semantic actions are derived labels only |
-| Latency | Start-to-model-completion plus separately recorded adapter latency; parent active, worker active, and authenticated parent wait where available |
-| Compliance | Derived signed model/policy/access/audit evidence plus budget and mechanism deviations |
-
-Semantic `status: invalid` is often an intentional negative case and is not a
-structural failure. Reports keep that count separate from promotion validity.
-Duplicate detection compares generated artifacts with one another; it is a
-redundancy/diversity measure, not a leakage detector.
-Exact duplicate hashing uses canonical JSON with recursively sorted object keys
-and original array order.
-Reproduction compares canonical serialized UTF-8 bytes—including indentation,
-key order, LF newlines, and final newline—for corpus, kill matrix, and report;
-parsed-object equality is insufficient.
-
-`schemas/run-record.schema.json` is the normative telemetry envelope. Its
-compliance object references the derived isolation audit and evidence hash; it
-also binds canonical staging and metrics hashes and does not accept self-attested
-outcomes or booleans. Total usage
-must equal parent plus worker where the platform exposes additive units. Missing
-platform fields remain explicit `null`/unavailable in collected records; they are
-never reconstructed from outcome quality.
-
-## Practical materiality and noninferiority
-
-The following run-level differences are fixed before AI outcomes:
-
-- promotion-rate noninferiority margin: -5 percentage points;
-- semantic path-coverage noninferiority margin: -3 percentage points;
-- mutant-kill noninferiority margin: -5 percentage points;
-- materially better quality: at least +3 points path coverage or +5 points
-  mutant kill, with promotion noninferior;
-- materially better diversity: at least +10 points unique semantic signatures,
-  with all three primary quality measures noninferior;
-- materially better efficiency: at least 20% lower median total credits/nano-AIU
-  or latency, with all three primary quality measures noninferior.
-
-These thresholds describe practical decisions. Failure to detect a statistical
-difference is not equivalence or noninferiority.
-
-## Statistical analysis
-
-Analyze the 12 run-level observations per available arm.
-
-1. Report every arm's median, interquartile range, mean, standard deviation, and
-   all 12 block values for each endpoint.
-2. For arms 1-4, code tier and delegation as -1/+1. Estimate paired block-level
-   tier, delegation, and interaction contrasts. Report contrast estimates and
-   95% block-bootstrap intervals using 10,000 resamples and seed `20260729`.
-   The tier and delegation main effects are differences of their two marginal
-   means. Interaction is the difference between frontier and cheap delegation
-   effects. Also report the four conditional simple effects:
-   delegation at frontier/cheap and tier within inline/delegated runs.
-3. For each of four AI arms and each of three primary endpoints, use the paired
-   within-block difference `AI - baseline` for the one-sided noninferiority null
-   `H0: difference <= margin` against `H1: difference > margin`. Compute the
-   one-sided exact sign-flip/randomization p-value after shifting by the fixed
-   margin, and a one-sided 95% lower block-bootstrap bound.
-4. Apply Holm step-down control at family-wise alpha 0.05 across the complete
-   family of 12 noninferiority hypotheses (four arms x three primary endpoints).
-   Claim noninferiority only when its Holm-adjusted one-sided p-value is below
-   0.05. Also report the unadjusted lower bound and point estimate against the
-   practical margin; do not call an unadjusted interval confirmatory.
-5. Equality/superiority is a separate question. Report two-sided paired
-   sign-flip p-values and two-sided 95% block-bootstrap intervals descriptively,
-   with a separate Holm adjustment across the 12 equality hypotheses. A failed
-   equality test does not establish equivalence, and an equality result cannot
-   substitute for the one-sided noninferiority test.
-6. Factorial main effects/interactions are the three preregistered contrasts and
-   are reported with unadjusted intervals plus a clear multiplicity warning.
-7. Treat usage, tools, latency, compliance, diagnostic coverage, redundancy, and
-   diversity as secondary/descriptive. Do not convert them into an unregistered
-   composite score.
-8. The analysis executable accepts no caller options. Alpha 0.05, all three
-   margins, 10,000 bootstrap draws, and seed 20260729 are frozen protocol
-   constants; supplied option or top-level override fields are errors.
-9. The production analysis CLI independently authenticates the platform export
-   and invokes the frozen model, schedule/order, isolation, and budget verifiers
-   for matching run IDs before constructing eligible observations. Caller-
-   supplied availability, compliance, budget, or evidence hashes are rejected.
-
-## Missingness, retries, and exclusions
-
-- A pre-session platform failure may receive one retry in a new session with the
-  same arm, block, model, seed, and remaining full budget. Record both attempts.
-- A started session is never retried because of output quality, validator
-  failure, timeout, low coverage, or low mutant score.
-- Model mismatch, acceptance exposure, nonfresh session, or non-atomic binding
-  is an exclusion and compliance failure, not a zero silently replaced by a new
-  trial.
-- A malformed/short/late staging file remains the measured outcome with its
-  observed structural validity and promotion rate.
-- Primary complete-block analysis includes only blocks with all available arms.
-  Also report all-arm descriptive data and sensitivity bounds that assign each
-  missing arm outcome first 0 and then 1, plus worst/best paired AI-minus-
-  baseline bounds. Do not impute intermediate values.
-- If zero complete blocks remain, do not execute sign-flip or paired-factorial
-  routines. Emit deterministic per-arm availability/summaries and sensitivity
-  bounds, set paired comparisons/factorial results to null, and give an explicit
-  unavailable reason.
-- Any unavailable frozen AI model binding withholds factorial and confirmatory
-  decisions regardless of how many complete blocks remain. Descriptive summaries
-  and registered 0/1/worst-best sensitivity bounds remain reportable.
-- If more than two blocks are incomplete, withhold confirmatory language and
-  report the benchmark as descriptive. `evaluator/statistics.mjs` then emits
-  `confirmatoryAvailable: false`, an explicit reason, and `noninferior: null` for
-  every comparison regardless of raw or Holm-adjusted p-values.
-
-## Blinding and judging
-
-Oracle promotion, traces, mutation, schemas, and redundancy metrics are
-deterministic and require no judge. The evaluator receives opaque run IDs; arm,
-model, delegation, session text, and usage are joined only after metrics freeze.
-
-No subjective judge is planned. A judge may be added only if objective arms are
-within all practical materiality thresholds and a downstream decision genuinely
-requires ranking diagnostic actionability. In that event, freeze a separate
-rubric, blinded bundles, judge models/humans, and analysis before opening arm
-labels. Such judgments are secondary and cannot replace the preregistered
-deterministic endpoints.
-
-## Execution order
-
-1. Run `npm test` and `npm run reproduce`.
-2. Generate/freeze `design/schedule.json`.
-3. Materialize the allowlisted public contract/server/profile, then create a
-   disposable non-repository run with mandatory launcher confinement.
-4. In schedule order, create each run's fresh role sessions and verify/freeze its
-   signed run/model binding before generation.
-5. Generate inputs through actual MCP calls; collect call-correlated signed raw
-   telemetry/access logs without corrective retries.
-6. End the model run, execute the evaluator-only canonical adapter, sign its
-   snapshot hash, and verify the complete isolation audit.
-7. Validate each canonical staging slot and promote valid cases through the
-   evaluator oracle without opening corpus content in parent/worker context.
-8. Run evaluator-only held-out acceptance, traces, mutation, and compact reporting under blinded
-   run IDs.
-9. Emit canonical hash-bound metrics artifacts and signed `metrics.computed`
-   events, then have statistics rederive every outcome before joining arm labels
-   and executing the registered analysis.
-
-Do not merge, publish claims, or alter this protocol merely because a preferred
-arm underperforms.
+Results are local, unsigned, descriptive point estimates. The runtime did not provide
+a detached trust anchor, complete tool-schema payloads, or authoritative compaction
+counts. Missing telemetry remained unavailable; it was not inferred. Full raw evidence
+entered history through PRs #21-#23. The current tree keeps only protocol-relevant
+design and executable deterministic source.

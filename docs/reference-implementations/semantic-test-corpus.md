@@ -4,10 +4,9 @@
 schema-valid v1 source documents. It never computes expected results. Deterministic
 parent code owns validation, promotion, migration execution, the expected-output
 oracle, traces, and mutant scoring. See the
-[final descriptive ITT report](../../experiments/semantic-test-corpus/report.md) and
-[self-contained results dashboard](../../experiments/semantic-test-corpus/results/v5-results-dashboard.html),
-with [GitHub-renderable static charts](../../experiments/semantic-test-corpus/results/v5-charts/)
-and the [immutable evidence package](../../experiments/semantic-test-corpus/results/v5-b01/).
+[final descriptive ITT report](../../experiments/semantic-test-corpus/report.md),
+[concise protocol](../../experiments/semantic-test-corpus/protocol.md), and
+[cross-study machine-readable summary](../../experiments/results-summary.csv).
 
 ## Components
 
