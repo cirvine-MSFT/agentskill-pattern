@@ -1,0 +1,19 @@
+{
+  "name": "unit-test-delegation-v2-study",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "engines": {
+    "node": "22.14.0"
+  },
+  "scripts": {
+    "verify": "node scripts/study.mjs verify",
+    "test": "node --test tests/*.test.mjs",
+    "test:command": "node --test tests/pilot-command.integration.mjs",
+    "no-run": "node scripts/study.mjs no-run",
+    "pilot:preflight": "node scripts/pilot-command.mjs preflight",
+    "pilot:execute": "node scripts/pilot-command.mjs execute",
+    "schedule": "node scripts/generate-schedule.mjs",
+    "hashes": "node scripts/update-source-manifest.mjs"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pilot-gate.schema.json",
+  "type": "object",
+  "required": ["schemaVersion", "sourceManifestRootHash", "observations", "operationalCompletions", "validPairs", "validTreatments", "featureDifference", "catastrophicFeaturePair", "decision", "reasons"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "sourceManifestRootHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "observations": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "operationalCompletions": { "type": "integer", "minimum": 0, "maximum": 6 },
+    "validPairs": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "validTreatments": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "featureDifference": { "type": ["number", "null"] },
+    "catastrophicFeaturePair": { "type": "boolean" },
+    "decision": { "enum": ["GO", "NO-GO"] },
+    "reasons": { "type": "array", "items": { "type": "string" } }
+  }
+}
