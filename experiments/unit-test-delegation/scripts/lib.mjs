@@ -360,11 +360,53 @@ export function verifySourceManifest() {
   return { files: actual.length, rootHash };
 }
 
-export function sourceEntries() {
+function sourcePaths() {
   return listFiles(root)
     .filter((file) => file !== "design/source-manifest.json")
+    .filter((file) => !file.startsWith("node_modules/") && !file.startsWith("evidence/"));
+}
+
+export function sourceEntries() {
+  const repositoryRoot = path.resolve(root, "..", "..");
+  const rootRelative = path.relative(repositoryRoot, root).replaceAll("\\", "/");
+  const indexPaths = execFileSync("git", ["ls-files", "--cached", "-z", "--", rootRelative], {
+    cwd: repositoryRoot,
+    encoding: "utf8"
+  })
+    .split("\0")
+    .filter(Boolean)
+    .map((file) => path.posix.relative(rootRelative, file))
+    .filter((file) => file !== "design/source-manifest.json")
     .filter((file) => !file.startsWith("node_modules/") && !file.startsWith("evidence/"))
+    .sort();
+  const actualPaths = sourcePaths();
+  assert.deepEqual(indexPaths, actualPaths,
+    "stage every current-source file before generating the source manifest");
+
+  const unstaged = execFileSync("git", ["diff", "--name-only", "-z", "--", rootRelative], {
+    cwd: repositoryRoot,
+    encoding: "utf8"
+  })
+    .split("\0")
+    .filter(Boolean)
+    .map((file) => path.posix.relative(rootRelative, file))
+    .filter((file) => file !== "design/source-manifest.json");
+  assert.deepEqual(unstaged, [],
+    "stage final current-source bytes before generating the source manifest");
+
+  const entries = indexPaths.map((file) => ({
+    path: file,
+    sha256: sha256(execFileSync("git", ["show", `:${rootRelative}/${file}`], {
+      cwd: repositoryRoot,
+      encoding: null,
+      maxBuffer: 64 * 1024 * 1024
+    }))
+  }));
+  const workingEntries = actualPaths
     .map((file) => ({ path: file, sha256: sha256(fs.readFileSync(path.join(root, file))) }));
+  assert.deepEqual(workingEntries, entries,
+    "working-tree bytes differ from staged bytes; normalize the checkout before generating");
+  return entries;
 }
 
 export function assertNoRun() {

@@ -164,3 +164,14 @@ command while leaving their values. The packaging-only correction uses two npm
 delimiters and a strict wrapper around the unchanged hash-reviewed runner. The defect
 and its reproduction consumed zero pilot IDs, started zero observations, and created
 no result or private evidence roots.
+
+After that correction merged, its three newly added files were committed as LF under
+the repository's `text eol=lf` policy, but the mutable current-source manifest had
+recorded their pre-commit CRLF working-tree hashes. This second outcome-independent
+packaging correction makes manifest generation hash finalized staged bytes, rejects
+unstaged/untracked inputs and working-tree/index byte differences, and excludes the
+manifest itself. A fresh Windows `core.autocrlf=true` checkout must reproduce the
+manifest and pass the documented static preflight. Diagnosis and correction consumed
+zero IDs, started zero observations, and created no private evidence root. The pilot
+must be reauthorized against the corrected current-source root before execution; main
+remains forbidden.
