@@ -158,6 +158,11 @@ test("reports physical line positions", () => {
     assert.equal(result.tests.mutants.length, 4);
     assert(result.tests.mutants.every((mutant) => mutant.killed));
     assert.notEqual(result.tests.branchCoverage, null);
+    assert.deepEqual(result.tests.isolation, {
+      passed: true,
+      changed: ["src/feature.js", "test/feature.test.js"],
+      workerStayedInTarget: true
+    });
     assert.equal(result.adherence.adherent, true);
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
@@ -264,4 +269,7 @@ test("analysis applies prospective economics, quality, pilot, and guardrail gate
   const oneFailure = structuredClone(pilot);
   oneFailure[0].status = "malformed-result";
   assert.equal(evaluatePilot(oneFailure).decision, "GO");
+  const minorControlMiss = structuredClone(pilot);
+  minorControlMiss.find((entry) => entry.arm === "A1").evaluation.feature.score = 0.8;
+  assert.equal(evaluatePilot(minorControlMiss).decision, "GO");
 });

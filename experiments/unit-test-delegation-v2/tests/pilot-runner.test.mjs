@@ -382,6 +382,25 @@ test("A2 events prove actor, model, tool, and parent no-review boundaries", () =
   });
   assert.equal(audit.adherent, false);
   assert(audit.reasons.includes("parent accessed the delegated target test"));
+  const shellReview = structuredClone(events);
+  shellReview.splice(-6, 0,
+    toolStart("parent-shell-review", "powershell", { command: "npm test" }),
+    {
+      type: "tool.execution_complete",
+      timestamp: "2026-08-01T00:00:02.050Z",
+      data: { toolCallId: "parent-shell-review", success: true, result: { content: "tests passed" } }
+    });
+  const shellAudit = auditEvents({
+    events: shellReview,
+    usageRows: rows,
+    prompt,
+    plan,
+    workspace: process.cwd(),
+    envelope
+  });
+  assert.equal(shellAudit.adherent, false);
+  assert(shellAudit.reasons.includes("parent used a tool after worker start"));
+  assert(shellAudit.reasons.includes("parent accessed the delegated target test"));
 });
 
 test("A1 parsing rejects delegation and worker usage", () => {

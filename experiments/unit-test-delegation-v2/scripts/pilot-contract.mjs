@@ -202,6 +202,17 @@ function normalizePath(value, workspace) {
   return candidate.replaceAll("\\", "/").replace(/^\.\//u, "");
 }
 
+function toolAccessesTarget(event, target, workspace) {
+  if (normalizePath(toolPath(event), workspace) === target) return true;
+  const name = event.data?.toolName;
+  if (!["powershell", "bash", "shell"].includes(name)) return false;
+  const serialized = JSON.stringify(event.data?.arguments ?? {})
+    .replaceAll("\\\\", "/")
+    .toLowerCase();
+  return serialized.includes(target.toLowerCase())
+    || /(?:npm|pnpm|yarn)\b[^"\n]*\btest\b|node\b[^"\n]*--test/u.test(serialized);
+}
+
 export function auditEvents({ events, usageRows, prompt, plan, workspace, envelope }) {
   const reasons = [];
   const { tasks, workerCallId } = workerCall(events);
@@ -260,6 +271,10 @@ export function auditEvents({ events, usageRows, prompt, plan, workspace, envelo
       || taskStartIndex <= skillCompleteIndex) {
       reasons.push("A2 task bypassed the completed Skill routing boundary");
     }
+    if (parentTools.some((event) =>
+      event !== tasks[0] && events.indexOf(event) > taskStartIndex)) {
+      reasons.push("parent used a tool after worker start");
+    }
     const taskCompletes = toolCompletes.filter((event) =>
       event.data?.toolCallId === workerCallId);
     if (taskCompletes.length !== 1 || taskCompletes[0].data?.success !== true) {
@@ -308,7 +323,7 @@ export function auditEvents({ events, usageRows, prompt, plan, workspace, envelo
     if (parentTools.some((event) =>
       ["read", "view", "edit", "apply_patch", "powershell", "bash", "shell", "rg", "glob", "search"]
         .includes(event.data?.toolName)
-      && normalizePath(toolPath(event), workspace) === target)) {
+      && toolAccessesTarget(event, target, workspace))) {
       reasons.push("parent accessed the delegated target test");
     }
     const trace = deriveTrace(events);
@@ -524,7 +539,7 @@ export function concisePilotSummary(observations, gate) {
     return { blockId: control.blockId, A1: row(control), A2: row(treatment) };
   });
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     phase: "excluded-pilot",
     decision: gate.decision,
     reasons: gate.reasons,

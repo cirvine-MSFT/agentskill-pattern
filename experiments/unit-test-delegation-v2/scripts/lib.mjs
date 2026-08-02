@@ -61,7 +61,7 @@ export function generateSchedule(study = readJson(path.join(root, "design", "stu
     }));
   };
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     seed: study.seed,
     algorithm: "sha256-counter-sort-v1",
     pilot: build("pilot", study.pilot.tasks, study.pilot.repetitions),
@@ -208,7 +208,7 @@ export function materialize({ taskId, arm, runId, out }) {
   const candidateFiles = listFiles(output);
   assert(!candidateFiles.some((file) => /(?:gold|hidden|mutant|schedule|evidence)/iu.test(file)), "candidate leakage");
   writeJson(path.join(output, ".study", "candidate-manifest.json"), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     taskId,
     phase: task.phase,
     arm,
@@ -281,6 +281,27 @@ function inspectTests(source) {
   };
 }
 
+function inspectIsolation(workspace, arm, trace, envelope) {
+  const changed = execFileSync("git", ["status", "--porcelain"], {
+    cwd: workspace,
+    encoding: "utf8"
+  }).split(/\r?\n/u).filter(Boolean).map((line) =>
+    line.slice(3).replaceAll("\\", "/")).sort();
+  const expected = ["src/feature.js", "test/feature.test.js"];
+  const workerEdits = arm === "A2" && Array.isArray(trace?.events)
+    ? trace.events.filter((event) => event.actor === "worker" && event.kind === "edit")
+    : [];
+  const target = normalizeTracePath(envelope?.targetTestPath, workspace);
+  const workerStayedInTarget = arm === "A1"
+    || (workerEdits.length === 1
+      && normalizeTracePath(workerEdits[0].path, workspace) === target);
+  return {
+    passed: canonical(changed) === canonical(expected) && workerStayedInTarget,
+    changed,
+    workerStayedInTarget
+  };
+}
+
 export function evaluate({ workspace, taskId, arm, trace = null }) {
   const task = getTask(taskId);
   const production = fs.readFileSync(path.join(workspace, "src", "feature.js"), "utf8");
@@ -294,6 +315,8 @@ export function evaluate({ workspace, taskId, arm, trace = null }) {
   });
   const staticTests = inspectTests(testSource);
   const adherence = arm === "A2" ? evaluateTrace(trace, readJson(path.join(workspace, ".study", "envelope.json")), workspace) : { adherent: true, reasons: [] };
+  const envelope = readJson(path.join(workspace, ".study", "envelope.json"));
+  const isolation = inspectIsolation(workspace, arm, trace, envelope);
   const components = {
     compilePass: visible.passed ? 1 : 0,
     meaningfulAssertions: staticTests.assertions >= 3 ? 1 : 0,
@@ -301,11 +324,11 @@ export function evaluate({ workspace, taskId, arm, trace = null }) {
     branchCoverage: visible.coverage.branch ?? 0,
     statementCoverage: visible.coverage.statement ?? 0,
     noFalsePositive: goldTests.passed ? 1 : 0,
-    isolation: adherence.adherent ? 1 : 0,
+    isolation: isolation.passed ? 1 : 0,
     nontrivial: staticTests.trivial ? 0 : 1
   };
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     taskId,
     arm,
     feature: { passed: hidden.passed, total: hidden.total, score: hidden.passed / hidden.total, failures: hidden.failures },
@@ -320,6 +343,7 @@ export function evaluate({ workspace, taskId, arm, trace = null }) {
       mutants,
       branchCoverage: visible.coverage.branch,
       statementCoverage: visible.coverage.statement,
+      isolation,
       components,
       compositeBeforeDuplicate: Object.values(components).reduce((sum, value) => sum + value, 0) / Object.keys(components).length
     },

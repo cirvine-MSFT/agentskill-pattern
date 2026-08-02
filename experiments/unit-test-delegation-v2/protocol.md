@@ -57,6 +57,12 @@ permitted paths; one target write; compact status; and no parent target access a
 worker start. A routing, model, tool, artifact, or terminal violation is retained as A2
 nonadherence.
 
+This directly addresses v1's read-set/tool-completion failure: v2 removes the worker's
+target read entirely, supplies the exact precreated sentinel in the envelope, reduces the
+expected worker calls from five to four, and uses the stronger Sonnet worker. The audit
+also rejects parent tools issued concurrently with or after worker start and recognizes
+shell test commands as target access.
+
 ## Deterministic external evaluation
 
 Evaluation starts only after the parent process exits and costs zero AI credits. Feature
@@ -107,8 +113,9 @@ several valid pairs but still bounded. Its deterministic order comes from
 `unit-test-delegation-v2|sonnet-4.6|2026-08-01|b7314d89`.
 
 Pilot GO requires all six schedule slots attempted or retained, at least five operational
-completions, at least two complete valid pairs, feature score 1.0 for every operational
-completion, at least two adherent A2 observations whose tests pass candidate and gold,
+completions, at least two complete valid pairs, feature score >= 0.80 for every operational
+completion, valid-pair mean feature difference >= -0.05 with no catastrophic treatment
+pair, at least two adherent A2 observations whose tests pass candidate and gold,
 mean valid-A2 mutant kill >= 0.70, no valid-A2 gold false positive, and every started unit
 within 90 combined credits, 300,000 model tokens, and 360 seconds. Ordinary post-start
 failure does not abort remaining slots. The pilot decision is made only after the full

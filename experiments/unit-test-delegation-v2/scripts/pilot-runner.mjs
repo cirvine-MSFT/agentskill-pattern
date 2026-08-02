@@ -330,7 +330,7 @@ export function collectStaticPreflight({
 function reserveIdentity(lockRoot, plan) {
   const file = path.join(lockRoot, `${String(plan.globalOrder).padStart(2, "0")}-${plan.observationId}.lock.json`);
   writeOnce(file, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     observationId: plan.observationId,
     sessionId: plan.sessionId,
     worktreeId: plan.worktreeId,
@@ -391,7 +391,7 @@ export function retainedNotStartedObservation(plan, candidateCommitSha, reason) 
     ? { credits: 0, nanoAiu: 0, inputTokens: 0, outputTokens: 0, completions: 0 }
     : { credits: null, nanoAiu: null, inputTokens: null, outputTokens: null, completions: null };
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     observationId: plan.observationId,
     sessionId: plan.sessionId,
     worktreeId: plan.worktreeId,
@@ -465,7 +465,7 @@ function runObservation({
     candidateRoot: "<candidate-root>"
   });
   writeOnce(path.join(rawRoot, "attempt-start.json"), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     observationId: plan.observationId,
     sessionId: plan.sessionId,
     launchedAt: new Date().toISOString()
@@ -495,7 +495,7 @@ function runObservation({
     diagnostics.push(`usage settlement failed: ${error.message}`);
   }
   writeOnce(path.join(rawRoot, "usage.json"), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     source: "assistant_usage_events",
     sessionId: plan.sessionId,
     rows: usageRows
@@ -542,7 +542,7 @@ function runObservation({
     evaluationError
   });
   const observation = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     observationId: plan.observationId,
     sessionId: plan.sessionId,
     worktreeId: plan.worktreeId,
@@ -573,7 +573,7 @@ function evidenceManifest(privateRoot) {
       bytes: fs.statSync(path.join(privateRoot, file)).size
     }));
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     algorithm: "sha256",
     files: entries,
     rootHash: sha256(canonical(entries))
@@ -660,14 +660,14 @@ export function executePilot({
   writeOnce(path.join(sanitizedRoot, "pilot-summary.json"), summary);
   writeOnce(path.join(sanitizedRoot, "pilot-gate.json"), gate);
   writeOnce(path.join(sanitizedRoot, "observation-hashes.json"), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     observations: finalized.map((observation) => ({
       observationId: observation.observationId,
       sha256: sha256(canonical(observation))
     }))
   });
   const disposition = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     authorizationId: authorization.authorizationId,
     stoppedEarly: stopReason !== null,
     stopReason,

@@ -223,14 +223,28 @@ export function evaluatePilot(input) {
       && pair.every((entry) => entry.status === "complete")
       && validTreatments.some((entry) => entry.blockId === block.blockId);
   });
+  const validPairObservations = validPairs.map((block) => ({
+    A1: observations.find((entry) => entry.blockId === block.blockId && entry.arm === "A1"),
+    A2: observations.find((entry) => entry.blockId === block.blockId && entry.arm === "A2")
+  }));
   const started = observations.filter((entry) => entry.startDisposition === "started");
   const reasons = [];
   if (operational.length < study.pilot.operationalCompletionsForGoMin) {
     reasons.push("operational completion minimum not met");
   }
   if (validPairs.length < study.pilot.validPairsForGoMin) reasons.push("valid pair minimum not met");
-  if (!operational.every((entry) => metric(entry, "feature") === 1)) {
-    reasons.push("operational feature correctness below 100%");
+  if (!operational.every((entry) => metric(entry, "feature") >= 0.8)) {
+    reasons.push("operational feature correctness below 0.80");
+  }
+  const pilotFeatureDifference = validPairObservations.length === 0
+    ? null
+    : mean(validPairObservations.map((pair) =>
+        metric(pair.A2, "feature") - metric(pair.A1, "feature")));
+  const pilotCatastrophic = validPairObservations.some((pair) =>
+    metric(pair.A1, "feature") >= 0.9 && metric(pair.A2, "feature") < 0.5);
+  if (!Number.isFinite(pilotFeatureDifference) || pilotFeatureDifference < -0.05
+    || pilotCatastrophic) {
+    reasons.push("valid-pair feature noninferiority failed");
   }
   if (validTreatments.length < study.pilot.validPairsForGoMin) {
     reasons.push("insufficient adherent A2 candidate/gold test passes");
@@ -259,6 +273,8 @@ export function evaluatePilot(input) {
     operationalCompletions: operational.length,
     validPairs: validPairs.map((entry) => entry.blockId),
     validTreatments: validTreatments.map((entry) => entry.observationId),
+    featureDifference: pilotFeatureDifference,
+    catastrophicFeaturePair: pilotCatastrophic,
     decision: reasons.length ? "NO-GO" : "GO",
     reasons
   };
