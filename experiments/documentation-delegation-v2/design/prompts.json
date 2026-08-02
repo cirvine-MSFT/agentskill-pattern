@@ -1,0 +1,7 @@
+{
+  "protocolId": "feature-documentation-delegation-v2-sonnet",
+  "sharedEnvelope": "Complete the engineering task in TASK.md. You own requirements, production implementation, public checks, integration, and the final response. Work only in this fresh candidate root. Do not access parent directories, hidden acceptance material, schedules, evidence, evaluator paths, or prior runs. Do not self-grade against hidden criteria.",
+  "A1": "Condition A1: implement and check the feature, then write the complete precreated documentation target yourself using docs/CONVENTIONS.md. Do not load a documentation-routing Skill or invoke any agent.",
+  "A2": "Condition A2: implement and check all production work yourself. Then load feature-documentation-sonnet-v2 exactly once. Through that Skill invoke the named feature-documentation-sonnet-v2 custom agent exactly once, delegating only the precreated documentation target. Pass TASK.md, docs/CONVENTIONS.md, the exact changed public source paths, the target, and an owned-path restriction equal to the target. Trust its terminal JSON. After worker editing begins, do not access, validate, repair, quote, or selectively stage the target. Do not retry or write an inline fallback.",
+  "workerHandoff": "Requirements: TASK.md\nConventions: docs/CONVENTIONS.md\nChanged public source paths: CHANGED_SOURCE_PATHS\nPrecreated target: TARGET\nOwned path: TARGET\nReplace the complete target in exactly one successful edit. Return only the terminal JSON schema from your agent contract."
+}

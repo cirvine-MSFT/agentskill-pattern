@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "observation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "protocolId", "observationId", "blockId", "arm", "order",
+    "fixtureId", "variantId", "parentSessionId", "workerSessionId", "worktreeId",
+    "started", "completed", "adherent", "usage", "timing", "evaluation", "evidenceSha256"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 2},
+    "protocolId": {"const": "feature-documentation-delegation-v2-sonnet"},
+    "observationId": {"type": "string", "pattern": "^V2[MP]-\\d{2}-A[12]-[a-f0-9]{10}$"},
+    "blockId": {"type": "string", "pattern": "^V2[MP]-\\d{2}$"},
+    "arm": {"enum": ["A1", "A2"]},
+    "order": {"type": "integer", "minimum": 1, "maximum": 2},
+    "fixtureId": {"type": "string"},
+    "variantId": {"type": "string"},
+    "parentSessionId": {"type": "string", "format": "uuid"},
+    "workerSessionId": {"type": ["string", "null"]},
+    "worktreeId": {"type": "string", "format": "uuid"},
+    "started": {"type": "boolean"},
+    "completed": {"type": "boolean"},
+    "adherent": {"type": "boolean"},
+    "usage": {
+      "type": "object",
+      "required": [
+        "combinedAiCredits", "parentAiCredits", "workerAiCredits",
+        "parentCumulativeInputTokens", "parentPeakInputTokens", "totalTokens"
+      ],
+      "properties": {
+        "combinedAiCredits": {"type": ["number", "null"], "minimum": 0},
+        "parentAiCredits": {"type": ["number", "null"], "minimum": 0},
+        "workerAiCredits": {"type": ["number", "null"], "minimum": 0},
+        "parentCumulativeInputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "parentPeakInputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "totalTokens": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "timing": {
+      "type": "object",
+      "required": ["wallMs", "workerMs"],
+      "properties": {
+        "wallMs": {"type": ["integer", "null"], "minimum": 0},
+        "workerMs": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "evaluation": {"oneOf": [{"type": "null"}, {"$ref": "evaluation.schema.json"}]},
+    "evidenceSha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+  }
+}

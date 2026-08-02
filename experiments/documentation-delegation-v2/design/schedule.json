@@ -1,0 +1,735 @@
+{
+  "frozenCounts": {
+    "mainBlocks": 24,
+    "mainObservations": 48,
+    "pilotBlocks": 6,
+    "pilotObservations": 12
+  },
+  "main": [
+    {
+      "blockId": "V2M-01",
+      "fixtureId": "header-preference",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-01-A2-dd0969f927",
+          "order": 1,
+          "parentSessionId": "e407a431-3ac7-4673-af7a-8234fe4d7ff0",
+          "workerSessionId": "f06786ea-9f99-4f99-a5ea-a45ebdfd1def",
+          "worktreeId": "d19dacd1-287e-497f-a2f4-16e72e24778a"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-01-A1-a66963d1f4",
+          "order": 2,
+          "parentSessionId": "79bc1899-d295-4c18-ac07-485995b51ff1",
+          "workerSessionId": null,
+          "worktreeId": "3a7f90da-7f34-418b-a7dc-ae973adb609f"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-02",
+      "fixtureId": "header-preference",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-02-A1-9f2896bc7a",
+          "order": 1,
+          "parentSessionId": "42058c6e-bc51-43ec-affc-51ae1d4f5ca6",
+          "workerSessionId": null,
+          "worktreeId": "5ea71287-1b44-4233-a83b-1d68ddaa4112"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-02-A2-c277c23f51",
+          "order": 2,
+          "parentSessionId": "e31d0e96-6ac4-444b-a163-b9c41acd0348",
+          "workerSessionId": "8872d664-12c8-412f-a416-da96e8efd93b",
+          "worktreeId": "2045d9a8-9fcc-425d-a9a1-3aa568a09b5d"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-03",
+      "fixtureId": "header-preference",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-03-A2-5f985eeee3",
+          "order": 1,
+          "parentSessionId": "769314a9-d5c5-4be4-acc2-ba4e2d22688d",
+          "workerSessionId": "3afa0212-f4c4-4ace-ac23-67ea3464921c",
+          "worktreeId": "ca2fc831-8b08-40db-aaaa-c02f18cb09dd"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-03-A1-5ce376c642",
+          "order": 2,
+          "parentSessionId": "fd7721c7-704d-4337-a0ef-a818e99a7cf1",
+          "workerSessionId": null,
+          "worktreeId": "0aab3c10-4360-4352-a290-231d402226a3"
+        }
+      ],
+      "variantId": "r3"
+    },
+    {
+      "blockId": "V2M-04",
+      "fixtureId": "sliding-window",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-04-A1-a89787b00e",
+          "order": 1,
+          "parentSessionId": "9d9640d2-091b-49e6-ad30-c30105cc2944",
+          "workerSessionId": null,
+          "worktreeId": "22d85fcb-ddc8-4282-aab4-f93f6426ba9a"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-04-A2-d88f022021",
+          "order": 2,
+          "parentSessionId": "d8bd5459-6c25-40a4-a3b3-019104f41f2a",
+          "workerSessionId": "229ca17c-7132-47c4-ab65-3363953c212f",
+          "worktreeId": "06c7416c-82f9-4c67-a38c-e4bda848ab98"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-05",
+      "fixtureId": "sliding-window",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-05-A2-fb324053b3",
+          "order": 1,
+          "parentSessionId": "1417470c-0a85-4dcb-a01b-edc047c0237f",
+          "workerSessionId": "12adfb5d-619c-41c6-a429-a73d7c0c2f16",
+          "worktreeId": "4cb19b71-022b-41a7-a2d6-228a3ab4c6e5"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-05-A1-55c533313e",
+          "order": 2,
+          "parentSessionId": "2d3fff83-4750-4a18-a25d-be99041201f6",
+          "workerSessionId": null,
+          "worktreeId": "7149ff62-28ff-431b-a948-56cfed9cb1b6"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-06",
+      "fixtureId": "sliding-window",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-06-A1-6a6e817c5f",
+          "order": 1,
+          "parentSessionId": "48d35a87-b3a6-4eae-add1-41e91be4a317",
+          "workerSessionId": null,
+          "worktreeId": "3c558ad8-cdb2-4cca-a3cb-42a4ce772ef0"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-06-A2-2dee9280fa",
+          "order": 2,
+          "parentSessionId": "046e1ede-d4e7-4068-a84d-0d9bb7515cd3",
+          "workerSessionId": "28c747f6-5332-437d-af93-b0d02dcf80f2",
+          "worktreeId": "92dfe6d1-6754-4d0f-aff9-ff91d0596745"
+        }
+      ],
+      "variantId": "r3"
+    },
+    {
+      "blockId": "V2M-07",
+      "fixtureId": "config-overlay",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-07-A2-373fa492cc",
+          "order": 1,
+          "parentSessionId": "c5f5a90e-4e49-4ee5-aa2c-48147f9c72c2",
+          "workerSessionId": "7f29e905-0500-424a-aaba-7388f0f8cf91",
+          "worktreeId": "00a430fc-836c-4b39-a452-6235acda7815"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-07-A1-a4a51ba87c",
+          "order": 2,
+          "parentSessionId": "14859b37-5cb7-423d-af0d-281a5767a65f",
+          "workerSessionId": null,
+          "worktreeId": "666f009d-ce0f-4126-ae47-34ee65f6b6e4"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-08",
+      "fixtureId": "config-overlay",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-08-A1-4b856c5e2c",
+          "order": 1,
+          "parentSessionId": "94270c6e-68ca-47bb-acdf-7b3779c00e49",
+          "workerSessionId": null,
+          "worktreeId": "2a1e5565-b8f3-4f60-a487-db96d373fc59"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-08-A2-ecd17f560d",
+          "order": 2,
+          "parentSessionId": "4a2b60ad-c3cd-413e-ad08-ed68aedcd94a",
+          "workerSessionId": "6a78aa5a-6842-46bc-a6f2-315d3a059c13",
+          "worktreeId": "16f64002-f473-41eb-a4be-241df4f3c6d5"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-09",
+      "fixtureId": "config-overlay",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-09-A2-5eb83365b0",
+          "order": 1,
+          "parentSessionId": "c069c9dc-057d-4727-a9a4-1a02c8bfb57a",
+          "workerSessionId": "b309dbb4-b42e-407d-a934-b37fd851772d",
+          "worktreeId": "67513277-2f25-4f1c-aab6-52cabd9778dc"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-09-A1-a39c0b9db3",
+          "order": 2,
+          "parentSessionId": "b73de046-0443-48f1-a01d-594b163199db",
+          "workerSessionId": null,
+          "worktreeId": "9abc940f-85c5-4a0d-a575-7aea82475daf"
+        }
+      ],
+      "variantId": "r3"
+    },
+    {
+      "blockId": "V2M-10",
+      "fixtureId": "settings-upgrade",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-10-A1-522b95cb09",
+          "order": 1,
+          "parentSessionId": "91a4b391-f471-41b6-ac08-8206a7a6452f",
+          "workerSessionId": null,
+          "worktreeId": "478497b1-5865-42d7-a9ec-4f617626c84d"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-10-A2-bd0f2e6794",
+          "order": 2,
+          "parentSessionId": "2fcda46a-578e-4509-a2bc-5c42962843b5",
+          "workerSessionId": "6d8f6feb-3bd8-4127-a60d-9fc51357d994",
+          "worktreeId": "3f60d8dd-6ee4-47dd-ab81-e280c2788905"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-11",
+      "fixtureId": "settings-upgrade",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-11-A1-9f798c1866",
+          "order": 1,
+          "parentSessionId": "0c0659eb-dc1e-48ff-a185-075d3a4a9df3",
+          "workerSessionId": null,
+          "worktreeId": "8faa8549-9356-4b9c-af9c-d63f289c1c44"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-11-A2-ea746a2362",
+          "order": 2,
+          "parentSessionId": "2f93c574-208c-49bf-a5da-2f29278baca1",
+          "workerSessionId": "18907aac-a7be-434a-a08a-73c34762382a",
+          "worktreeId": "886a04b8-154d-4469-a87b-134e779b3980"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-12",
+      "fixtureId": "settings-upgrade",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-12-A2-575b75c093",
+          "order": 1,
+          "parentSessionId": "8de4753f-fe42-4f3b-affa-1a85530cfea3",
+          "workerSessionId": "39958ba9-bf75-4a61-a2ae-5ef4e83807f2",
+          "worktreeId": "ed889b7e-e040-4d1e-a6de-96b81908b5fd"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-12-A1-a5f7d72336",
+          "order": 2,
+          "parentSessionId": "3ae7e948-6c70-46ec-ac22-6facc672f25d",
+          "workerSessionId": null,
+          "worktreeId": "27cc68a9-d2fc-4831-a46c-e95c8a94462a"
+        }
+      ],
+      "variantId": "r3"
+    },
+    {
+      "blockId": "V2M-13",
+      "fixtureId": "retry-budget",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-13-A1-ba5fae3471",
+          "order": 1,
+          "parentSessionId": "eef8ef3c-dfdc-44cc-ab0b-f5d885926079",
+          "workerSessionId": null,
+          "worktreeId": "42e8e1ef-7eff-46f8-a117-2cd46d361090"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-13-A2-d6c67c341e",
+          "order": 2,
+          "parentSessionId": "eaac5b83-3c2c-419e-a6e0-fea5da170193",
+          "workerSessionId": "70500335-1f30-41b0-a615-bae267723fe9",
+          "worktreeId": "256332a4-548f-4c82-a87d-3053003d4784"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-14",
+      "fixtureId": "retry-budget",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-14-A2-9feb343b4f",
+          "order": 1,
+          "parentSessionId": "2e3f924a-876c-4181-aeb9-d92ddbd49083",
+          "workerSessionId": "738f29d9-0f74-4d93-a7ce-eedd23fc9569",
+          "worktreeId": "7e3c2efa-c801-4f88-a9b8-56de19da450a"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-14-A1-6177f79f53",
+          "order": 2,
+          "parentSessionId": "b0f02818-5262-4bf0-afcf-2ee035867ebc",
+          "workerSessionId": null,
+          "worktreeId": "0aa95acc-bcca-4ae2-a9ca-a9b65b1f91e7"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-15",
+      "fixtureId": "retry-budget",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-15-A1-e1f3fa8edb",
+          "order": 1,
+          "parentSessionId": "f49c8e5d-f94c-4a49-ab05-a98e9618b339",
+          "workerSessionId": null,
+          "worktreeId": "32bdcfdd-9822-4824-a97f-7539b31e4e58"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-15-A2-27239c7c42",
+          "order": 2,
+          "parentSessionId": "6ccc5f06-5bbd-4236-a160-af406580462f",
+          "workerSessionId": "ab4c59c6-cabb-48b3-acc2-9a39296a4a0b",
+          "worktreeId": "6e028cf5-7fc9-42b7-a2c9-4b58f66fec1d"
+        }
+      ],
+      "variantId": "r3"
+    },
+    {
+      "blockId": "V2M-16",
+      "fixtureId": "path-rewrite",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-16-A1-4e27b6cf80",
+          "order": 1,
+          "parentSessionId": "e99dbd2a-8750-4da5-a68e-c0319c635400",
+          "workerSessionId": null,
+          "worktreeId": "2d2e5c9d-df94-4739-a404-628399859994"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-16-A2-904f328963",
+          "order": 2,
+          "parentSessionId": "c978b148-22c9-445f-aff3-51cecc3e1a1a",
+          "workerSessionId": "36d851d0-5dc1-4ffd-a376-271f48d330cc",
+          "worktreeId": "263e4b0f-f135-46b8-a6af-b1e4e3a1db9c"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-17",
+      "fixtureId": "path-rewrite",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-17-A2-7d4369fab0",
+          "order": 1,
+          "parentSessionId": "4c339c79-43c2-4b1b-a478-bf5f05ddca83",
+          "workerSessionId": "bc6d0163-d7eb-4970-a53d-0b4285313073",
+          "worktreeId": "063a634d-95ef-4326-a324-1b12de11eaed"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-17-A1-0db6375c35",
+          "order": 2,
+          "parentSessionId": "82ad7266-ca3b-4ab4-a798-56b35e8241f0",
+          "workerSessionId": null,
+          "worktreeId": "de83c664-6840-443f-ab88-fb4ea13bb56c"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-18",
+      "fixtureId": "path-rewrite",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-18-A1-3f490fef9a",
+          "order": 1,
+          "parentSessionId": "c9d0cf02-a9a5-4b3c-a928-5d5a69008433",
+          "workerSessionId": null,
+          "worktreeId": "1d5ecf42-2df9-4e70-a9b3-58e18ec268ea"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-18-A2-56c050886e",
+          "order": 2,
+          "parentSessionId": "83994776-2bbb-40ba-ae75-49fe5ddd1b2b",
+          "workerSessionId": "2e3f7f27-485b-4a8a-a25d-54b4bbd4098d",
+          "worktreeId": "90c0e5b6-f962-4ad7-a5a4-78f75380ac95"
+        }
+      ],
+      "variantId": "r3"
+    },
+    {
+      "blockId": "V2M-19",
+      "fixtureId": "table-project-cli",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-19-A2-2034864a72",
+          "order": 1,
+          "parentSessionId": "e190a927-6d44-4e83-acae-49289c0ee48c",
+          "workerSessionId": "3c4d1c50-cfb5-476e-a9ef-5a6319a38dd7",
+          "worktreeId": "bd74fe1d-b5a7-4f7a-ad98-2196bb41957d"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-19-A1-6c34188d5f",
+          "order": 2,
+          "parentSessionId": "391c5a31-fdd2-4328-a6c7-88da2ac17833",
+          "workerSessionId": null,
+          "worktreeId": "b2b5ab07-bc7d-487b-ab81-8d420ace5fe8"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-20",
+      "fixtureId": "table-project-cli",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-20-A1-b875303f65",
+          "order": 1,
+          "parentSessionId": "55837c5b-adc0-4f14-acf5-354884102559",
+          "workerSessionId": null,
+          "worktreeId": "f3acabd3-22c7-41df-af7a-2f9694b0a904"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-20-A2-bddef61531",
+          "order": 2,
+          "parentSessionId": "02e8055c-1e40-40b7-aa8a-cec661b05a10",
+          "workerSessionId": "519acced-4e09-4d54-a3cf-522f1c40c5af",
+          "worktreeId": "c3f0d6aa-528c-492c-aeea-7afa4b95a39a"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-21",
+      "fixtureId": "table-project-cli",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-21-A1-555ab31b44",
+          "order": 1,
+          "parentSessionId": "3f88ec46-1b47-4304-af66-8105df645983",
+          "workerSessionId": null,
+          "worktreeId": "5f440a84-1d72-4537-a86f-ec8ef8fb58d2"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-21-A2-061d1c7dca",
+          "order": 2,
+          "parentSessionId": "7e5ea64d-4492-418c-a3c0-fc7c2d673ede",
+          "workerSessionId": "eaea1503-ae01-4894-a302-29f2f0c0b76e",
+          "worktreeId": "d9bdddc9-a545-435a-a313-6d8b8a8b4d53"
+        }
+      ],
+      "variantId": "r3"
+    },
+    {
+      "blockId": "V2M-22",
+      "fixtureId": "token-audit-cli",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-22-A2-423c60e404",
+          "order": 1,
+          "parentSessionId": "00b732d8-e653-4481-aae1-8434d00d683f",
+          "workerSessionId": "6f71b613-3b04-47b0-a87e-ca4e8722aeb2",
+          "worktreeId": "d48a2472-5422-495e-a321-cbc285377e27"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-22-A1-1949c31268",
+          "order": 2,
+          "parentSessionId": "2d1312dc-dc26-48df-a24a-764daca187ab",
+          "workerSessionId": null,
+          "worktreeId": "0e48b622-7174-4c52-ac1d-38cef6e1cd71"
+        }
+      ],
+      "variantId": "r1"
+    },
+    {
+      "blockId": "V2M-23",
+      "fixtureId": "token-audit-cli",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2M-23-A2-4d080b45be",
+          "order": 1,
+          "parentSessionId": "8109dd09-9281-497c-a5d4-576b358035d8",
+          "workerSessionId": "fb2aff80-27b4-4d08-a42a-169ddc522277",
+          "worktreeId": "2be84623-4e65-4e86-a284-8e7fd595ee1a"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2M-23-A1-fd5ef5bfb8",
+          "order": 2,
+          "parentSessionId": "934f73ad-3d40-4fea-aa1f-5798ef823e16",
+          "workerSessionId": null,
+          "worktreeId": "fd5cbc1a-6ca2-4f62-a769-c7064a2c4acd"
+        }
+      ],
+      "variantId": "r2"
+    },
+    {
+      "blockId": "V2M-24",
+      "fixtureId": "token-audit-cli",
+      "phase": "main",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2M-24-A1-534fde7d14",
+          "order": 1,
+          "parentSessionId": "0375609d-3ada-40db-a828-b95050237887",
+          "workerSessionId": null,
+          "worktreeId": "b10441ce-7578-4985-a57a-3d873be64532"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2M-24-A2-403707ceb6",
+          "order": 2,
+          "parentSessionId": "df0e6ef4-9083-46c1-aceb-b5ceb5352967",
+          "workerSessionId": "ed85ff12-6207-46dc-a06a-9aabfa56ff6f",
+          "worktreeId": "0612b6fa-dc21-4c8f-a746-4c8752fa2eb7"
+        }
+      ],
+      "variantId": "r3"
+    }
+  ],
+  "pilot": [
+    {
+      "blockId": "V2P-01",
+      "fixtureId": "label-fold",
+      "phase": "pilot",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2P-01-A2-15f62ce532",
+          "order": 1,
+          "parentSessionId": "e8845f13-3e1a-4a6f-a5d3-e35f609b5602",
+          "workerSessionId": "c56a4251-c313-4967-a75d-8da71ba2afd9",
+          "worktreeId": "5e9613b2-e815-4d34-aaa0-47711081aff6"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2P-01-A1-331ac11add",
+          "order": 2,
+          "parentSessionId": "7b26846d-7d4f-4097-af46-a33d4c89b287",
+          "workerSessionId": null,
+          "worktreeId": "fa6e2138-203e-4a4c-a48d-4eff5ecb0c78"
+        }
+      ],
+      "variantId": "p1"
+    },
+    {
+      "blockId": "V2P-02",
+      "fixtureId": "sum-lines-cli",
+      "phase": "pilot",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2P-02-A1-7a60e558ae",
+          "order": 1,
+          "parentSessionId": "cc5d2601-d3f4-4d0a-a8d8-1b29ca32f3e5",
+          "workerSessionId": null,
+          "worktreeId": "643de213-a733-40f8-a177-7f8707cf29e4"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2P-02-A2-e4517c4b10",
+          "order": 2,
+          "parentSessionId": "fe290293-97cb-4e35-ae31-4bd10200c8c2",
+          "workerSessionId": "fb9c0c14-91d0-49bf-a202-168600a8255c",
+          "worktreeId": "49f0ec78-df1e-42f9-ad38-2036d5cb13af"
+        }
+      ],
+      "variantId": "p1"
+    },
+    {
+      "blockId": "V2P-03",
+      "fixtureId": "environment-pick",
+      "phase": "pilot",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2P-03-A1-9e3af9bd37",
+          "order": 1,
+          "parentSessionId": "8adc4eb8-a8dd-4d54-ada7-c566efce43f5",
+          "workerSessionId": null,
+          "worktreeId": "9214b9b6-48c5-4562-ad95-9bd3be42aeff"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2P-03-A2-37a1edfd82",
+          "order": 2,
+          "parentSessionId": "0b3d86ab-f8d7-451d-a23e-deb178b7207d",
+          "workerSessionId": "540fa453-893d-49f0-aaa0-d99152685f34",
+          "worktreeId": "e1261b82-7fe5-4dd9-afda-354a6545216e"
+        }
+      ],
+      "variantId": "p1"
+    },
+    {
+      "blockId": "V2P-04",
+      "fixtureId": "chunk-view",
+      "phase": "pilot",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2P-04-A2-7132a374f4",
+          "order": 1,
+          "parentSessionId": "38ecdc7f-32c4-4a06-ae40-d67c16ec9e32",
+          "workerSessionId": "c215e64d-546f-4fb6-a0a8-0899774b8efe",
+          "worktreeId": "55c5f35e-ebb2-4666-ad93-09c617538886"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2P-04-A1-12009132e1",
+          "order": 2,
+          "parentSessionId": "d1240ad0-9054-4e42-ac56-462c9d0acd66",
+          "workerSessionId": null,
+          "worktreeId": "08f2b483-76ed-4d17-acdd-185f2ca35868"
+        }
+      ],
+      "variantId": "p1"
+    },
+    {
+      "blockId": "V2P-05",
+      "fixtureId": "color-map-cli",
+      "phase": "pilot",
+      "runs": [
+        {
+          "arm": "A2",
+          "observationId": "V2P-05-A2-7a28a0be04",
+          "order": 1,
+          "parentSessionId": "423ec5b3-860c-4cee-a957-f817eeddff07",
+          "workerSessionId": "98e6feba-cd82-430a-a9db-742bd4362e86",
+          "worktreeId": "c5106b30-14ed-4c32-ac17-0a8d3fb01f0a"
+        },
+        {
+          "arm": "A1",
+          "observationId": "V2P-05-A1-06a9fd759e",
+          "order": 2,
+          "parentSessionId": "e168529d-e806-48a8-ae58-b59a0de14b18",
+          "workerSessionId": null,
+          "worktreeId": "a32b88a7-c4a9-4ec0-aae0-073e93009e38"
+        }
+      ],
+      "variantId": "p1"
+    },
+    {
+      "blockId": "V2P-06",
+      "fixtureId": "config-alias",
+      "phase": "pilot",
+      "runs": [
+        {
+          "arm": "A1",
+          "observationId": "V2P-06-A1-38e08fb291",
+          "order": 1,
+          "parentSessionId": "950b4278-3a85-419a-a424-8dadf8fad578",
+          "workerSessionId": null,
+          "worktreeId": "65cb925a-1dc7-499e-a372-ea19f77f6af4"
+        },
+        {
+          "arm": "A2",
+          "observationId": "V2P-06-A2-5506441ef0",
+          "order": 2,
+          "parentSessionId": "bef8765d-6e2c-42e5-a17b-41c0a04fd171",
+          "workerSessionId": "44d16472-65ab-466b-a3fc-b94e337fd1cf",
+          "worktreeId": "63f56963-45d7-4e8d-af7c-c16e31f99899"
+        }
+      ],
+      "variantId": "p1"
+    }
+  ],
+  "protocolId": "feature-documentation-delegation-v2-sonnet",
+  "randomizationSeed": 82620417,
+  "scheduleVersion": 2
+}

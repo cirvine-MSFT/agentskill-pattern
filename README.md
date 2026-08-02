@@ -40,6 +40,7 @@ Editable architecture diagrams and rendered PNGs are in
 | Release-note synthesis | [`release-note-synthesis` Skill](.github/skills/release-note-synthesis/SKILL.md), [agent](.github/agents/release-note-haiku.agent.md), [two-tool MCP](tools/release-note-mcp/) | Feasibility only; runtime wiring failed before semantic quality could be tested. |
 | Action-item extraction | [retained v3 Skill and agent](experiments/action-item-extraction/candidate/) | Feasibility only; context isolation worked, but held-out tuple quality and grounding failed. |
 | Feature documentation | [`feature-documentation` Skill](.github/skills/feature-documentation/SKILL.md), [fixed-Haiku agent](.github/agents/feature-documentation-haiku.agent.md), [excluded-pilot report](experiments/documentation-delegation/report.md) | Excluded pilot NO-GO; delegated docs and treatment adherence failed, so main was not authorized. |
+| Feature documentation v2 | [`feature-documentation-sonnet-v2` Skill](.github/skills/feature-documentation-sonnet-v2/SKILL.md), [fixed-Sonnet agent](.github/agents/feature-documentation-sonnet-v2.agent.md), [preregistration](experiments/documentation-delegation-v2/) | Preregistered design only; mandatory Skill routing, six-pair excluded pilot, 24-pair held-out main, zero observations. |
 | Unit-test authoring | [fixed-Haiku candidate Skill and agent](experiments/unit-test-delegation/candidate/), [preregistered experiment](experiments/unit-test-delegation/) | Preregistered design only; zero AI observations and no execution authorization. |
 
 ## What the experiments found
