@@ -1,8 +1,14 @@
 #!/usr/bin/env node
-import {mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {mkdirSync, rmSync, writeFileSync} from "node:fs";
 import {dirname, isAbsolute, relative, resolve, sep} from "node:path";
 import {mainFixtures, pilotFixtures} from "../fixtures/catalog.mjs";
-import {assertInside, protocolId, stableStringify} from "./lib.mjs";
+import {
+  assertInside,
+  indexBytes,
+  protocolId,
+  repoRelative,
+  stableStringify
+} from "./lib.mjs";
 
 const conventions = `# Documentation conventions v2
 
@@ -111,13 +117,26 @@ documentation evaluation runs only after the parent session ends.
   }));
 
   const repository = resolve(import.meta.dirname, "..", "..", "..");
+  const skillPath = resolve(
+    repository,
+    ".github",
+    "skills",
+    "feature-documentation-sonnet-v2",
+    "SKILL.md"
+  );
+  const agentPath = resolve(
+    repository,
+    ".github",
+    "agents",
+    "feature-documentation-sonnet-v2.agent.md"
+  );
   writeFileSync(
     resolve(candidate, ".github", "skills", "feature-documentation-sonnet-v2", "SKILL.md"),
-    readFileSync(resolve(repository, ".github", "skills", "feature-documentation-sonnet-v2", "SKILL.md"))
+    indexBytes(repoRelative(skillPath))
   );
   writeFileSync(
     resolve(candidate, ".github", "agents", "feature-documentation-sonnet-v2.agent.md"),
-    readFileSync(resolve(repository, ".github", "agents", "feature-documentation-sonnet-v2.agent.md"))
+    indexBytes(repoRelative(agentPath))
   );
 
   writeFileSync(resolve(evaluator, "hidden-spec.json"), stableStringify({
