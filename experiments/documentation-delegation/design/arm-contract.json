@@ -1,0 +1,100 @@
+{
+  "protocolId": "feature-documentation-delegation-v1",
+  "status": "preregistered-design-only",
+  "baselineCommit": "2566c16a9ce202cbce691d1d17f27b1d876e650b",
+  "cli": {
+    "name": "GitHub Copilot CLI",
+    "version": "1.0.77",
+    "executionLocation": "local",
+    "parentModel": "gpt-5.6-sol",
+    "parentEffort": "medium",
+    "workerModel": "claude-haiku-4.5"
+  },
+  "arms": [
+    {
+      "id": "A1",
+      "name": "GPT parent inline documentation",
+      "parentOwns": ["requirements", "production-code", "integration", "documentation", "final-response"],
+      "delegated": false
+    },
+    {
+      "id": "A2",
+      "name": "GPT parent to fixed-Haiku documentation worker",
+      "parentOwns": ["requirements", "production-code", "integration", "final-response"],
+      "workerOwns": ["one-precreated-documentation-target"],
+      "delegated": true,
+      "skill": "feature-documentation",
+      "agent": "feature-documentation-haiku",
+      "parentToolsForDelegation": ["task"],
+      "workerTools": ["read", "edit"],
+      "forbiddenWorkerCapabilities": ["shell", "search", "web", "mcp", "recursion"],
+      "parentPostDelegationDocReadAllowed": false,
+      "parentDocGradingOrRepairAllowed": false,
+      "retryAllowed": false,
+      "adherencePredicate": {
+        "exactWorkerInvocations": 1,
+        "exactWorkerSessions": 1,
+        "workerModel": "claude-haiku-4.5",
+        "workerAllowedTools": ["read", "edit"],
+        "workerReadAllowlistRequired": true,
+        "workerEditTargetOnly": true,
+        "workerSuccessfulTargetEditRequired": true,
+        "compactTerminalStatusRequired": true,
+        "parentTargetEditAllowed": false,
+        "parentTargetReadAfterWorkerFirstEditAllowed": false,
+        "nestedDelegationAllowed": false
+      }
+    }
+  ],
+  "design": {
+    "type": "randomized-complete-paired-block",
+    "mainBlocks": 24,
+    "mainFixtures": 8,
+    "variantsPerFixture": 3,
+    "armsPerBlock": 2,
+    "mainObservations": 48,
+    "pilotBlocks": 2,
+    "pilotObservations": 4,
+    "pilotOutcomeEligible": false,
+    "randomizationSeed": 56017731,
+    "freshIdsAndWorktreePerObservation": true,
+    "intentToTreat": true,
+    "retries": 0
+  },
+  "primaryContrast": "A2-minus-A1 paired within fixture-variant block",
+  "positiveSignal": {
+    "allConjunctsRequired": true,
+    "allMainUnitsStartedRequired": true,
+    "bootstrapSeed": 56017732,
+    "bootstrapResamples": 100000,
+    "combinedAiCreditsPairedRatioUpper95": 0.85,
+    "parentAiCreditsPairedRatioUpper95": 0.7,
+    "parentCumulativeInputPairedRatioUpper95": 0.7,
+    "parentPeakInputPairedRatioUpper95": 0.85,
+    "featureCorrectnessDifferenceLower95": -0.02,
+    "documentationCorrectnessDifferenceLower95": -0.05,
+    "documentationCoverageDifferenceLower95": -0.05,
+    "documentationExecutabilityDifferenceLower95": -0.05,
+    "treatmentFeatureCorrectnessFloor": 0.95,
+    "treatmentDocumentationDimensionFloor": 0.9,
+    "treatmentCompletionFloor": 0.9,
+    "treatmentAdherenceFloor": 0.9,
+    "completionDifferenceLower95": -0.05,
+    "totalTokensPairedRatioUpper95": 1.75,
+    "wallTimePairedRatioUpper95": 1.5
+  },
+  "startBoundary": {
+    "preStart": "No parent CLI session has been created and no model request has been sent.",
+    "started": "The pinned parent CLI process emits its first model-usage event.",
+    "startedFailure": "Retained in ITT with available usage; incomplete quality dimensions score zero.",
+    "preStartInfrastructureFailure": "May be rescheduled only before any model request, with the same frozen observation ID and order slot."
+  },
+  "prohibitions": [
+    "start any pilot or main AI observation in this design session",
+    "expose hidden requirements, evaluator code, schedule, or adversarial variants to candidates",
+    "let A2 parent read, grade, repair, or rewrite delegated documentation",
+    "retry a started observation or worker call",
+    "replace or reorder outcome-aware observations",
+    "use deterministic evaluator work as AI-credit cost"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "observation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "protocolId", "observationId", "blockId", "arm", "order",
+    "fixtureId", "variantId", "parentSessionId", "workerSessionId", "sourceCommit",
+    "started", "completed", "adherent", "adherence", "usage", "timing", "tools", "evaluation"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "protocolId": {"const": "feature-documentation-delegation-v1"},
+    "observationId": {"type": "string", "pattern": "^(?:MAIN|PILOT)-B\\d{2}-A[12]-[a-f0-9]{8}$"},
+    "blockId": {"type": "string", "pattern": "^(?:MAIN|PILOT)-B\\d{2}$"},
+    "arm": {"enum": ["A1", "A2"]},
+    "order": {"type": "integer", "minimum": 1, "maximum": 2},
+    "fixtureId": {"type": "string"},
+    "variantId": {"type": "string", "pattern": "^v[1-3]$"},
+    "parentSessionId": {"type": ["string", "null"]},
+    "workerSessionId": {"type": ["string", "null"]},
+    "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "started": {"type": "boolean"},
+    "completed": {"type": "boolean"},
+    "adherent": {"type": "boolean"},
+    "adherence": {"$ref": "adherence.schema.json"},
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "combinedAiCredits", "parentAiCredits", "workerAiCredits", "combinedNanoAiu",
+        "parentNanoAiu", "workerNanoAiu", "totalTokens", "parentTokens", "workerTokens",
+        "parentCumulativeInputTokens", "parentPeakInputTokens", "parentOutputTokens",
+        "workerInputTokens", "workerOutputTokens", "completions"
+      ],
+      "properties": {
+        "combinedAiCredits": {"type": ["number", "null"], "minimum": 0},
+        "parentAiCredits": {"type": ["number", "null"], "minimum": 0},
+        "workerAiCredits": {"type": ["number", "null"], "minimum": 0},
+        "combinedNanoAiu": {"type": ["integer", "null"], "minimum": 0},
+        "parentNanoAiu": {"type": ["integer", "null"], "minimum": 0},
+        "workerNanoAiu": {"type": ["integer", "null"], "minimum": 0},
+        "totalTokens": {"type": ["integer", "null"], "minimum": 0},
+        "parentTokens": {"type": ["integer", "null"], "minimum": 0},
+        "workerTokens": {"type": ["integer", "null"], "minimum": 0},
+        "parentCumulativeInputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "parentPeakInputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "parentOutputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "workerInputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "workerOutputTokens": {"type": ["integer", "null"], "minimum": 0},
+        "completions": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activeMs", "workerMs", "waitMs", "wallMs"],
+      "properties": {
+        "activeMs": {"type": ["integer", "null"], "minimum": 0},
+        "workerMs": {"type": ["integer", "null"], "minimum": 0},
+        "waitMs": {"type": ["integer", "null"], "minimum": 0},
+        "wallMs": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parentCalls", "workerCalls", "resultBytes"],
+      "properties": {
+        "parentCalls": {"type": ["integer", "null"], "minimum": 0},
+        "workerCalls": {"type": ["integer", "null"], "minimum": 0},
+        "resultBytes": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "evaluation": {"oneOf": [{"type": "null"}, {"$ref": "evaluation.schema.json"}]}
+  }
+}

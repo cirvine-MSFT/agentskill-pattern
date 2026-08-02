@@ -1,0 +1,16 @@
+{
+  "name": "documentation-delegation-experiment",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "freeze": "node scripts/freeze-design.mjs",
+    "links": "node scripts/check-links.mjs",
+    "no-run": "node scripts/verify-no-run.mjs",
+    "reproduce": "node scripts/reproduce.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}
