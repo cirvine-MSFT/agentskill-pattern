@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 2,
+  "authorizationId": "unit-test-delegation-v2-excluded-pilot",
+  "pilot": "authorized",
+  "main": "forbidden",
+  "requiresExecuteFlag": true,
+  "authorizedAfterMerge": "e8eb4098056ce7bc7faf6e09de79e9d5335beeee",
+  "sourceManifestRootHash": "f0edbce3d4ef3eae7cc4940134c885a55874b6d792b2808195b473d78100f2c6",
+  "pilotIdentities": [
+    {
+      "observationId": "pilot-P12-r01-A1",
+      "sessionId": "c9768761-7ff1-5afc-901f-ea1d90119de8",
+      "worktreeId": "v2-worktree-1be76560b34b2806dd90cb16"
+    },
+    {
+      "observationId": "pilot-P12-r01-A2",
+      "sessionId": "69054d11-0f56-58ae-aff5-668b7672ed36",
+      "worktreeId": "v2-worktree-cd01dd809916a910475fc5f9"
+    },
+    {
+      "observationId": "pilot-P13-r01-A2",
+      "sessionId": "a682c56c-7f96-55da-96d6-c419fa8f21d5",
+      "worktreeId": "v2-worktree-0e5fd0d04b01715c7c69362f"
+    },
+    {
+      "observationId": "pilot-P13-r01-A1",
+      "sessionId": "197e6a76-80ed-5a25-acb9-0571ba01ddb3",
+      "worktreeId": "v2-worktree-f802e9fd55f68a8ecf675cd2"
+    },
+    {
+      "observationId": "pilot-P11-r01-A1",
+      "sessionId": "034cc4ae-ab33-57db-bb2a-4af3bf8926eb",
+      "worktreeId": "v2-worktree-038351e2a8640c88fc317746"
+    },
+    {
+      "observationId": "pilot-P11-r01-A2",
+      "sessionId": "6269964f-a62b-5e34-98dc-d727672422eb",
+      "worktreeId": "v2-worktree-eb4fe0c0dcdf9bddb5f2339d"
+    }
+  ],
+  "generatedCandidateManifestHashes": {
+    "pilot-P12-r01-A1": "ae4bed2ab763283acccb985d9e1aae145a4f76c182166d271c36f7c19ce8a8f6",
+    "pilot-P12-r01-A2": "824a4ed1ddad14a3d1f7876aae272fa961efbd8da73ba841b1b70dd033466d7a",
+    "pilot-P13-r01-A2": "77e3487d5f0e8c4da9c78ac2f8e53227bdb6b083a801f13cca82cd4905ef7903",
+    "pilot-P13-r01-A1": "cfc6b9d4799be041fa5e212ab2f623e68a77a7039d4fc7b91f73ee3440f24d12",
+    "pilot-P11-r01-A1": "8dce363c73db228b9ee47b51f6caf7fa9ded571b76f43f9a90b7406dfceae719",
+    "pilot-P11-r01-A2": "8ca15f664fd71ebde48d37ebe30f1fd689d6c02bbac3fb12af68470d0a37df0d"
+  },
+  "reviewedExecutionFiles": [
+    {
+      "path": "scripts/pilot-contract.mjs",
+      "sha256": "c52ec5c4298c59d356ecfccee75dae3c93101c0b34dfebb87786f98ce17d26a1"
+    },
+    {
+      "path": "scripts/pilot-runner.mjs",
+      "sha256": "23016ab761dd7fd0b3d88797569ca668baf81d2e417889d923cc2c28e2b32d8d"
+    }
+  ],
+  "reason": "Reviewed design authorization for the six permanently excluded v2 pilot observations only. Explicit --execute remains mandatory and held-out main remains forbidden."
+}

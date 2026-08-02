@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "status": "preregistered-design-only",
+  "baseCommit": "e8eb4098056ce7bc7faf6e09de79e9d5335beeee",
+  "seed": "unit-test-delegation-v2|sonnet-4.6|2026-08-01|b7314d89",
+  "pins": {
+    "copilotCli": "1.0.77",
+    "node": "22.14.0",
+    "npm": "10.9.2",
+    "parentModel": "gpt-5.6-sol",
+    "parentContextTier": "default",
+    "parentReasoningEffort": "medium",
+    "workerModel": "claude-sonnet-4.6"
+  },
+  "arms": {
+    "A1": "parent-production-and-tests",
+    "A2": "parent-production-skill-routed-sonnet-tests"
+  },
+  "pilot": {
+    "tasks": ["P11", "P12", "P13"],
+    "repetitions": 1,
+    "plannedPairs": 3,
+    "plannedObservations": 6,
+    "permanentlyExcluded": true,
+    "validPairsForGoMin": 2,
+    "operationalCompletionsForGoMin": 5
+  },
+  "main": {
+    "tasks": ["M11", "M12", "M13", "M14"],
+    "repetitions": 6,
+    "plannedPairs": 24,
+    "plannedObservations": 48
+  },
+  "envelope": {
+    "combinedCredits": 90,
+    "modelTokens": 300000,
+    "wallSeconds": 360,
+    "parentProcesses": 1,
+    "workerInvocations": 1,
+    "postStartRetries": 0
+  },
+  "positiveSignal": {
+    "combinedCreditRatioMax": 0.88,
+    "taskCreditRatioMax": 0.92,
+    "tasksMeetingCreditRatioMin": 3,
+    "parentCreditRatioMax": 0.72,
+    "parentCumulativeInputRatioMax": 0.78,
+    "parentPeakInputRatioMax": 0.92,
+    "featureDifferenceMin": -0.02,
+    "perTaskFeatureDifferenceMin": -0.05,
+    "testCompositeDifferenceMin": -0.03,
+    "mutantKillDifferenceMin": -0.04,
+    "branchCoverageDifferenceMin": -0.04,
+    "falsePositiveDifferenceMax": 0.02,
+    "treatmentReliabilityMin": 0.95,
+    "treatmentAdherenceMin": 0.95,
+    "reliabilityDifferenceMin": -0.04,
+    "totalTokenRatioMax": 1.35,
+    "wallTimeRatioMax": 1.35
+  }
+}
