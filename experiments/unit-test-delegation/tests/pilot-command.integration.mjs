@@ -172,7 +172,7 @@ test("fresh autocrlf checkout has stable hashes and passes documented preflight 
     );
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      run("npm", ["--prefix", "experiments/unit-test-delegation", "run", "hashes"], checkout);
+      run("npm.cmd", ["--prefix", "experiments/unit-test-delegation", "run", "hashes"], checkout);
       assert.equal(run("git", ["status", "--porcelain"], checkout).stdout, "");
     }
 
