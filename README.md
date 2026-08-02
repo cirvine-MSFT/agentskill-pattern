@@ -39,7 +39,7 @@ Editable architecture diagrams and rendered PNGs are in
 | Semantic test corpus | [`semantic-test-corpus` Skill](.github/skills/semantic-test-corpus/SKILL.md), [agents](.github/agents/semantic-test-corpus.agent.md), [confined MCP](tools/semantic-corpus-mcp/), [notes](docs/reference-implementations/semantic-test-corpus.md) | Implemented; controlled benchmark saved AI credits and parent context but lost held-out quality and reliability. |
 | Release-note synthesis | [`release-note-synthesis` Skill](.github/skills/release-note-synthesis/SKILL.md), [agent](.github/agents/release-note-haiku.agent.md), [two-tool MCP](tools/release-note-mcp/) | Feasibility only; runtime wiring failed before semantic quality could be tested. |
 | Action-item extraction | [retained v3 Skill and agent](experiments/action-item-extraction/candidate/) | Feasibility only; context isolation worked, but held-out tuple quality and grounding failed. |
-| Feature documentation | [`feature-documentation` Skill](.github/skills/feature-documentation/SKILL.md), [fixed-Haiku agent](.github/agents/feature-documentation-haiku.agent.md), [preregistered experiment](experiments/documentation-delegation/) | Preregistered design only; zero AI observations and no execution authorization. |
+| Feature documentation | [`feature-documentation` Skill](.github/skills/feature-documentation/SKILL.md), [fixed-Haiku agent](.github/agents/feature-documentation-haiku.agent.md), [excluded-pilot report](experiments/documentation-delegation/report.md) | Excluded pilot NO-GO; delegated docs and treatment adherence failed, so main was not authorized. |
 | Unit-test authoring | [fixed-Haiku candidate Skill and agent](experiments/unit-test-delegation/candidate/), [preregistered experiment](experiments/unit-test-delegation/) | Preregistered design only; zero AI observations and no execution authorization. |
 
 ## What the experiments found
@@ -59,6 +59,10 @@ summary. Each study retains one concise protocol and one canonical report.
 - **Action items:** the v3 mechanics isolated transcript/file work from the parent, but
   the three excluded pilots averaged 0.462 tuple F1 and failed the 100% grounding
   requirement.
+- **Feature documentation:** the two-block excluded pilot used 17.4% fewer combined
+  credits but 52.0% more parent cumulative input and 57.3% more total model tokens.
+  Both delegated guides scored zero and both treatment runs failed routing/adherence,
+  producing a frozen NO-GO; the main study was not run.
 
 Quality was assessed by repository-owned deterministic external evaluators and, for
 ASCII, blinded artifact judging. The parent model did not grade its own output.

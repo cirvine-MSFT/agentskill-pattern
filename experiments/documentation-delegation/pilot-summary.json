@@ -1,0 +1,350 @@
+{
+  "authorizationBoundary": {
+    "mainAuthorized": false,
+    "nextStep": "A pilot GO plus separate explicit main authorization is required."
+  },
+  "outcomeEligibility": "permanently-excluded-pilot",
+  "pairs": [
+    {
+      "blockId": "PILOT-B01",
+      "combinedCreditsRatioA2A1": 0.6389644180330207,
+      "docsDifferenceA2MinusA1": -1,
+      "featureDifferenceA2MinusA1": 0,
+      "parentInputRatioA2A1": 1.2029964212782305
+    },
+    {
+      "blockId": "PILOT-B02",
+      "combinedCreditsRatioA2A1": 1.1715953110505157,
+      "docsDifferenceA2MinusA1": -1,
+      "featureDifferenceA2MinusA1": 0,
+      "parentInputRatioA2A1": 2.0797206036955864
+    }
+  ],
+  "pilot": {
+    "decision": "NO-GO",
+    "gates": {
+      "allArtifactsEvaluated": true,
+      "allStartedOnce": true,
+      "deterministicReproduction": true,
+      "exactFrozenCoverage": true,
+      "parentNoReview": false,
+      "terminalCapture": true,
+      "treatmentAdherence": false,
+      "treatmentRouting": false,
+      "usagePartition": true
+    }
+  },
+  "privacy": {
+    "canonicalPaths": "omitted",
+    "rawEvidence": "retained only in the authorized durable artifact root"
+  },
+  "protocolId": "feature-documentation-delegation-v1",
+  "reproduction": {
+    "details": [
+      {
+        "match": true,
+        "observationId": "PILOT-B01-A2-fb119c9e",
+        "pass": 1
+      },
+      {
+        "match": true,
+        "observationId": "PILOT-B01-A1-34623695",
+        "pass": 1
+      },
+      {
+        "match": true,
+        "observationId": "PILOT-B02-A2-8748ee83",
+        "pass": 1
+      },
+      {
+        "match": true,
+        "observationId": "PILOT-B02-A1-65c17abc",
+        "pass": 1
+      },
+      {
+        "match": true,
+        "observationId": "PILOT-B01-A2-fb119c9e",
+        "pass": 2
+      },
+      {
+        "match": true,
+        "observationId": "PILOT-B01-A1-34623695",
+        "pass": 2
+      },
+      {
+        "match": true,
+        "observationId": "PILOT-B02-A2-8748ee83",
+        "pass": 2
+      },
+      {
+        "match": true,
+        "observationId": "PILOT-B02-A1-65c17abc",
+        "pass": 2
+      }
+    ],
+    "pass": true,
+    "passes": 2
+  },
+  "retainedEvidenceProvenanceSha256": "727c79ad830567013d0cc72061ab47a3cfe24fb7a5ada9400375bfceb11eef8d",
+  "runnerProtocolId": "feature-documentation-pilot-runner-v1",
+  "runs": [
+    {
+      "adherent": false,
+      "arm": "A2",
+      "blockId": "PILOT-B01",
+      "completed": true,
+      "disposition": "complete",
+      "evaluation": {
+        "documentation": {
+          "correctness": 0,
+          "coverage": 0,
+          "details": [
+            "Required headings are missing or out of order",
+            "Missing required facts: repeated whitespace",
+            "Expected at least 1 executable examples"
+          ],
+          "executability": 0,
+          "format": 0.5,
+          "unsupportedClaims": 0
+        },
+        "feature": {
+          "failures": [
+            "Feature check 1: EROFS: read-only file system, open '/evaluator/.module-probe-0.mjs'",
+            "Feature check 2: EROFS: read-only file system, open '/evaluator/.module-probe-1.mjs'"
+          ],
+          "passed": 0,
+          "score": 0,
+          "total": 2
+        },
+        "pass": false,
+        "schemaVersion": 1,
+        "taskId": "pilot-slug-codec",
+        "variantId": "v1"
+      },
+      "evidenceSha256": "738359c79ab7ccf88c3d7bdab0cd4f1852eabd54b0814fe5c7b87c18a13371e9",
+      "failure": "unexpected candidate output: src/index.mjs.orig; Worker edited outside the documentation target; Worker made no successful target edit; Worker session ID or model differs from the frozen assignment; Worker terminal status is absent or non-compact; worker handoff differs from the frozen prompt bytes; worker tool path escaped the candidate root",
+      "observationId": "PILOT-B01-A2-fb119c9e",
+      "started": true,
+      "timing": {
+        "activeMs": 50892,
+        "waitMs": 10812,
+        "wallMs": 61465,
+        "workerMs": 10180
+      },
+      "tools": {
+        "parentCalls": 14,
+        "resultBytes": 7226,
+        "workerCalls": 4
+      },
+      "usage": {
+        "combinedAiCredits": 26.313625,
+        "combinedNanoAiu": 26313625000,
+        "completions": 13,
+        "parentAiCredits": 25.110825,
+        "parentCumulativeInputTokens": 118998,
+        "parentNanoAiu": 25110825000,
+        "parentOutputTokens": 3569,
+        "parentPeakInputTokens": 14682,
+        "parentTokens": 122567,
+        "totalTokens": 131535,
+        "workerAiCredits": 1.2028,
+        "workerInputTokens": 8203,
+        "workerNanoAiu": 1202800000,
+        "workerOutputTokens": 765,
+        "workerTokens": 8968
+      },
+      "usageSettled": true
+    },
+    {
+      "adherent": false,
+      "arm": "A1",
+      "blockId": "PILOT-B01",
+      "completed": true,
+      "disposition": "complete",
+      "evaluation": {
+        "documentation": {
+          "correctness": 1,
+          "coverage": 1,
+          "details": [],
+          "executability": 1,
+          "format": 1,
+          "unsupportedClaims": 0
+        },
+        "feature": {
+          "failures": [
+            "Feature check 1: EROFS: read-only file system, open '/evaluator/.module-probe-0.mjs'",
+            "Feature check 2: EROFS: read-only file system, open '/evaluator/.module-probe-1.mjs'"
+          ],
+          "passed": 0,
+          "score": 0,
+          "total": 2
+        },
+        "pass": false,
+        "schemaVersion": 1,
+        "taskId": "pilot-slug-codec",
+        "variantId": "v1"
+      },
+      "evidenceSha256": "d5d50d64aac0e98134bf2505ef42db36e30e257c67e39b1f182dff8923a31fd8",
+      "failure": "immutable candidate input changed: package.json; unexpected candidate output: test/index.test.mjs",
+      "observationId": "PILOT-B01-A1-34623695",
+      "started": true,
+      "timing": {
+        "activeMs": 93517,
+        "waitMs": 0,
+        "wallMs": 94658,
+        "workerMs": 0
+      },
+      "tools": {
+        "parentCalls": 12,
+        "resultBytes": 12893,
+        "workerCalls": 0
+      },
+      "usage": {
+        "combinedAiCredits": 41.181675,
+        "combinedNanoAiu": 41181675000,
+        "completions": 9,
+        "parentAiCredits": 41.181675,
+        "parentCumulativeInputTokens": 98918,
+        "parentNanoAiu": 41181675000,
+        "parentOutputTokens": 8706,
+        "parentPeakInputTokens": 17578,
+        "parentTokens": 107624,
+        "totalTokens": 107624,
+        "workerAiCredits": 0,
+        "workerInputTokens": 0,
+        "workerNanoAiu": 0,
+        "workerOutputTokens": 0,
+        "workerTokens": 0
+      },
+      "usageSettled": true
+    },
+    {
+      "adherent": false,
+      "arm": "A2",
+      "blockId": "PILOT-B02",
+      "completed": true,
+      "disposition": "complete",
+      "evaluation": {
+        "documentation": {
+          "correctness": 0,
+          "coverage": 0,
+          "details": [
+            "Required headings are missing or out of order",
+            "Missing required facts: Hello",
+            "Expected at least 1 executable examples"
+          ],
+          "executability": 0,
+          "format": 0.5,
+          "unsupportedClaims": 0
+        },
+        "feature": {
+          "failures": [],
+          "passed": 1,
+          "score": 1,
+          "total": 1
+        },
+        "pass": false,
+        "schemaVersion": 1,
+        "taskId": "pilot-greet-cli",
+        "variantId": "v1"
+      },
+      "evidenceSha256": "352ebab21042dd13cf7790a2dfa4916437106196f7d7216a94148d7fca5e06a3",
+      "failure": "Worker edited outside the documentation target; Worker made no successful target edit; Worker session ID or model differs from the frozen assignment; Worker terminal status is absent or non-compact; worker handoff differs from the frozen prompt bytes; worker tool path escaped the candidate root",
+      "observationId": "PILOT-B02-A2-8748ee83",
+      "started": true,
+      "timing": {
+        "activeMs": 48673,
+        "waitMs": 14129,
+        "wallMs": 60180,
+        "workerMs": 13590
+      },
+      "tools": {
+        "parentCalls": 16,
+        "resultBytes": 4805,
+        "workerCalls": 5
+      },
+      "usage": {
+        "combinedAiCredits": 26.048225,
+        "combinedNanoAiu": 26048225000,
+        "completions": 14,
+        "parentAiCredits": 24.422825,
+        "parentCumulativeInputTokens": 116716,
+        "parentNanoAiu": 24422825000,
+        "parentOutputTokens": 3541,
+        "parentPeakInputTokens": 13830,
+        "parentTokens": 120257,
+        "totalTokens": 132763,
+        "workerAiCredits": 1.6254,
+        "workerInputTokens": 11569,
+        "workerNanoAiu": 1625400000,
+        "workerOutputTokens": 937,
+        "workerTokens": 12506
+      },
+      "usageSettled": true
+    },
+    {
+      "adherent": true,
+      "arm": "A1",
+      "blockId": "PILOT-B02",
+      "completed": true,
+      "disposition": "complete",
+      "evaluation": {
+        "documentation": {
+          "correctness": 1,
+          "coverage": 1,
+          "details": [
+            "Executable example 3: Usage: node src/cli.mjs greet --name <value>"
+          ],
+          "executability": 0.6666666666666666,
+          "format": 1,
+          "unsupportedClaims": 0
+        },
+        "feature": {
+          "failures": [],
+          "passed": 1,
+          "score": 1,
+          "total": 1
+        },
+        "pass": false,
+        "schemaVersion": 1,
+        "taskId": "pilot-greet-cli",
+        "variantId": "v1"
+      },
+      "evidenceSha256": "2674ec3980f9cfb6e9b13a655ebb6783002019ddfd9ab892a47212427eebaff9",
+      "failure": null,
+      "observationId": "PILOT-B02-A1-65c17abc",
+      "started": true,
+      "timing": {
+        "activeMs": 52634,
+        "waitMs": 0,
+        "wallMs": 51655,
+        "workerMs": 0
+      },
+      "tools": {
+        "parentCalls": 11,
+        "resultBytes": 5109,
+        "workerCalls": 0
+      },
+      "usage": {
+        "combinedAiCredits": 22.233125,
+        "combinedNanoAiu": 22233125000,
+        "completions": 7,
+        "parentAiCredits": 22.233125,
+        "parentCumulativeInputTokens": 56121,
+        "parentNanoAiu": 22233125000,
+        "parentOutputTokens": 4323,
+        "parentPeakInputTokens": 11218,
+        "parentTokens": 60444,
+        "totalTokens": 60444,
+        "workerAiCredits": 0,
+        "workerInputTokens": 0,
+        "workerNanoAiu": 0,
+        "workerOutputTokens": 0,
+        "workerTokens": 0
+      },
+      "usageSettled": true
+    }
+  ],
+  "schemaVersion": 1,
+  "sourceCommit": "61c1391c7c712a8d8defbbaa6c54212c00ac9ce5"
+}
