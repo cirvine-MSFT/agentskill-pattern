@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evaluation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "fixtureId", "variantId", "feature", "documentation", "pass"],
+  "properties": {
+    "schemaVersion": {"const": 2},
+    "fixtureId": {"type": "string"},
+    "variantId": {"type": "string"},
+    "feature": {
+      "type": "object",
+      "required": ["passed", "total", "score", "failures"],
+      "properties": {
+        "passed": {"type": "integer", "minimum": 0},
+        "total": {"type": "integer", "minimum": 1},
+        "score": {"type": "number", "minimum": 0, "maximum": 1},
+        "failures": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "documentation": {
+      "type": "object",
+      "required": ["correctness", "coverage", "executability", "format", "unsupportedClaims", "details"],
+      "properties": {
+        "correctness": {"type": "number", "minimum": 0, "maximum": 1},
+        "coverage": {"type": "number", "minimum": 0, "maximum": 1},
+        "executability": {"type": "number", "minimum": 0, "maximum": 1},
+        "format": {"type": "number", "minimum": 0, "maximum": 1},
+        "unsupportedClaims": {"type": "integer", "minimum": 0},
+        "details": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "pass": {"type": "boolean"}
+  }
+}

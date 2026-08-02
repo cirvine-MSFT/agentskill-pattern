@@ -1,0 +1,71 @@
+{
+  "protocolId": "feature-documentation-delegation-v2-sonnet",
+  "status": "preregistered-design-only",
+  "baselineMinimumCommit": "10f74edf235f24b2d14af7fda06e9269b5eed1ec",
+  "cli": {
+    "name": "GitHub Copilot CLI",
+    "version": "1.0.71",
+    "parentModel": "gpt-5.6-sol",
+    "parentEffort": "medium",
+    "workerModelRequested": "claude-sonnet-4.6",
+    "workerModelObserved": "claude-sonnet-4.6"
+  },
+  "arms": {
+    "A1": {
+      "documentationOwner": "parent",
+      "delegated": false
+    },
+    "A2": {
+      "documentationOwner": "feature-documentation-sonnet-v2",
+      "delegated": true,
+      "skill": "feature-documentation-sonnet-v2",
+      "agent": "feature-documentation-sonnet-v2",
+      "exactSkillLoads": 1,
+      "exactAgentInvocations": 1,
+      "workerTools": ["read", "edit"],
+      "workerSuccessfulTargetEdits": 1,
+      "forbiddenWorkerCapabilities": ["shell", "search", "web", "mcp", "skill", "agent", "recursion"],
+      "parentPostWorkerTargetAccess": false,
+      "retry": false
+    }
+  },
+  "design": {
+    "type": "randomized-complete-paired-block",
+    "mainFixtures": 8,
+    "variantsPerMainFixture": 3,
+    "mainBlocks": 24,
+    "mainObservations": 48,
+    "pilotFixtures": 6,
+    "pilotBlocks": 6,
+    "pilotObservations": 12,
+    "pilotOutcomeEligible": false,
+    "randomizationSeed": 82620417,
+    "intentToTreat": true
+  },
+  "positiveSignal": {
+    "allConjunctsRequired": true,
+    "allMainUnitsStartedRequired": true,
+    "bootstrapSeed": 82620418,
+    "bootstrapResamples": 100000,
+    "combinedAiCreditsRatioUpper95": 0.9,
+    "parentAiCreditsRatioUpper95": 0.75,
+    "featureCorrectnessDifferenceLower95": -0.02,
+    "documentationDimensionDifferenceLower95": -0.05,
+    "treatmentFeatureCorrectnessFloor": 0.95,
+    "treatmentDocumentationDimensionFloor": 0.9,
+    "treatmentCompletionFloor": 0.9,
+    "completionDifferenceLower95": -0.05,
+    "treatmentAdherenceFloor": 0.9,
+    "parentCumulativeInputRatioUpper95": 0.8,
+    "parentPeakInputRatioUpper95": 0.9,
+    "totalTokensRatioUpper95": 1.6,
+    "wallTimeRatioUpper95": 1.5
+  },
+  "pilotGo": {
+    "minimumValidPairs": 5,
+    "allSlotsDisposedExactlyOnce": true,
+    "routingPassRequiredForEveryValidA2": true,
+    "deterministicReproductions": 2,
+    "authorizesMainExecution": false
+  }
+}
