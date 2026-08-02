@@ -47,8 +47,10 @@ observation.
 Pilot failure permanently stops this experiment version. Pilot GO authorizes only a
 separate reviewed main-execution authorization commit. That commit may record GO and
 bind environment preflight evidence but may not change tasks, prompts, schedule,
-metrics, margins, models, tools, or analysis. This design session executes neither
-pilot nor main observations.
+metrics, margins, models, tools, or analysis. The reviewed execution amendment
+authorizes only the four permanently excluded pilot observations after this
+preregistration merged. The guarded launcher requires explicit `--execute`; without it,
+the command performs preflight only. Main remains forbidden.
 
 ## Main sample and randomization
 
@@ -147,7 +149,11 @@ contains only source, contracts, schemas, deterministic tests, and hashes.
 
 ## No-run attestation
 
-At preregistration, `design/authorization.json` has both phases set to `forbidden`,
-the evidence directory is absent, and the validator rejects any observation-like file,
-run marker, or changed authorization. Passing deterministic checks is not execution
-authorization.
+At preregistration, both phases were forbidden and the source manifest root was
+`def40cf7d53e098c58afffdd76859955910b0eea16fa9a263a3395de720e5538`. The reviewed
+authorization now permits only the excluded pilot and binds that original manifest,
+the four generated candidate hashes, and all four predetermined session/worktree IDs.
+The prospective no-run attestation still records zero started observations and zero
+result evidence files. Passing deterministic checks or holding authorization is not
+execution: only the guarded command with explicit `--execute` may cross the lifecycle
+boundary. Main remains forbidden.
