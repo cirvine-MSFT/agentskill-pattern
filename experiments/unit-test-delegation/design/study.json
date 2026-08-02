@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "status": "preregistered-design-only",
+  "baseCommit": "61c1391c7c712a8d8defbbaa6c54212c00ac9ce5",
+  "seed": "unit-test-delegation-v1|2026-08-01|61c1391",
+  "pins": {
+    "copilotCli": "1.0.77",
+    "node": "22.14.0",
+    "parentModel": "gpt-5.6-sol",
+    "parentContextTier": "default",
+    "parentReasoningEffort": "medium",
+    "workerModel": "claude-haiku-4.5"
+  },
+  "arms": {
+    "A1": "parent-production-and-tests",
+    "A2": "parent-production-worker-tests"
+  },
+  "pilot": {
+    "tasks": ["P01", "P02"],
+    "repetitions": 1,
+    "permanentlyExcluded": true
+  },
+  "main": {
+    "tasks": ["M01", "M02", "M03", "M04", "M05", "M06"],
+    "repetitions": 5,
+    "plannedPairs": 30,
+    "plannedObservations": 60
+  },
+  "envelope": {
+    "combinedCredits": 40,
+    "modelTokens": 80000,
+    "wallSeconds": 300,
+    "parentProcesses": 1,
+    "workerInvocations": 1,
+    "postStartRetries": 0
+  },
+  "positiveSignal": {
+    "combinedCreditRatioMax": 0.8,
+    "taskCreditRatioMax": 0.85,
+    "tasksMeetingCreditRatioMin": 5,
+    "parentCreditRatioMax": 0.7,
+    "parentCumulativeInputRatioMax": 0.75,
+    "parentPeakInputRatioMax": 0.9,
+    "featureDifferenceMin": -0.02,
+    "perTaskFeatureDifferenceMin": -0.05,
+    "testCompositeDifferenceMin": -0.05,
+    "mutantKillDifferenceMin": -0.05,
+    "branchCoverageDifferenceMin": -0.05,
+    "falsePositiveDifferenceMax": 0.02,
+    "treatmentReliabilityMin": 0.95,
+    "treatmentAdherenceMin": 0.95,
+    "reliabilityDifferenceMin": -0.05,
+    "totalTokenRatioMax": 1.5,
+    "wallTimeRatioMax": 1.5
+  }
+}

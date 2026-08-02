@@ -1,0 +1,713 @@
+{
+  "schemaVersion": 1,
+  "seed": "unit-test-delegation-v1|2026-08-01|61c1391",
+  "algorithm": "sha256-counter-sort-v1",
+  "pilot": [
+    {
+      "blockId": "pilot-P01-r01",
+      "taskId": "P01",
+      "repetition": 1,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 1,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "pilot-P01-r01-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "pilot-P01-r01-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "pilot-P02-r01",
+      "taskId": "P02",
+      "repetition": 1,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 2,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "pilot-P02-r01-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "pilot-P02-r01-A1"
+        }
+      ]
+    }
+  ],
+  "main": [
+    {
+      "blockId": "main-M02-r05",
+      "taskId": "M02",
+      "repetition": 5,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 1,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M02-r05-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M02-r05-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M05-r01",
+      "taskId": "M05",
+      "repetition": 1,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 2,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M05-r01-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M05-r01-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M02-r04",
+      "taskId": "M02",
+      "repetition": 4,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 3,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M02-r04-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M02-r04-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M01-r04",
+      "taskId": "M01",
+      "repetition": 4,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 4,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M01-r04-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M01-r04-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M03-r01",
+      "taskId": "M03",
+      "repetition": 1,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 5,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M03-r01-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M03-r01-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M02-r03",
+      "taskId": "M02",
+      "repetition": 3,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 6,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M02-r03-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M02-r03-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M04-r04",
+      "taskId": "M04",
+      "repetition": 4,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 7,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M04-r04-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M04-r04-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M06-r01",
+      "taskId": "M06",
+      "repetition": 1,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 8,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M06-r01-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M06-r01-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M06-r04",
+      "taskId": "M06",
+      "repetition": 4,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 9,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M06-r04-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M06-r04-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M01-r01",
+      "taskId": "M01",
+      "repetition": 1,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 10,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M01-r01-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M01-r01-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M01-r05",
+      "taskId": "M01",
+      "repetition": 5,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 11,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M01-r05-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M01-r05-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M06-r03",
+      "taskId": "M06",
+      "repetition": 3,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 12,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M06-r03-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M06-r03-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M04-r05",
+      "taskId": "M04",
+      "repetition": 5,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 13,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M04-r05-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M04-r05-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M01-r02",
+      "taskId": "M01",
+      "repetition": 2,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 14,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M01-r02-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M01-r02-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M04-r02",
+      "taskId": "M04",
+      "repetition": 2,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 15,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M04-r02-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M04-r02-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M04-r01",
+      "taskId": "M04",
+      "repetition": 1,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 16,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M04-r01-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M04-r01-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M02-r02",
+      "taskId": "M02",
+      "repetition": 2,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 17,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M02-r02-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M02-r02-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M05-r05",
+      "taskId": "M05",
+      "repetition": 5,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 18,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M05-r05-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M05-r05-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M02-r01",
+      "taskId": "M02",
+      "repetition": 1,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 19,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M02-r01-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M02-r01-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M04-r03",
+      "taskId": "M04",
+      "repetition": 3,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 20,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M04-r03-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M04-r03-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M03-r04",
+      "taskId": "M03",
+      "repetition": 4,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 21,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M03-r04-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M03-r04-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M05-r02",
+      "taskId": "M05",
+      "repetition": 2,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 22,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M05-r02-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M05-r02-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M03-r03",
+      "taskId": "M03",
+      "repetition": 3,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 23,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M03-r03-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M03-r03-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M05-r04",
+      "taskId": "M05",
+      "repetition": 4,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 24,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M05-r04-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M05-r04-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M01-r03",
+      "taskId": "M01",
+      "repetition": 3,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 25,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M01-r03-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M01-r03-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M03-r05",
+      "taskId": "M03",
+      "repetition": 5,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 26,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M03-r05-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M03-r05-A1"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M03-r02",
+      "taskId": "M03",
+      "repetition": 2,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 27,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M03-r02-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M03-r02-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M06-r02",
+      "taskId": "M06",
+      "repetition": 2,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 28,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M06-r02-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M06-r02-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M05-r03",
+      "taskId": "M05",
+      "repetition": 3,
+      "arms": [
+        "A1",
+        "A2"
+      ],
+      "blockIndex": 29,
+      "observations": [
+        {
+          "arm": "A1",
+          "order": 1,
+          "observationId": "main-M05-r03-A1"
+        },
+        {
+          "arm": "A2",
+          "order": 2,
+          "observationId": "main-M05-r03-A2"
+        }
+      ]
+    },
+    {
+      "blockId": "main-M06-r05",
+      "taskId": "M06",
+      "repetition": 5,
+      "arms": [
+        "A2",
+        "A1"
+      ],
+      "blockIndex": 30,
+      "observations": [
+        {
+          "arm": "A2",
+          "order": 1,
+          "observationId": "main-M06-r05-A2"
+        },
+        {
+          "arm": "A1",
+          "order": 2,
+          "observationId": "main-M06-r05-A1"
+        }
+      ]
+    }
+  ]
+}
