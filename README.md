@@ -41,7 +41,7 @@ Editable architecture diagrams and rendered PNGs are in
 | Action-item extraction | [retained v3 Skill and agent](experiments/action-item-extraction/candidate/) | Feasibility only; context isolation worked, but held-out tuple quality and grounding failed. |
 | Feature documentation | [`feature-documentation` Skill](.github/skills/feature-documentation/SKILL.md), [fixed-Haiku agent](.github/agents/feature-documentation-haiku.agent.md), [excluded-pilot report](experiments/documentation-delegation/report.md) | Excluded pilot NO-GO; delegated docs and treatment adherence failed, so main was not authorized. |
 | Feature documentation v2 | [`feature-documentation-sonnet-v2` Skill](.github/skills/feature-documentation-sonnet-v2/SKILL.md), [fixed-Sonnet agent](.github/agents/feature-documentation-sonnet-v2.agent.md), [preregistration](experiments/documentation-delegation-v2/) | Preregistered design only; mandatory Skill routing, six-pair excluded pilot, 24-pair held-out main, zero observations. |
-| Unit-test authoring | [v1 result](experiments/unit-test-delegation-results/report.md), [Sonnet 4.6 v2 preregistration](experiments/unit-test-delegation-v2/) | V1 pilot NO-GO after tool misuse; v2 is design-only with zero observations, an authorized excluded pilot, and held-out main forbidden. |
+| Unit-test authoring | [v1 result](experiments/unit-test-delegation-results/report.md), [Sonnet 4.6 v2 result](experiments/unit-test-delegation-v2-results/report.md) | Both excluded pilots stopped on frozen integrity boundaries and returned NO-GO; held-out main remains forbidden. |
 
 ## What the experiments found
 

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 2,
+  "sourceManifestRootHash": "0fa265c778446a2c6e46ffb7cff413abd0193a85dabb866d580daa7abd5bbd86",
+  "observations": [
+    "pilot-P11-r01-A1",
+    "pilot-P11-r01-A2",
+    "pilot-P12-r01-A1",
+    "pilot-P12-r01-A2",
+    "pilot-P13-r01-A1",
+    "pilot-P13-r01-A2"
+  ],
+  "operationalCompletions": 1,
+  "validPairs": [],
+  "validTreatments": [],
+  "featureDifference": null,
+  "catastrophicFeaturePair": false,
+  "decision": "NO-GO",
+  "reasons": [
+    "operational completion minimum not met",
+    "valid pair minimum not met",
+    "valid-pair feature noninferiority failed",
+    "insufficient adherent A2 candidate/gold test passes",
+    "valid A2 mutant kill below 0.70"
+  ]
+}
